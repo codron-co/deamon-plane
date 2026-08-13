@@ -1,0 +1,30 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+!.env.*.example
+tools/coolify-spike/.env
+tools/coolify-spike/last-run.json
+
+# Local / agent scratch
+.superpowers/
+.deamon/
+_tmp/
+/_tmp/
+
+# PHP / Node (Dalga 1+)
+/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/storage/*.key
+/storage/logs/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log

@@ -1,0 +1,56 @@
+# Deployment — Deamon Plane on Coolify
+
+Plane is a **separate Coolify application** from customer Deamon CMS sites (ADR-1).  
+Same install shape: **Docker Compose build pack** + repo compose file. Not Nixpacks. Not Dockerfile-only.
+
+## Two Coolify apps (do not mix)
+
+| App | Git repo | Compose file | Stack |
+|-----|----------|--------------|--------|
+| **Plane** (this product) | `codron-co/deamon-plane` | `docker-compose.coolify.yml` | `app` + **own** MySQL + **own** Redis (`plane_*` volumes) |
+| **Customer site** | `codron-co/deamon` | `docker-compose.coolify.yml` | `app` + **own** MySQL + **own** Redis (`deamon_*` volumes) |
+
+Plane never shares MySQL/Redis with a customer site. Customer sites never share with each other.
+
+## Coolify UI — create Plane
+
+1. **New resource** → Git (`codron-co/deamon-plane`).
+2. **Build pack:** Docker Compose.
+3. **Compose file:** `docker-compose.coolify.yml` (do not point at `docker-compose.yml`).
+4. **Branch:** `main` (or `alpha`/`beta` for staging Plane).
+5. **Port:** app service **8080** (compose `expose`; Coolify proxy).
+6. **Health check:** HTTP `/up` on 8080.
+7. **Domain** on compose service **`app`** (same as CMS: `docker_compose_domains` name `app`).
+8. **Environment** — copy `.env.production.example`:
+   - Required: `APP_KEY` (`php artisan key:generate --show` once; store in Coolify).
+   - URL: Coolify `SERVICE_URL_APP` / `SERVICE_FQDN_APP` (Dalga 1 maps `APP_URL` ← `SERVICE_URL_APP`). Do not duplicate `APP_URL` unless overriding.
+   - Do **not** set `DB_*` / `REDIS_*` / `APP_DEBUG` in Coolify — compose `environment:` owns them.
+   - After bootstrap: `COOLIFY_BASE_URL`, `COOLIFY_API_TOKEN` (fleet), later GitHub secrets.
+9. **Persistent volumes** come from compose (`plane_storage`, `plane_mysql`, `plane_redis`). Do not bind-mount `/root`. Channel/redeploy must not delete the application (Coolify `DELETE` defaults `delete_volumes=true`).
+
+## First deploy gate
+
+`Dockerfile` `COPY composer.json` — Laravel is **Dalga 1 / Task 0**. Creating the Coolify resource **now** is OK; **Deploy** succeeds only after `composer.json` exists on the tracked branch.
+
+Local check (after Task 0):
+
+```bash
+docker compose -f docker-compose.coolify.yml --env-file .env up --build -d
+# or local ports file:
+docker compose --env-file .env up --build -d
+curl -fsS http://localhost:8088/up
+```
+
+## Provisioning customer sites (Plane jobs — Dalga 2)
+
+API create must use **git + `build_pack=dockercompose`** + `docker_compose_location=docker-compose.coolify.yml` against **`codron-co/deamon`**, not this repo. Deprecated `POST /applications/dockercompose` (raw YAML, no git) is forbidden.
+
+Customer Coolify env: only `APP_KEY` + `DEAMON_SITE_NAME` (+ `SERVICE_*`). See CMS `docs/modules/deployment.md`.
+
+## Access
+
+v1 internal ops: restrict Plane domain (VPN / IP allowlist / SSO — Task 15). Customer CMS admins do not use Plane.
+
+## Out of scope
+
+Mailcow, Nixpacks, shared DB, embedding Plane inside a Deamon CMS container.

@@ -1,0 +1,77 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COOLIFY_BRANCH: ${COOLIFY_BRANCH:-}
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-}
+    expose:
+      - "8080"
+    env_file:
+      - .env
+    environment:
+      APP_NAME: "Deamon Plane"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: plane
+      DB_USERNAME: plane
+      DB_PASSWORD: plane
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      SESSION_DRIVER: database
+      SESSION_SECURE_COOKIE: "true"
+      TRUSTED_PROXIES: "*"
+      FILESYSTEM_DISK: public
+      MAIL_MAILER: log
+      WAIT_FOR_DB: "true"
+      WAIT_FOR_REDIS: "true"
+      RUN_DEPLOY_TASKS: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - plane_storage:/var/www/html/storage/app/public
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: plane
+      MYSQL_USER: plane
+      MYSQL_PASSWORD: plane
+      MYSQL_ROOT_PASSWORD: plane-root
+    volumes:
+      - plane_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uplane", "-pplane"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - plane_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  plane_storage:
+  plane_mysql:
+  plane_redis:
