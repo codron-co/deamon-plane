@@ -57,7 +57,7 @@
                 </thead>
                 <tbody>
                     @foreach ($themes as $theme)
-                        <tr>
+                        <tr data-href="{{ route('ops.themes.show', $theme) }}" tabindex="0">
                             <td>
                                 <a class="site-name" href="{{ route('ops.themes.show', $theme) }}">{{ $theme->displayName() }}</a>
                                 <div class="site-slug">{{ $theme->theme_id }}</div>
