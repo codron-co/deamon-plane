@@ -38,8 +38,6 @@ class CoolifyProjectRecord extends Model
     {
         $name = trim((string) $this->name);
 
-        return $name !== '' && $name !== $this->uuid
-            ? $name.' ('.$this->uuid.')'
-            : (string) $this->uuid;
+        return $name !== '' ? $name : (string) $this->uuid;
     }
 }

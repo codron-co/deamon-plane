@@ -134,6 +134,8 @@ class CoolifyInventorySync
             ])->save();
         });
 
+        $connection->refresh()->applyUnambiguousDefaults();
+
         return [
             'servers' => $servers->count(),
             'projects' => $projects->count(),

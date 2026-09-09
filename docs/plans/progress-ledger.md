@@ -102,6 +102,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 - Status: **code complete** (this worktree). Multi-connection + server aktif/pasif + project/env/git allowlists + site `<select>` + attach existing + preflight + 422 field errors + agent secret inject.
 - Nav: **Coolify**. Default connection for new sites. Super Admin advanced UUID paste (collapsed, warned). Compose path fixed `/docker-compose.coolify.yml`.
 - GitHub Apps: `GET /github-apps` (v4.x). 404 → hybrid UI (deploy keys + advanced paste). Not the Plane theme-catalog GitHub App.
+- Defaults: option **name** only (uuid = value/title). Single active server/project/env auto-persisted. Env dropdown is **project-scoped** (`project_uuid`), not a global dump.
 - Commit: not requested
 
 ## Hybrid leftovers (operator on wake)

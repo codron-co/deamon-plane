@@ -79,28 +79,40 @@
 
             <div class="field">
                 <label class="field-label" for="default-server">Varsayılan sunucu</label>
-                <select id="default-server" class="field-input" name="default_server_uuid" @disabled(! $canWrite)>
+                <select id="default-server" class="field-input" name="default_server_uuid" data-coolify-servers @disabled(! $canWrite)>
                     <option value="">—</option>
                     @foreach ($connection->servers->where('is_active', true) as $server)
-                        <option value="{{ $server->uuid }}" @selected($connection->default_server_uuid === $server->uuid)>{{ $server->label() }}</option>
+                        <option value="{{ $server->uuid }}" title="{{ $server->uuid }}" @selected($connection->default_server_uuid === $server->uuid)>{{ $server->label() }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="field">
                 <label class="field-label" for="default-project">Varsayılan proje</label>
-                <select id="default-project" class="field-input" name="default_project_uuid" @disabled(! $canWrite)>
+                <select id="default-project" class="field-input" name="default_project_uuid" data-coolify-projects @disabled(! $canWrite)>
                     <option value="">—</option>
                     @foreach ($connection->projects->where('is_active', true) as $project)
-                        <option value="{{ $project->uuid }}" @selected($connection->default_project_uuid === $project->uuid)>{{ $project->label() }}</option>
+                        <option value="{{ $project->uuid }}" title="{{ $project->uuid }}" @selected($connection->default_project_uuid === $project->uuid)>{{ $project->label() }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="field">
                 <label class="field-label" for="default-env">Varsayılan ortam</label>
-                <select id="default-env" class="field-input" name="default_environment_uuid" @disabled(! $canWrite)>
+                <select
+                    id="default-env"
+                    class="field-input"
+                    name="default_environment_uuid"
+                    data-coolify-environments
+                    data-environment-options="{{ Js::from($environmentOptions ?? []) }}"
+                    @disabled(! $canWrite)
+                >
                     <option value="">—</option>
-                    @foreach ($connection->environments->where('is_active', true) as $environment)
-                        <option value="{{ $environment->uuid }}" @selected($connection->default_environment_uuid === $environment->uuid)>{{ $environment->label() }}</option>
+                    @foreach ($connection->environmentsForProject($connection->default_project_uuid) as $environment)
+                        <option
+                            value="{{ $environment->uuid }}"
+                            data-project="{{ $environment->project_uuid }}"
+                            title="{{ $environment->uuid }}"
+                            @selected($connection->default_environment_uuid === $environment->uuid)
+                        >{{ $environment->label() }}</option>
                     @endforeach
                 </select>
                 <input type="hidden" name="default_environment_name" value="{{ $connection->default_environment_name }}">
@@ -182,4 +194,8 @@
             </form>
         </div>
     @endif
+@endsection
+
+@section('scripts')
+    <script src="{{ asset('js/ops-coolify-form.js') }}" defer></script>
 @endsection

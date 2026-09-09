@@ -32,12 +32,12 @@ Left nav **Coolify**. Super Admin / operator write; viewer read.
 | `coolify_connections` | name, base_url, encrypted token + webhook secret, `is_enabled`, `is_default`, selected defaults |
 | `coolify_servers` | uuid, name, `is_active` — inactive cannot be chosen on site create |
 | `coolify_projects` | uuid, name, `is_active` |
-| `coolify_environments` | project_uuid + uuid/name, `is_active` |
+| `coolify_environments` | **project_uuid** + uuid/name, `is_active`. Sync writes `project_uuid`. Default + site-create env `<select>` lists **only** that project’s rows (never a flat dump). Changing the project rebuilds the env list (`ops-coolify-form.js`). Option text is the Coolify **name**; uuid is `value` + `title`. |
 | `coolify_git_sources` | `github_app` \| `deploy_key`, uuid, name, `is_active` |
 
 Existing `coolify_settings` row is copied into the first connection on migrate (encrypted columns copied as-is). Settings does not host Coolify credentials.
 
-**Default connection:** `is_default` — new sites pre-select it.
+**Default connection:** `is_default` — new sites pre-select it. After sync (and on the connection show page) a **single** active server / project / environment / git source is persisted as the matching default.
 
 **Disconnect:** confirm modal. Deletes the Plane connection + allowlists. Does **not** DELETE Coolify apps. No SSH.
 
@@ -69,7 +69,9 @@ Coolify **422** `message` + `errors{field: []}` is appended on `CoolifyApiExcept
 
 ## Domains
 
-Live GET `docker_compose_domains` is often a **JSON string** object (`{"app":{"domain":"https://…"}}`); `Application.fqdn` is often null. The adapter parses that string. PATCH always sends the OpenAPI **array** `[{ "name": "app", "domain": "https://…" }]`. `force_domain_override` defaults false.
+Live GET `docker_compose_domains` is often a **JSON string** object (`{"app":{"domain":"https://…"}}`); `Application.fqdn` is often null on older compose apps. Coolify **generate-domain** (create without a domain) writes `{uuid}.demo.codron.co` or `{uuid}.random.codron.co` on **`fqdn`** and does **not** clear it when Plane PATCHes only compose domains.
+
+Create and `setDomains` send **only the operator host**: OpenAPI array `docker_compose_domains: [{ "name": "app", "domain": "https://…" }]` **and** `fqdn` set to that same first host (replaces leftover generate-domain). `force_domain_override` defaults false. Do not PATCH live generate-domains off existing apps without operator OK — they may still be on the proxy.
 
 ## Coolify menu (not Settings)
 

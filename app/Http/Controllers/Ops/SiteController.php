@@ -89,19 +89,21 @@ class SiteController extends Controller
             $connection = $default;
         }
 
+        $site = new Site([
+            'channel' => Channel::Main,
+            'coolify_connection_id' => $connection?->id,
+            'coolify_server_uuid' => $connection?->default_server_uuid ?: config('ops.coolify.default_server_uuid'),
+            'coolify_project_uuid' => $connection?->default_project_uuid,
+            'coolify_environment_uuid' => $connection?->default_environment_uuid,
+            'coolify_git_source_uuid' => $connection?->default_git_source_uuid,
+            'coolify_git_source_kind' => $connection?->default_git_source_kind,
+        ]);
+
         return view('ops.sites.create', [
-            'site' => new Site([
-                'channel' => Channel::Main,
-                'coolify_connection_id' => $connection?->id,
-                'coolify_server_uuid' => $connection?->default_server_uuid ?: config('ops.coolify.default_server_uuid'),
-                'coolify_project_uuid' => $connection?->default_project_uuid,
-                'coolify_environment_uuid' => $connection?->default_environment_uuid,
-                'coolify_git_source_uuid' => $connection?->default_git_source_uuid,
-                'coolify_git_source_kind' => $connection?->default_git_source_kind,
-            ]),
+            'site' => $site,
             'channels' => config('ops.channels', []),
             'readonly' => false,
-            ...$this->coolifyFormData($connection, $request),
+            ...$this->coolifyFormData($connection, $request, $site),
         ]);
     }
 
@@ -197,7 +199,7 @@ class SiteController extends Controller
             'themeInstallations' => $site->themeInstallations,
             'assignableThemes' => $this->assignableThemes($site),
             'canAssignTheme' => $request->user()?->can('assign', Theme::class) ?? false,
-            ...$this->coolifyFormData($connection, $request),
+            ...$this->coolifyFormData($connection, $request, $site),
         ]);
     }
 
@@ -501,7 +503,7 @@ class SiteController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function coolifyFormData(?CoolifyConnection $connection, Request $request): array
+    private function coolifyFormData(?CoolifyConnection $connection, Request $request, ?Site $site = null): array
     {
         $connections = CoolifyConnection::query()
             ->where('is_enabled', true)
@@ -513,12 +515,28 @@ class SiteController extends Controller
             $connection->load(['servers', 'projects', 'environments', 'gitSources']);
         }
 
+        $selectedProject = old(
+            'coolify_project_uuid',
+            $site?->coolify_project_uuid ?: $connection?->default_project_uuid,
+        );
+
         return [
             'coolifyConnections' => $connections,
             'coolifyConnection' => $connection,
             'coolifyServers' => $connection?->servers->where('is_active', true)->values() ?? collect(),
             'coolifyProjects' => $connection?->projects->where('is_active', true)->values() ?? collect(),
-            'coolifyEnvironments' => $connection?->environments->where('is_active', true)->values() ?? collect(),
+            'coolifyEnvironments' => $connection?->environmentsForProject(is_string($selectedProject) ? $selectedProject : null) ?? collect(),
+            'coolifyEnvironmentOptions' => $connection instanceof CoolifyConnection
+                ? $connection->environments
+                    ->where('is_active', true)
+                    ->values()
+                    ->map(static fn ($row): array => [
+                        'uuid' => $row->uuid,
+                        'project_uuid' => $row->project_uuid,
+                        'label' => $row->label(),
+                    ])
+                    ->all()
+                : [],
             'coolifyGitSources' => $connection?->gitSources->where('is_active', true)->values() ?? collect(),
             'attachableApps' => [],
             'githubAppsListAvailable' => $connection?->github_apps_list_available,

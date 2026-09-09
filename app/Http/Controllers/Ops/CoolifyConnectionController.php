@@ -77,6 +77,8 @@ class CoolifyConnectionController extends Controller
         $this->authorize('view', $connection);
 
         $connection->load(['servers', 'projects', 'environments', 'gitSources']);
+        $connection->applyUnambiguousDefaults();
+        $connection->load(['servers', 'projects', 'environments', 'gitSources']);
 
         return view('ops.coolify.show', [
             'connection' => $connection,
@@ -84,6 +86,7 @@ class CoolifyConnectionController extends Controller
             'webhookUrl' => url('/webhooks/coolify'),
             'hasToken' => $connection->hasToken(),
             'hasWebhookSecret' => $connection->hasWebhookSecret(),
+            'environmentOptions' => $this->environmentOptions($connection),
         ]);
     }
 
@@ -96,8 +99,17 @@ class CoolifyConnectionController extends Controller
 
         $connection->default_project_uuid = $this->nullableString($request->input('default_project_uuid'));
         $connection->default_server_uuid = $this->nullableString($request->input('default_server_uuid'));
-        $connection->default_environment_uuid = $this->nullableString($request->input('default_environment_uuid'));
-        $connection->default_environment_name = $this->nullableString($request->input('default_environment_name'));
+
+        $envUuid = $this->nullableString($request->input('default_environment_uuid'));
+        $env = $envUuid !== null && $connection->default_project_uuid !== null
+            ? CoolifyEnvironment::query()
+                ->where('coolify_connection_id', $connection->id)
+                ->where('project_uuid', $connection->default_project_uuid)
+                ->where('uuid', $envUuid)
+                ->first()
+            : null;
+        $connection->default_environment_uuid = $env?->uuid;
+        $connection->default_environment_name = $env !== null ? (trim((string) $env->name) ?: null) : null;
 
         $git = $this->nullableString($request->input('default_git_source'));
         if ($git !== null && str_contains($git, ':')) {
@@ -269,11 +281,7 @@ class CoolifyConnectionController extends Controller
                 'uuid' => $row->uuid,
                 'label' => $row->label(),
             ]),
-            'environments' => $connection->environments->where('is_active', true)->values()->map(fn (CoolifyEnvironment $row) => [
-                'uuid' => $row->uuid,
-                'project_uuid' => $row->project_uuid,
-                'label' => $row->label(),
-            ]),
+            'environments' => $this->environmentOptions($connection),
             'git_sources' => $connection->gitSources->where('is_active', true)->values()->map(fn (CoolifyGitSource $row) => [
                 'value' => $row->formValue(),
                 'label' => $row->label(),
@@ -314,6 +322,24 @@ class CoolifyConnectionController extends Controller
         if (filled($validated['webhook_secret'] ?? null)) {
             $connection->webhook_secret = $validated['webhook_secret'];
         }
+    }
+
+    /**
+     * @return list<array{uuid: string, project_uuid: string, label: string}>
+     */
+    private function environmentOptions(CoolifyConnection $connection): array
+    {
+        $connection->loadMissing('environments');
+
+        return $connection->environments
+            ->where('is_active', true)
+            ->values()
+            ->map(static fn (CoolifyEnvironment $row): array => [
+                'uuid' => $row->uuid,
+                'project_uuid' => $row->project_uuid,
+                'label' => $row->label(),
+            ])
+            ->all();
     }
 
     private function assertChild(CoolifyConnection $connection, ?int $childConnectionId): void

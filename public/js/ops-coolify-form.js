@@ -1,10 +1,6 @@
 (function () {
     const connection = document.querySelector("[data-coolify-connection]");
-    if (!connection) {
-        return;
-    }
-
-    const template = connection.getAttribute("data-options-template") || "";
+    const template = connection ? connection.getAttribute("data-options-template") || "" : "";
     const serverSelect = document.querySelector("[data-coolify-servers]");
     const projectSelect = document.querySelector("[data-coolify-projects]");
     const environmentSelect = document.querySelector("[data-coolify-environments]");
@@ -25,6 +21,7 @@
             const option = document.createElement("option");
             option.value = item[valueKey];
             option.textContent = item[labelKey];
+            option.title = item.title || item.uuid || "";
             if (item.project_uuid) {
                 option.dataset.project = item.project_uuid;
             }
@@ -33,6 +30,51 @@
             }
             select.appendChild(option);
         });
+    }
+
+    function readCatalog() {
+        if (!environmentSelect) {
+            return [];
+        }
+        const raw = environmentSelect.getAttribute("data-environment-options");
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length) {
+                    return parsed;
+                }
+            } catch (e) {
+                /* fall through */
+            }
+        }
+        return Array.prototype.slice.call(environmentSelect.options).filter(function (option) {
+            return option.value;
+        }).map(function (option) {
+            return {
+                uuid: option.value,
+                label: option.textContent,
+                project_uuid: option.dataset.project || "",
+                title: option.title || option.value,
+            };
+        });
+    }
+
+    function applyEnvironmentFilter(preferred) {
+        if (!environmentSelect) {
+            return;
+        }
+        const catalog = readCatalog();
+        if (catalog.length) {
+            environmentSelect.setAttribute("data-environment-options", JSON.stringify(catalog));
+        }
+        const project = projectSelect ? projectSelect.value : "";
+        const scoped = catalog.filter(function (item) {
+            return project !== "" && item.project_uuid === project;
+        });
+        fillSelect(environmentSelect, scoped, "uuid", "label", preferred !== undefined ? preferred : environmentSelect.value);
+        if (catalog.length) {
+            environmentSelect.setAttribute("data-environment-options", JSON.stringify(catalog));
+        }
     }
 
     function loadOptions(id) {
@@ -51,7 +93,10 @@
                 const defaults = data.defaults || {};
                 fillSelect(serverSelect, data.servers || [], "uuid", "label", defaults.server);
                 fillSelect(projectSelect, data.projects || [], "uuid", "label", defaults.project);
-                fillSelect(environmentSelect, data.environments || [], "uuid", "label", defaults.environment);
+                if (environmentSelect) {
+                    environmentSelect.setAttribute("data-environment-options", JSON.stringify(data.environments || []));
+                }
+                applyEnvironmentFilter(defaults.environment);
                 fillSelect(gitSelect, data.git_sources || [], "value", "label", defaults.git);
                 if (attachSelect) {
                     fillSelect(
@@ -73,9 +118,18 @@
             });
     }
 
-    connection.addEventListener("change", function () {
-        loadOptions(connection.value);
-    });
+    if (projectSelect) {
+        projectSelect.addEventListener("change", function () {
+            applyEnvironmentFilter("");
+        });
+    }
+    applyEnvironmentFilter();
+
+    if (connection) {
+        connection.addEventListener("change", function () {
+            loadOptions(connection.value);
+        });
+    }
 
     const placement = document.querySelector("[data-coolify-placement]");
     const attachField = document.querySelector("[data-attach-field]");

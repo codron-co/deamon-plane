@@ -160,6 +160,90 @@ class CoolifyConnectionsTest extends TestCase
         $this->assertFalse($server->fresh()->is_active);
     }
 
+    public function test_sync_two_github_apps_auto_defaults_localhost_and_scopes_envs_to_project(): void
+    {
+        Http::fake([
+            'https://coolify.example/api/v1/servers' => Http::response([
+                ['uuid' => 'no48ksggg0k8sk4o4w08gks8', 'name' => 'localhost'],
+            ], 200),
+            'https://coolify.example/api/v1/projects' => Http::response([
+                ['uuid' => 'z8ocg8k04ww8osssccc088c0', 'name' => 'Deamon'],
+                ['uuid' => 'other-proj', 'name' => 'Web Apps'],
+            ], 200),
+            'https://coolify.example/api/v1/projects/z8ocg8k04ww8osssccc088c0/environments' => Http::response([
+                ['uuid' => 'i0sw4kk0cogg4o08oscwcssk', 'name' => 'production'],
+                ['uuid' => 'sns276euzsz2fprqg3xgfz17', 'name' => 'alpha'],
+            ], 200),
+            'https://coolify.example/api/v1/projects/other-proj/environments' => Http::response([
+                ['uuid' => 'rw8flmmfzxkp0qnklzzi8lny', 'name' => 'plane'],
+                ['uuid' => 'is8kkgcg0g8ss40gswg484cg', 'name' => 'production'],
+            ], 200),
+            'https://coolify.example/api/v1/github-apps' => Http::response([
+                [
+                    'uuid' => 'r08cws800oow8w008880c8og',
+                    'name' => 'coolify-github-codronco',
+                    'organization' => 'codron-co',
+                ],
+                [
+                    'uuid' => 'x1gny2ozb9pzngjsm9a0z7jn',
+                    'name' => 'coolify-github-eminwhocodes',
+                    'organization' => '',
+                ],
+            ], 200),
+            'https://coolify.example/api/v1/security/keys' => Http::response([
+                ['uuid' => 'pk-1', 'name' => 'deploy'],
+            ], 200),
+        ]);
+
+        $connection = CoolifyConnection::factory()->create([
+            'name' => 'Prod',
+            'base_url' => 'https://coolify.example',
+            'api_token' => self::TOKEN,
+            'is_default' => true,
+            'default_server_uuid' => null,
+            'default_project_uuid' => 'z8ocg8k04ww8osssccc088c0',
+            'default_environment_uuid' => null,
+        ]);
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.coolify.show', $connection))
+            ->post(route('ops.coolify.sync', $connection))
+            ->assertRedirect(route('ops.coolify.show', $connection));
+
+        $connection->refresh();
+        $this->assertSame('no48ksggg0k8sk4o4w08gks8', $connection->default_server_uuid);
+        $this->assertSame('z8ocg8k04ww8osssccc088c0', $connection->default_project_uuid);
+        $this->assertSame(2, CoolifyGitSource::query()->where('kind', 'github_app')->count());
+        $this->assertDatabaseHas('coolify_environments', [
+            'uuid' => 'i0sw4kk0cogg4o08oscwcssk',
+            'project_uuid' => 'z8ocg8k04ww8osssccc088c0',
+            'name' => 'production',
+        ]);
+        $this->assertDatabaseHas('coolify_environments', [
+            'uuid' => 'rw8flmmfzxkp0qnklzzi8lny',
+            'project_uuid' => 'other-proj',
+            'name' => 'plane',
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.coolify.show', $connection))
+            ->assertOk()
+            ->assertSee('localhost', false)
+            ->assertSee('Deamon', false)
+            ->assertSee('coolify-github-codronco / codron-co', false)
+            ->assertSee('coolify-github-eminwhocodes', false)
+            ->assertDontSee('GitHub App: GitHub App', false)
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/id="default-env"[^>]*>.*value="i0sw4kk0cogg4o08oscwcssk"[^>]*>\s*production/s',
+            $html,
+        );
+        $this->assertStringNotContainsString('value="rw8flmmfzxkp0qnklzzi8lny"', $html);
+        $this->assertStringNotContainsString('value="is8kkgcg0g8ss40gswg484cg"', $html);
+        $this->assertStringNotContainsString('z8ocg8k04ww8osssccc088c0</option>', $html);
+    }
+
     public function test_github_apps_404_is_hybrid_and_deploy_keys_still_sync(): void
     {
         Http::fake([

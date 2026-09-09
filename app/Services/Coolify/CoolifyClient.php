@@ -168,10 +168,16 @@ class CoolifyClient
      */
     public function setDomains(string $uuid, string|array $fqdn, bool $forceDomainOverride = false): CoolifyApplication
     {
+        $composeDomains = CoolifyDomainParser::forPatch($fqdn);
         $body = [
-            'docker_compose_domains' => CoolifyDomainParser::forPatch($fqdn),
+            'docker_compose_domains' => $composeDomains,
             'force_domain_override' => $forceDomainOverride,
         ];
+
+        $primary = CoolifyDomainParser::firstDomain($composeDomains);
+        if ($primary !== null) {
+            $body['fqdn'] = $primary;
+        }
 
         $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid), [], $body);
 
@@ -319,10 +325,14 @@ class CoolifyClient
             return $json;
         }
 
-        foreach (['data', 'deployments'] as $key) {
+        foreach (['data', 'deployments', 'github_apps', 'sources', 'keys', 'servers', 'projects', 'environments'] as $key) {
             if (isset($json[$key]) && is_array($json[$key])) {
                 return array_is_list($json[$key]) ? $json[$key] : array_values($json[$key]);
             }
+        }
+
+        if (isset($json['uuid']) || isset($json['id'])) {
+            return [$json];
         }
 
         return [];

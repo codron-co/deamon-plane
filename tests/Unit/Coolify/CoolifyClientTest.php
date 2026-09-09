@@ -102,7 +102,8 @@ class CoolifyClientTest extends TestCase
                 ['uuid' => 'env-1', 'name' => 'production'],
             ], 200),
             'https://coolify.test/api/v1/github-apps' => Http::response([
-                ['uuid' => 'gh-1', 'name' => 'codron'],
+                ['uuid' => 'gh-1', 'name' => 'coolify-github-codronco', 'organization' => 'codron-co'],
+                ['uuid' => 'gh-2', 'name' => 'coolify-github-eminwhocodes'],
             ], 200),
             'https://coolify.test/api/v1/security/keys' => Http::response([
                 ['uuid' => 'pk-1', 'name' => 'deploy'],
@@ -115,7 +116,10 @@ class CoolifyClientTest extends TestCase
 
         $this->assertSame('env-1', $envs[0]->uuid);
         $this->assertNotNull($apps);
+        $this->assertCount(2, $apps);
         $this->assertSame('gh-1', $apps[0]->uuid);
+        $this->assertSame('coolify-github-codronco / codron-co', $apps[0]->name);
+        $this->assertSame('coolify-github-eminwhocodes', $apps[1]->name);
         $this->assertSame('pk-1', $keys[0]->uuid);
     }
 
@@ -172,6 +176,7 @@ class CoolifyClientTest extends TestCase
                 && $body['docker_compose_domains'] === [
                     ['name' => 'app', 'domain' => 'https://www.example.com'],
                 ]
+                && ($body['fqdn'] ?? null) === 'https://www.example.com'
                 && ! array_key_exists('docker_compose_raw', $body);
         });
 

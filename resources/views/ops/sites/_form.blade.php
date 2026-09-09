@@ -163,7 +163,7 @@
     <select id="site_server" class="field-input" name="coolify_server_uuid" data-coolify-servers @disabled($readonly)>
         <option value="">—</option>
         @foreach ($coolifyServers as $server)
-            <option value="{{ $server->uuid }}" @selected($selectedServer === $server->uuid)>{{ $server->label() }}</option>
+            <option value="{{ $server->uuid }}" title="{{ $server->uuid }}" @selected($selectedServer === $server->uuid)>{{ $server->label() }}</option>
         @endforeach
     </select>
     @error('coolify_server_uuid') <p class="field-error">{{ $message }}</p> @enderror
@@ -174,7 +174,7 @@
     <select id="site_project" class="field-input" name="coolify_project_uuid" data-coolify-projects @disabled($readonly)>
         <option value="">—</option>
         @foreach ($coolifyProjects as $project)
-            <option value="{{ $project->uuid }}" @selected($selectedProject === $project->uuid)>{{ $project->label() }}</option>
+            <option value="{{ $project->uuid }}" title="{{ $project->uuid }}" @selected($selectedProject === $project->uuid)>{{ $project->label() }}</option>
         @endforeach
     </select>
     @error('coolify_project_uuid') <p class="field-error">{{ $message }}</p> @enderror
@@ -183,12 +183,20 @@
 <div class="field" data-provision-field>
     <label class="field-label" for="site_environment">Ortam</label>
     <p class="field-hint">Coolify environment. Kanal (main/beta/alpha) değil.</p>
-    <select id="site_environment" class="field-input" name="coolify_environment_uuid" data-coolify-environments @disabled($readonly)>
+    <select
+        id="site_environment"
+        class="field-input"
+        name="coolify_environment_uuid"
+        data-coolify-environments
+        data-environment-options="{{ Js::from($coolifyEnvironmentOptions ?? []) }}"
+        @disabled($readonly)
+    >
         <option value="">—</option>
         @foreach ($coolifyEnvironments as $environment)
             <option
                 value="{{ $environment->uuid }}"
                 data-project="{{ $environment->project_uuid }}"
+                title="{{ $environment->uuid }}"
                 @selected($selectedEnvironment === $environment->uuid)
             >{{ $environment->label() }}</option>
         @endforeach
@@ -208,7 +216,7 @@
     <select id="site_git" class="field-input" name="coolify_git_source" data-coolify-git @disabled($readonly)>
         <option value="">— public</option>
         @foreach ($coolifyGitSources as $source)
-            <option value="{{ $source->formValue() }}" @selected($selectedGit === $source->formValue())>{{ $source->label() }}</option>
+            <option value="{{ $source->formValue() }}" title="{{ $source->uuid }}" @selected($selectedGit === $source->formValue())>{{ $source->label() }}</option>
         @endforeach
     </select>
     @error('coolify_git_source') <p class="field-error">{{ $message }}</p> @enderror

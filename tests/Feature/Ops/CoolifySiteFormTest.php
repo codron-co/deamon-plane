@@ -43,6 +43,8 @@ class CoolifySiteFormTest extends TestCase
 
         $this->assertStringContainsString('<select', $html);
         $this->assertStringContainsString($connection->name, $html);
+        $this->assertStringContainsString('value="env-prod"', $html);
+        $this->assertStringNotContainsString('value="rw8flmmfzxkp0qnklzzi8lny"', $html);
     }
 
     public function test_operator_cannot_pick_inactive_server(): void
@@ -212,6 +214,13 @@ class CoolifySiteFormTest extends TestCase
             'project_uuid' => 'proj_test',
             'uuid' => 'env-prod',
             'name' => 'production',
+            'is_active' => true,
+        ]);
+        CoolifyEnvironment::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'project_uuid' => 'other-proj',
+            'uuid' => 'rw8flmmfzxkp0qnklzzi8lny',
+            'name' => 'plane',
             'is_active' => true,
         ]);
         CoolifyGitSource::query()->create([

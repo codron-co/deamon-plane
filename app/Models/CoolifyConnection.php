@@ -8,6 +8,7 @@ use Database\Factories\CoolifyConnectionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class CoolifyConnection extends Model
@@ -72,6 +73,99 @@ class CoolifyConnection extends Model
     public function environments(): HasMany
     {
         return $this->hasMany(CoolifyEnvironment::class);
+    }
+
+    /**
+     * Active environments for one Coolify project. Empty project → none (never a global dump).
+     *
+     * @return Collection<int, CoolifyEnvironment>
+     */
+    public function environmentsForProject(?string $projectUuid)
+    {
+        $projectUuid = trim((string) $projectUuid);
+        if ($projectUuid === '') {
+            return collect();
+        }
+
+        return $this->environments
+            ->where('is_active', true)
+            ->where('project_uuid', $projectUuid)
+            ->values();
+    }
+
+    /**
+     * Single active server / project / env / git source becomes the default and is persisted.
+     */
+    public function applyUnambiguousDefaults(): bool
+    {
+        $this->loadMissing(['servers', 'projects', 'environments', 'gitSources']);
+
+        $changed = false;
+
+        $serverUuid = $this->soleActiveUuid($this->servers->where('is_active', true)->values(), $this->default_server_uuid);
+        if ($serverUuid !== $this->default_server_uuid) {
+            $this->default_server_uuid = $serverUuid;
+            $changed = true;
+        }
+
+        $projectUuid = $this->soleActiveUuid($this->projects->where('is_active', true)->values(), $this->default_project_uuid);
+        if ($projectUuid !== $this->default_project_uuid) {
+            $this->default_project_uuid = $projectUuid;
+            $changed = true;
+        }
+
+        $projectEnvs = $this->environmentsForProject($this->default_project_uuid);
+        $envUuid = $this->soleActiveUuid($projectEnvs, $this->default_environment_uuid);
+        $envName = $envUuid !== null
+            ? trim((string) ($projectEnvs->firstWhere('uuid', $envUuid)?->name ?? ''))
+            : null;
+        $envName = $envName !== '' ? $envName : null;
+
+        if ($envUuid !== $this->default_environment_uuid || $envName !== $this->default_environment_name) {
+            $this->default_environment_uuid = $envUuid;
+            $this->default_environment_name = $envName;
+            $changed = true;
+        }
+
+        $sources = $this->gitSources->where('is_active', true)->values();
+        if ($sources->count() === 1) {
+            $source = $sources->first();
+            $kind = $source->kind instanceof CoolifyGitSourceKind
+                ? $source->kind
+                : CoolifyGitSourceKind::tryFrom((string) $source->kind);
+            if ($this->default_git_source_uuid !== $source->uuid || $this->default_git_source_kind !== $kind) {
+                $this->default_git_source_uuid = $source->uuid;
+                $this->default_git_source_kind = $kind;
+                $changed = true;
+            }
+        } elseif (filled($this->default_git_source_uuid)
+            && ! $sources->contains(fn (CoolifyGitSource $row): bool => $row->uuid === $this->default_git_source_uuid)) {
+            $this->default_git_source_uuid = null;
+            $this->default_git_source_kind = null;
+            $changed = true;
+        }
+
+        if ($changed) {
+            $this->save();
+        }
+
+        return $changed;
+    }
+
+    /**
+     * @param  Collection<int, CoolifyServer|CoolifyProjectRecord|CoolifyEnvironment>  $rows
+     */
+    private function soleActiveUuid($rows, ?string $current): ?string
+    {
+        if ($rows->count() === 1) {
+            return $rows->first()->uuid;
+        }
+
+        if (filled($current) && $rows->contains(static fn ($row): bool => $row->uuid === $current)) {
+            return $current;
+        }
+
+        return null;
     }
 
     public function gitSources(): HasMany

@@ -37,13 +37,9 @@ class CoolifyGitSource extends Model
 
     public function label(): string
     {
-        $kind = $this->kind instanceof CoolifyGitSourceKind
-            ? $this->kind->label()
-            : (string) $this->kind;
         $name = trim((string) $this->name);
-        $title = $name !== '' ? $name : $this->uuid;
 
-        return $kind.': '.$title;
+        return $name !== '' ? $name : (string) $this->uuid;
     }
 
     public function formValue(): string
