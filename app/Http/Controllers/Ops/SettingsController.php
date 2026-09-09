@@ -33,17 +33,13 @@ class SettingsController extends Controller
     {
         $this->authorize('ops.write');
 
-        return redirect()
-            ->route('ops.coolify.index')
-            ->with('status', 'Coolify is under Coolify menu.');
+        return redirect()->route('ops.coolify.index');
     }
 
     public function testConnection(): RedirectResponse
     {
         $this->authorize('ops.write');
 
-        return redirect()
-            ->route('ops.coolify.index')
-            ->with('status', 'Coolify is under Coolify menu.');
+        return redirect()->route('ops.coolify.index');
     }
 }

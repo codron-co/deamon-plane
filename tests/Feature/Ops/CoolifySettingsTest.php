@@ -35,7 +35,7 @@ class CoolifySettingsTest extends TestCase
             ->get(route('ops.settings'))
             ->assertOk()
             ->assertSee('GitHub theme catalog', false)
-            ->assertSee('Coolify is under Coolify menu.', false)
+            ->assertDontSee('Coolify is under Coolify menu.', false)
             ->assertDontSee(self::TOKEN, false)
             ->assertDontSee('name="api_token"', false)
             ->assertDontSee('name="base_url"', false)
@@ -54,7 +54,7 @@ class CoolifySettingsTest extends TestCase
                 'api_token' => self::TOKEN,
             ])
             ->assertRedirect(route('ops.coolify.index'))
-            ->assertSessionHas('status', 'Coolify is under Coolify menu.');
+            ->assertSessionMissing('status');
     }
 
     public function test_legacy_settings_coolify_test_redirects_to_coolify_menu(): void
@@ -62,7 +62,7 @@ class CoolifySettingsTest extends TestCase
         $this->actingAs($this->operator())
             ->post(route('ops.settings.coolify.test'))
             ->assertRedirect(route('ops.coolify.index'))
-            ->assertSessionHas('status', 'Coolify is under Coolify menu.');
+            ->assertSessionMissing('status');
     }
 
     public function test_viewer_cannot_save_legacy_settings_update(): void

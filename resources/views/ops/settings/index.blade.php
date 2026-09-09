@@ -3,8 +3,6 @@
 @section('title', 'Settings')
 
 @section('content')
-    <p class="ops-flash" role="status">Coolify is under Coolify menu.</p>
-
     <p class="page-lede">GitHub App (tema kataloğu) burada. Token asla gösterilmez.</p>
 
     @include('ops.settings.partials.github')

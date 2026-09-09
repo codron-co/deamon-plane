@@ -32,7 +32,7 @@ class NavPagesTest extends TestCase
             ->get(route('ops.settings'))
             ->assertOk()
             ->assertSee('GitHub theme catalog', false)
-            ->assertSee('Coolify is under Coolify menu.', false)
+            ->assertDontSee('Coolify is under Coolify menu.', false)
             ->assertDontSee('name="api_token"', false)
             ->assertDontSee('Test connection', false);
     }
