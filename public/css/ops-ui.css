@@ -1,0 +1,570 @@
+/* Plane UI foundation overrides.
+ * Keep page-specific styling in ops.css; shared interaction/layout primitives live here.
+ */
+
+:root,
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --shadow-popover: 0 16px 48px rgba(0, 0, 0, 0.38), 0 2px 10px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="semidark"] {
+    color-scheme: dark;
+    --surface-base: #101114;
+    --surface-raised: #17181c;
+    --surface-overlay: #202228;
+    --border: #292c33;
+    --border-strong: #383c46;
+    --text: #f0f1f4;
+    --text-muted: #a0a6b1;
+    --text-faint: #777e8a;
+    --shadow-popover: 0 16px 48px rgba(0, 0, 0, 0.32), 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="light"] {
+    color-scheme: light;
+    --surface-base: #f7f8fa;
+    --surface-raised: #ffffff;
+    --surface-overlay: #f0f2f5;
+    --border: #e1e4e9;
+    --border-strong: #cfd4dc;
+    --text: #17191d;
+    --text-muted: #5e6672;
+    --text-faint: #818995;
+    --danger-text: #b4232d;
+    --focus: #4f5bc5;
+    --shadow-popover: 0 16px 48px rgba(19, 27, 38, 0.13), 0 2px 10px rgba(19, 27, 38, 0.08);
+}
+
+/* Viewport-stable application shell. */
+@media (min-width: 769px) {
+    .ops-sidebar {
+        position: sticky;
+        top: 0;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .ops-nav {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+
+    .ops-sidebar-foot {
+        flex: 0 0 auto;
+    }
+}
+
+/* One useful workspace width. Narrowness belongs inside forms/cards, not the page shell. */
+.ops-content,
+.ops-content-wide {
+    width: 100%;
+    max-width: 1600px;
+}
+
+/* Account dropdown */
+.ops-user-menu {
+    position: relative;
+}
+
+.ops-user-menu > summary {
+    list-style: none;
+}
+
+.ops-user-menu > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ops-user-trigger {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+}
+
+.ops-user-trigger:hover,
+.ops-user-menu[open] .ops-user-trigger {
+    background: var(--surface-raised);
+    border-color: var(--border);
+}
+
+.ops-user-trigger:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.ops-user-avatar {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.ops-user-copy {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.ops-user-copy strong,
+.ops-user-copy span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ops-user-copy strong {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ops-user-copy span {
+    color: var(--text-faint);
+    font-size: 10px;
+}
+
+.ops-user-chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--text-faint);
+    transition: transform 120ms ease;
+}
+
+.ops-user-menu[open] .ops-user-chevron {
+    transform: rotate(180deg);
+}
+
+.ops-user-popover {
+    position: absolute;
+    z-index: 60;
+    left: 0;
+    bottom: calc(100% + 8px);
+    width: min(280px, calc(100vw - 24px));
+    padding: 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-popover);
+}
+
+.ops-user-popover-head {
+    padding: 8px 9px 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 5px;
+}
+
+.ops-user-popover-head strong,
+.ops-user-popover-head span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ops-user-popover-head strong {
+    font-size: 12px;
+}
+
+.ops-user-popover-head span {
+    margin-top: 2px;
+    color: var(--text-faint);
+    font-size: 11px;
+}
+
+.ops-menu-link,
+.ops-menu-button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 34px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    text-align: left;
+    cursor: pointer;
+}
+
+.ops-menu-link:hover,
+.ops-menu-button:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+}
+
+.ops-menu-link:focus-visible,
+.ops-menu-button:focus-visible,
+.ops-theme-choice:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -1px;
+}
+
+.ops-menu-section {
+    margin-top: 5px;
+    padding: 8px 9px;
+    border-top: 1px solid var(--border);
+}
+
+.ops-menu-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text-faint);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ops-theme-choices {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.ops-theme-choice {
+    height: 30px;
+    padding: 0 7px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-base);
+    color: var(--text-muted);
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.ops-theme-choice:hover,
+.ops-theme-choice.is-active {
+    border-color: var(--border-strong);
+    background: var(--surface-overlay);
+    color: var(--text);
+}
+
+.ops-theme-choice.is-active {
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Progressive-enhancement custom select. Native select stays in the form, custom UI owns interaction. */
+.ops-select {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.ops-select-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.ops-select-trigger {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-overlay);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.ops-select-trigger[data-size="sm"] {
+    height: 32px;
+}
+
+.ops-select-trigger:disabled {
+    opacity: 0.58;
+    cursor: default;
+}
+
+.ops-select-trigger:hover:not(:disabled),
+.ops-select.is-open .ops-select-trigger {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
+}
+
+.ops-select-trigger:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.ops-select-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ops-select-chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--text-faint);
+    transition: transform 120ms ease;
+}
+
+.ops-select.is-open .ops-select-chevron {
+    transform: rotate(180deg);
+}
+
+.ops-select-menu {
+    position: absolute;
+    z-index: 80;
+    top: calc(100% + 6px);
+    left: 0;
+    width: max(100%, min(360px, calc(100vw - 24px)));
+    max-height: min(300px, 45vh);
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-popover);
+    overscroll-behavior: contain;
+}
+
+.ops-select.is-dropup .ops-select-menu {
+    top: auto;
+    bottom: calc(100% + 6px);
+}
+
+.ops-select-menu[hidden] {
+    display: none;
+}
+
+.ops-select-option {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 34px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    text-align: left;
+    cursor: pointer;
+}
+
+.ops-select-option:hover,
+.ops-select-option.is-highlighted {
+    background: var(--surface-overlay);
+    color: var(--text);
+}
+
+.ops-select-option[aria-selected="true"] {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.ops-select-option:disabled {
+    opacity: 0.48;
+    cursor: default;
+}
+
+.ops-select-option-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ops-select-check {
+    visibility: hidden;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.ops-select-option[aria-selected="true"] .ops-select-check {
+    visibility: visible;
+}
+
+.ops-filter + .ops-select,
+.ops-select:has(.ops-filter) {
+    width: auto;
+    min-width: 132px;
+}
+
+/* Generic clickable table rows. */
+.ops-table tbody tr[data-href] {
+    cursor: pointer;
+}
+
+.ops-table tbody tr[data-href]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+}
+
+.version-chip,
+.branch-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 7px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.version-chip {
+    color: color-mix(in srgb, var(--text) 82%, var(--accent));
+}
+
+.branch-version {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+/* Resource detail foundation. */
+.ops-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.ops-detail-card {
+    min-width: 0;
+    min-height: 82px;
+    padding: 13px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-raised);
+}
+
+.ops-detail-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text-faint);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ops-detail-value {
+    min-width: 0;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.ops-detail-section {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+
+.ops-detail-section h2 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Hard-coded dark status surfaces need light-theme counterparts until ops.css is fully tokenized. */
+html[data-theme="light"] .ops-flash {
+    background: #ecf9f0;
+    border-color: #b9e4c6;
+    color: #1e6b38;
+}
+
+html[data-theme="light"] .ops-alert {
+    background: #fff0f1;
+    border-color: #f2c4c8;
+    color: #a32731;
+}
+
+html[data-theme="light"] .ops-alert-warning,
+html[data-theme="light"] .fleet-attention {
+    background: #fff9df;
+    border-color: #eadb89;
+    color: #66530c;
+}
+
+html[data-theme="light"] .fleet-attention-title,
+html[data-theme="light"] .fleet-attention-lede {
+    color: #66530c;
+}
+
+html[data-theme="light"] .fleet-attention-list li {
+    background: rgba(255, 255, 255, 0.58);
+}
+
+@media (max-width: 1024px) {
+    .ops-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .ops-sidebar {
+        position: static;
+        height: auto;
+        overflow: visible;
+    }
+
+    .ops-sidebar-foot {
+        display: block;
+    }
+
+    .ops-user-popover {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        width: auto;
+    }
+
+    .ops-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ops-content,
+    .ops-content-wide {
+        max-width: none;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ops-user-chevron,
+    .ops-select-chevron {
+        transition: none;
+    }
+}
