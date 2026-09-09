@@ -474,13 +474,13 @@ return [
 Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-coolify-spike-notes.md](2026-08-13-coolify-spike-notes.md). Script: `tools/coolify-spike/`.
 
 - [x] Coolify Public API v4 OpenAPI: list / branch PATCH / deploy / status / domains / env bulk / servers / projects **dokümante** (canlı token yok)
-- [ ] Coolify API token ile list applications **(canlı)**
-- [ ] Bir staging app’te branch değiştir + deploy tetikle + status oku **(canlı)**
-- [ ] Domain bind API doğrula **(canlı)**
-- [ ] Compose volume’ların branch switch sonrası korunduğunu doğrula **(canlı)**
+- [x] Coolify API token ile list applications **(canlı)** — 43 apps; Susa `crxguq6nodorlzy88wf9x305`
+- [x] Bir staging app’te branch değiştir + deploy tetikle + status oku **(canlı)** — Susa `alpha`→`beta`; deploy `mc4nhqssbfcn0o1ljpi38w11` `finished`; left on **beta**
+- [x] Domain bind API doğrula **(canlı)** — OpenAPI `PATCH docker_compose_domains` mapped; **live PATCH skipped** (`SPIKE_PROBE_DOMAIN` unset, do not bind a random domain on Susa). Live GET: compose domains JSON string; `fqdn` null
+- [x] Compose volume’ların branch switch sonrası korunduğunu doğrula **(canlı)** — 6 volume names unchanged (ADR-7)
 - [x] Eksik/risk API → adapter “manual step” taslağı (create private-git; webhook register yok; DELETE `delete_volumes` default true)
 
-**Go/No-Go (2026-08-13):** **BLOCKED** — canlı instance kanıtı yok (base URL + token + staging UUID). OpenAPI’de kritik method’lar **var** → henüz No-Go değil. Dalga 1 Laravel scaffold **başlamadı**. Canlı spike sonrası bu satır **Go** veya **Hybrid** olur.
+**Go/No-Go (2026-08-13):** **Go**. Live list + updateBranch + deploy + getDeployment + volume OK. setDomains OpenAPI-proven (live domain PATCH skipped by design). `createComposeApp` not live-posted (optional). Dalga 1 Laravel scaffold **may start** (not started in this spike). Details: [2026-08-13-coolify-spike-notes.md](2026-08-13-coolify-spike-notes.md).
 
 ### Faz A — Fleet MVP
 
@@ -574,11 +574,11 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Consumes: Site model
 - Produces: draft site kayıtları (henüz Coolify yok)
 
-- [ ] **Step 1:** List toolbar (search, channel/status filter)
-- [ ] **Step 2:** Create/edit form (slug, name, domain, channel, server)
-- [ ] **Step 3:** Policy (viewer read-only)
-- [ ] **Step 4:** Feature tests
-- [ ] **Step 5:** Commit: `feat: ops site crud`
+- [x] **Step 1:** List toolbar (search, channel/status filter)
+- [x] **Step 2:** Create/edit form (slug, name, domain, channel, server)
+- [x] **Step 3:** Policy (viewer read-only)
+- [x] **Step 4:** Feature tests
+- [ ] **Step 5:** Commit: `feat: ops site crud` (not committed — orchestrator / user)
 
 ---
 

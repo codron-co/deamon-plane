@@ -2,7 +2,7 @@
 
 > Stub — Task 4 sonrası doldurulacak.
 
-1. Plane → Sites → Create (slug, name, domain, channel)
+1. Plane → Sites → Create (slug, name, domain, channel, optional server UUID). Record stays **draft**; no Coolify call (Task 3).
 2. Provision → Coolify **Docker Compose** + `codron-co/deamon` + `docker-compose.coolify.yml` (Nixpacks yok)
 3. DNS → Coolify (service `app`)
 4. Health yeşil

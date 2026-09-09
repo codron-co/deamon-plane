@@ -20,7 +20,7 @@ function Read-DotEnv {
     param([string]$Path)
     $map = @{}
     if (-not (Test-Path $Path)) {
-        throw "Missing $Path — copy .env.example to .env and fill COOLIFY_BASE_URL + COOLIFY_API_TOKEN."
+        throw "Missing $Path - copy .env.example to .env and fill COOLIFY_BASE_URL + COOLIFY_API_TOKEN."
     }
     Get-Content $Path | ForEach-Object {
         $line = $_.Trim()
@@ -148,7 +148,7 @@ if ($r.ok) {
 }
 
 if ([string]::IsNullOrWhiteSpace($stagingUuid)) {
-    Write-Host 'SKIP get staging app — set COOLIFY_STAGING_APP_UUID'
+    Write-Host 'SKIP get staging app - set COOLIFY_STAGING_APP_UUID'
     $results.getApp = @{ ok = $false; skipped = $true }
 } else {
     Write-Host "== GET /applications/$stagingUuid"

@@ -4,6 +4,7 @@
 !.env.example
 !.env.*.example
 tools/coolify-spike/.env
+tools/coolify-spike/.last-run.json
 tools/coolify-spike/last-run.json
 
 # Local / agent scratch
@@ -12,9 +13,10 @@ tools/coolify-spike/last-run.json
 _tmp/
 /_tmp/
 
-# PHP / Node (Dalga 1+)
+# PHP / Node
 /vendor/
 /node_modules/
+/public/build
 /public/hot
 /public/storage
 /storage/*.key
@@ -22,9 +24,20 @@ _tmp/
 /storage/framework/cache/
 /storage/framework/sessions/
 /storage/framework/views/
+/storage/pail
+.phpunit.cache
 .phpunit.result.cache
+.phpactor.json
 Homestead.json
 Homestead.yaml
 auth.json
 npm-debug.log
 yarn-error.log
+*.log
+.DS_Store
+Thumbs.db
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed

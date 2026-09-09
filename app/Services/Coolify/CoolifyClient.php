@@ -1,0 +1,340 @@
+<?php
+
+namespace App\Services\Coolify;
+
+use App\Services\Coolify\Dto\CoolifyApplication;
+use App\Services\Coolify\Dto\CoolifyDeployment;
+use App\Services\Coolify\Dto\CoolifyDeployResult;
+use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
+use App\Services\Coolify\Dto\CoolifyProject;
+use App\Services\Coolify\Dto\CoolifyServer;
+use App\Services\Coolify\Dto\CoolifyStorages;
+use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
+use InvalidArgumentException;
+
+class CoolifyClient
+{
+    public function __construct(
+        private readonly ?CoolifyCredentials $credentials = null,
+    ) {}
+
+    public function credentials(): CoolifyCredentials
+    {
+        return $this->credentials ?? CoolifyCredentials::resolve();
+    }
+
+    /**
+     * @return Collection<int, CoolifyApplication>
+     */
+    public function listApps(?string $tag = null): Collection
+    {
+        $query = [];
+        if (filled($tag)) {
+            $query['tag'] = $tag;
+        }
+
+        $json = $this->request('GET', '/applications', $query);
+
+        return $this->mapList($json, CoolifyApplication::fromArray(...));
+    }
+
+    public function getApp(string $uuid): CoolifyApplication
+    {
+        $json = $this->request('GET', '/applications/'.$this->assertUuid($uuid));
+
+        return CoolifyApplication::fromArray($this->unwrapResource($json));
+    }
+
+    /**
+     * @return Collection<int, CoolifyServer>
+     */
+    public function listServers(): Collection
+    {
+        return $this->mapList($this->request('GET', '/servers'), CoolifyServer::fromArray(...));
+    }
+
+    /**
+     * @return Collection<int, CoolifyProject>
+     */
+    public function listProjects(): Collection
+    {
+        return $this->mapList($this->request('GET', '/projects'), CoolifyProject::fromArray(...));
+    }
+
+    /**
+     * Git + build_pack=dockercompose. Never POST /applications/dockercompose.
+     */
+    public function createComposeApp(CreateComposeAppRequest $request): CoolifyApplication
+    {
+        $json = $this->request('POST', $request->endpoint(), [], $request->toPayload());
+
+        return CoolifyApplication::fromArray($this->unwrapResource($json));
+    }
+
+    /**
+     * @param  array<string, string>|list<array{key: string, value: string}>  $pairs
+     * @return Collection<int, CoolifyEnvironmentVariable>
+     */
+    public function updateEnvs(string $uuid, array $pairs): Collection
+    {
+        $json = $this->request(
+            'PATCH',
+            '/applications/'.$this->assertUuid($uuid).'/envs/bulk',
+            [],
+            ['data' => $this->normalizeEnvPairs($pairs)],
+        );
+
+        if (! is_array($json)) {
+            return collect();
+        }
+
+        return $this->mapList($json, CoolifyEnvironmentVariable::fromArray(...));
+    }
+
+    /**
+     * @return Collection<int, CoolifyEnvironmentVariable>
+     */
+    public function listEnvs(string $uuid): Collection
+    {
+        return $this->mapList(
+            $this->request('GET', '/applications/'.$this->assertUuid($uuid).'/envs'),
+            CoolifyEnvironmentVariable::fromArray(...),
+        );
+    }
+
+    /**
+     * @param  string|array<int|string, mixed>  $fqdn
+     */
+    public function setDomains(string $uuid, string|array $fqdn, bool $forceDomainOverride = false): CoolifyApplication
+    {
+        $body = [
+            'docker_compose_domains' => CoolifyDomainParser::forPatch($fqdn),
+            'force_domain_override' => $forceDomainOverride,
+        ];
+
+        $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid), [], $body);
+
+        return CoolifyApplication::fromArray($this->unwrapResource($json));
+    }
+
+    public function updateBranch(string $uuid, string $branch): CoolifyApplication
+    {
+        $json = $this->request(
+            'PATCH',
+            '/applications/'.$this->assertUuid($uuid),
+            [],
+            ['git_branch' => $branch],
+        );
+
+        return CoolifyApplication::fromArray($this->unwrapResource($json));
+    }
+
+    public function deploy(string $uuid, bool $force = false): CoolifyDeployResult
+    {
+        $query = ['uuid' => $this->assertUuid($uuid)];
+        if ($force) {
+            $query['force'] = 'true';
+        }
+
+        $json = $this->request('POST', '/deploy', $query);
+
+        return CoolifyDeployResult::fromArray(is_array($json) ? $json : []);
+    }
+
+    public function getDeployment(string $deploymentUuid): CoolifyDeployment
+    {
+        $json = $this->request('GET', '/deployments/'.$this->assertUuid($deploymentUuid));
+
+        return CoolifyDeployment::fromArray($this->unwrapResource($json));
+    }
+
+    /**
+     * @return Collection<int, CoolifyDeployment>
+     */
+    public function listAppDeployments(string $appUuid, ?int $skip = null, ?int $take = null): Collection
+    {
+        $query = [];
+        if ($skip !== null) {
+            $query['skip'] = $skip;
+        }
+        if ($take !== null) {
+            $query['take'] = $take;
+        }
+
+        $json = $this->request('GET', '/deployments/applications/'.$this->assertUuid($appUuid), $query);
+
+        return $this->mapList($json, CoolifyDeployment::fromArray(...));
+    }
+
+    /**
+     * @return Collection<int, CoolifyDeployment>
+     */
+    public function listRunningDeployments(): Collection
+    {
+        return $this->mapList($this->request('GET', '/deployments'), CoolifyDeployment::fromArray(...));
+    }
+
+    public function listStorages(string $uuid): CoolifyStorages
+    {
+        $json = $this->request('GET', '/applications/'.$this->assertUuid($uuid).'/storages');
+
+        return CoolifyStorages::fromArray(is_array($json) ? $json : []);
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @param  array<string, mixed>|null  $body
+     */
+    private function request(string $method, string $path, array $query = [], ?array $body = null): mixed
+    {
+        $credentials = $this->credentials();
+
+        if ($credentials->baseUrl === '') {
+            throw new CoolifyApiException('Coolify base URL is not configured.', 400);
+        }
+
+        if (! $credentials->hasToken()) {
+            throw new CoolifyApiException('Coolify API token is not configured.', 401);
+        }
+
+        $pending = $this->http($credentials);
+
+        $response = match (strtoupper($method)) {
+            'GET' => $pending->get($path, $query),
+            'POST' => $query === []
+                ? $pending->post($path, $body ?? [])
+                : $pending->withQueryParameters($query)->post($path, $body ?? []),
+            'PATCH' => $pending->patch($path, $body ?? []),
+            default => throw new InvalidArgumentException("Unsupported Coolify HTTP method [{$method}]."),
+        };
+
+        return $this->decode($response, $credentials->token());
+    }
+
+    private function http(CoolifyCredentials $credentials): PendingRequest
+    {
+        return Http::withToken($credentials->token())
+            ->baseUrl($credentials->apiRoot())
+            ->acceptJson()
+            ->asJson()
+            ->timeout((int) config('ops.coolify.timeout', 30));
+    }
+
+    private function decode(Response $response, string $token): mixed
+    {
+        if ($response->failed()) {
+            throw CoolifyApiException::fromResponse($response, $token);
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(array<string, mixed>): T  $mapper
+     * @return Collection<int, T>
+     */
+    private function mapList(mixed $json, callable $mapper): Collection
+    {
+        $rows = $this->decodeList($json);
+
+        return collect($rows)
+            ->filter(static fn (mixed $row): bool => is_array($row))
+            ->values()
+            ->map(static fn (array $row) => $mapper($row));
+    }
+
+    /**
+     * @return list<mixed>
+     */
+    private function decodeList(mixed $json): array
+    {
+        if (! is_array($json)) {
+            return [];
+        }
+
+        if (array_is_list($json)) {
+            return $json;
+        }
+
+        foreach (['data', 'deployments'] as $key) {
+            if (isset($json[$key]) && is_array($json[$key])) {
+                return array_is_list($json[$key]) ? $json[$key] : array_values($json[$key]);
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function unwrapResource(mixed $json): array
+    {
+        if (! is_array($json)) {
+            throw new CoolifyApiException('Coolify API returned an unexpected payload.', 502);
+        }
+
+        if (isset($json['uuid']) || isset($json['deployment_uuid'])) {
+            return $json;
+        }
+
+        if (isset($json['data']) && is_array($json['data'])) {
+            return $json['data'];
+        }
+
+        return $json;
+    }
+
+    /**
+     * @param  array<string, string>|list<array{key: string, value: string}>  $pairs
+     * @return list<array{key: string, value: string}>
+     */
+    private function normalizeEnvPairs(array $pairs): array
+    {
+        if ($pairs === []) {
+            return [];
+        }
+
+        if (array_is_list($pairs)) {
+            $out = [];
+            foreach ($pairs as $pair) {
+                if (! is_array($pair) || ! isset($pair['key'])) {
+                    continue;
+                }
+
+                $out[] = [
+                    'key' => (string) $pair['key'],
+                    'value' => (string) ($pair['value'] ?? ''),
+                ];
+            }
+
+            return $out;
+        }
+
+        $out = [];
+        foreach ($pairs as $key => $value) {
+            $out[] = [
+                'key' => (string) $key,
+                'value' => (string) $value,
+            ];
+        }
+
+        return $out;
+    }
+
+    private function assertUuid(string $uuid): string
+    {
+        $uuid = trim($uuid);
+        if ($uuid === '' || str_contains($uuid, '/') || str_contains($uuid, '..')) {
+            throw new InvalidArgumentException('Coolify resource uuid is invalid.');
+        }
+
+        return $uuid;
+    }
+}

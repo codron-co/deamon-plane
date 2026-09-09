@@ -2,19 +2,39 @@
 
 CodRon **internal ops** paneli: Coolify üzerindeki Deamon müşteri sitelerini (fleet), kanal (`main` / `beta` / `alpha`), domain, deploy durumu ve (sonraki faz) git-bağlı tema mağazasını yönetir.
 
-Bu repo **Deamon CMS değildir.** CMS: [`codron-co/deamon`](https://github.com/codron-co/deamon). Plane ayrı Laravel uygulaması olarak burada gelişir.
+Bu repo **Deamon CMS değildir.** CMS: [`codron-co/deamon`](https://github.com/codron-co/deamon). Plane is a Laravel 12 ops app in this repository.
 
-## Başlangıç: subagent-driven build
+## Deploy (Coolify)
 
-Ürünü orkestratör + paralel subagent’larla inşa etmek için starter prompt’u yapıştır:
+Build pack **Docker Compose** → `docker-compose.coolify.yml` (app + own MySQL + Redis). Not Nixpacks. Not Dockerfile-only.
 
-**→ [.cursor/prompts/000_START-Plane-Orkestrasyon.md](.cursor/prompts/000_START-Plane-Orkestrasyon.md)**
+Steps: [docs/modules/deployment.md](docs/modules/deployment.md). Laravel scaffold (Task 0) is in tree — first Coolify **Deploy** can succeed once this branch has `composer.json` (image installs vendors in Docker).
 
-İndeks: [.cursor/README.md](.cursor/README.md) · kısa özet: [docs/subagent-orchestration.md](docs/subagent-orchestration.md)
+Local stack:
 
-Dalga 0 = Coolify API spike (Go/No-Go). Spike olmadan Laravel full scaffold yok.
+```bash
+cp .env.example .env
+php artisan key:generate
+docker compose --env-file .env up --build -d
+# http://localhost:8088/login   health: http://localhost:8088/up
+```
 
-**Coolify kurulumu:** Build pack **Docker Compose** → `docker-compose.coolify.yml` (app + kendi MySQL + Redis). Adımlar: [docs/modules/deployment.md](docs/modules/deployment.md). İlk yeşil deploy Laravel (Dalga 1) sonrası.
+## Local login
+
+After migrate + seed (entrypoint runs `migrate` on boot; seed once):
+
+```bash
+php artisan migrate --seed
+```
+
+Default **local** super_admin (from `.env.example`, not for production):
+
+- Email: `ops@localhost.test`
+- Password: `password`
+
+Override with `OPS_SEED_EMAIL` / `OPS_SEED_PASSWORD`. Leave those unset in production.
+
+Roles: `super_admin`, `operator`, `viewer` (viewer is read-only).
 
 ## Dokümantasyon
 
@@ -31,8 +51,9 @@ Dalga 0 = Coolify API spike (Go/No-Go). Spike olmadan Laravel full scaffold yok.
 ## Durum
 
 - Plan, kararlar ve **orkestrasyon prompt paketi**: hazır
-- Dalga 0: OpenAPI map + spike script + **Coolify Compose sözleşmesi** (`docker-compose.coolify.yml`) hazır; canlı Go/No-Go token bekliyor — [spike notes](docs/plans/2026-08-13-coolify-spike-notes.md)
-- Laravel uygulama iskeleti: henüz yok (Dalga 1 / Task 0 — Go/Hybrid sonrası)
+- Dalga 0: **Go** — [spike notes](docs/plans/2026-08-13-coolify-spike-notes.md)
+- Laravel 12 ops scaffold (Task 0): login, roles, denser shell, `config/ops.php`
+- Fleet schema (`sites` / deployments): Task 1 — not started
 - Kullanıcı modeli v1: yalnızca internal ops (müşteri self-service yok)
 
 ## İlişkili sistemler
@@ -46,3 +67,4 @@ Dalga 0 = Coolify API spike (Go/No-Go). Spike olmadan Laravel full scaffold yok.
 
 1. Starter: [.cursor/prompts/000_START-Plane-Orkestrasyon.md](.cursor/prompts/000_START-Plane-Orkestrasyon.md)
 2. SoT: [docs/plans/2026-08-13-deamon-plane.md](docs/plans/2026-08-13-deamon-plane.md)
+3. Tests: `php artisan test`

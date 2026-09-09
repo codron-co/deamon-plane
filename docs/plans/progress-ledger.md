@@ -4,25 +4,27 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 
 ## Dalga 0 — Discovery / Spike
 
-- Status: **in progress / BLOCKED on live Coolify credentials**
-- OpenAPI method map: `docs/plans/2026-08-13-coolify-spike-notes.md`
-- Spike script: `tools/coolify-spike/`
-- Go/Hybrid/No-Go: **not declared** (live proof missing)
-- Coolify Compose sözleşmesi (Dalga 0): `docker-compose.coolify.yml` + `Dockerfile` + `docker/` — **Laravel yok; ilk Deploy Task 0 sonrası**
-- Laravel create-project: **not started**
+- Status: **complete — Go**
+- OpenAPI + live proof: `docs/plans/2026-08-13-coolify-spike-notes.md`
+- Spike script: `tools/coolify-spike/` (read-only then `-Mutate` on Susa DEMO only)
+- Staging app: **Susa** `crxguq6nodorlzy88wf9x305` (`codron-co/deamon`, compose, left on **beta**)
+- Defaults: project Deamon `z8ocg8k04ww8osssccc088c0`; server localhost `no48ksggg0k8sk4o4w08gks8`
+- Go/Hybrid/No-Go: **Go** (list + updateBranch + deploy + getDeployment + volume OK; setDomains OpenAPI + skip live domain PATCH; createComposeApp skipped)
+- Coolify Compose sözleşmesi (Dalga 0): `docker-compose.coolify.yml` + `Dockerfile` + `docker/` — Laravel Task 0 scaffold present; first Deploy unblocked
+- Laravel create-project: **done** (Task 0 bootstrap — merged non-destructively)
 - CMS code in this repo: none
 - Mailcow: out of scope
-- Commit: none (user did not request)
+- Commit: `7d6d738 v0` plus this worktree (Dalga 0 notes + Task 0–3)
 
 ## Task 0–15
 
 | Task | Role | Status |
 |------|------|--------|
-| Spike | Dalga 0 | blocked — need COOLIFY_BASE_URL + token + staging UUID |
-| 0 bootstrap | BOOTSTRAP | not started (needs Go/Hybrid) |
-| 1 schema | SCHEMA | not started |
-| 2 Coolify client | COOLIFY-CLIENT | not started |
-| 3 site CRUD | UI-SITES | not started |
+| Spike | Dalga 0 | **complete — Go** |
+| 0 bootstrap | BOOTSTRAP | **done** (Laravel 12 + Fortify login + roles + denser shell + `config/ops.php`; no fleet tables) |
+| 1 schema | SCHEMA | **done** (sites/site_domains/deployments/audit_logs + enums/models/factories; no theme tables) |
+| 2 Coolify client | COOLIFY-CLIENT | **done** (CoolifyClient + DTOs + CoolifyApiException + ApplicationService; Http::fake unit tests; `coolify_settings` encrypted token; Settings Coolify partial + Test connection) |
+| 3 site CRUD | UI-SITES | **done** (draft Sites CRUD + policy + confirm modal + `SiteCrudTest`; no Coolify/provision) |
 | 4 provision | PROVISION | not started |
 | 5 channel | CHANNEL | not started |
 | 6 webhooks | WEBHOOKS-DEPLOY | not started |

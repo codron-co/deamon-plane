@@ -17,6 +17,7 @@ Müşteri CMS admin’i plane’e erişmez.
 | Channel downgrade | Confirm + version gate |
 | Plane erişimi | Az kullanıcı; 2FA; VPN/IP allowlist; `APP_DEBUG=false` |
 | Audit | Create/switch/domain/deploy/theme mutasyonları append-only |
+| Site CRUD | Viewer read-only; destroy = soft delete + confirm modal (`window.confirm` yok) |
 
 ## Blast radius
 

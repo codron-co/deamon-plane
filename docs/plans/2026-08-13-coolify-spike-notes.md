@@ -2,22 +2,20 @@
 
 **Date:** 2026-08-13  
 **Source of truth (API):** Coolify OpenAPI `v4.x` (`https://github.com/coollabsio/coolify/blob/v4.x/openapi.yaml`, servers: `{host}/api/v1`)  
-**Live instance:** **not exercised** — `COOLIFY_BASE_URL` / token / staging app UUID were not in env, repo, or user profile.
+**Live instance:** `https://dev.codron.cloud` (Coolify **4.3.1**) — read-only list + authorized mutate on **Susa DEMO** only.
 
-This file is secret-free. Tokens, env values, and production UUIDs must never be committed.
+This file is secret-free. Tokens and env **values** must never be committed. Staging/demo resource UUIDs below are operational IDs, not secrets. Do not copy production customer app UUIDs into git.
 
 ## Verdict (this pass)
 
 | Gate | Value |
 |------|--------|
-| **Go / Hybrid / No-Go** | **BLOCKED** — live proof missing (credentials + staging target) |
-| OpenAPI coverage | **Sufficient on paper** for list, branch update, deploy, deployment status, compose domains, env bulk, servers/projects |
-| Volume persistence (ADR-7) | **Risk noted, not live-proven** — see § Volume |
-| Laravel scaffold | **Not started** (Dalga 1 blocked until Go or Hybrid) |
+| **Go / Hybrid / No-Go** | **Go** — list + updateBranch + deploy + getDeployment OK; setDomains OpenAPI-proven (live PATCH skipped by design); volumes unchanged after `alpha`→`beta` redeploy |
+| OpenAPI coverage | Confirmed on live instance for list, GET app, storages, env keys, servers/projects, PATCH `git_branch`, POST `/deploy`, GET `/deployments/{uuid}` |
+| Volume persistence (ADR-7) | **OK (live)** — six persistent volume names identical before/after channel switch |
+| Laravel scaffold | **Not started** (Dalga 1 **may start** — this spike does not scaffold it) |
 
-**Not No-Go:** required methods exist in Coolify Public API v4. Absence of a token is an ops blocker, not an API gap.
-
-**Not Go / Hybrid yet:** Faz 0 acceptance 0.1–0.4 need a real staging call. Do not start Dalga 1 until this file’s Live proof section is filled and the orchestrator writes Go or Hybrid.
+**Left staging channel:** Susa remains on **`beta`** (was `alpha`). Site `https://susa.demo.codron.co/` `/up` and `/` returned HTTP 200 after deploy `finished`. Deamon Plane app `d6ovbjzxgpao23faam3vrcve` was **not** mutated.
 
 ---
 
@@ -35,7 +33,7 @@ Plane names ↔ Coolify HTTP. Paths are under `/api/v1`.
 
 | Plane method | HTTP | Notes |
 |--------------|------|--------|
-| `listApps(?tag)` | `GET /applications?tag=` | Array of `Application`. Filter fields: `uuid`, `name`, `git_branch`, `build_pack`, `fqdn`, `git_repository`. Tag query supports §18 “tek project + tag/slug”. |
+| `listApps(?tag)` | `GET /applications?tag=` | Array of `Application`. Filter fields: `uuid`, `name`, `git_branch`, `build_pack`, `fqdn`, `git_repository`. **Live:** compose apps often have `fqdn=null`; use `docker_compose_domains`. Tag query supports §18 “tek project + tag/slug”. |
 | `getApp(uuid)` | `GET /applications/{uuid}` | Full `Application`. |
 | `listServers()` | `GET /servers` | Bootstrap server picker. |
 | `listProjects()` | `GET /projects` | Bootstrap project picker. |
@@ -43,7 +41,7 @@ Plane names ↔ Coolify HTTP. Paths are under `/api/v1`.
 | ~~`POST /applications/dockercompose`~~ | deprecated | Docs: “use POST /services”. That path wants `docker_compose_raw` **without git** — **wrong** for Deamon customer sites. Do not use for provision. |
 | `updateEnvs(uuid, pairs)` | `PATCH /applications/{uuid}/envs/bulk` body `{ "data": [ { "key", "value" } ] }` | Also `POST /applications/{uuid}/envs` create; `PATCH .../envs` update one. Customer Coolify env: **only** `APP_KEY` + `DEAMON_SITE_NAME` (+ Coolify `SERVICE_*`). |
 | `listEnvs(uuid)` | `GET /applications/{uuid}/envs` | Import / rotate. Never log `value`. |
-| `setDomains(uuid, fqdn)` | `PATCH /applications/{uuid}` | Compose apps: **`docker_compose_domains`: `[{ "name": "app", "domain": "https://fqdn" }]`**. Also `domains` comma-separated. Conflict → HTTP 409-style payload: `force_domain_override=true` only with Super Admin + audit. |
+| `setDomains(uuid, fqdn)` | `PATCH /applications/{uuid}` | OpenAPI: compose **`docker_compose_domains`: `[{ "name": "app", "domain": "https://fqdn" }]`**. **Live GET shape (Susa):** JSON **string** object `{"app":{"domain":"https://susa.demo.codron.co,https://www.susa.demo.codron.co/"}}` — not an array; `Application.fqdn` is **null** for compose apps. Adapter must parse the string and read `app.domain`. Conflict → HTTP 409-style payload: `force_domain_override=true` only with Super Admin + audit. Live PATCH skipped on Susa (do not bind a random domain). |
 | `updateBranch(uuid, branch)` | `PATCH /applications/{uuid}` `{ "git_branch": "main\|beta\|alpha" }` | Channel switch. Allowlist in plane, not Coolify. |
 | `deploy(uuid, force?)` | `POST /deploy?uuid={uuid}&force=` | Response: `{ deployments: [ { resource_uuid, deployment_uuid, message } ] }`. |
 | `getDeployment(deploymentUuid)` | `GET /deployments/{uuid}` | Schema `ApplicationDeploymentQueue` (`status`, etc.). |
@@ -82,9 +80,11 @@ OpenAPI `Application.uuid` (string). Plane `sites.coolify_app_uuid` maps here. I
 
 ## Domain bind
 
-- Compose service name in `docker-compose.coolify.yml` is **`app`** (port expose 8080). Domain must attach to that service via `docker_compose_domains[].name = "app"`.
+- Compose service name in `docker-compose.coolify.yml` is **`app`** (port expose 8080). Domain must attach to that service via `docker_compose_domains` key **`app`**.
+- Live GET (Susa): `fqdn` is null; domains live only in `docker_compose_domains` (JSON string). Trailing slash on `www` host is present on the existing record — do not “fix” during spike.
 - `force_domain_override` default **false**. Conflict response includes `conflicts[]` with `domain`, `resource_name`, `resource_uuid`.
 - Plane: unique `primary_domain`; surface Coolify conflict; do not silently override.
+- **Live PATCH:** skipped (`SPIKE_PROBE_DOMAIN` unset). Do not bind a random domain on Susa.
 
 ---
 
@@ -121,9 +121,9 @@ Coolify typically **prefixes** compose volume names with the **application UUID*
 
 **DELETE trap:** `DELETE /applications/{uuid}` query `delete_volumes` defaults to **`true`**. Channel switch and retry must not call delete. Destroy/archive UI must confirm and pass `delete_volumes` explicitly.
 
-**Live proof still required:** after staging `alpha`↔`beta` redeploy, `GET /applications/{uuid}/storages` names unchanged + MySQL data / `/up` still healthy. Until then: **risk**, not fail.
+**Live proof (Susa DEMO, 2026-08-13):** PATCH `git_branch` `alpha`→`beta` + POST `/deploy` + deployment `mc4nhqssbfcn0o1ljpi38w11` → `finished`. `GET /applications/{uuid}/storages` names **unchanged** (6 persistent volumes). App status `running:healthy`. Compose generated volume names are **app-uuid prefixed** (`{uuid}_deamon-storage|themes|mysql|redis`). Two older hyphenated names (`{uuid}-deamon-themes`, `{uuid}-deamon-public-storage`) also remained — leftover, not wiped.
 
-If live test shows volumes recreated: Hybrid + manual checklist; do **not** “fix” with shared MySQL/Redis.
+If a future test shows volumes recreated: Hybrid + manual checklist; do **not** “fix” with shared MySQL/Redis.
 
 ---
 
@@ -161,30 +161,34 @@ Out of scope (not asked, not built): Mailcow, customer self-serve, ZIP themes in
 
 ---
 
-## Live proof (fill after `tools/coolify-spike/spike.ps1`)
+## Live proof (`tools/coolify-spike/spike.ps1`)
 
-Script: `tools/coolify-spike/spike.ps1` (read-only default; `-Mutate` staging only).
+Script: `tools/coolify-spike/spike.ps1` (read-only default; `-Mutate` staging only). Windows PowerShell 5: ASCII-only comments in the script (UTF-8 em-dash broke parse).
+
+**Defaults (confirmed live):** project **Deamon** `z8ocg8k04ww8osssccc088c0`; server **localhost** `no48ksggg0k8sk4o4w08gks8`. Coolify environment on Susa: `sns276euzsz2fprqg3xgfz17` (folder name `alpha` — independent of git channel).
+
+**Staging target:** name **Susa**, uuid `crxguq6nodorlzy88wf9x305`, repo `codron-co/deamon`, `build_pack=dockercompose`, `docker_compose_location=/docker-compose.coolify.yml`. List `fqdn` is null; host is `https://susa.demo.codron.co` via `docker_compose_domains`. Matches the earlier uuid; used live match.
+
+**Do not mutate:** Deamon Plane `d6ovbjzxgpao23faam3vrcve` (left `alpha`); production-looking `main`/`dockerfile` customer domains (izyem.com, basutsilo.com, etc.).
 
 | Check | Result | Evidence (redacted) |
 |-------|--------|---------------------|
-| Token list applications | pending | |
-| List servers / projects | pending | |
-| GET staging app shape (`uuid`, `git_branch`, `build_pack`) | pending | |
-| PATCH branch + POST deploy + GET deployment status | pending | |
-| Domain PATCH `docker_compose_domains` / conflict | pending | |
-| Storages names stable across redeploy | pending | |
-| Create git+compose (optional) | skipped until mutate + GH App uuid | |
+| Token list applications | **ok** | `GET /applications` → 43 apps; sample fields `uuid`, `name`, `git_branch`, `build_pack`, `fqdn` |
+| List servers / projects | **ok** | 1 server `localhost` `no48ksggg0k8sk4o4w08gks8`; 4 projects including Deamon `z8ocg8k04ww8osssccc088c0` |
+| GET staging app shape | **ok** | Susa `crxguq6nodorlzy88wf9x305`; before mutate `git_branch=alpha`; compose pack + `/docker-compose.coolify.yml` |
+| PATCH branch + POST deploy + GET deployment status | **ok** | PATCH `git_branch=beta` 200; POST `/deploy?uuid=` queued `mc4nhqssbfcn0o1ljpi38w11`; poll `in_progress` → `finished` (~3 min); commit `791af01e32708ac6bdd2162a298b20f59476f4da`; app left on **beta**, `running:healthy` |
+| Domain PATCH `docker_compose_domains` / conflict | **OpenAPI-proven + skip live probe** | `SPIKE_PROBE_DOMAIN` unset — did not bind a new domain on Susa. Live GET already shows compose domains JSON string (see adapter map). |
+| Storages names stable across redeploy | **ok** | Before = after: `{uuid}-deamon-themes`, `{uuid}-deamon-public-storage`, `{uuid}_deamon-storage`, `{uuid}_deamon-themes`, `{uuid}_deamon-mysql`, `{uuid}_deamon-redis`. Added/removed: none. `/up` HTTP 200, `/` HTTP 200. |
+| Create git+compose (optional) | **skipped** | No live `POST /applications/private-github-app` (would create a new resource). OpenAPI map unchanged. GH App uuid still optional in spike `.env`. |
+| Env list | **ok (keys only)** | Keys include `APP_KEY`, `DEAMON_SITE_NAME`, `SERVICE_URL_APP`, `SERVICE_FQDN_APP` (values never logged). Extra keys exist on this demo (DB/DeskRon/mobile) — Plane customer contract remains **only** `APP_KEY` + `DEAMON_SITE_NAME` (+ Coolify `SERVICE_*`). |
+
+`GET /deployments/applications/{uuid}` returns a large payload (includes logs). Adapter must not persist full logs; use `GET /deployments/{deployment_uuid}` for poll (`status`, `commit`).
 
 ---
 
-## How to unblock Go/Hybrid
+## Unblocked
 
-1. Coolify → Keys & Tokens → API token.  
-2. Pick **one staging** Docker Compose Deamon app (not a paying customer production site).  
-3. `tools/coolify-spike/.env` from `.env.example`.  
-4. Run `.\spike.ps1` then `.\spike.ps1 -Mutate` (staging `alpha`↔`beta`).  
-5. Paste redacted `last-run.json` summary into the table above.  
-6. Orchestrator sets **Go** or **Hybrid** and only then starts Dalga 1.
+Live Go recorded 2026-08-13. Orchestrator may start Dalga 1 Laravel scaffold. Do **not** start it from this spike. Token stays in gitignored `tools/coolify-spike/.env`.
 
 ---
 

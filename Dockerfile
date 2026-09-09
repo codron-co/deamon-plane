@@ -2,7 +2,7 @@
 #
 # Deamon Plane — Coolify Docker Compose runtime.
 # Build pack: Docker Compose → docker-compose.coolify.yml (not Nixpacks / Dockerfile-only).
-# Laravel (composer.json) is added in Dalga 1 / Task 0. First Coolify deploy succeeds after that.
+# Laravel 12 ops app (Task 0). First Coolify deploy needs composer.json on the branch.
 
 FROM composer:2.8 AS vendor
 

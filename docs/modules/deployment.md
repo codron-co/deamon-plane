@@ -25,14 +25,14 @@ Plane never shares MySQL/Redis with a customer site. Customer sites never share 
    - Required: `APP_KEY` (`php artisan key:generate --show` once; store in Coolify).
    - URL: Coolify `SERVICE_URL_APP` / `SERVICE_FQDN_APP` (Dalga 1 maps `APP_URL` ← `SERVICE_URL_APP`). Do not duplicate `APP_URL` unless overriding.
    - Do **not** set `DB_*` / `REDIS_*` / `APP_DEBUG` in Coolify — compose `environment:` owns them.
-   - After bootstrap: `COOLIFY_BASE_URL`, `COOLIFY_API_TOKEN` (fleet), later GitHub secrets.
+   - After bootstrap: `COOLIFY_BASE_URL` (and optional `COOLIFY_API_TOKEN` fallback). Ops Settings stores the fleet token encrypted in `coolify_settings`. Later GitHub secrets.
 9. **Persistent volumes** come from compose (`plane_storage`, `plane_mysql`, `plane_redis`). Do not bind-mount `/root`. Channel/redeploy must not delete the application (Coolify `DELETE` defaults `delete_volumes=true`).
 
 ## First deploy gate
 
-`Dockerfile` `COPY composer.json` — Laravel is **Dalga 1 / Task 0**. Creating the Coolify resource **now** is OK; **Deploy** succeeds only after `composer.json` exists on the tracked branch.
+`Dockerfile` `COPY composer.json` — Laravel 12 ops scaffold is in this repo (Task 0). Coolify **Deploy** can succeed on a branch that includes `composer.json` / `composer.lock`.
 
-Local check (after Task 0):
+Local check:
 
 ```bash
 docker compose -f docker-compose.coolify.yml --env-file .env up --build -d
@@ -40,6 +40,8 @@ docker compose -f docker-compose.coolify.yml --env-file .env up --build -d
 docker compose --env-file .env up --build -d
 curl -fsS http://localhost:8088/up
 ```
+
+Sign-in: `/login`. Seed a local super_admin with `php artisan db:seed` using `OPS_SEED_*` from `.env.example` (never a production password in git).
 
 ## Provisioning customer sites (Plane jobs — Dalga 2)
 
