@@ -11,7 +11,7 @@
             <ul class="fleet-attention-list">
                 @foreach ($dockerfilePackSites as $site)
                     <li>
-                        <a href="{{ route('ops.sites.edit', $site) }}">
+                        <a href="{{ route('ops.sites.show', $site) }}">
                             <span class="fleet-attention-name">{{ $site->name }}</span>
                             <code>{{ $site->primary_domain }}</code>
                         </a>
