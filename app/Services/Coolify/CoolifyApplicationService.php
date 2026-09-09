@@ -15,7 +15,7 @@ use InvalidArgumentException;
 
 /**
  * Thin wrappers over CoolifyClient for list / create / env / domain / branch / deploy.
- * Provision jobs and channel switch live in later tasks.
+ * Channel switch uses updateBranch + deploy only — never DELETE the application.
  */
 class CoolifyApplicationService
 {

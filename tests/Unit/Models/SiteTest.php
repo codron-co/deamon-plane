@@ -152,6 +152,33 @@ class SiteTest extends TestCase
         $this->assertTrue($site->canTransitionTo(SiteStatus::Error));
     }
 
+    public function test_can_switch_channel_requires_provisioned_active_or_error(): void
+    {
+        $draft = Site::factory()->create([
+            'status' => SiteStatus::Draft,
+            'coolify_app_uuid' => 'app-1',
+        ]);
+        $this->assertFalse($draft->canSwitchChannel());
+
+        $active = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'coolify_app_uuid' => 'app-1',
+        ]);
+        $this->assertTrue($active->canSwitchChannel());
+
+        $deploying = Site::factory()->create([
+            'status' => SiteStatus::Deploying,
+            'coolify_app_uuid' => 'app-1',
+        ]);
+        $this->assertFalse($deploying->canSwitchChannel());
+
+        $unprovisioned = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'coolify_app_uuid' => null,
+        ]);
+        $this->assertFalse($unprovisioned->canSwitchChannel());
+    }
+
     public function test_status_machine_rejects_illegal_transition(): void
     {
         $site = Site::factory()->create();

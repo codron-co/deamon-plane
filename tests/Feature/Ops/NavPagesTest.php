@@ -26,7 +26,7 @@ class NavPagesTest extends TestCase
 
         $this->actingAs($operator)->get(route('ops.fleet'))->assertOk();
         $this->actingAs($operator)->get(route('ops.sites'))->assertOk();
-        $this->actingAs($operator)->get(route('ops.themes'))->assertOk()->assertSee('Faz B', false);
+        $this->actingAs($operator)->get(route('ops.themes'))->assertOk()->assertSee('git-only', false);
         $this->actingAs($operator)->get(route('ops.settings'))->assertOk();
     }
 }

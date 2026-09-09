@@ -8,6 +8,7 @@ use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -110,6 +111,21 @@ class Site extends Model
         return $this->morphMany(AuditLog::class, 'subject');
     }
 
+    public function themeInstallations(): HasMany
+    {
+        return $this->hasMany(SiteThemeInstallation::class);
+    }
+
+    public function activeThemeInstallation(): HasOne
+    {
+        return $this->hasOne(SiteThemeInstallation::class)->where('is_active', true);
+    }
+
+    public function allowedThemes(): BelongsToMany
+    {
+        return $this->belongsToMany(Theme::class, 'theme_site_access')->withTimestamps();
+    }
+
     public function canTransitionTo(SiteStatus $next): bool
     {
         $current = $this->status ?? SiteStatus::Draft;
@@ -126,5 +142,61 @@ class Site extends Model
         }
 
         $this->status = $next;
+    }
+
+    public function canBeProvisioned(): bool
+    {
+        return in_array($this->status, [SiteStatus::Draft, SiteStatus::Error], true);
+    }
+
+    public function canSwitchChannel(): bool
+    {
+        if (blank($this->coolify_app_uuid)) {
+            return false;
+        }
+
+        return in_array($this->status, [SiteStatus::Active, SiteStatus::Error], true);
+    }
+
+    public function hasAgentSecret(): bool
+    {
+        $raw = $this->getRawOriginal('agent_secret_encrypted');
+        if (is_string($raw) && $raw !== '') {
+            return true;
+        }
+
+        $attribute = $this->attributes['agent_secret_encrypted'] ?? null;
+
+        return is_string($attribute) && $attribute !== '';
+    }
+
+    public function resolvedAgentBaseUrl(): ?string
+    {
+        $base = trim((string) ($this->agent_base_url ?? ''));
+        if ($base !== '') {
+            return rtrim($base, '/');
+        }
+
+        $host = trim((string) ($this->primary_domain ?? ''));
+        if ($host === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $host) === 1) {
+            return rtrim($host, '/');
+        }
+
+        return 'https://'.rtrim($host, '/');
+    }
+
+    public function reportedDeamonVersion(): ?string
+    {
+        $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
+        $version = $payload['deamon_version'] ?? $payload['version'] ?? null;
+        if (! is_string($version) || trim($version) === '') {
+            return null;
+        }
+
+        return trim($version);
     }
 }

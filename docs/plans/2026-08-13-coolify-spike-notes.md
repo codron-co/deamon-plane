@@ -129,7 +129,7 @@ If a future test shows volumes recreated: Hybrid + manual checklist; do **not** 
 
 ## Webhooks (Task 6 note)
 
-OpenAPI v4.x dump used for this spike has **no** “register Coolify→Plane webhook URL” application endpoint. Deploy visibility v1 can **poll** `GET /deployments/applications/{uuid}` (15–30s) as specified in the plan. If the instance UI supports outbound webhooks, document as optional Hybrid step (“Coolify’de aç” + paste Plane URL) — confirm on live instance.
+OpenAPI v4.x dump used for this spike has **no** “register Coolify→Plane webhook URL” application endpoint. Deploy visibility v1 polls `GET /deployments/{uuid}` (15–30s) and accepts `POST /webhooks/coolify`. Coolify **Notifications → Webhook** POSTs are **unsigned** today. Plane assumes HMAC-SHA256 on the raw body with header `X-Coolify-Signature` (also `X-Hub-Signature-256` / `X-Signature`) and secret `coolify_settings.webhook_secret` or `COOLIFY_WEBHOOK_SECRET`. Details: [coolify-webhooks.md](../modules/coolify-webhooks.md).
 
 ---
 

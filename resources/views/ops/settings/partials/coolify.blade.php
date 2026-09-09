@@ -105,6 +105,37 @@
             >
         </div>
 
+        <div class="field">
+            <span class="field-label">Deploy webhook URL</span>
+            <p class="field-hint">Paste this in Coolify Notifications → Webhook. Plane verifies HMAC; Coolify’s own notification POSTs are unsigned today — see <code>docs/modules/coolify-webhooks.md</code>.</p>
+            <input class="field-input" type="text" value="{{ $webhookUrl }}" readonly>
+        </div>
+
+        <div class="field">
+            <label class="field-label" for="coolify-webhook-secret">Webhook signing secret</label>
+            <p class="field-hint">
+                Encrypted. Header <code>X-Coolify-Signature: sha256=&lt;hmac&gt;</code> (also accepts <code>X-Hub-Signature-256</code>).
+                @if ($hasWebhookSecret)
+                    Secret configured. Leave blank to keep the current value.
+                @else
+                    Not configured. Env fallback is <code>COOLIFY_WEBHOOK_SECRET</code>.
+                @endif
+            </p>
+            <input
+                id="coolify-webhook-secret"
+                class="field-input"
+                type="password"
+                name="webhook_secret"
+                value=""
+                placeholder="{{ $hasWebhookSecret ? '••••••••' : 'HMAC secret' }}"
+                autocomplete="new-password"
+                @disabled(! $canWrite)
+            >
+            @error('webhook_secret')
+                <p class="field-hint" role="alert">{{ $message }}</p>
+            @enderror
+        </div>
+
         @if ($canWrite)
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save connection</button>

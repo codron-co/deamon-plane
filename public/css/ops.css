@@ -239,7 +239,7 @@ code {
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
 }
 
@@ -388,6 +388,25 @@ code {
     align-items: center;
     gap: 8px;
     margin-top: 4px;
+}
+
+.ops-panel {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    max-width: 520px;
+}
+
+.ops-panel h2 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ops-panel > p {
+    margin: 0 0 12px;
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
 .danger-zone {
@@ -624,6 +643,70 @@ code {
 
 .status-archived {
     color: var(--text-faint);
+}
+
+.status-finished {
+    color: #86efac;
+    border-color: #1f3d2c;
+}
+
+.status-failed {
+    color: var(--danger-text);
+    border-color: #4a1c20;
+}
+
+.status-cancelled,
+.status-queued {
+    color: var(--text-faint);
+}
+
+.status-in_progress {
+    color: #fde68a;
+    border-color: #3f3514;
+}
+
+.status-ok {
+    color: #86efac;
+    border-color: #1f3d2c;
+}
+
+.status-unhealthy,
+.status-stale {
+    color: var(--danger-text);
+    border-color: #4a1c20;
+}
+
+.status-needs_secret,
+.status-unknown {
+    color: #fde68a;
+    border-color: #3f3514;
+}
+
+.deployments-panel {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.deployments-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.deployments-panel h2 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.deployments-panel > .deployments-panel-head p,
+.deployments-panel > p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
 .ops-pagination {

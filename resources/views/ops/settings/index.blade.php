@@ -7,6 +7,8 @@
 
     @include('ops.settings.partials.coolify')
 
+    @include('ops.settings.partials.github')
+
     <section class="settings-panel" aria-labelledby="customer-defaults-heading">
         <h2 id="customer-defaults-heading">Customer site defaults</h2>
         <p class="field-hint">From environment. Provision jobs (later) create git + Docker Compose apps — never Nixpacks, never raw <code>POST /applications/dockercompose</code>.</p>

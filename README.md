@@ -53,7 +53,7 @@ Roles: `super_admin`, `operator`, `viewer` (viewer is read-only).
 - Plan, kararlar ve **orkestrasyon prompt paketi**: hazır
 - Dalga 0: **Go** — [spike notes](docs/plans/2026-08-13-coolify-spike-notes.md)
 - Laravel 12 ops scaffold (Task 0): login, roles, denser shell, `config/ops.php`
-- Fleet schema (`sites` / deployments): Task 1 — not started
+- Fleet schema (`sites` / deployments): Task 1 done; Coolify deploy webhooks + fleet KPI: Task 6 (HMAC `POST /webhooks/coolify`)
 - Kullanıcı modeli v1: yalnızca internal ops (müşteri self-service yok)
 
 ## İlişkili sistemler

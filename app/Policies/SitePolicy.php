@@ -31,4 +31,19 @@ class SitePolicy
     {
         return $user->canWriteOps();
     }
+
+    public function provision(User $user, Site $site): bool
+    {
+        return $user->canWriteOps();
+    }
+
+    public function switchChannel(User $user, Site $site): bool
+    {
+        return $user->canWriteOps();
+    }
+
+    public function checkHealth(User $user, Site $site): bool
+    {
+        return $user->canWriteOps();
+    }
 }

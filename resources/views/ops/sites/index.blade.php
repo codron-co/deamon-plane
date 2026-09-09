@@ -77,7 +77,7 @@
                                 <td><code>{{ $site->primary_domain }}</code></td>
                                 <td><span class="channel-chip">{{ $site->channel->value }}</span></td>
                                 <td><span class="status-chip status-{{ $site->status->value }}">{{ $site->status->value }}</span></td>
-                                <td class="muted">—</td>
+                                <td class="muted">{{ $site->activeThemeInstallation?->theme?->theme_id ?: '—' }}</td>
                                 <td class="ops-row-actions">
                                     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.edit', $site) }}">{{ auth()->user()?->can('update', $site) ? 'Edit' : 'View' }}</a>
                                     @can('delete', $site)

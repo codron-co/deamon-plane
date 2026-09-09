@@ -14,6 +14,10 @@ Task 2 client for Deamon Plane. Spike lock: [Coolify spike notes](../plans/2026-
 
 Do not call Coolify from tests with a live token. Use `Http::fake`. Never log `api_token` or env `value`.
 
+Provision (Task 4) consumes `CoolifyApplicationService` only — do not add HTTP mapping here. Flow: [provision-site.md](../runbooks/provision-site.md).
+
+Fleet import (Task 7) calls `listApps` only (`ops:import-coolify-apps`). It does not create apps, patch env, or deploy. Runbook: [import-coolify-apps.md](../runbooks/import-coolify-apps.md).
+
 ## Create path
 
 Git + `build_pack=dockercompose` + `docker_compose_location=docker-compose.coolify.yml`.
@@ -30,4 +34,4 @@ Live GET `docker_compose_domains` is often a **JSON string** object (`{"app":{"d
 
 ## Settings
 
-Ops **Settings → Coolify connection**: encrypted token save + Test connection (`listServers`). Env `COOLIFY_*` remains a fallback when the DB row is empty.
+Ops **Settings → Coolify connection**: encrypted token save + Test connection (`listServers`). Encrypted `webhook_secret` (HMAC for `POST /webhooks/coolify`) with env fallback `COOLIFY_WEBHOOK_SECRET`. Env `COOLIFY_*` remains a fallback when the DB row is empty. Deploy webhooks: [coolify-webhooks.md](coolify-webhooks.md).

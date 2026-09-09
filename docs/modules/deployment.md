@@ -25,7 +25,7 @@ Plane never shares MySQL/Redis with a customer site. Customer sites never share 
    - Required: `APP_KEY` (`php artisan key:generate --show` once; store in Coolify).
    - URL: Coolify `SERVICE_URL_APP` / `SERVICE_FQDN_APP` (Dalga 1 maps `APP_URL` ← `SERVICE_URL_APP`). Do not duplicate `APP_URL` unless overriding.
    - Do **not** set `DB_*` / `REDIS_*` / `APP_DEBUG` in Coolify — compose `environment:` owns them.
-   - After bootstrap: `COOLIFY_BASE_URL` (and optional `COOLIFY_API_TOKEN` fallback). Ops Settings stores the fleet token encrypted in `coolify_settings`. Later GitHub secrets.
+   - After bootstrap: `COOLIFY_BASE_URL` (and optional `COOLIFY_API_TOKEN` fallback). Ops Settings stores the fleet token and webhook HMAC secret encrypted in `coolify_settings`. `COOLIFY_WEBHOOK_SECRET` is the env fallback. See [coolify-webhooks.md](coolify-webhooks.md). Later GitHub secrets. CMS agent secret is **per customer site** (`CONTROL_PLANE_AGENT_SECRET`) — not a Plane env. See [agent-client.md](agent-client.md).
 9. **Persistent volumes** come from compose (`plane_storage`, `plane_mysql`, `plane_redis`). Do not bind-mount `/root`. Channel/redeploy must not delete the application (Coolify `DELETE` defaults `delete_volumes=true`).
 
 ## First deploy gate
@@ -51,7 +51,7 @@ Customer Coolify env: only `APP_KEY` + `DEAMON_SITE_NAME` (+ `SERVICE_*`). See C
 
 ## Access
 
-v1 internal ops: restrict Plane domain (VPN / IP allowlist / SSO — Task 15). Customer CMS admins do not use Plane.
+v1 internal ops: restrict Plane domain (VPN / Coolify IP allowlist / optional SSO) **and** optional `OPS_IP_ALLOWLIST` (comma-separated) in Plane. Checklist: [deploy-plane.md](../runbooks/deploy-plane.md). Customer CMS admins do not use Plane.
 
 ## Out of scope
 

@@ -65,7 +65,7 @@
 
 <div class="field">
     <label class="field-label" for="site_channel">Channel</label>
-    <p class="field-hint">Git branch allowlist. Switch on a live site is Task 5.</p>
+    <p class="field-hint">Git branch allowlist. Live sites switch from the Channel switch panel — not this field.</p>
     <select
         id="site_channel"
         class="field-input"
@@ -117,7 +117,7 @@
 @if ($site->exists)
     <div class="field">
         <span class="field-label">Status</span>
-        <p class="field-hint">Stays draft until provision (Task 4). Not editable here.</p>
+        <p class="field-hint">Draft and error sites can be provisioned. Not editable here.</p>
         <p class="status-chip status-{{ $site->status?->value }}">{{ $site->status?->value }}</p>
     </div>
 @endif

@@ -135,6 +135,30 @@ class CoolifySettingsTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_webhook_secret_is_encrypted_and_never_rendered(): void
+    {
+        $secret = 'plane-webhook-signing-secret';
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.settings.update'), [
+                'base_url' => 'https://coolify.example',
+                'webhook_secret' => $secret,
+            ])
+            ->assertRedirect();
+
+        $raw = DB::table('coolify_settings')->value('webhook_secret');
+        $this->assertNotSame($secret, $raw);
+        $this->assertSame($secret, CoolifySetting::current()->webhook_secret);
+        $this->assertArrayNotHasKey('webhook_secret', CoolifySetting::current()->toArray());
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.settings'))
+            ->assertOk()
+            ->assertSee('Webhook signing secret', false)
+            ->assertSee('/webhooks/coolify', false)
+            ->assertDontSee($secret, false);
+    }
+
     public function test_blank_token_on_save_keeps_existing_value(): void
     {
         CoolifySetting::factory()->create([

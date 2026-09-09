@@ -1,11 +1,53 @@
 # Runbook: Deploy Plane (Coolify Compose)
 
-SoT: [docs/modules/deployment.md](../modules/deployment.md)
+SoT: [docs/modules/deployment.md](../modules/deployment.md) · compose contract: repo-root `docker-compose.coolify.yml` + `Dockerfile` + `docker/` (do not replace with Nixpacks).
 
-1. Coolify → New Resource → Git `codron-co/deamon-plane`
-2. Build pack **Docker Compose** → file **`docker-compose.coolify.yml`**
-3. Domain on service **`app`**, health `/up` port **8080**
-4. Env: `APP_KEY` only at first; later `COOLIFY_*` / `GITHUB_*`
-5. Do not set DB/Redis in Coolify env (compose owns them)
-6. First green deploy: Laravel scaffold is on the branch (`composer.json`); image runs `composer install` + `artisan migrate` on boot
-7. Restrict access (IP/VPN) before importing the fleet
+Plane is **internal ops**. Restrict the domain before importing the customer fleet.
+
+## Coolify UI checklist (copy-paste)
+
+1. Coolify → **New Resource** → Git `codron-co/deamon-plane` (not `codron-co/deamon`).
+2. **Build pack:** Docker Compose. **Compose file:** `docker-compose.coolify.yml` (not `docker-compose.yml`).
+3. Branch: `main` (or `alpha`/`beta` for a staging Plane).
+4. Domain on compose service **`app`**, proxy port **8080**, health **`/up`**.
+5. Environment — copy [`.env.production.example`](../../.env.production.example):
+   - **Required:** `APP_KEY` (`php artisan key:generate --show` once; store only in Coolify).
+   - URL: Coolify `SERVICE_URL_APP` / `SERVICE_FQDN_APP`. Do not duplicate `APP_URL` unless overriding.
+   - Do **not** set `DB_*`, `REDIS_*`, or `APP_DEBUG=true`. Compose forces `APP_ENV=production`, `APP_DEBUG=false`, own MySQL+Redis (`plane_*` volumes).
+   - After first login: `COOLIFY_BASE_URL` (token is better in Settings, encrypted). Optional `COOLIFY_WEBHOOK_SECRET`, `GITHUB_*`, `OPS_IP_ALLOWLIST`.
+6. Persistent volumes come from compose (`plane_storage`, `plane_mysql`, `plane_redis`). Do not bind-mount `/root`. Do not `DELETE` the app (`delete_volumes` defaults true).
+7. Queue worker + scheduler already run in the image (`supervisord`: php-fpm, nginx, `queue:work`, `schedule:work`).
+8. First boot: entrypoint `artisan migrate`. Create the first `super_admin` **out of band** (do not set `OPS_SEED_PASSWORD` in production).
+9. Restrict access: Coolify IP allowlist / VPN / SSO in front of the Plane domain, **and** optional `OPS_IP_ALLOWLIST` (comma-separated) in Plane. See [security.md](../security.md).
+10. Login → Settings → Coolify Test connection → (Faz B) GitHub Test → Themes Sync catalog.
+11. Import fleet: `php artisan ops:import-coolify-apps` dry-run, then `--apply` — [import-coolify-apps.md](import-coolify-apps.md).
+12. Inject per-site agent secrets — [agent-secret-inject.md](agent-secret-inject.md).
+
+## Existing Coolify app (spike)
+
+Dalga 0 recorded Plane app uuid `d6ovbjzxgpao23faam3vrcve` as **exited/unhealthy**. **Do not blindly PATCH/deploy it.** Confirm in Coolify UI that it is the intended Plane resource, that the repo is `deamon-plane`, and that it is not a customer site.
+
+**Never mutate Susa** `crxguq6nodorlzy88wf9x305` or other customer apps from this runbook.
+
+Prefer completing this checklist in the Coolify UI over an API deploy from a laptop.
+
+## Staging smoke (after Plane is up)
+
+- [ ] `/up` 200 on the Plane domain
+- [ ] Ops login
+- [ ] Coolify test connection
+- [ ] Import dry-run count looks right
+- [ ] One staging CMS site: provision **or** imported + Check health (secret injected)
+- [ ] Channel switch volumes persist
+- [ ] Theme assign (opt-in) if CMS Task 11 is live
+- [ ] Audit rows visible; no secrets in the row
+
+Record the result in [progress-ledger.md](../plans/progress-ledger.md).
+
+## Access
+
+v1: few users, 2FA at the IdP if you have one, IP/VPN in front of Plane. Customer CMS admins do not use Plane.
+
+## Out of scope
+
+Mailcow, Nixpacks, shared DB with customers, embedding Plane inside a Deamon CMS container, live mutate of customer Coolify apps.

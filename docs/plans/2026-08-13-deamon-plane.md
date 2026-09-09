@@ -593,12 +593,12 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Consumes: CoolifyApplicationService
 - Produces: `coolify_app_uuid`, deployment rows, status transitions
 
-- [ ] **Step 1:** Generate APP_KEY + agent secret (encrypted)
-- [ ] **Step 2:** Job: create app → env → domain → deploy
-- [ ] **Step 3:** Poll/webhook status → `active`/`error`
-- [ ] **Step 4:** Audit log entries
-- [ ] **Step 5:** Feature test full happy path + failure path
-- [ ] **Step 6:** Commit: `feat: site provision via coolify`
+- [x] **Step 1:** Generate APP_KEY + agent secret (encrypted)
+- [x] **Step 2:** Job: create app → env → domain → deploy
+- [x] **Step 3:** Poll/webhook status → `active`/`error` (poll job; webhooks are Task 6)
+- [x] **Step 4:** Audit log entries
+- [x] **Step 5:** Feature test full happy path + failure path
+- [ ] **Step 6:** Commit: `feat: site provision via coolify` (orchestrator / user)
 
 ---
 
@@ -612,11 +612,11 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Consumes: Coolify `updateBranch` + `deploy`; Agent health (optional stub)
 - Produces: channel update + deployment record
 
-- [ ] **Step 1:** Policy matrix (confirm + force)
-- [ ] **Step 2:** Switch job + UI
-- [ ] **Step 3:** Block concurrent switches (`deploying`)
-- [ ] **Step 4:** Tests
-- [ ] **Step 5:** Commit: `feat: channel switch main beta alpha`
+- [x] **Step 1:** Policy matrix (confirm + force)
+- [x] **Step 2:** Switch job + UI
+- [x] **Step 3:** Block concurrent switches (`deploying`)
+- [x] **Step 4:** Tests
+- [ ] **Step 5:** Commit: `feat: channel switch main beta alpha` (orchestrator / user)
 
 ---
 
@@ -626,10 +626,10 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Create: webhook controller, deployment index partial
 - Test: webhook signature + status update tests
 
-- [ ] **Step 1:** Webhook endpoint + secret verify
-- [ ] **Step 2:** Map Coolify payloads → `deployments.status`
-- [ ] **Step 3:** Site detail Deployments tab
-- [ ] **Step 4:** Fleet dashboard KPI
+- [x] **Step 1:** Webhook endpoint + secret verify
+- [x] **Step 2:** Map Coolify payloads → `deployments.status`
+- [x] **Step 3:** Site detail Deployments tab
+- [x] **Step 4:** Fleet dashboard KPI
 - [ ] **Step 5:** Commit: `feat: deployment status and webhooks`
 
 ---
@@ -640,9 +640,9 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Create: `ops:import-coolify-apps` command
 - Test: unit with fake list payload
 
-- [ ] **Step 1:** Dry-run table output
-- [ ] **Step 2:** Upsert by coolify uuid / domain
-- [ ] **Step 3:** Runbook dokümanı
+- [x] **Step 1:** Dry-run table output
+- [x] **Step 2:** Upsert by coolify uuid / domain
+- [x] **Step 3:** Runbook dokümanı
 - [ ] **Step 4:** Commit: `feat: import coolify fleet`
 
 ---
@@ -670,9 +670,9 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Create: `SiteAgentClient`, `CheckSiteHealthJob`, UI health badge
 - Test: agent fake
 
-- [ ] **Step 1:** Client signing
-- [ ] **Step 2:** Schedule health poll (5–15 dk) + on-demand button
-- [ ] **Step 3:** Unhealthy attention on dashboard
+- [x] **Step 1:** Client signing
+- [x] **Step 2:** Schedule health poll (5–15 dk) + on-demand button
+- [x] **Step 3:** Unhealthy attention on dashboard
 - [ ] **Step 4:** Commit: `feat: site agent health checks`
 
 ---
@@ -683,10 +683,10 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Create: theme migrations/models, `GitHubAppClient`, `ThemeCatalogSync`
 - Test: catalog sync unit/feature
 
-- [ ] **Step 1:** Schema `themes`, `theme_site_access`, `site_theme_installations`
-- [ ] **Step 2:** List org repos with prefix filter
-- [ ] **Step 3:** Parse `theme.json` from default branch
-- [ ] **Step 4:** Themes index UI
+- [x] **Step 1:** Schema `themes`, `theme_site_access`, `site_theme_installations`
+- [x] **Step 2:** List org repos with prefix filter
+- [x] **Step 3:** Parse `theme.json` from default branch
+- [x] **Step 4:** Themes index UI
 - [ ] **Step 5:** Commit: `feat: theme catalog from github org`
 
 ---
@@ -710,9 +710,9 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Create: `ThemeRolloutService`, jobs, site Themes tab UI
 - Test: assign → agent fake → installation active
 
-- [ ] **Step 1:** Visibility checks (public/allowlist/private)
-- [ ] **Step 2:** Install + optional activate/sync
-- [ ] **Step 3:** Manual “Update now”
+- [x] **Step 1:** Visibility checks (public/allowlist/private)
+- [x] **Step 2:** Install + optional activate/sync
+- [x] **Step 3:** Manual “Update now”
 - [ ] **Step 4:** Commit: `feat: theme assign and install via agent`
 
 ---
@@ -723,10 +723,10 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Create: GitHub webhook controller, fan-out job, auto_update flag
 - Test: signature + fan-out limits
 
-- [ ] **Step 1:** Verify webhook secret
-- [ ] **Step 2:** Match repo → theme → installations
-- [ ] **Step 3:** `minimum_deamon_version` skip
-- [ ] **Step 4:** Rate limit concurrency
+- [x] **Step 1:** Verify webhook secret
+- [x] **Step 2:** Match repo → theme → installations
+- [x] **Step 3:** `minimum_deamon_version` skip
+- [x] **Step 4:** Rate limit concurrency
 - [ ] **Step 5:** Commit: `feat: theme push auto rollout`
 
 ---
@@ -737,10 +737,10 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 - Create: `docs/security.md`, runbooks, redaction helpers
 - Test: secret not in logs (unit)
 
-- [ ] **Step 1:** Audit tüm mutasyonlarda
-- [ ] **Step 2:** IP allowlist opsiyonel middleware
-- [ ] **Step 3:** Token rotation runbook
-- [ ] **Step 4:** Backup reminder copy on channel switch
+- [x] **Step 1:** Audit tüm mutasyonlarda
+- [x] **Step 2:** IP allowlist opsiyonel middleware
+- [x] **Step 3:** Token rotation runbook
+- [x] **Step 4:** Backup reminder copy on channel switch
 - [ ] **Step 5:** Commit: `docs: security and ops runbooks`
 
 ---
@@ -750,10 +750,10 @@ Spike notları (OpenAPI map + adapter imzaları + §18 kilit): [2026-08-13-cooli
 **Files:**
 - Modify: `docs/modules/deployment.md`, `docs/runbooks/deploy-plane.md` — **mevcut** `Dockerfile` / `docker-compose.coolify.yml` ezme
 
-- [ ] **Step 1:** Coolify’de Plane app: Docker Compose + `docker-compose.coolify.yml` (kendi MySQL+Redis)
-- [ ] **Step 2:** Restrict access (SSO/VPN/IP)
-- [ ] **Step 3:** Import 35 sites dry-run → apply
-- [ ] **Step 4:** Smoke: 1 staging CMS site provision + channel switch
+- [x] **Step 1:** Coolify’de Plane app: Docker Compose + `docker-compose.coolify.yml` (kendi MySQL+Redis) — compose contract complete; **live deploy skipped** (spike app unhealthy / high risk)
+- [x] **Step 2:** Restrict access (SSO/VPN/IP) — docs + `OPS_IP_ALLOWLIST`
+- [ ] **Step 3:** Import 35 sites dry-run → apply — operator on wake
+- [ ] **Step 4:** Smoke: 1 staging CMS site provision + channel switch — operator on wake
 - [ ] **Step 5:** Commit: `chore: production deploy docs for control plane`
 
 ---

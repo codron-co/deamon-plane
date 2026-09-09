@@ -22,6 +22,7 @@ class CoolifySettingFactory extends Factory
             'default_server_uuid' => 'srv_test',
             'github_app_uuid' => null,
             'private_key_uuid' => null,
+            'webhook_secret' => null,
         ];
     }
 }

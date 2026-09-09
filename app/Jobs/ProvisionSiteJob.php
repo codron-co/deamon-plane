@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Enums\SiteStatus;
+use App\Models\Site;
+use App\Services\Sites\SiteProvisioner;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
+
+class ProvisionSiteJob implements ShouldBeUnique, ShouldQueue
+{
+    use Queueable;
+
+    public int $tries = 1;
+
+    public int $timeout = 120;
+
+    public int $uniqueFor = 3600;
+
+    public function __construct(
+        public readonly string $siteId,
+        public readonly ?int $actorUserId = null,
+        public readonly ?string $ip = null,
+    ) {}
+
+    public function uniqueId(): string
+    {
+        return $this->siteId;
+    }
+
+    public function handle(SiteProvisioner $provisioner): void
+    {
+        $site = Site::query()->find($this->siteId);
+        if ($site === null || $site->status !== SiteStatus::Provisioning) {
+            return;
+        }
+
+        try {
+            $provisioner->provisionOnCoolify($site, $this->actorUserId, $this->ip);
+        } catch (Throwable $exception) {
+            $fresh = $site->fresh() ?? $site;
+            $provisioner->markFailed(
+                $fresh,
+                $provisioner->safeFailureMessage($fresh, $exception),
+                $fresh->deployments()->latest('id')->first(),
+                $this->actorUserId,
+                $this->ip,
+            );
+        }
+    }
+}

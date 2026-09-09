@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
 use App\Models\CoolifySetting;
+use App\Models\GithubSetting;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyClient;
 use App\Services\Coolify\CoolifyCredentials;
@@ -17,6 +18,7 @@ class SettingsController extends Controller
     {
         $settings = CoolifySetting::current();
         $credentials = CoolifyCredentials::resolve($settings);
+        $github = GithubSetting::current();
 
         return view('ops.settings.index', [
             'settings' => $settings,
@@ -26,9 +28,20 @@ class SettingsController extends Controller
             'githubAppUuid' => $settings->github_app_uuid,
             'privateKeyUuid' => $settings->private_key_uuid,
             'hasToken' => $credentials->hasToken(),
+            'hasWebhookSecret' => $settings->hasWebhookSecret() || filled(config('ops.coolify.webhook_secret')),
+            'webhookUrl' => url('/webhooks/coolify'),
             'composeFile' => config('ops.deamon.compose_file'),
             'repository' => config('ops.deamon.repository'),
             'canWrite' => request()->user()?->can('ops.write') ?? false,
+            'githubOrg' => $github->org ?: config('ops.themes.org'),
+            'githubHasToken' => $github->hasToken() || filled(config('ops.github.token')),
+            'githubHasApp' => $github->hasAppCredentials()
+                || (filled(config('ops.github.app_id')) && filled(config('ops.github.private_key'))),
+            'githubHasWebhookSecret' => $github->hasWebhookSecret() || filled(config('ops.github.webhook_secret')),
+            'githubAppId' => $github->app_id ?: config('ops.github.app_id'),
+            'githubInstallationId' => $github->installation_id ?: config('ops.github.installation_id'),
+            'githubWebhookUrl' => url('/webhooks/github'),
+            'themeRepoPrefix' => config('ops.themes.repo_prefix'),
         ]);
     }
 
@@ -43,6 +56,7 @@ class SettingsController extends Controller
             'default_server_uuid' => ['nullable', 'string', 'max:64'],
             'github_app_uuid' => ['nullable', 'string', 'max:64'],
             'private_key_uuid' => ['nullable', 'string', 'max:64'],
+            'webhook_secret' => ['nullable', 'string', 'max:2000'],
             'ack' => ['sometimes', 'boolean'],
         ]);
 
@@ -55,6 +69,10 @@ class SettingsController extends Controller
 
         if (filled($validated['api_token'] ?? null)) {
             $settings->api_token = $validated['api_token'];
+        }
+
+        if (filled($validated['webhook_secret'] ?? null)) {
+            $settings->webhook_secret = $validated['webhook_secret'];
         }
 
         $settings->save();

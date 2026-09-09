@@ -55,4 +55,30 @@ class Deployment extends Model
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
+
+    public function shortSha(): string
+    {
+        if (blank($this->commit_sha)) {
+            return '';
+        }
+
+        return substr((string) $this->commit_sha, 0, 7);
+    }
+
+    public function durationLabel(): string
+    {
+        if ($this->started_at === null) {
+            return '—';
+        }
+
+        $seconds = (int) $this->started_at->diffInSeconds($this->finished_at ?? now());
+        if ($seconds < 60) {
+            return $seconds.'s';
+        }
+
+        $minutes = intdiv($seconds, 60);
+        $remain = $seconds % 60;
+
+        return $remain === 0 ? $minutes.'m' : $minutes.'m '.$remain.'s';
+    }
 }

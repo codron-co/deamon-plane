@@ -143,6 +143,11 @@
         }
 
         if (form.dataset.confirmApproved === 'true') {
+            form.querySelectorAll('input[name="confirmed"]').forEach((input) => {
+                if (input instanceof HTMLInputElement) {
+                    input.value = '1';
+                }
+            });
             delete form.dataset.confirmApproved;
 
             return;

@@ -17,10 +17,15 @@
 - [Decisions (ADR)](decisions/README.md)
 - [Security](security.md)
 - [Related infra (Mailcow vb.)](related-infra.md) — Mailcow plane v1 **out of scope**
-- [Ops Sites CRUD](modules/ops-sites.md) — draft desired state; no Coolify calls
+- [Ops Sites CRUD](modules/ops-sites.md) — draft desired state + provision POST + channel switch
 - [Deployment (Coolify Compose)](modules/deployment.md)
 - [Coolify HTTP adapter](modules/coolify-client.md)
-- [Runbooks](runbooks/README.md) — deploy-plane / provision / channel-switch / theme-rollout
+- [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC + deployments UI + fleet KPI
+- [Site agent client](modules/agent-client.md) — HMAC health poll + version gate + unhealthy KPI
+- [Theme catalog](modules/theme-catalog.md) — GitHub `deamon-theme-*` sync (no ZIP)
+- [Theme agent client](modules/theme-agent-client.md) — assign via CMS `X-Deamon-*` HMAC
+- [GitHub theme webhooks](modules/github-webhooks.md) — distinct from Coolify deploy webhooks
+- [Runbooks](runbooks/README.md) — deploy-plane / provision / import / channel-switch / agent-secret-inject / theme-rollout / token-rotation
 
 ## Sınır
 
