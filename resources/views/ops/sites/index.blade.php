@@ -15,16 +15,10 @@
         <form method="GET" action="{{ route('ops.sites') }}" class="ops-list-toolbar" data-ops-list-toolbar>
             <label class="ops-search">
                 <span class="visually-hidden">Search sites</span>
-                <input
-                    type="search"
-                    name="q"
-                    value="{{ $search }}"
-                    placeholder="Search name, slug, domain"
-                    autocomplete="off"
-                >
+                <input type="search" name="q" value="{{ $search }}" placeholder="Search name, slug, domain" autocomplete="off">
             </label>
-            <select name="channel" class="field-input ops-filter" data-ops-list-filter aria-label="Channel">
-                <option value="">All channels</option>
+            <select name="channel" class="field-input ops-filter" data-ops-list-filter aria-label="Repo branch">
+                <option value="">All branches</option>
                 @foreach ($channels as $channelOption)
                     <option value="{{ $channelOption }}" @selected($channel === $channelOption)>{{ $channelOption }}</option>
                 @endforeach
@@ -43,7 +37,7 @@
         @if ($sites->isEmpty() && ! $filtersActive)
             <div class="empty-panel">
                 <h2>No sites yet</h2>
-                <p>Create a draft with slug, domain, and channel. Provisioning against Coolify is Task 4 — this list is desired state only.</p>
+                <p>Create a draft with slug, domain, and repo branch. Provisioning against Coolify is Task 4 — this list is desired state only.</p>
                 @if ($canCreate)
                     <a class="btn btn-primary" href="{{ route('ops.sites.create') }}">New site</a>
                 @endif
@@ -61,7 +55,7 @@
                         <tr>
                             <th>Site</th>
                             <th>Domain</th>
-                            <th>Channel</th>
+                            <th>Repo branch</th>
                             <th>Status</th>
                             <th>Theme</th>
                             <th></th>
@@ -69,10 +63,11 @@
                     </thead>
                     <tbody>
                         @foreach ($sites as $site)
-                            <tr>
+                            @php($reportedVersion = $site->reportedDeamonVersion())
+                            <tr data-href="{{ route('ops.sites.show', $site) }}" tabindex="0">
                                 <td>
                                     <div class="site-name-row">
-                                        <a class="site-name" href="{{ route('ops.sites.edit', $site) }}">{{ $site->name }}</a>
+                                        <a class="site-name" href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
                                         @if ($site->hasDockerfileBuildPackWarning())
                                             <span class="status-chip status-dockerfile">Dockerfile (eski pack)</span>
                                         @endif
@@ -80,19 +75,21 @@
                                     <div class="site-slug">{{ $site->slug }}</div>
                                 </td>
                                 <td><code>{{ $site->primary_domain }}</code></td>
-                                <td><span class="channel-chip">{{ $site->channel->value }}</span></td>
+                                <td>
+                                    <div class="branch-version">
+                                        <span class="branch-chip">{{ $site->channel->value }}</span>
+                                        <span class="version-chip">{{ $reportedVersion ?: 'Unknown' }}</span>
+                                    </div>
+                                </td>
                                 <td><span class="status-chip status-{{ $site->status->value }}">{{ $site->status->value }}</span></td>
                                 <td class="muted">{{ $site->activeThemeInstallation?->theme?->theme_id ?: '—' }}</td>
                                 <td class="ops-row-actions">
-                                    <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.edit', $site) }}">{{ auth()->user()?->can('update', $site) ? 'Edit' : 'View' }}</a>
+                                    <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">View</a>
+                                    @can('update', $site)
+                                        <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.edit', $site) }}">Edit</a>
+                                    @endcan
                                     @can('delete', $site)
-                                        <form
-                                            method="POST"
-                                            action="{{ route('ops.sites.destroy', $site) }}"
-                                            data-confirm="Archive {{ $site->name }}? This soft-deletes the Plane record. Coolify is not contacted."
-                                            data-confirm-title="Delete site"
-                                            data-confirm-label="Delete"
-                                        >
+                                        <form method="POST" action="{{ route('ops.sites.destroy', $site) }}" data-confirm="Archive {{ $site->name }}? This soft-deletes the Plane record. Coolify is not contacted." data-confirm-title="Delete site" data-confirm-label="Delete">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-ghost btn-sm btn-danger-text">Delete</button>

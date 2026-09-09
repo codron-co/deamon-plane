@@ -30,7 +30,7 @@
                 </thead>
                 <tbody>
                     @foreach ($connections as $connection)
-                        <tr>
+                        <tr data-href="{{ route('ops.coolify.show', $connection) }}" tabindex="0">
                             <td>
                                 <a class="site-name" href="{{ route('ops.coolify.show', $connection) }}">{{ $connection->name }}</a>
                                 @if ($connection->is_default)

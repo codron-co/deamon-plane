@@ -22,9 +22,16 @@ Plane chats stay small. Read only what the current Plane task needs.
 - [.cursor/README.md](.cursor/README.md) — Plane prompt index
 - [.cursor/prompts/000_START-Plane-Orkestrasyon.md](.cursor/prompts/000_START-Plane-Orkestrasyon.md) — orchestrator starter
 
+## Task-specific local skills
+
+- Plane UI/UX, Blade/CSS/vanilla JS, layout, tables, forms, themes, i18n and interaction primitives: [.agents/skills/plane-ui-ux/SKILL.md](.agents/skills/plane-ui-ux/SKILL.md)
+
+This Plane-specific skill is the only UI skill routed from this repo. Do not copy CMS `.agents/skills/**` into Plane.
+
 ## Pointers (one line; do not paste specs)
 
 - Plan / ledger: [docs/plans/2026-08-13-deamon-plane.md](docs/plans/2026-08-13-deamon-plane.md), [docs/plans/progress-ledger.md](docs/plans/progress-ledger.md)
+- UI/UX remediation: [docs/plans/2026-09-10-ui-ux-remediation.md](docs/plans/2026-09-10-ui-ux-remediation.md)
 - Scope: [.cursor/prompts/referans/_Scope-Constraints.md](.cursor/prompts/referans/_Scope-Constraints.md)
 - Security: [docs/security.md](docs/security.md)
 - Deploy: [docs/modules/deployment.md](docs/modules/deployment.md), [docs/runbooks/README.md](docs/runbooks/README.md)
@@ -37,4 +44,4 @@ Plane chats stay small. Read only what the current Plane task needs.
 - Multi-tenant SaaS / marketplace / customer theme ZIP upload: out of scope
 - Mailcow and other related-infra items: see [docs/related-infra.md](docs/related-infra.md) (plane v1 out of scope unless a task says otherwise)
 - Never invent CMS modules, theme stacks, or admin Blade/Inertia work here
-- Do not copy CMS `AGENTS.md` or `.agents/skills/**` into this repo
+- Do not copy CMS `AGENTS.md` or CMS `.agents/skills/**` into this repo

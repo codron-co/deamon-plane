@@ -1,15 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Fleet') — {{ config('app.name') }}</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <script>
+        (function () {
+            try {
+                var theme = window.localStorage.getItem('plane-theme');
+                if (theme === 'light' || theme === 'semidark' || theme === 'dark') {
+                    document.documentElement.dataset.theme = theme;
+                }
+            } catch (error) {
+                /* Keep the dark default when storage is unavailable. */
+            }
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/ops.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/ops-ui.css') }}">
 </head>
 <body class="ops-app">
     <div class="ops-shell">
@@ -46,15 +59,45 @@
             </nav>
 
             <div class="ops-sidebar-foot">
-                @php($role = auth()->user()?->opsRole())
-                <div class="ops-user">
-                    <span class="ops-user-name">{{ auth()->user()?->name }}</span>
-                    <span class="ops-user-role">{{ $role?->label() ?? 'No role' }}</span>
-                </div>
-                <form method="POST" action="{{ url('/logout') }}">
-                    @csrf
-                    <button type="submit" class="ops-logout">Sign out</button>
-                </form>
+                @php
+                    $opsUser = auth()->user();
+                    $role = $opsUser?->opsRole();
+                    $initial = $opsUser?->name ? mb_strtoupper(mb_substr(trim($opsUser->name), 0, 1)) : '?';
+                @endphp
+                <details class="ops-user-menu" data-user-menu>
+                    <summary class="ops-user-trigger" aria-label="Open user menu">
+                        <span class="ops-user-avatar" aria-hidden="true">{{ $initial }}</span>
+                        <span class="ops-user-copy">
+                            <strong>{{ $opsUser?->name }}</strong>
+                            <span>{{ $role?->label() ?? 'No role' }}</span>
+                        </span>
+                        <svg class="ops-user-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </summary>
+                    <div class="ops-user-popover">
+                        <div class="ops-user-popover-head">
+                            <strong>{{ $opsUser?->name }}</strong>
+                            <span>{{ $opsUser?->email }}</span>
+                        </div>
+
+                        <a class="ops-menu-link" href="{{ route('ops.settings') }}">Settings</a>
+
+                        <div class="ops-menu-section">
+                            <span class="ops-menu-label">Appearance</span>
+                            <div class="ops-theme-choices" role="group" aria-label="Appearance">
+                                <button class="ops-theme-choice" type="button" data-theme-value="light" aria-pressed="false">Light</button>
+                                <button class="ops-theme-choice" type="button" data-theme-value="semidark" aria-pressed="false">Semi-dark</button>
+                                <button class="ops-theme-choice" type="button" data-theme-value="dark" aria-pressed="false">Dark</button>
+                            </div>
+                        </div>
+
+                        <div class="ops-menu-section">
+                            <form method="POST" action="{{ url('/logout') }}">
+                                @csrf
+                                <button type="submit" class="ops-menu-button">Sign out</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
             </div>
         </aside>
 
@@ -81,6 +124,7 @@
     </div>
     @include('ops.partials.confirm-modal')
     <script src="{{ asset('js/ops-confirm.js') }}" defer></script>
+    <script src="{{ asset('js/ops-ui.js') }}" defer></script>
     @yield('scripts')
 </body>
 </html>
