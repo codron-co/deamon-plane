@@ -272,6 +272,82 @@ code {
     word-break: break-all;
 }
 
+.fleet-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.fleet-attention {
+    background: #1a1608;
+    border: 1px solid #5c4a14;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+.fleet-attention-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.fleet-attention-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fde68a;
+}
+
+.fleet-attention-lede {
+    margin: 4px 0 0;
+    color: #c4b572;
+    font-size: 12px;
+    max-width: 52ch;
+}
+
+.fleet-attention-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+}
+
+.fleet-attention-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 36px;
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    background: rgba(8, 10, 10, 0.35);
+}
+
+.fleet-attention-list a {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.fleet-attention-name {
+    font-weight: 500;
+    color: var(--text);
+}
+
+.fleet-attention-list a:hover .fleet-attention-name {
+    color: #fde68a;
+}
+
+.fleet-attention-list code {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .empty-panel {
     background: var(--surface-raised);
     border: 1px solid var(--border);
@@ -326,6 +402,12 @@ code {
     border: 1px solid #4a1c20;
     color: #fca5a5;
     font-size: 13px;
+}
+
+.ops-alert-warning {
+    background: #2a2110;
+    border-color: #5c4a14;
+    color: #fde68a;
 }
 
 .ops-form {
@@ -582,6 +664,13 @@ code {
     background: var(--surface-overlay);
 }
 
+.site-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .site-name {
     font-weight: 500;
 }
@@ -619,6 +708,12 @@ code {
     color: var(--text-muted);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
+}
+
+.status-dockerfile {
+    color: #fde68a;
+    border-color: #3f3514;
+    background: #1f1a0a;
 }
 
 .status-draft {
@@ -879,6 +974,10 @@ code {
 @media (max-width: 1024px) {
     .kpi-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .fleet-body {
+        grid-template-columns: 1fr;
     }
 }
 

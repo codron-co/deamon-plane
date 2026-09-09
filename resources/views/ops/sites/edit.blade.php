@@ -7,6 +7,14 @@
 @endsection
 
 @section('content')
+    @if ($site->hasDockerfileBuildPackWarning())
+        <p class="ops-alert ops-alert-warning" role="status">
+            Coolify build pack is <strong>dockerfile</strong>, not <strong>dockercompose</strong>.
+            Provision and channel switch still use the existing app UUID.
+            Migrate this Coolify app to Docker Compose later; do not treat dockerfile as a skip.
+        </p>
+    @endif
+
     <p class="page-lede">
         Desired state for <code>{{ $site->slug }}</code>.
         @if ($readonly)

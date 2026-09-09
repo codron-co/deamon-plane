@@ -23,7 +23,17 @@ class CoolifyFleetImporter
      */
     public function plan(Collection $apps): Collection
     {
-        return $apps->map(fn (CoolifyApplication $app): ImportPlanRow => $this->planApp($app))->values();
+        $claimedHosts = [];
+
+        return $apps->map(function (CoolifyApplication $app) use (&$claimedHosts): ImportPlanRow {
+            $row = $this->planApp($app, $claimedHosts);
+
+            if ($row->willWrite() && filled($row->host)) {
+                $claimedHosts[$row->host] = $row->uuid;
+            }
+
+            return $row;
+        })->values();
     }
 
     /**
@@ -43,16 +53,26 @@ class CoolifyFleetImporter
                 continue;
             }
 
-            DB::transaction(function () use ($row, &$created, &$updated): void {
-                if ($row->action === ImportPlanRow::ACTION_CREATE) {
-                    $this->createSite($row);
-                    $created++;
+            DB::transaction(function () use ($row, &$created, &$updated, &$skipped): void {
+                // Re-resolve: plan() is snapshot-at-start. A sibling create in this apply
+                // can occupy the same domain (e.g. meyyit.tr compose + dockerfile).
+                $existing = $this->findExisting($row->uuid, $row->host);
+
+                if ($existing instanceof Site && $this->isConflict($existing, $row->uuid, $row->host)) {
+                    $skipped++;
 
                     return;
                 }
 
-                $this->updateSite($row);
-                $updated++;
+                if ($existing instanceof Site) {
+                    $this->updateSite($row->existing?->is($existing) ? $row : $row->withExisting($existing));
+                    $updated++;
+
+                    return;
+                }
+
+                $this->createSite($row);
+                $created++;
             });
         }
 
@@ -69,7 +89,10 @@ class CoolifyFleetImporter
         ];
     }
 
-    public function planApp(CoolifyApplication $app): ImportPlanRow
+    /**
+     * @param  array<string, string>  $claimedHosts  host => uuid already planned to write in this import
+     */
+    public function planApp(CoolifyApplication $app, array $claimedHosts = []): ImportPlanRow
     {
         $reasons = $this->classifier->skipReasons($app);
         $host = $this->classifier->primaryHost($app);
@@ -132,6 +155,20 @@ class CoolifyFleetImporter
                 null,
                 $repoDisplay,
                 'missing fqdn and app.domain',
+                $flags,
+                $dockerfile,
+                $needsReview,
+            );
+        }
+
+        // Same host twice in one Coolify list (meyyit.tr: alpha compose + main dockerfile).
+        // Upsert-by-domain cannot merge different uuids; first planned write wins, second skips.
+        if ($existing === null && $host !== null && isset($claimedHosts[$host]) && $claimedHosts[$host] !== $app->uuid) {
+            return $this->skipRow(
+                $app,
+                $host,
+                $repoDisplay,
+                'duplicate domain already claimed in this import by uuid '.$claimedHosts[$host].'; upsert-by-domain would collide — second app skipped (not merged)',
                 $flags,
                 $dockerfile,
                 $needsReview,
@@ -368,7 +405,7 @@ class CoolifyFleetImporter
         $lines = [];
 
         if ($row->dockerfileWarning) {
-            $lines[] = '[import] dockerfile_build_pack: Coolify build_pack is dockerfile (compose preferred)';
+            $lines[] = '[import] '.Site::DOCKERFILE_BUILD_PACK_MARKER.': Coolify build_pack is dockerfile (compose preferred)';
         }
 
         if ($row->needsReview) {

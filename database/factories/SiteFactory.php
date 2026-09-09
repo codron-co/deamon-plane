@@ -48,6 +48,13 @@ class SiteFactory extends Factory
         ]);
     }
 
+    public function dockerfilePack(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'notes' => '[import] '.Site::DOCKERFILE_BUILD_PACK_MARKER.': Coolify build_pack is dockerfile (compose preferred)',
+        ]);
+    }
+
     /**
      * Secrets are generated at provision time (Task 4), not at draft create.
      */

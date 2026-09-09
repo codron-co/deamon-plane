@@ -71,7 +71,12 @@
                         @foreach ($sites as $site)
                             <tr>
                                 <td>
-                                    <a class="site-name" href="{{ route('ops.sites.edit', $site) }}">{{ $site->name }}</a>
+                                    <div class="site-name-row">
+                                        <a class="site-name" href="{{ route('ops.sites.edit', $site) }}">{{ $site->name }}</a>
+                                        @if ($site->hasDockerfileBuildPackWarning())
+                                            <span class="status-chip status-dockerfile">Dockerfile (eski pack)</span>
+                                        @endif
+                                    </div>
                                     <div class="site-slug">{{ $site->slug }}</div>
                                 </td>
                                 <td><code>{{ $site->primary_domain }}</code></td>

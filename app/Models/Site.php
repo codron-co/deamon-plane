@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Channel;
 use App\Enums\SiteStatus;
 use Database\Factories\SiteFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -198,5 +199,24 @@ class Site extends Model
         }
 
         return trim($version);
+    }
+
+    public const DOCKERFILE_BUILD_PACK_MARKER = 'dockerfile_build_pack';
+
+    /**
+     * Coolify fleet import writes this marker into notes when build_pack is dockerfile.
+     */
+    public function hasDockerfileBuildPackWarning(): bool
+    {
+        return str_contains((string) $this->notes, self::DOCKERFILE_BUILD_PACK_MARKER);
+    }
+
+    /**
+     * @param  Builder<Site>  $query
+     * @return Builder<Site>
+     */
+    public function scopeWithDockerfileBuildPackWarning(Builder $query): Builder
+    {
+        return $query->where('notes', 'like', '%'.self::DOCKERFILE_BUILD_PACK_MARKER.'%');
     }
 }

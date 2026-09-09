@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Import;
 
+use App\Console\Commands\ImportCoolifyApps\CoolifyFleetImporter;
+use App\Console\Commands\ImportCoolifyApps\ImportPlanRow;
 use App\Enums\Channel;
 use App\Enums\SiteStatus;
 use App\Models\AuditLog;
@@ -152,6 +154,95 @@ class ImportCoolifyAppsCommandTest extends TestCase
         $this->assertSame(Channel::Beta, $site->channel);
         $this->assertSame(SiteStatus::Provisioning, $site->status);
         $this->assertSame('keep-existing-secret', $site->agent_secret_encrypted);
+    }
+
+    public function test_duplicate_domain_second_app_is_skipped_not_merged(): void
+    {
+        $this->fakeApplicationList([
+            [
+                'uuid' => 'n2hffc9ecklyxstizuqbj3vk',
+                'name' => 'Meyyit Alpha',
+                'git_branch' => 'alpha',
+                'build_pack' => 'dockercompose',
+                'fqdn' => 'https://meyyit.tr',
+                'git_repository' => 'https://github.com/codron-co/deamon.git',
+                'status' => 'running:healthy',
+            ],
+            [
+                'uuid' => 'o10rz72ii13e3m84i1j3vp8b',
+                'name' => 'Meyyit Main',
+                'git_branch' => 'main',
+                'build_pack' => 'dockerfile',
+                'fqdn' => 'https://meyyit.tr',
+                'git_repository' => 'https://github.com/codron-co/deamon.git',
+                'status' => 'running:healthy',
+            ],
+        ]);
+
+        $this->artisan('ops:import-coolify-apps')
+            ->expectsTable(
+                ['uuid', 'name', 'repo', 'branch', 'pack', 'domain', 'action'],
+                [
+                    ['n2hffc9ecklyxstizuqbj3vk', 'Meyyit Alpha', 'codron-co/deamon', 'alpha', 'dockercompose', 'meyyit.tr', 'create'],
+                    ['o10rz72ii13e3m84i1j3vp8b', 'Meyyit Main', 'codron-co/deamon', 'main', 'dockerfile', 'meyyit.tr', 'skip'],
+                ],
+            )
+            ->expectsOutputToContain('duplicate domain already claimed')
+            ->expectsOutputToContain('1 create, 0 update, 1 skip')
+            ->assertSuccessful();
+
+        $this->artisan('ops:import-coolify-apps', ['--apply' => true])
+            ->expectsOutputToContain('Wrote 1 create(s), 0 update(s).')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Site::query()->where('primary_domain', 'meyyit.tr')->count());
+        $winner = Site::query()->where('primary_domain', 'meyyit.tr')->first();
+        $this->assertNotNull($winner);
+        $this->assertSame('n2hffc9ecklyxstizuqbj3vk', $winner->coolify_app_uuid);
+        $this->assertDatabaseMissing('sites', ['coolify_app_uuid' => 'o10rz72ii13e3m84i1j3vp8b']);
+    }
+
+    public function test_apply_skips_stale_second_create_for_same_domain(): void
+    {
+        $importer = app(CoolifyFleetImporter::class);
+
+        $first = new ImportPlanRow(
+            uuid: 'uuid-first',
+            name: 'First',
+            repo: 'codron-co/deamon',
+            branch: 'alpha',
+            pack: 'dockercompose',
+            domain: 'meyyit.tr',
+            action: ImportPlanRow::ACTION_CREATE,
+            channel: Channel::Alpha,
+            status: SiteStatus::Active,
+            host: 'meyyit.tr',
+            slug: 'meyyit',
+            gitRepository: 'https://github.com/codron-co/deamon.git',
+        );
+        $second = new ImportPlanRow(
+            uuid: 'uuid-second',
+            name: 'Second',
+            repo: 'codron-co/deamon',
+            branch: 'main',
+            pack: 'dockerfile',
+            domain: 'meyyit.tr',
+            action: ImportPlanRow::ACTION_CREATE,
+            channel: Channel::Main,
+            status: SiteStatus::Active,
+            host: 'meyyit.tr',
+            slug: 'meyyit',
+            gitRepository: 'https://github.com/codron-co/deamon.git',
+            dockerfileWarning: true,
+        );
+
+        $result = $importer->apply(collect([$first, $second]));
+
+        $this->assertSame(1, $result['created']);
+        $this->assertSame(0, $result['updated']);
+        $this->assertSame(1, $result['skipped']);
+        $this->assertSame(1, Site::query()->where('primary_domain', 'meyyit.tr')->count());
+        $this->assertSame('uuid-first', Site::query()->where('primary_domain', 'meyyit.tr')->value('coolify_app_uuid'));
     }
 
     public function test_command_fails_without_coolify_credentials(): void

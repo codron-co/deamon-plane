@@ -57,7 +57,9 @@ Always skipped:
 | Empty uuid, or create without `fqdn` / `app.domain` | Cannot upsert safely |
 | Soft-deleted site already occupies uuid/domain | Unique indexes; do not restore |
 
-`dockercompose` is preferred. **`dockerfile` is still imported** with a `dockerfile_build_pack` flag in `sites.notes` (many live sites still use Dockerfile). Nixpacks / static / raw compose-without-git are skipped.
+`dockercompose` is preferred. **`dockerfile` is still imported** (not skipped) with a `dockerfile_build_pack` flag in `sites.notes` (many live sites still use Dockerfile). Sites list shows a **Dockerfile (eski pack)** chip; edit shows an amber alert. Provision and channel switch still use the existing Coolify app UUID. Nixpacks / static / raw compose-without-git are skipped.
+
+Duplicate primary domain in one Coolify list (e.g. `meyyit.tr` = alpha compose `n2hffc9ecklyxstizuqbj3vk` + main dockerfile `o10rz72ii13e3m84i1j3vp8b`): first planned write wins; the second is **skip** (uuid/domain conflict — not merged, not a second `sites` row). `sites.primary_domain` is unique. Re-run dry-run after this rule: the second row is skip, not create.
 
 ## Domain
 
@@ -85,6 +87,6 @@ Slug on **create** only: first label of the host (strip `www.`), else slugified 
 
 ## After apply
 
-1. Open **Sites** and scan `needs_review` / `dockerfile` notes.
+1. Open **Sites** and scan `needs_review` notes plus the **Dockerfile (eski pack)** chip / edit alert.
 2. Point or confirm DNS. Agent `/health` skips until a secret exists (`needs_secret`).
 3. Inject `CONTROL_PLANE_AGENT_SECRET` on the CMS Coolify app, then store the same value on the Plane row — [agent-secret-inject.md](agent-secret-inject.md). Do not invent secrets in import. Dalga 5 hardens automation.

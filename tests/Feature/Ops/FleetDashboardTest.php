@@ -91,5 +91,40 @@ class FleetDashboardTest extends TestCase
 
         $this->assertSame(1, substr_count($html, 'kpi-label">Unhealthy'));
         $this->assertMatchesRegularExpression('/Unhealthy<\/p>\s*<p class="kpi-value">2<\/p>/', $html);
+        $this->assertSame(5, substr_count($html, 'class="kpi-card"'));
+        $this->assertStringNotContainsString('Dockerfile (eski pack)', $html);
+        $this->assertStringNotContainsString('Compose\'a geçirilmedi', $html);
+    }
+
+    public function test_fleet_dashboard_lists_dockerfile_pack_sites_in_attention_row(): void
+    {
+        $legacy = Site::factory()->dockerfilePack()->create([
+            'name' => 'Legacy Dockerfile Site',
+            'primary_domain' => 'legacy.example.test',
+        ]);
+        Site::factory()->create([
+            'name' => 'Compose Site',
+            'primary_domain' => 'compose.example.test',
+            'notes' => null,
+        ]);
+
+        $operator = User::factory()->create();
+        $operator->assignRole(OpsRole::Operator->value);
+
+        $html = $this->actingAs($operator)
+            ->get(route('ops.fleet'))
+            ->assertOk()
+            ->assertSee('Fleet snapshot', false)
+            ->assertSee('Dockerfile (eski pack)', false)
+            ->assertSee('Compose\'a geçirilmedi', false)
+            ->assertSee('Legacy Dockerfile Site', false)
+            ->assertSee('legacy.example.test', false)
+            ->assertSee(route('ops.sites.edit', $legacy), false)
+            ->assertDontSee('Compose Site', false)
+            ->getContent();
+
+        $this->assertSame(5, substr_count($html, 'class="kpi-card"'));
+        $this->assertSame(1, substr_count($html, 'id="fleet-attention-heading"'));
+        $this->assertStringNotContainsString('eski sürüm', $html);
     }
 }

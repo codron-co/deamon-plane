@@ -13,6 +13,7 @@ class FleetController extends Controller
         return view('ops.fleet.index', [
             'channels' => config('ops.channels'),
             'kpis' => $kpis->snapshot(),
+            'dockerfilePackSites' => $kpis->dockerfilePackSites(),
         ]);
     }
 }

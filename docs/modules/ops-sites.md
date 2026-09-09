@@ -62,10 +62,13 @@ Site detail includes a **Deployments** section (`ops/deployments/index`): last 2
 
 GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status`. Search input debounces a GET submit (300 ms). No Coolify client on the list page.
 
+Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip next to the name; edit shows a warning that pack is dockerfile (not dockercompose), that provision/channel still use the existing app UUID, and that compose migration is later — not a skip. Fleet home keeps the same 5 KPI cards and lists those sites in a left attention row (**Dockerfile (eski pack)** / Compose'a geçirilmedi) — pack flag only, not CMS `deamon_version`.
+
 ## Import existing Coolify apps
 
 Artisan `ops:import-coolify-apps` (Task 7). Default is **dry-run**; `--apply` upserts. Classification, domain parse, and status rules: [import-coolify-apps.md](../runbooks/import-coolify-apps.md).
 
 - Customer filter: `DEAMON_GIT_REPOSITORY` / `codron-co/deamon`, excluding `deamon-plane`, `entron`, `webapp-transfer`, theme repos.
 - Upsert by `coolify_app_uuid` then primary domain. Slug from host / app name on create only.
-- No agent secrets. `dockerfile` is imported with a notes flag; compose preferred.
+- No agent secrets. `dockerfile` is imported with a notes flag + visible list/edit warning; compose preferred.
+- Duplicate domain in one import (two Coolify uuids, same host): first write wins, second **skip** — not merged.

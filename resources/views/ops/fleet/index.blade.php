@@ -6,4 +6,5 @@
     <p class="page-lede">Coolify-hosted Deamon sites. Deploy status updates from signed Coolify webhooks, with poll as fallback.</p>
 
     @include('ops.dashboard.kpis')
+    @include('ops.dashboard.attention')
 @endsection

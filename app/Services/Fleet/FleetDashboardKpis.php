@@ -8,6 +8,7 @@ use App\Enums\SiteStatus;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Agent\SiteHealthEvaluator;
+use Illuminate\Support\Collection;
 
 class FleetDashboardKpis
 {
@@ -56,5 +57,18 @@ class FleetDashboardKpis
                 ->whereIn('status', [SiteStatus::Provisioning, SiteStatus::Deploying])
                 ->count(),
         ];
+    }
+
+    /**
+     * Sites still on Coolify dockerfile pack (compose not migrated). Not CMS deamon_version.
+     *
+     * @return Collection<int, Site>
+     */
+    public function dockerfilePackSites(): Collection
+    {
+        return Site::query()
+            ->withDockerfileBuildPackWarning()
+            ->orderBy('name')
+            ->get(['id', 'slug', 'name', 'primary_domain', 'notes']);
     }
 }
