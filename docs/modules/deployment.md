@@ -45,7 +45,7 @@ Sign-in: `/login`. Seed a local super_admin with `php artisan db:seed` using `OP
 
 ## Provisioning customer sites (Plane jobs — Dalga 2)
 
-API create must use **git + `build_pack=dockercompose`** + `docker_compose_location=docker-compose.coolify.yml` against **`codron-co/deamon`**, not this repo. Deprecated `POST /applications/dockercompose` (raw YAML, no git) is forbidden.
+API create must use **git + `build_pack=dockercompose`** + `docker_compose_location=/docker-compose.coolify.yml` (leading slash required) against **`codron-co/deamon`**, not this repo. Deprecated `POST /applications/dockercompose` (raw YAML, no git) is forbidden.
 
 Customer Coolify env: only `APP_KEY` + `DEAMON_SITE_NAME` (+ `SERVICE_*`). See CMS `docs/modules/deployment.md`.
 

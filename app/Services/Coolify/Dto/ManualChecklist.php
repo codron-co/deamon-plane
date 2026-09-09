@@ -17,7 +17,7 @@ final class ManualChecklist
     {
         return new self('createComposeApp', [
             'Create the compose app in Coolify UI: Git + Docker Compose build pack.',
-            'Set compose file to docker-compose.coolify.yml (not docker-compose.yml, not Nixpacks).',
+            'Set compose file to /docker-compose.coolify.yml (leading slash; not docker-compose.yml, not Nixpacks).',
             'Use a GitHub App or deploy key for private codron-co/deamon.',
         ]);
     }

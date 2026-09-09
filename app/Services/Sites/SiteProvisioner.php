@@ -303,7 +303,7 @@ class SiteProvisioner
             privateKeyUuid: filled($settings->private_key_uuid) ? (string) $settings->private_key_uuid : null,
             name: 'deamon-'.$site->slug,
             instantDeploy: false,
-            dockerComposeLocation: (string) config('ops.deamon.compose_file', 'docker-compose.coolify.yml'),
+            dockerComposeLocation: (string) config('ops.deamon.compose_file', CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION),
         );
     }
 

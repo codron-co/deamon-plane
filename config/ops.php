@@ -27,7 +27,7 @@ return [
 
     'deamon' => [
         'repository' => env('DEAMON_GIT_REPOSITORY', 'https://github.com/codron-co/deamon.git'),
-        'compose_file' => env('DEAMON_COMPOSE_FILE', 'docker-compose.coolify.yml'),
+        'compose_file' => env('DEAMON_COMPOSE_FILE', '/docker-compose.coolify.yml'),
     ],
 
     'themes' => [

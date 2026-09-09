@@ -59,7 +59,7 @@ class CoolifyApplicationService
         $defaults = $request;
         $compose = $defaults->dockerComposeLocation !== ''
             ? $defaults->dockerComposeLocation
-            : (string) config('ops.deamon.compose_file', 'docker-compose.coolify.yml');
+            : (string) config('ops.deamon.compose_file', CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION);
 
         if ($compose !== $defaults->dockerComposeLocation) {
             $defaults = new CreateComposeAppRequest(

@@ -35,6 +35,10 @@ class CoolifyApiException extends RuntimeException
             ? (string) ($json['message'] ?? $json['error'] ?? 'Coolify API request failed.')
             : 'Coolify API request failed.';
 
+        if (is_array($json)) {
+            $message = self::appendValidationErrors($message, $json['errors'] ?? null);
+        }
+
         $conflicts = [];
         if (is_array($json) && isset($json['conflicts']) && is_array($json['conflicts'])) {
             $conflicts = $json['conflicts'];
@@ -46,6 +50,44 @@ class CoolifyApiException extends RuntimeException
             $conflicts,
             $payload,
         );
+    }
+
+    /**
+     * Laravel-style Coolify 422 bodies are often message=Validation failed. plus errors{field: [...]}.
+     */
+    private static function appendValidationErrors(string $message, mixed $errors): string
+    {
+        if (! is_array($errors) || $errors === []) {
+            return $message;
+        }
+
+        $parts = [];
+        foreach ($errors as $field => $fieldErrors) {
+            if (! is_string($field) || $field === '') {
+                continue;
+            }
+
+            $texts = is_array($fieldErrors)
+                ? array_values(array_filter($fieldErrors, is_string(...)))
+                : (is_string($fieldErrors) ? [$fieldErrors] : []);
+
+            if ($texts === []) {
+                continue;
+            }
+
+            $parts[] = $field.': '.implode(' ', $texts);
+        }
+
+        if ($parts === []) {
+            return $message;
+        }
+
+        $suffix = implode('; ', $parts);
+        if ($suffix === '' || str_contains($message, $suffix)) {
+            return $message;
+        }
+
+        return trim($message.' '.$suffix);
     }
 
     public static function redact(string $text, ?string $token = null): string

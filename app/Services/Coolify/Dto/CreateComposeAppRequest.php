@@ -7,6 +7,8 @@ use InvalidArgumentException;
 
 final class CreateComposeAppRequest
 {
+    public const DEFAULT_COMPOSE_LOCATION = '/docker-compose.coolify.yml';
+
     /**
      * @param  string|list<array{name?: string, domain?: string}>|array<string, mixed>|null  $dockerComposeDomains
      */
@@ -22,7 +24,7 @@ final class CreateComposeAppRequest
         public readonly ?string $name = null,
         public readonly bool $instantDeploy = false,
         public readonly string|array|null $dockerComposeDomains = null,
-        public readonly string $dockerComposeLocation = 'docker-compose.coolify.yml',
+        public readonly string $dockerComposeLocation = self::DEFAULT_COMPOSE_LOCATION,
     ) {
         if ($this->projectUuid === '' || $this->serverUuid === '') {
             throw new InvalidArgumentException('project_uuid and server_uuid are required to create a Coolify compose app.');
@@ -64,9 +66,7 @@ final class CreateComposeAppRequest
             'git_repository' => $this->gitRepository,
             'git_branch' => $this->gitBranch,
             'build_pack' => 'dockercompose',
-            'docker_compose_location' => $this->dockerComposeLocation !== ''
-                ? $this->dockerComposeLocation
-                : 'docker-compose.coolify.yml',
+            'docker_compose_location' => self::normalizeLocation($this->dockerComposeLocation),
         ];
 
         if (filled($this->environmentUuid)) {
@@ -96,5 +96,18 @@ final class CreateComposeAppRequest
         }
 
         return $payload;
+    }
+
+    /**
+     * Coolify validates docker_compose_location as a rooted path (leading slash).
+     */
+    public static function normalizeLocation(string $location): string
+    {
+        $location = trim($location);
+        if ($location === '') {
+            return self::DEFAULT_COMPOSE_LOCATION;
+        }
+
+        return str_starts_with($location, '/') ? $location : '/'.$location;
     }
 }

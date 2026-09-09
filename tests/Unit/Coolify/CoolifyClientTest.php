@@ -133,7 +133,7 @@ class CoolifyClientTest extends TestCase
             return $request->method() === 'POST'
                 && $request->url() === 'https://coolify.test/api/v1/applications/private-github-app'
                 && $body['build_pack'] === 'dockercompose'
-                && $body['docker_compose_location'] === 'docker-compose.coolify.yml'
+                && $body['docker_compose_location'] === '/docker-compose.coolify.yml'
                 && $body['github_app_uuid'] === 'gh-app-1'
                 && $body['instant_deploy'] === true
                 && $body['docker_compose_domains'] === [
@@ -145,6 +145,58 @@ class CoolifyClientTest extends TestCase
         Http::assertNotSent(function (Request $request): bool {
             return str_contains($request->url(), '/applications/dockercompose');
         });
+    }
+
+    public function test_create_compose_app_prefixes_compose_location_without_leading_slash(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/applications/public' => Http::response([
+                'uuid' => 'slash-app',
+                'name' => 'deamon-izyem',
+                'build_pack' => 'dockercompose',
+            ], 201),
+        ]);
+
+        $this->client()->createComposeApp(new CreateComposeAppRequest(
+            projectUuid: 'proj-1',
+            serverUuid: 'srv-1',
+            gitRepository: 'https://github.com/codron-co/deamon.git',
+            gitBranch: 'main',
+            dockerComposeLocation: 'docker-compose.coolify.yml',
+        ));
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->data()['docker_compose_location'] === '/docker-compose.coolify.yml';
+        });
+    }
+
+    public function test_validation_failed_includes_field_errors_without_token(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/applications/public' => Http::response([
+                'message' => 'Validation failed. Authorization: Bearer '.self::TOKEN,
+                'errors' => [
+                    'docker_compose_location' => ['The docker compose location field format is invalid.'],
+                ],
+            ], 422),
+        ]);
+
+        try {
+            $this->client()->createComposeApp(new CreateComposeAppRequest(
+                projectUuid: 'proj-1',
+                serverUuid: 'srv-1',
+                gitRepository: 'https://github.com/codron-co/deamon.git',
+                gitBranch: 'main',
+            ));
+            $this->fail('Expected CoolifyApiException.');
+        } catch (CoolifyApiException $exception) {
+            $this->assertSame(422, $exception->status);
+            $this->assertStringContainsString('Validation failed.', $exception->getMessage());
+            $this->assertStringContainsString('docker_compose_location', $exception->getMessage());
+            $this->assertStringContainsString('format is invalid', $exception->getMessage());
+            $this->assertStringNotContainsString(self::TOKEN, $exception->getMessage());
+            $this->assertStringContainsString('[redacted]', $exception->getMessage());
+        }
     }
 
     public function test_create_compose_app_uses_deploy_key_and_public_endpoints(): void

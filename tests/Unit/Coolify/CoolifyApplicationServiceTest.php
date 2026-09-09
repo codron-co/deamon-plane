@@ -65,7 +65,7 @@ class CoolifyApplicationServiceTest extends TestCase
 
         Http::assertSent(function (Request $request): bool {
             return $request->data()['build_pack'] === 'dockercompose'
-                && $request->data()['docker_compose_location'] === 'docker-compose.coolify.yml';
+                && $request->data()['docker_compose_location'] === '/docker-compose.coolify.yml';
         });
     }
 

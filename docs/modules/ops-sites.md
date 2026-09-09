@@ -32,7 +32,7 @@ Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + pr
 `SiteProvisioner` + `ProvisionSiteJob` + `PollDeploymentJob`. Runbook: [provision-site.md](../runbooks/provision-site.md).
 
 - Eligible statuses: `draft`, `error` (retry). Viewer is forbidden.
-- Coolify: git + `build_pack=dockercompose` + `docker-compose.coolify.yml`; env **only** `APP_KEY` + `DEAMON_SITE_NAME`; domain on compose service `app`.
+- Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env **only** `APP_KEY` + `DEAMON_SITE_NAME`; domain on compose service `app`.
 - Success → `coolify_app_uuid` + status `active`. Agent health is a separate poll (does not gate provision). Failure → `error` + audit.
 - Retry reuses an existing Coolify app uuid (does not DELETE the app).
 

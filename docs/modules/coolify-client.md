@@ -8,7 +8,7 @@ Task 2 client for Deamon Plane. Spike lock: [Coolify spike notes](../plans/2026-
 |-------|------|
 | `App\Services\Coolify\CoolifyClient` | Bearer HTTP to `{COOLIFY_BASE_URL}/api/v1` |
 | `App\Services\Coolify\CoolifyApplicationService` | Thin wrappers + channel allowlist on create/updateBranch |
-| `App\Services\Coolify\CoolifyApiException` | Status, `conflicts[]`, token redaction |
+| `App\Services\Coolify\CoolifyApiException` | Status, `conflicts[]`, validation `errors` in the message, token redaction |
 | `App\Services\Coolify\CoolifyUnsupportedOperationException` | Hybrid gap + `ManualChecklist` DTO |
 | `App\Models\CoolifySetting` | Singleton row; `api_token` encrypted + hidden |
 
@@ -20,7 +20,7 @@ Fleet import (Task 7) calls `listApps` only (`ops:import-coolify-apps`). It does
 
 ## Create path
 
-Git + `build_pack=dockercompose` + `docker_compose_location=docker-compose.coolify.yml`.
+Git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml` (Coolify requires a leading slash).
 
 - `POST /applications/private-github-app` when `github_app_uuid` is set
 - `POST /applications/private-deploy-key` when `private_key_uuid` is set

@@ -84,7 +84,7 @@ class ProvisionSiteTest extends TestCase
             return $request->method() === 'POST'
                 && $request->url() === 'https://coolify.test/api/v1/applications/public'
                 && ($body['build_pack'] ?? null) === 'dockercompose'
-                && ($body['docker_compose_location'] ?? null) === 'docker-compose.coolify.yml'
+                && ($body['docker_compose_location'] ?? null) === '/docker-compose.coolify.yml'
                 && ($body['git_repository'] ?? null) === 'https://github.com/codron-co/deamon.git'
                 && ($body['git_branch'] ?? null) === 'beta'
                 && ($body['project_uuid'] ?? null) === 'proj_test'
@@ -283,7 +283,7 @@ class ProvisionSiteTest extends TestCase
                     'name' => 'deamon-izyem',
                     'git_branch' => 'beta',
                     'build_pack' => 'dockercompose',
-                    'docker_compose_location' => 'docker-compose.coolify.yml',
+                    'docker_compose_location' => '/docker-compose.coolify.yml',
                 ], 201);
             }
 

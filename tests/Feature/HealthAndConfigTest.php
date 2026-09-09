@@ -29,7 +29,7 @@ class HealthAndConfigTest extends TestCase
 
     public function test_deamon_compose_file_is_coolify_compose(): void
     {
-        $this->assertSame('docker-compose.coolify.yml', config('ops.deamon.compose_file'));
+        $this->assertSame('/docker-compose.coolify.yml', config('ops.deamon.compose_file'));
     }
 
     public function test_app_url_falls_back_to_service_url_app(): void

@@ -19,7 +19,7 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
    - Git repository from site / `DEAMON_GIT_REPOSITORY` (customer CMS repo, not this Plane repo)
    - Branch = site channel
    - Build pack **Docker Compose** (`build_pack=dockercompose`)
-   - Compose file `docker-compose.coolify.yml`
+   - Compose file `/docker-compose.coolify.yml` (Coolify `docker_compose_location` requires a leading slash)
    - Stack is **app + isolated MySQL + isolated Redis** (no shared DB/Redis)
 5. Env written to the **app** service only: `APP_KEY`, `DEAMON_SITE_NAME`. Coolify injects `SERVICE_URL_APP` / `SERVICE_FQDN_APP`. Do not add mailbox or extra secrets here.
 6. Domain is bound on compose service **`app`** via `setDomains` (`force_domain_override` stays false).
