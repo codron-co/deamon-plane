@@ -5,12 +5,12 @@ Never paste live tokens into git, chat, or audit notes. After rotation, confirm 
 ## Coolify API token
 
 1. Coolify → Keys & Tokens → create a least-privilege token.
-2. Plane → **Settings → Coolify** → paste into API token (leave blank later to keep). Save.
+2. Plane → **Coolify** → open the connection → paste into API token (leave blank later to keep). Save.
 3. **Test connection**.
 4. Revoke the previous Coolify token.
 5. Audit is not written for the token value (encrypted column only).
 
-Webhook signing secret (`COOLIFY_WEBHOOK_SECRET` / Settings webhook secret) is a **different** secret. Rotate it in Plane and in the Coolify Notifications URL (`?token=`) together, or unsigned POSTs 401. Signed proxies must update the HMAC key at the same time.
+Webhook signing secret (`COOLIFY_WEBHOOK_SECRET` / Coolify menu webhook secret) is a **different** secret. Rotate it in Plane and in the Coolify Notifications URL (`?token=`) together, or unsigned POSTs 401. Signed proxies must update the HMAC key at the same time.
 
 ## GitHub PAT / App
 

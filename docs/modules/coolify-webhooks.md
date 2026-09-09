@@ -10,7 +10,7 @@ There is no Coolify Public API to register the URL (spike: OpenAPI has no regist
 
 ## Coolify native (unsigned + query token)
 
-Coolify **Notifications → Webhook** POSTs JSON (`Content-Type: application/json`) with **no** HMAC header. Paste this URL (same signing secret as Settings → Coolify → Webhook signing secret):
+Coolify **Notifications → Webhook** POSTs JSON (`Content-Type: application/json`) with **no** HMAC header. Paste this URL (same signing secret as Coolify menu → connection → webhook signing secret):
 
 ```
 https://{plane-host}/webhooks/coolify?token=<webhook signing secret>
@@ -56,7 +56,7 @@ Terminal rows are not regressed by a later in-progress event (webhook and poll s
 
 ## UI
 
-- Settings → Coolify connection: **Deploy webhook URL** is the path only. The hint tells the operator to append `?token=` + the webhook signing secret. The live secret is never rendered after save.
+- Coolify menu → connection: **Deploy webhook URL** is the path only. The hint tells the operator to append `?token=` + the webhook signing secret. The live secret is never rendered after save.
 - Site detail **Deployments**: last 25 rows, status chip, duration, short SHA, **Open in Coolify** (assumed `{base}/project/{project}/environment/{environment_name}/application/{uuid}`).
 - Fleet dashboard KPIs (5): total sites, by channel, unhealthy (`status=error` **or** agent timeout / bad signature / `queue_ok=false` / stale), failed deploys, deploying. `needs_secret` does not count. See [agent-client.md](agent-client.md).
 

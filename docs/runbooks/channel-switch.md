@@ -7,7 +7,7 @@ Channel = Coolify `git_branch` (`main` | `beta` | `alpha`) + redeploy. **Never d
 ## Preconditions
 
 1. Site status is **active** (or **error** after a failed switch). Draft sites must be provisioned first.
-2. `coolify_app_uuid` is set. Coolify Settings have a base URL + API token.
+2. `coolify_app_uuid` is set. Coolify menu has a base URL + API token.
 3. Target is on the allowlist: `main`, `beta`, `alpha`. Other branches cannot be chosen in the UI.
 4. Status is not `deploying` or `provisioning` — concurrent switches are blocked.
 5. You accept that volumes (MySQL, Redis, themes, storage) stay attached to this app uuid.

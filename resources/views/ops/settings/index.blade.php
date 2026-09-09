@@ -3,9 +3,9 @@
 @section('title', 'Settings')
 
 @section('content')
-    <p class="page-lede">GitHub App (tema kataloğu) burada. Coolify instance’ları sol menüdeki <strong>Coolify</strong> altında. Token asla gösterilmez.</p>
+    <p class="ops-flash" role="status">Coolify is under Coolify menu.</p>
 
-    @include('ops.settings.partials.coolify')
+    <p class="page-lede">GitHub App (tema kataloğu) burada. Token asla gösterilmez.</p>
 
     @include('ops.settings.partials.github')
 

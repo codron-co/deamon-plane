@@ -28,6 +28,12 @@ class NavPagesTest extends TestCase
         $this->actingAs($operator)->get(route('ops.sites'))->assertOk();
         $this->actingAs($operator)->get(route('ops.themes'))->assertOk()->assertSee('git-only', false);
         $this->actingAs($operator)->get(route('ops.coolify.index'))->assertOk()->assertSee('Coolify', false);
-        $this->actingAs($operator)->get(route('ops.settings'))->assertOk();
+        $this->actingAs($operator)
+            ->get(route('ops.settings'))
+            ->assertOk()
+            ->assertSee('GitHub theme catalog', false)
+            ->assertSee('Coolify is under Coolify menu.', false)
+            ->assertDontSee('name="api_token"', false)
+            ->assertDontSee('Test connection', false);
     }
 }

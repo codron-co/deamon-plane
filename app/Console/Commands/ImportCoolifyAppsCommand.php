@@ -25,7 +25,7 @@ class ImportCoolifyAppsCommand extends Command
 
         $credentials = CoolifyCredentials::resolve();
         if ($credentials->baseUrl === '' || ! $credentials->hasToken()) {
-            $this->error('Coolify is not configured. Save the API URL and token in Settings.');
+            $this->error('Coolify is not configured. Save the API URL and token in the Coolify menu.');
 
             return self::FAILURE;
         }

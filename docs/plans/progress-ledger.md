@@ -92,6 +92,11 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 | 14 security | SECURITY | **done** (checklist closed in `docs/security.md`) |
 | 15 prod deploy plane | PROD-DEPLOY | **partial** — runbook complete; **live deploy skipped**; read-only status recorded above |
 
+## Settings: Coolify panel removed (2026-09-10)
+
+- Settings (`/settings`) is GitHub theme catalog + customer defaults only. Coolify token / webhook / UUID / Test connection live under **Coolify** (`/coolify`).
+- Leftover `POST /settings` and `POST /settings/coolify/test` redirect to Coolify connections.
+
 ## Coolify menu (ops — 2026-09-10)
 
 - Status: **code complete** (this worktree). Multi-connection + server aktif/pasif + project/env/git allowlists + site `<select>` + attach existing + preflight + 422 field errors + agent secret inject.
@@ -103,7 +108,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 - Coolify Notifications remain unsigned — paste `https://{plane}/webhooks/coolify?token=<webhook signing secret>`. HMAC still preferred if a signer exists. Poll remains backup.
 - Agent secret inject is in the site UI (`Generate & inject secret`) when Coolify env API works; Coolify UI leftover if that PATCH fails.
-- GitHub App/PAT + org webhook secret must be pasted in Settings (not in git). Theme catalog ≠ Coolify Git source.
+- GitHub App/PAT + org webhook secret must be pasted in Settings (not in git). Theme catalog ≠ Coolify Git source. Coolify API token lives under **Coolify** (`/coolify`), not Settings.
 - CMS Task 11 is live at v1.2.5 — site still needs `CONTROL_PLANE_AGENT_SECRET` injected before theme assign 200s.
 - Plane Coolify app has **no domain** yet; do not PATCH from a laptop unless the UI target is confirmed. Never touch Susa `crxguq6nodorlzy88wf9x305`.
 - Commit / push not done (overnight rule).

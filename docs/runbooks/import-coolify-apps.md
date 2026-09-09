@@ -6,7 +6,7 @@ Do not paste API tokens, `APP_KEY`, or agent secrets into tickets or this file. 
 
 ## Preconditions
 
-1. Coolify connection is saved in Plane **Settings** (base URL + API token). Env `COOLIFY_*` is a fallback when the DB row is empty.
+1. Coolify connection is saved in Plane **Coolify** menu (base URL + API token). Env `COOLIFY_*` is a fallback when the DB row is empty.
 2. Plane schema is migrated (`sites`, `site_domains`, `audit_logs`).
 3. You are on the Plane host / ops shell (internal). This is not a customer CMS command.
 

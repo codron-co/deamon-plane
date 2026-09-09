@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
-use App\Models\CoolifySetting;
 use App\Models\GithubSetting;
-use App\Services\Coolify\CoolifyCredentials;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
@@ -13,20 +11,9 @@ class SettingsController extends Controller
 {
     public function index(): View
     {
-        $settings = CoolifySetting::current();
-        $credentials = CoolifyCredentials::resolve($settings);
         $github = GithubSetting::current();
 
         return view('ops.settings.index', [
-            'settings' => $settings,
-            'coolifyBaseUrl' => $settings->base_url ?: config('ops.coolify.base_url'),
-            'projectUuid' => $settings->default_project_uuid ?: config('ops.coolify.default_project_uuid'),
-            'serverUuid' => $settings->default_server_uuid ?: config('ops.coolify.default_server_uuid'),
-            'githubAppUuid' => $settings->github_app_uuid,
-            'privateKeyUuid' => $settings->private_key_uuid,
-            'hasToken' => $credentials->hasToken(),
-            'hasWebhookSecret' => $settings->hasWebhookSecret() || filled(config('ops.coolify.webhook_secret')),
-            'webhookUrl' => url('/webhooks/coolify'),
             'composeFile' => config('ops.deamon.compose_file'),
             'repository' => config('ops.deamon.repository'),
             'canWrite' => request()->user()?->can('ops.write') ?? false,
@@ -48,7 +35,7 @@ class SettingsController extends Controller
 
         return redirect()
             ->route('ops.coolify.index')
-            ->with('status', 'Coolify ayarları Coolify menüsüne taşındı.');
+            ->with('status', 'Coolify is under Coolify menu.');
     }
 
     public function testConnection(): RedirectResponse
@@ -57,6 +44,6 @@ class SettingsController extends Controller
 
         return redirect()
             ->route('ops.coolify.index')
-            ->with('status', 'Bağlantı testi Coolify menüsünden yapılır.');
+            ->with('status', 'Coolify is under Coolify menu.');
     }
 }

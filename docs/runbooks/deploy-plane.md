@@ -14,12 +14,12 @@ Plane is **internal ops**. Production host: **`https://plane.codron.co`** (compo
    - **Required:** `APP_KEY` (`php artisan key:generate --show` once; store only in Coolify).
    - URL: Coolify `SERVICE_URL_APP` / `SERVICE_FQDN_APP`. Do not duplicate `APP_URL` unless overriding.
    - Do **not** set `DB_*`, `REDIS_*`, or `APP_DEBUG=true`. Compose forces `APP_ENV=production`, `APP_DEBUG=false`, own MySQL+Redis (`plane_*` volumes).
-   - After first login: `COOLIFY_BASE_URL` (token is better in Settings, encrypted). Optional `COOLIFY_WEBHOOK_SECRET`, `GITHUB_*`, `OPS_IP_ALLOWLIST`.
+   - After first login: `COOLIFY_BASE_URL` (token is better in the Coolify menu, encrypted). Optional `COOLIFY_WEBHOOK_SECRET`, `GITHUB_*`, `OPS_IP_ALLOWLIST`.
 6. Persistent volumes come from compose (`plane_storage`, `plane_mysql`, `plane_redis`). Do not bind-mount `/root`. Do not `DELETE` the app (`delete_volumes` defaults true).
 7. Queue worker + scheduler already run in the image (`supervisord`: php-fpm, nginx, `queue:work`, `schedule:work`).
 8. First boot: entrypoint `artisan migrate`. Create the first `super_admin` **out of band** (do not set `OPS_SEED_PASSWORD` in production).
 9. Restrict access: Coolify IP allowlist / VPN / SSO in front of the Plane domain, **and** optional `OPS_IP_ALLOWLIST` (comma-separated) in Plane. See [security.md](../security.md).
-10. Login → Settings → Coolify Test connection → (Faz B) GitHub Test → Themes Sync catalog.
+10. Login → Coolify → Test connection → Settings → GitHub Test → Themes Sync catalog.
 11. Import fleet: `php artisan ops:import-coolify-apps` dry-run, then `--apply` — [import-coolify-apps.md](import-coolify-apps.md).
 12. Inject per-site agent secrets — [agent-secret-inject.md](agent-secret-inject.md).
 

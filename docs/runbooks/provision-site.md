@@ -4,9 +4,9 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
 
 ## Preconditions
 
-1. Coolify connection is saved in Plane **Settings** (base URL + API token). Tests and CI use `Http::fake` — do not point a laptop at production Coolify to “try” provision.
-2. Default **project** UUID is set (Settings or `COOLIFY_DEFAULT_PROJECT_UUID`).
-3. Target **server** UUID is on the draft site or in Settings (`COOLIFY_DEFAULT_SERVER_UUID`).
+1. Coolify connection is saved in Plane **Coolify** menu (base URL + API token). Tests and CI use `Http::fake` — do not point a laptop at production Coolify to “try” provision.
+2. Default **project** UUID is set (Coolify menu or `COOLIFY_DEFAULT_PROJECT_UUID`).
+3. Target **server** UUID is on the draft site or in the Coolify menu (`COOLIFY_DEFAULT_SERVER_UUID`).
 4. DNS for the customer hostname is ready to aim at Coolify / Traefik (can be done right after provision).
 5. Channel is one of `main` | `beta` | `alpha`.
 
@@ -39,11 +39,11 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
 
 | Symptom | What to do |
 |---------|------------|
-| Flash: Coolify is not configured | Settings → token + base URL |
-| Flash: project/server UUIDs required | Set server on the site or defaults in Settings |
+| Flash: Coolify is not configured | Coolify menu → token + base URL |
+| Flash: project/server UUIDs required | Set server on the site or defaults in Coolify menu |
 | Status `error`, no `coolify_app_uuid` | Create failed; fix Coolify/git access, retry Provision |
 | Status `error`, uuid present | Env/domain/deploy/poll failed; retry reuses the app; do **not** DELETE the Coolify app (`delete_volumes` defaults true) |
 | Domain 409 | Hostname already bound; resolve in Coolify. Super Admin force-override is not in this task |
-| Private git create fails | Settings needs Coolify GitHub App uuid or deploy key (not `POST /applications/dockercompose`) |
+| Private git create fails | Coolify menu needs GitHub App uuid or deploy key (not `POST /applications/dockercompose`) |
 
 Secrets must never appear in Plane logs, audit `before`/`after`, or flash messages. Rotation is a later hardening runbook.
