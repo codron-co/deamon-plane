@@ -3,7 +3,7 @@
 @section('title', $site->name)
 
 @section('actions')
-    <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites') }}">Back to sites</a>
+    <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">Back to site</a>
 @endsection
 
 @section('content')
