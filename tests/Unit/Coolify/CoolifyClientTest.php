@@ -329,6 +329,7 @@ class CoolifyClientTest extends TestCase
                 && $body['docker_compose_domains'] === [
                     ['name' => 'app', 'domain' => 'https://www.example.com'],
                 ]
+                && ($body['fqdn'] ?? null) === 'https://www.example.com'
                 && ! is_string($body['docker_compose_domains']);
         });
     }

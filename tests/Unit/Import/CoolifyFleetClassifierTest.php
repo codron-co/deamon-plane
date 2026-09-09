@@ -102,6 +102,41 @@ class CoolifyFleetClassifierTest extends TestCase
         $this->assertSame('old.example.test', $this->classifier->primaryHost($app));
     }
 
+    public function test_domain_skips_coolify_generate_wildcard_before_operator_host(): void
+    {
+        $app = CoolifyApplication::fromArray([
+            'uuid' => '6cmmgh5ty9lzv6uiz5kfavue',
+            'name' => 'deamon-test',
+            'fqdn' => 'https://6cmmgh5ty9lzv6uiz5kfavue.demo.codron.co',
+            'git_repository' => 'https://github.com/codron-co/deamon.git',
+            'docker_compose_domains' => '{"app":{"domain":"https://test.deamon.codron.co"}}',
+        ]);
+
+        $this->assertSame('test.deamon.codron.co', $this->classifier->primaryHost($app));
+    }
+
+    public function test_fqdn_comma_list_skips_generate_domain_and_keeps_human_demo_slug(): void
+    {
+        $generatedFirst = CoolifyApplication::fromArray([
+            'uuid' => 'xscn1wbbsql7pnovbneyrtkl',
+            'name' => 'Deamon Landing Page',
+            'fqdn' => 'https://xscn1wbbsql7pnovbneyrtkl.random.codron.co,https://deamon.codron.co,https://www.deamon.codron.co',
+            'git_repository' => 'https://github.com/codron-co/deamon.git',
+        ]);
+
+        $this->assertSame('deamon.codron.co', $this->classifier->primaryHost($generatedFirst));
+
+        $humanDemo = CoolifyApplication::fromArray([
+            'uuid' => 'crxguq6nodorlzy88wf9x305',
+            'name' => 'Susa',
+            'fqdn' => null,
+            'git_repository' => 'https://github.com/codron-co/deamon.git',
+            'docker_compose_domains' => '{"app":{"domain":"https://susa.demo.codron.co,https://www.susa.demo.codron.co/"}}',
+        ]);
+
+        $this->assertSame('susa.demo.codron.co', $this->classifier->primaryHost($humanDemo));
+    }
+
     public function test_slug_uses_domain_host_then_app_name(): void
     {
         $this->assertSame('susa', $this->classifier->slugFrom('susa.demo.codron.co', 'Susa DEMO'));

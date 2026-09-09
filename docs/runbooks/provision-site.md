@@ -21,8 +21,9 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
    - Build pack **Docker Compose** (`build_pack=dockercompose`)
    - Compose file `/docker-compose.coolify.yml` (Coolify `docker_compose_location` requires a leading slash)
    - Stack is **app + isolated MySQL + isolated Redis** (no shared DB/Redis)
+   - Operator domain is sent on create (`docker_compose_domains` on service **`app`** + `fqdn`) so Coolify does not also assign a generate-domain (`{uuid}.demo.codron.co` / `{uuid}.random.codron.co`)
 5. Env written to the **app** service only: `APP_KEY`, `DEAMON_SITE_NAME`. Coolify injects `SERVICE_URL_APP` / `SERVICE_FQDN_APP`. Do not add mailbox or extra secrets here.
-6. Domain is bound on compose service **`app`** via `setDomains` (`force_domain_override` stays false).
+6. Domain is bound again via `setDomains`: compose service **`app`** plus `fqdn` = the same operator host (`force_domain_override` stays false). That replaces a leftover generate-domain on **new/retry provision** only — do not clear generate FQDNs on already-live apps without operator OK.
 7. Deploy is triggered. A `deployments` row (`trigger=create`) is stored. Plane prefers a Coolify webhook (`POST /webhooks/coolify` — HMAC or query `token`) and falls back to polling every 15s until `finished` or `failed`.
 8. Success: `coolify_app_uuid` set, status **active**, audit `site.provision_succeeded`. Provision generates an agent secret (encrypted). Use **Check health** on the site to poll CMS `/internal/control/v1/health` — it does not gate this step.
 9. Failure: status **error**, audit `site.provision_failed`. Retry **Provision** on the same row (reuses the Coolify app uuid when one already exists; does not delete volumes).

@@ -128,41 +128,71 @@ class CoolifyFleetClassifier
 
     public function primaryHost(CoolifyApplication $app): ?string
     {
+        $hosts = [];
+
         foreach ($app->composeDomains as $row) {
             if (($row['name'] ?? '') !== CoolifyDomainParser::COMPOSE_SERVICE) {
                 continue;
             }
 
-            $host = $this->hostFromDomainString((string) ($row['domain'] ?? ''));
-            if ($host !== null) {
-                return $host;
-            }
+            $hosts = array_merge($hosts, $this->hostsFromDomainString((string) ($row['domain'] ?? '')));
         }
 
         if (is_string($app->fqdn) && $app->fqdn !== '') {
-            $host = $this->hostFromDomainString($app->fqdn);
-            if ($host !== null) {
+            $hosts = array_merge($hosts, $this->hostsFromDomainString($app->fqdn));
+        }
+
+        if ($hosts === []) {
+            $first = CoolifyDomainParser::firstDomain($app->composeDomains);
+
+            return $first !== null ? $this->hostFromDomainString($first) : null;
+        }
+
+        $hosts = array_values(array_unique($hosts));
+
+        foreach ($hosts as $host) {
+            if (! CoolifyDomainParser::isGeneratedWildcardHost($host)) {
                 return $host;
             }
         }
 
-        $first = CoolifyDomainParser::firstDomain($app->composeDomains);
+        return $hosts[0];
+    }
 
-        return $first !== null ? $this->hostFromDomainString($first) : null;
+    /**
+     * @return list<string>
+     */
+    public function hostsFromDomainString(string $domain): array
+    {
+        $hosts = [];
+
+        foreach (array_map('trim', explode(',', $domain)) as $part) {
+            $host = $this->parseSingleHost($part);
+            if ($host !== null && ! in_array($host, $hosts, true)) {
+                $hosts[] = $host;
+            }
+        }
+
+        return $hosts;
     }
 
     public function hostFromDomainString(string $domain): ?string
     {
-        $first = trim((string) (explode(',', $domain)[0] ?? ''));
-        if ($first === '') {
+        return $this->hostsFromDomainString($domain)[0] ?? null;
+    }
+
+    private function parseSingleHost(string $part): ?string
+    {
+        $part = trim($part);
+        if ($part === '') {
             return null;
         }
 
-        if (preg_match('#^https?://#i', $first) !== 1) {
-            $first = 'https://'.$first;
+        if (preg_match('#^https?://#i', $part) !== 1) {
+            $part = 'https://'.$part;
         }
 
-        $host = parse_url($first, PHP_URL_HOST);
+        $host = parse_url($part, PHP_URL_HOST);
         if (! is_string($host) || $host === '') {
             return null;
         }

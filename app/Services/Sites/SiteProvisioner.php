@@ -339,6 +339,7 @@ class SiteProvisioner
             privateKeyUuid: $privateKey,
             name: 'deamon-'.$site->slug,
             instantDeploy: false,
+            dockerComposeDomains: filled($site->primary_domain) ? (string) $site->primary_domain : null,
             dockerComposeLocation: CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
         );
     }

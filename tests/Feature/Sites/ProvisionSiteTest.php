@@ -91,6 +91,10 @@ class ProvisionSiteTest extends TestCase
                 && ($body['project_uuid'] ?? null) === 'proj_test'
                 && ($body['server_uuid'] ?? null) === 'srv_test'
                 && ($body['name'] ?? null) === 'deamon-izyem'
+                && ($body['fqdn'] ?? null) === 'https://shop.izyem.example.test'
+                && ($body['docker_compose_domains'] ?? null) === [
+                    ['name' => 'app', 'domain' => 'https://shop.izyem.example.test'],
+                ]
                 && empty($body['instant_deploy'])
                 && ! array_key_exists('docker_compose_raw', $body);
         });
@@ -115,6 +119,7 @@ class ProvisionSiteTest extends TestCase
                 && ($body['docker_compose_domains'] ?? null) === [
                     ['name' => 'app', 'domain' => 'https://shop.izyem.example.test'],
                 ]
+                && ($body['fqdn'] ?? null) === 'https://shop.izyem.example.test'
                 && ($body['force_domain_override'] ?? null) === false;
         });
 

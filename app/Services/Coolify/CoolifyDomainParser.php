@@ -133,6 +133,17 @@ final class CoolifyDomainParser
         return $hosts[0] !== '' ? $hosts[0] : null;
     }
 
+    /**
+     * Coolify generate-domain: `{uuid}.{random|demo}.codron.co`.
+     * Human slugs on the same wildcard (susa.demo.codron.co) are not generated.
+     */
+    public static function isGeneratedWildcardHost(string $host): bool
+    {
+        $host = strtolower(rtrim(trim($host), '.'));
+
+        return preg_match('/^[a-z0-9]{20,32}\.(random|demo)\.codron\.co$/', $host) === 1;
+    }
+
     public static function normalizeDomainString(string $domain): string
     {
         $parts = array_values(array_filter(array_map('trim', explode(',', $domain)), static fn (string $part): bool => $part !== ''));

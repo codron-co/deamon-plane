@@ -93,6 +93,10 @@ final class CreateComposeAppRequest
 
         if ($this->dockerComposeDomains !== null && $this->dockerComposeDomains !== '' && $this->dockerComposeDomains !== []) {
             $payload['docker_compose_domains'] = CoolifyDomainParser::forPatch($this->dockerComposeDomains);
+            $fqdn = CoolifyDomainParser::firstDomain($payload['docker_compose_domains']);
+            if ($fqdn !== null) {
+                $payload['fqdn'] = $fqdn;
+            }
         }
 
         return $payload;

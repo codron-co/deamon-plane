@@ -63,8 +63,10 @@ Duplicate primary domain in one Coolify list (e.g. `meyyit.tr` = alpha compose `
 
 ## Domain
 
-1. Coolify `fqdn` when present (host only, no scheme).
-2. Else parse `docker_compose_domains` — live shape is often a **JSON string** object; read **`app.domain`** (first comma-separated host). Spike: compose apps frequently have `fqdn=null`.
+1. Parse `docker_compose_domains` — live shape is often a **JSON string** object; read **`app.domain`** hosts (comma-separated).
+2. Else Coolify `fqdn` (host only, no scheme).
+3. Prefer the first **operator** host. Skip Coolify generate-domains (`{20–32 alnum}.random.codron.co` / `{20–32 alnum}.demo.codron.co`). Human slugs on the same wildcard stay (`susa.demo.codron.co`). If every host is generated, keep the first so a generate-only app still imports.
+4. One `site_domains` row (primary). Import does not store every comma-separated host. Site edit shows `primary_domain` only.
 
 Slug on **create** only: first label of the host (strip `www.`), else slugified app name (strip leading `deamon-`). Collision → `-2`, `-3`. Updates never rename slug.
 

@@ -47,4 +47,17 @@ class CoolifyDomainParserTest extends TestCase
 
         CoolifyDomainParser::forPatch('');
     }
+
+    public function test_generated_wildcard_host_is_uuid_shaped_not_human_slug(): void
+    {
+        $this->assertTrue(CoolifyDomainParser::isGeneratedWildcardHost(
+            '6cmmgh5ty9lzv6uiz5kfavue.demo.codron.co'
+        ));
+        $this->assertTrue(CoolifyDomainParser::isGeneratedWildcardHost(
+            'xscn1wbbsql7pnovbneyrtkl.random.codron.co'
+        ));
+        $this->assertFalse(CoolifyDomainParser::isGeneratedWildcardHost('susa.demo.codron.co'));
+        $this->assertFalse(CoolifyDomainParser::isGeneratedWildcardHost('ozkol-v1.demo.codron.co'));
+        $this->assertFalse(CoolifyDomainParser::isGeneratedWildcardHost('test.deamon.codron.co'));
+    }
 }

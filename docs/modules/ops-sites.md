@@ -23,7 +23,7 @@ Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 
 ## Fields
 
-Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + primary `site_domains` row), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional attach of an existing `codron-co/deamon` app, `notes`.
+Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional attach of an existing `codron-co/deamon` app, `notes`.
 
 Coolify UUIDs are **not** free-text on site create. Super Admin may open a collapsed, warned “Gelişmiş” paste. Compose file is never an operator field — always `/docker-compose.coolify.yml`.
 
@@ -41,7 +41,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 `SiteProvisioner` + `ProvisionSiteJob` + `PollDeploymentJob`. Runbook: [provision-site.md](../runbooks/provision-site.md).
 
 - Eligible statuses: `draft`, `error` (retry). Viewer is forbidden.
-- Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env `APP_KEY` + `DEAMON_SITE_NAME` (+ `CONTROL_PLANE_AGENT_SECRET` inject). Domain on compose service `app`.
+- Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env `APP_KEY` + `DEAMON_SITE_NAME` (+ `CONTROL_PLANE_AGENT_SECRET` inject). Domain on compose service `app` **and** `fqdn` (operator host only — see [coolify-client.md](coolify-client.md)).
 - Preflight before create POST (Turkish): selected server in live `listServers`; Git source in live sources list. 422 `errors` are shown on the provision flash and in the audit error field.
 - Success → `coolify_app_uuid` + status `active`. Agent health is a separate poll (does not gate provision). Failure → `error` + audit.
 - Retry reuses an existing Coolify app uuid (does not DELETE the app).
