@@ -159,6 +159,15 @@ class CoolifyConnectionController extends Controller
         return back()->with('status', 'Coolify bağlantısı OK — '.$servers->count().' sunucu.');
     }
 
+    public function redirectGetSync(CoolifyConnection $connection): RedirectResponse
+    {
+        $this->authorize('view', $connection);
+
+        return redirect()
+            ->route('ops.coolify.show', $connection)
+            ->with('status', 'Senkron için Sync düğmesini kullanın. GET /sync senkron çalıştırmaz.');
+    }
+
     public function sync(CoolifyConnection $connection, CoolifyInventorySync $sync): RedirectResponse
     {
         $this->authorize('sync', $connection);

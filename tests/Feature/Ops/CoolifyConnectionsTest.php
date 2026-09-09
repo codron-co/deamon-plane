@@ -59,11 +59,36 @@ class CoolifyConnectionsTest extends TestCase
         $this->assertNotSame(self::TOKEN, DB::table('coolify_connections')->value('api_token'));
         $this->assertArrayNotHasKey('api_token', $connection->toArray());
 
-        $this->actingAs($this->operator())
+        $html = $this->actingAs($this->operator())
             ->get(route('ops.coolify.show', $connection))
             ->assertOk()
             ->assertSee('Token kayıtlı', false)
-            ->assertDontSee(self::TOKEN, false);
+            ->assertSee('>Sync<', false)
+            ->assertDontSee(self::TOKEN, false)
+            ->getContent();
+
+        $this->assertStringContainsString('method="POST"', $html);
+        $this->assertStringContainsString(route('ops.coolify.sync', $connection), $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/<a\b[^>]*\bhref="[^"]*\/coolify\/\d+\/sync"/i',
+            $html,
+        );
+    }
+
+    public function test_get_sync_redirects_to_show_and_does_not_call_coolify(): void
+    {
+        Http::fake();
+
+        $connection = CoolifyConnection::factory()->create([
+            'api_token' => self::TOKEN,
+        ]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.coolify.sync.get', $connection))
+            ->assertRedirect(route('ops.coolify.show', $connection))
+            ->assertSessionHas('status');
+
+        Http::assertNothingSent();
     }
 
     public function test_test_connection_and_sync_persist_servers_projects_envs_git(): void
@@ -105,7 +130,7 @@ class CoolifyConnectionsTest extends TestCase
         $this->actingAs($this->operator())
             ->from(route('ops.coolify.show', $connection))
             ->post(route('ops.coolify.sync', $connection))
-            ->assertRedirect()
+            ->assertRedirect(route('ops.coolify.show', $connection))
             ->assertSessionHas('status');
 
         $this->assertDatabaseHas('coolify_servers', [

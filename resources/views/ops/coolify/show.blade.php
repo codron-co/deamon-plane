@@ -4,6 +4,12 @@
 
 @section('actions')
     <a class="btn btn-ghost btn-sm" href="{{ route('ops.coolify.index') }}">Tüm Coolify</a>
+    @if ($canWrite)
+        <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}">
+            @csrf
+            <button type="submit" class="btn btn-primary btn-sm">Sync</button>
+        </form>
+    @endif
 @endsection
 
 @section('content')
@@ -27,16 +33,29 @@
             @if ($canWrite)
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Kaydet</button>
-                    <button type="submit" class="btn btn-secondary" formaction="{{ route('ops.coolify.test', $connection) }}">Bağlantıyı test et</button>
-                    <button type="submit" class="btn btn-secondary" formaction="{{ route('ops.coolify.sync', $connection) }}">API’den çek</button>
-                    @unless ($connection->is_default)
-                        <button type="submit" class="btn btn-ghost" formaction="{{ route('ops.coolify.default', $connection) }}">Varsayılan yap</button>
-                    @endunless
                 </div>
             @else
                 <p class="field-hint">Viewer salt okunur.</p>
             @endif
         </form>
+        @if ($canWrite)
+            <div class="form-actions">
+                <form method="POST" action="{{ route('ops.coolify.test', $connection) }}">
+                    @csrf
+                    <button type="submit" class="btn btn-secondary">Bağlantıyı test et</button>
+                </form>
+                <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}">
+                    @csrf
+                    <button type="submit" class="btn btn-secondary">Sync</button>
+                </form>
+                @unless ($connection->is_default)
+                    <form method="POST" action="{{ route('ops.coolify.default', $connection) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost">Varsayılan yap</button>
+                    </form>
+                @endunless
+            </div>
+        @endif
     </section>
 
     @if ($connection->github_apps_list_available === false)

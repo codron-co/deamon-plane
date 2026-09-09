@@ -11,6 +11,7 @@ Route::get('/coolify/{connection}/options', [CoolifyConnectionController::class,
 Route::put('/coolify/{connection}', [CoolifyConnectionController::class, 'update'])->name('ops.coolify.update');
 Route::delete('/coolify/{connection}', [CoolifyConnectionController::class, 'destroy'])->name('ops.coolify.destroy');
 Route::post('/coolify/{connection}/test', [CoolifyConnectionController::class, 'test'])->name('ops.coolify.test');
+Route::get('/coolify/{connection}/sync', [CoolifyConnectionController::class, 'redirectGetSync'])->name('ops.coolify.sync.get');
 Route::post('/coolify/{connection}/sync', [CoolifyConnectionController::class, 'sync'])->name('ops.coolify.sync');
 Route::post('/coolify/{connection}/default', [CoolifyConnectionController::class, 'makeDefault'])->name('ops.coolify.default');
 Route::post('/coolify/{connection}/servers/{server}/toggle', [CoolifyConnectionController::class, 'toggleServer'])->name('ops.coolify.servers.toggle');

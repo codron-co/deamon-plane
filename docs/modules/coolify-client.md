@@ -35,7 +35,7 @@ Left nav **Coolify**. Super Admin / operator write; viewer read.
 | `coolify_environments` | project_uuid + uuid/name, `is_active` |
 | `coolify_git_sources` | `github_app` \| `deploy_key`, uuid, name, `is_active` |
 
-Existing `coolify_settings` row is copied into the first connection on migrate (encrypted columns copied as-is). Settings → Coolify is a pointer to this menu.
+Existing `coolify_settings` row is copied into the first connection on migrate (encrypted columns copied as-is). Settings does not host Coolify credentials.
 
 **Default connection:** `is_default` — new sites pre-select it.
 
@@ -71,6 +71,17 @@ Coolify **422** `message` + `errors{field: []}` is appended on `CoolifyApiExcept
 
 Live GET `docker_compose_domains` is often a **JSON string** object (`{"app":{"domain":"https://…"}}`); `Application.fqdn` is often null. The adapter parses that string. PATCH always sends the OpenAPI **array** `[{ "name": "app", "domain": "https://…" }]`. `force_domain_override` defaults false.
 
-## Settings vs Coolify menu
+## Coolify menu (not Settings)
 
-Ops **Coolify** menu: connections, test, sync, aktif/pasif, defaults. Encrypted `webhook_secret` per connection; env fallback `COOLIFY_WEBHOOK_SECRET`. Settings page only links here. Deploy webhooks: [coolify-webhooks.md](coolify-webhooks.md).
+Ops **Coolify** menu (`/coolify`): connections, API token, test, sync, aktif/pasif, defaults, deploy webhook URL. Encrypted `webhook_secret` per connection; env fallback `COOLIFY_WEBHOOK_SECRET`. Settings is GitHub theme catalog only — leftover `POST /settings` and `POST /settings/coolify/test` redirect here. Deploy webhooks: [coolify-webhooks.md](coolify-webhooks.md).
+
+### Connection routes
+
+| Method | Path | Name | Notes |
+|--------|------|------|-------|
+| GET | `/coolify/{connection}` | `ops.coolify.show` | Connection page |
+| POST | `/coolify/{connection}/sync` | `ops.coolify.sync` | Inventory sync (`CoolifyInventorySync`). CSRF. Operator / Super Admin |
+| GET | `/coolify/{connection}/sync` | `ops.coolify.sync.get` | **Does not sync.** 302 to show + flash “use the Sync button” |
+| POST | `/coolify/{connection}/test` | `ops.coolify.test` | `listServers` only |
+
+**Sync UI:** dedicated `<form method="POST">` + CSRF + **Sync** button (topbar and Bağlantı panel). Never `<a href="…/sync">` and never `formaction` on the PUT Kaydet form (`_method=PUT` would 405). Browser GET `/coolify/1/sync` is a redirect, not a 405.

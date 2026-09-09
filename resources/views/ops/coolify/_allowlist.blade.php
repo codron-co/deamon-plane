@@ -7,7 +7,7 @@
     <p>{{ $hint }}</p>
 
     @if ($rows->isEmpty())
-        <p class="muted">Liste boş. API’den çek.</p>
+        <p class="muted">Liste boş. Sync düğmesiyle API’den çekin.</p>
     @else
         <div class="sites-table-wrap">
             <table class="ops-table">
