@@ -23,7 +23,7 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
    - Stack is **app + isolated MySQL + isolated Redis** (no shared DB/Redis)
 5. Env written to the **app** service only: `APP_KEY`, `DEAMON_SITE_NAME`. Coolify injects `SERVICE_URL_APP` / `SERVICE_FQDN_APP`. Do not add mailbox or extra secrets here.
 6. Domain is bound on compose service **`app`** via `setDomains` (`force_domain_override` stays false).
-7. Deploy is triggered. A `deployments` row (`trigger=create`) is stored. Plane prefers a signed Coolify webhook (`POST /webhooks/coolify`) and falls back to polling every 15s until `finished` or `failed`.
+7. Deploy is triggered. A `deployments` row (`trigger=create`) is stored. Plane prefers a Coolify webhook (`POST /webhooks/coolify` — HMAC or query `token`) and falls back to polling every 15s until `finished` or `failed`.
 8. Success: `coolify_app_uuid` set, status **active**, audit `site.provision_succeeded`. Provision generates an agent secret (encrypted). Use **Check health** on the site to poll CMS `/internal/control/v1/health` — it does not gate this step.
 9. Failure: status **error**, audit `site.provision_failed`. Retry **Provision** on the same row (reuses the Coolify app uuid when one already exists; does not delete volumes).
 

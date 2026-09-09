@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');
     require __DIR__.'/ops/sites.php';
+    require __DIR__.'/ops/coolify.php';
     require __DIR__.'/ops/themes.php';
     Route::get('/settings', [SettingsController::class, 'index'])->name('ops.settings');
     Route::post('/settings', [SettingsController::class, 'update'])->name('ops.settings.update');

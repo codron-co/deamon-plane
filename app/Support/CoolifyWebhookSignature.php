@@ -7,11 +7,18 @@ use Illuminate\Http\Request;
 final class CoolifyWebhookSignature
 {
     /**
-     * Assumed Coolify→Plane HMAC (Coolify notification webhooks are unsigned today).
+     * Coolify→Plane webhook auth.
      *
-     * Header (first match): X-Coolify-Signature | X-Hub-Signature-256 | X-Signature
-     * Value: `sha256=<hex>` or raw hex. Secret: coolify_settings.webhook_secret
-     * (encrypted) or COOLIFY_WEBHOOK_SECRET. Empty secret is never used as an HMAC key.
+     * HMAC (preferred when a signer exists): header first match
+     * X-Coolify-Signature | X-Hub-Signature-256 | X-Signature.
+     * Value: `sha256=<hex>` or raw hex.
+     *
+     * Coolify native notifications are unsigned. Fallback: query `token` or
+     * `secret` must match the stored webhook signing secret via hash_equals.
+     *
+     * Secret: coolify_settings.webhook_secret (encrypted) or
+     * COOLIFY_WEBHOOK_SECRET. Empty secret is never used as an HMAC key or
+     * query-token comparator.
      */
     public const HEADER_PREFERRED = 'X-Coolify-Signature';
 
@@ -55,6 +62,27 @@ final class CoolifyWebhookSignature
         }
 
         return null;
+    }
+
+    public static function queryTokenFromRequest(Request $request): ?string
+    {
+        foreach (['token', 'secret'] as $key) {
+            $value = $request->query($key);
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    public static function queryTokenMatches(string $secret, ?string $token): bool
+    {
+        if ($secret === '' || $token === null || $token === '') {
+            return false;
+        }
+
+        return hash_equals($secret, $token);
     }
 
     private static function extractHex(string $header): ?string

@@ -3,11 +3,13 @@
 namespace App\Services\Sites;
 
 use App\Enums\Channel;
+use App\Enums\CoolifyGitSourceKind;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\SiteStatus;
 use App\Jobs\PollDeploymentJob;
 use App\Jobs\ProvisionSiteJob;
+use App\Models\CoolifyConnection;
 use App\Models\CoolifySetting;
 use App\Models\Deployment;
 use App\Models\Site;
@@ -15,6 +17,7 @@ use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyCredentials;
+use App\Services\Coolify\CoolifyProvisionPreflight;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use Illuminate\Encryption\Encrypter;
@@ -27,6 +30,8 @@ class SiteProvisioner
 {
     public function __construct(
         private readonly CoolifyApplicationService $coolify,
+        private readonly CoolifyProvisionPreflight $preflight,
+        private readonly SiteAgentSecretInjector $agentSecrets,
     ) {}
 
     public function canStart(Site $site): bool
@@ -41,6 +46,11 @@ class SiteProvisioner
         }
 
         $this->assertCoolifyReady($site);
+
+        $connection = $this->connectionFor($site);
+        if ($connection instanceof CoolifyConnection && blank($site->coolify_app_uuid)) {
+            $this->preflight->assert($site, $connection);
+        }
 
         $siteId = (string) $site->id;
 
@@ -69,23 +79,38 @@ class SiteProvisioner
 
     public function provisionOnCoolify(Site $site, ?int $actorUserId = null, ?string $ip = null): Deployment
     {
+        $connection = $this->connectionFor($site);
+        $coolify = $connection instanceof CoolifyConnection
+            ? CoolifyApplicationService::forConnection($connection)
+            : $this->coolify;
+
         $appUuid = $site->coolify_app_uuid;
 
         if (blank($appUuid)) {
-            $created = $this->coolify->createComposeApp($this->createRequest($site));
+            if ($connection instanceof CoolifyConnection) {
+                $this->preflight->assert($site, $connection);
+            }
+
+            $created = $coolify->createComposeApp($this->createRequest($site, $connection));
             $appUuid = $created->uuid;
             $site->coolify_app_uuid = $appUuid;
             $site->save();
         }
 
-        $this->coolify->updateEnvs($appUuid, [
+        $coolify->updateEnvs($appUuid, [
             'APP_KEY' => (string) $site->app_key_encrypted,
             'DEAMON_SITE_NAME' => $site->name,
         ]);
 
-        $this->coolify->setDomains($appUuid, $site->primary_domain);
+        $coolify->setDomains($appUuid, $site->primary_domain);
 
-        $deployed = $this->coolify->deploy($appUuid);
+        try {
+            $this->agentSecrets->inject($site);
+        } catch (SiteProvisionException) {
+            // Provision continues; operator can use Generate & inject on the site.
+        }
+
+        $deployed = $coolify->deploy($appUuid);
         $deploymentUuid = $deployed->firstDeploymentUuid();
 
         $channel = $site->channel instanceof Channel ? $site->channel : Channel::from((string) $site->channel);
@@ -233,7 +258,7 @@ class SiteProvisioner
 
     public function safeFailureMessage(Site $site, Throwable $exception): string
     {
-        $message = $exception instanceof CoolifyApiException
+        $message = $exception instanceof CoolifyApiException || $exception instanceof SiteProvisionException
             ? $exception->getMessage()
             : 'Provisioning failed.';
 
@@ -266,24 +291,25 @@ class SiteProvisioner
 
     private function assertCoolifyReady(Site $site): void
     {
-        $settings = CoolifySetting::current();
-        $credentials = CoolifyCredentials::resolve($settings);
+        $connection = $this->connectionFor($site);
+        $credentials = $connection instanceof CoolifyConnection
+            ? $connection->credentials()
+            : CoolifyCredentials::resolve(CoolifySetting::current());
 
         if ($credentials->baseUrl === '' || ! $credentials->hasToken()) {
-            throw new SiteProvisionException('Coolify is not configured. Add the API URL and token in Settings.');
+            throw new SiteProvisionException('Coolify bağlı değil. Coolify menüsünden URL ve API token ekleyin.');
         }
 
-        [$project, $server] = $this->resolveTargets($site, $settings);
+        [$project, $server] = $this->resolveTargets($site, $connection);
 
         if ($project === '' || $server === '') {
-            throw new SiteProvisionException('Coolify project and server UUIDs are required before provision.');
+            throw new SiteProvisionException('Provision için aktif proje ve sunucu seçin (Coolify menüsü). UUID’yi elle yazmayın.');
         }
     }
 
-    private function createRequest(Site $site): CreateComposeAppRequest
+    private function createRequest(Site $site, ?CoolifyConnection $connection): CreateComposeAppRequest
     {
-        $settings = CoolifySetting::current();
-        [$project, $server] = $this->resolveTargets($site, $settings);
+        [$project, $server] = $this->resolveTargets($site, $connection);
 
         $channel = $site->channel instanceof Channel
             ? $site->channel->value
@@ -293,29 +319,93 @@ class SiteProvisioner
             ? (string) $site->git_repository
             : (string) config('ops.deamon.repository');
 
+        [$githubApp, $privateKey] = $this->resolveGitSource($site, $connection);
+        $environmentUuid = trim((string) $site->coolify_environment_uuid);
+        if ($environmentUuid === '' && $connection instanceof CoolifyConnection) {
+            $environmentUuid = trim((string) $connection->default_environment_uuid);
+        }
+
+        $environmentName = $connection?->default_environment_name
+            ?: (string) config('ops.provision.environment_name', 'production');
+
         return new CreateComposeAppRequest(
             projectUuid: $project,
             serverUuid: $server,
             gitRepository: $repository,
             gitBranch: $channel,
-            environmentName: (string) config('ops.provision.environment_name', 'production'),
-            githubAppUuid: filled($settings->github_app_uuid) ? (string) $settings->github_app_uuid : null,
-            privateKeyUuid: filled($settings->private_key_uuid) ? (string) $settings->private_key_uuid : null,
+            environmentName: $environmentUuid === '' ? $environmentName : null,
+            environmentUuid: $environmentUuid !== '' ? $environmentUuid : null,
+            githubAppUuid: $githubApp,
+            privateKeyUuid: $privateKey,
             name: 'deamon-'.$site->slug,
             instantDeploy: false,
-            dockerComposeLocation: (string) config('ops.deamon.compose_file', CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION),
+            dockerComposeLocation: CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
         );
     }
 
     /**
      * @return array{0: string, 1: string}
      */
-    private function resolveTargets(Site $site, CoolifySetting $settings): array
+    private function resolveTargets(Site $site, ?CoolifyConnection $connection): array
     {
-        $project = trim((string) ($settings->default_project_uuid ?: config('ops.coolify.default_project_uuid')));
-        $server = trim((string) ($site->coolify_server_uuid ?: $settings->default_server_uuid ?: config('ops.coolify.default_server_uuid')));
+        $settings = CoolifySetting::current();
+        $project = trim((string) (
+            $site->coolify_project_uuid
+            ?: $connection?->default_project_uuid
+            ?: $settings->default_project_uuid
+            ?: config('ops.coolify.default_project_uuid')
+        ));
+        $server = trim((string) (
+            $site->coolify_server_uuid
+            ?: $connection?->default_server_uuid
+            ?: $settings->default_server_uuid
+            ?: config('ops.coolify.default_server_uuid')
+        ));
 
         return [$project, $server];
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function resolveGitSource(Site $site, ?CoolifyConnection $connection): array
+    {
+        $kind = $site->coolify_git_source_kind instanceof CoolifyGitSourceKind
+            ? $site->coolify_git_source_kind
+            : CoolifyGitSourceKind::tryFrom((string) $site->coolify_git_source_kind);
+        $uuid = trim((string) $site->coolify_git_source_uuid);
+
+        if ($uuid === '' && $connection instanceof CoolifyConnection) {
+            $kind = $connection->default_git_source_kind instanceof CoolifyGitSourceKind
+                ? $connection->default_git_source_kind
+                : CoolifyGitSourceKind::tryFrom((string) $connection->default_git_source_kind);
+            $uuid = trim((string) $connection->default_git_source_uuid);
+        }
+
+        if ($uuid === '') {
+            $settings = CoolifySetting::current();
+
+            return [
+                filled($settings->github_app_uuid) ? (string) $settings->github_app_uuid : null,
+                filled($settings->private_key_uuid) ? (string) $settings->private_key_uuid : null,
+            ];
+        }
+
+        return [
+            $kind === CoolifyGitSourceKind::GithubApp ? $uuid : null,
+            $kind === CoolifyGitSourceKind::DeployKey ? $uuid : null,
+        ];
+    }
+
+    private function connectionFor(Site $site): ?CoolifyConnection
+    {
+        if ($site->coolify_connection_id) {
+            $site->loadMissing('coolifyConnection');
+
+            return $site->coolifyConnection;
+        }
+
+        return CoolifyConnection::default();
     }
 
     /**

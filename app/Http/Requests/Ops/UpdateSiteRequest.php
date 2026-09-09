@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests\Ops;
 
+use App\Http\Requests\Ops\Concerns\ValidatesCoolifySiteTargets;
 use App\Models\Site;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateSiteRequest extends FormRequest
 {
+    use ValidatesCoolifySiteTargets;
+
     public function authorize(): bool
     {
         $site = $this->route('site');
@@ -23,8 +27,12 @@ class UpdateSiteRequest extends FormRequest
             'slug' => strtolower(trim((string) $this->input('slug'))),
             'domain' => strtolower(trim((string) $this->input('domain'))),
             'coolify_server_uuid' => $this->normalizedOptional('coolify_server_uuid'),
+            'coolify_project_uuid' => $this->normalizedOptional('coolify_project_uuid'),
+            'coolify_environment_uuid' => $this->normalizedOptional('coolify_environment_uuid'),
+            'coolify_git_source' => $this->normalizedOptional('coolify_git_source'),
             'notes' => $this->normalizedOptional('notes'),
         ]);
+        $this->applyAdvancedOverrides();
     }
 
     /**
@@ -36,7 +44,7 @@ class UpdateSiteRequest extends FormRequest
         $siteId = $site instanceof Site ? $site->id : null;
         $domainId = $site instanceof Site ? $site->primaryDomainRecord?->id : null;
 
-        return [
+        return array_merge([
             'slug' => ['required', 'string', 'min:2', 'max:64', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('sites', 'slug')->whereNull('deleted_at')->ignore($siteId)],
             'name' => ['required', 'string', 'max:255'],
             'domain' => [
@@ -48,9 +56,13 @@ class UpdateSiteRequest extends FormRequest
                 Rule::unique('site_domains', 'domain')->ignore($domainId),
             ],
             'channel' => ['required', 'string', Rule::in(config('ops.channels', []))],
-            'coolify_server_uuid' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9_-]+$/'],
             'notes' => ['nullable', 'string', 'max:5000'],
-        ];
+        ], $this->coolifyTargetRules());
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $this->withCoolifyTargetValidator($validator);
     }
 
     /**

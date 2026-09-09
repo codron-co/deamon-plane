@@ -19,8 +19,8 @@
 - [Related infra (Mailcow vb.)](related-infra.md) — Mailcow plane v1 **out of scope**
 - [Ops Sites CRUD](modules/ops-sites.md) — draft desired state + provision POST + channel switch
 - [Deployment (Coolify Compose)](modules/deployment.md)
-- [Coolify HTTP adapter](modules/coolify-client.md)
-- [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC + deployments UI + fleet KPI
+- [Coolify HTTP adapter](modules/coolify-client.md) — N connections, allowlists, site dropdowns
+- [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC or query token + deployments UI + fleet KPI
 - [Site agent client](modules/agent-client.md) — HMAC health poll + version gate + unhealthy KPI
 - [Theme catalog](modules/theme-catalog.md) — GitHub `deamon-theme-*` sync (no ZIP)
 - [Theme agent client](modules/theme-agent-client.md) — assign via CMS `X-Deamon-*` HMAC

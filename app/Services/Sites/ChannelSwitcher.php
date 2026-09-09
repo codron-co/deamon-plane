@@ -328,7 +328,7 @@ class ChannelSwitcher
         $credentials = CoolifyCredentials::resolve(CoolifySetting::current());
 
         if ($credentials->baseUrl === '' || ! $credentials->hasToken()) {
-            throw new ChannelSwitchException('Coolify is not configured. Add the API URL and token in Settings.');
+            throw new ChannelSwitchException('Coolify bağlı değil. Coolify menüsünden URL ve API token ekleyin.');
         }
     }
 

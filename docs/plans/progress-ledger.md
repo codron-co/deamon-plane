@@ -19,7 +19,7 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 ## Dalga 2 — Coolify Fleet
 
 - Status: **complete** (Tasks 2–7; Http::fake suite **114 passed**)
-- API mode: **hybrid** — compose create/branch/deploy/poll/import are automated; Coolify Notifications webhook POSTs are **unsigned**, so Plane HMAC (`X-Coolify-Signature`) 401s native Coolify until a signer sits in front. `PollDeploymentJob` is the working fallback.
+- API mode: **hybrid** — compose create/branch/deploy/poll/import are automated; Coolify Notifications webhook POSTs are **unsigned**. Plane accepts query `token` matching the webhook signing secret. HMAC (`X-Coolify-Signature`) remains preferred when a signer exists. `PollDeploymentJob` remains the backup.
 - Commit: not requested
 
 ## Dalga 3 — Agent Health
@@ -66,7 +66,7 @@ Sonraki: Dalga 5 (done in same overnight pass)
 SECURITY: closed (tests + runbooks + IP allowlist + APP_DEBUG gate)
 PROD-DEPLOY: artifacts ready; live Coolify mutate SKIPPED
 Faz A/B/C: met / met (Plane) / partial (live deploy + import apply leftover)
-Open follow-ups: Coolify UI domain + deploy current git; GitHub App/PAT; agent secret inject; import dry-run→apply; unsigned Coolify notifications
+Open follow-ups: Coolify UI domain + deploy current git; GitHub App/PAT; agent secret inject; import dry-run→apply
 Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 ```
 
@@ -92,11 +92,18 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 | 14 security | SECURITY | **done** (checklist closed in `docs/security.md`) |
 | 15 prod deploy plane | PROD-DEPLOY | **partial** — runbook complete; **live deploy skipped**; read-only status recorded above |
 
+## Coolify menu (ops — 2026-09-10)
+
+- Status: **code complete** (this worktree). Multi-connection + server aktif/pasif + project/env/git allowlists + site `<select>` + attach existing + preflight + 422 field errors + agent secret inject.
+- Nav: **Coolify**. Default connection for new sites. Super Admin advanced UUID paste (collapsed, warned). Compose path fixed `/docker-compose.coolify.yml`.
+- GitHub Apps: `GET /github-apps` (v4.x). 404 → hybrid UI (deploy keys + advanced paste). Not the Plane theme-catalog GitHub App.
+- Commit: not requested
+
 ## Hybrid leftovers (operator on wake)
 
-- Coolify Notifications remain unsigned → Plane Coolify HMAC 401s native posts; poll job is the fallback.
-- Agent secret inject is still manual after import.
-- GitHub App/PAT + org webhook secret must be pasted in Settings (not in git).
+- Coolify Notifications remain unsigned — paste `https://{plane}/webhooks/coolify?token=<webhook signing secret>`. HMAC still preferred if a signer exists. Poll remains backup.
+- Agent secret inject is in the site UI (`Generate & inject secret`) when Coolify env API works; Coolify UI leftover if that PATCH fails.
+- GitHub App/PAT + org webhook secret must be pasted in Settings (not in git). Theme catalog ≠ Coolify Git source.
 - CMS Task 11 is live at v1.2.5 — site still needs `CONTROL_PLANE_AGENT_SECRET` injected before theme assign 200s.
 - Plane Coolify app has **no domain** yet; do not PATCH from a laptop unless the UI target is confirmed. Never touch Susa `crxguq6nodorlzy88wf9x305`.
 - Commit / push not done (overnight rule).

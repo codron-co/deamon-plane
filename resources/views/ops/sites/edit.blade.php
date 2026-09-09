@@ -56,6 +56,19 @@
 
     @include('ops.sites._agent-health')
 
+    @if ($canInjectAgentSecret ?? false)
+        <section class="ops-panel" aria-labelledby="agent-secret-heading">
+            <h2 id="agent-secret-heading">Agent secret</h2>
+            <p>Coolify env <code>CONTROL_PLANE_AGENT_SECRET</code>. Üretilir, şifreli saklanır, bir daha gösterilmez.</p>
+            <form method="POST" action="{{ route('ops.sites.agent-secret', $site) }}" class="ops-form">
+                @csrf
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-secondary">Generate &amp; inject secret</button>
+                </div>
+            </form>
+        </section>
+    @endif
+
     @include('ops.sites._themes')
 
     @include('ops.deployments.index')
@@ -77,4 +90,8 @@
             </form>
         </div>
     @endif
+@endsection
+
+@section('scripts')
+    <script src="{{ asset('js/ops-coolify-form.js') }}" defer></script>
 @endsection

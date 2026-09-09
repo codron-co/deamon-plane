@@ -142,7 +142,7 @@ class SiteTest extends TestCase
         $site = Site::factory()->create();
 
         $this->assertTrue($site->canTransitionTo(SiteStatus::Provisioning));
-        $this->assertFalse($site->canTransitionTo(SiteStatus::Active));
+        $this->assertTrue($site->canTransitionTo(SiteStatus::Active));
 
         $site->transitionTo(SiteStatus::Provisioning);
         $site->save();

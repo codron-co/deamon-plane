@@ -95,6 +95,39 @@ class CoolifyClientTest extends TestCase
         $this->assertSame('Deamon', $projects[0]->name);
     }
 
+    public function test_list_environments_github_apps_and_private_keys(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/projects/proj-1/environments' => Http::response([
+                ['uuid' => 'env-1', 'name' => 'production'],
+            ], 200),
+            'https://coolify.test/api/v1/github-apps' => Http::response([
+                ['uuid' => 'gh-1', 'name' => 'codron'],
+            ], 200),
+            'https://coolify.test/api/v1/security/keys' => Http::response([
+                ['uuid' => 'pk-1', 'name' => 'deploy'],
+            ], 200),
+        ]);
+
+        $envs = $this->client()->listEnvironments('proj-1');
+        $apps = $this->client()->listGithubApps();
+        $keys = $this->client()->listPrivateKeys();
+
+        $this->assertSame('env-1', $envs[0]->uuid);
+        $this->assertNotNull($apps);
+        $this->assertSame('gh-1', $apps[0]->uuid);
+        $this->assertSame('pk-1', $keys[0]->uuid);
+    }
+
+    public function test_list_github_apps_404_returns_null(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/github-apps' => Http::response(['message' => 'Not found'], 404),
+        ]);
+
+        $this->assertNull($this->client()->listGithubApps());
+    }
+
     public function test_create_compose_app_uses_git_github_app_path_not_deprecated_raw_compose(): void
     {
         Http::fake(function (Request $request) {

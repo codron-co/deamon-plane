@@ -56,8 +56,7 @@
 
     @if (! $site->hasAgentSecret())
         <p class="field-hint">
-            Import does not invent secrets. Inject <code>CONTROL_PLANE_AGENT_SECRET</code> on the CMS Coolify app,
-            then store the same value encrypted on this site (Dalga 5 hardens automation).
+            Import secret üretmez. Aşağıdaki <strong>Generate &amp; inject</strong> Coolify env’e yazar — tinker yok.
         </p>
     @endif
 

@@ -6,7 +6,9 @@ use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Coolify\Dto\CoolifyDeployResult;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
+use App\Services\Coolify\Dto\CoolifyGitSource;
 use App\Services\Coolify\Dto\CoolifyProject;
+use App\Services\Coolify\Dto\CoolifyProjectEnvironment;
 use App\Services\Coolify\Dto\CoolifyServer;
 use App\Services\Coolify\Dto\CoolifyStorages;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
@@ -63,6 +65,61 @@ class CoolifyClient
     public function listProjects(): Collection
     {
         return $this->mapList($this->request('GET', '/projects'), CoolifyProject::fromArray(...));
+    }
+
+    /**
+     * GET /projects/{uuid}/environments. Falls back to nested environments on GET /projects/{uuid}.
+     *
+     * @return Collection<int, CoolifyProjectEnvironment>
+     */
+    public function listEnvironments(string $projectUuid): Collection
+    {
+        $projectUuid = $this->assertUuid($projectUuid);
+
+        try {
+            $json = $this->request('GET', '/projects/'.$projectUuid.'/environments');
+        } catch (CoolifyApiException $exception) {
+            if ($exception->status !== 404) {
+                throw $exception;
+            }
+
+            $json = $this->request('GET', '/projects/'.$projectUuid);
+            if (is_array($json) && isset($json['environments']) && is_array($json['environments'])) {
+                $json = $json['environments'];
+            }
+        }
+
+        return $this->mapList($json, static fn (array $row): CoolifyProjectEnvironment => CoolifyProjectEnvironment::fromArray($row, $projectUuid));
+    }
+
+    /**
+     * GET /github-apps. Returns null when the instance has no such route (hybrid).
+     *
+     * @return Collection<int, CoolifyGitSource>|null
+     */
+    public function listGithubApps(): ?Collection
+    {
+        try {
+            $json = $this->request('GET', '/github-apps');
+        } catch (CoolifyApiException $exception) {
+            if (in_array($exception->status, [404, 405], true)) {
+                return null;
+            }
+
+            throw $exception;
+        }
+
+        return $this->mapList($json, CoolifyGitSource::fromGithubApp(...));
+    }
+
+    /**
+     * GET /security/keys — Coolify deploy / private keys.
+     *
+     * @return Collection<int, CoolifyGitSource>
+     */
+    public function listPrivateKeys(): Collection
+    {
+        return $this->mapList($this->request('GET', '/security/keys'), CoolifyGitSource::fromPrivateKey(...));
     }
 
     /**

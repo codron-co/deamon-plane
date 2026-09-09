@@ -4,22 +4,20 @@ Internal ops only. Do not paste `CONTROL_PLANE_AGENT_SECRET`, `APP_KEY`, or Cool
 
 Import (`ops:import-coolify-apps`) and leftover sites **do not** get an agent secret. Plane will skip health polls and mark the site `needs_secret` until the CMS env and the Plane row match.
 
-Dalga 5 hardens this into a Coolify env-patch + redeploy job. Until then this is a manual Coolify UI step.
+Plane **Generate & inject secret** on site edit calls Coolify `PATCH /applications/{uuid}/envs/bulk` with `CONTROL_PLANE_AGENT_SECRET`. The value is generated if missing, stored encrypted on the site, and never rendered. Provision also attempts this after compose create. Tinker is leftover only if the Coolify env API fails.
 
 ## Preconditions
 
-1. The site exists in Plane (`coolify_app_uuid` set).
-2. You can open the customer Coolify application (not Plane).
-3. You have a fresh random secret (64+ chars). Generate it out of band. Do not reuse the Coolify API token or the Plane webhook secret.
+1. The site exists in Plane (`coolify_app_uuid` set) — provision or attach.
+2. A Coolify connection is configured (Coolify menu) so `updateEnvs` can run.
+3. Do not reuse the Coolify API token or the Plane webhook secret.
 
 ## Steps
 
-1. Coolify → customer Deamon app → **Environment**.
-2. Add `CONTROL_PLANE_AGENT_SECRET` on the **app** service only. Do not put it on MySQL/Redis. Do not commit it.
-3. Redeploy that Coolify app (volumes stay; do not DELETE the application).
-4. In Plane, store the **same** value on `sites.agent_secret_encrypted` (encrypted cast). v1: tinker / ops shell — not the Sites form (the form never shows secrets).
-5. Plane → site edit → **Check health**. Expect status `ok` and a `deamon_version`.
-6. Plane → **Check health**. CMS Task 8 (`/internal/control/v1/health`, Deamon v1.1.43) must be deployed on the site. Headers are locked: `X-Deamon-Timestamp`, `X-Deamon-Nonce`, `X-Deamon-Signature`.
+1. Plane → site edit → **Generate & inject secret**.
+2. If Coolify env write fails, use Coolify UI on the **app** service only (not MySQL/Redis). Redeploy; do not DELETE the application. Do not paste the secret into tickets.
+3. Plane → site edit → **Check health**. Expect status `ok` and a `deamon_version`.
+4. CMS Task 8 (`/internal/control/v1/health`) must be deployed. Headers: `X-Deamon-Timestamp`, `X-Deamon-Nonce`, `X-Deamon-Signature`.
 
 ## Failure notes
 

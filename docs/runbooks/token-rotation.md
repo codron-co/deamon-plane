@@ -10,7 +10,7 @@ Never paste live tokens into git, chat, or audit notes. After rotation, confirm 
 4. Revoke the previous Coolify token.
 5. Audit is not written for the token value (encrypted column only).
 
-Webhook HMAC (`COOLIFY_WEBHOOK_SECRET` / Settings webhook secret) is a **different** secret. Rotate it in Coolify Notifications and Plane together or signed POSTs 401.
+Webhook signing secret (`COOLIFY_WEBHOOK_SECRET` / Settings webhook secret) is a **different** secret. Rotate it in Plane and in the Coolify Notifications URL (`?token=`) together, or unsigned POSTs 401. Signed proxies must update the HMAC key at the same time.
 
 ## GitHub PAT / App
 

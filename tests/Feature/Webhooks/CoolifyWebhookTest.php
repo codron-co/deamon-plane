@@ -52,7 +52,7 @@ class CoolifyWebhookTest extends TestCase
         $this->assertSame(SiteStatus::Provisioning, $deployment->site->fresh()->status);
     }
 
-    public function test_missing_signature_is_rejected(): void
+    public function test_missing_signature_and_token_is_rejected(): void
     {
         $deployment = $this->inProgressDeployment();
         $payload = json_encode([
@@ -63,6 +63,91 @@ class CoolifyWebhookTest extends TestCase
         $this->call('POST', '/webhooks/coolify', [], [], [], [
             'CONTENT_TYPE' => 'application/json',
         ], $payload)->assertUnauthorized();
+
+        $this->assertSame(DeploymentStatus::InProgress, $deployment->fresh()->status);
+    }
+
+    public function test_unsigned_post_with_correct_token_maps_success_event_to_finished(): void
+    {
+        $deployment = $this->inProgressDeployment();
+
+        $this->unsignedPost([
+            'success' => true,
+            'event' => 'deployment_success',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+            'application_uuid' => $deployment->site->coolify_app_uuid,
+            'commit' => 'abc123def456',
+        ])->assertOk()->assertJson(['ok' => true, 'updated' => true]);
+
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Finished, $deployment->status);
+        $this->assertSame('abc123def456', $deployment->commit_sha);
+        $this->assertNotNull($deployment->finished_at);
+        $this->assertSame(SiteStatus::Active, $deployment->site->fresh()->status);
+    }
+
+    public function test_unsigned_post_with_secret_query_alias_is_accepted(): void
+    {
+        $deployment = $this->inProgressDeployment();
+
+        $this->unsignedPost([
+            'event' => 'deployment_success',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+            'application_uuid' => $deployment->site->coolify_app_uuid,
+        ], self::SECRET, 'secret')->assertOk();
+
+        $this->assertSame(DeploymentStatus::Finished, $deployment->fresh()->status);
+    }
+
+    public function test_wrong_query_token_is_rejected(): void
+    {
+        $deployment = $this->inProgressDeployment();
+
+        $this->unsignedPost([
+            'event' => 'deployment_success',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+            'application_uuid' => $deployment->site->coolify_app_uuid,
+        ], 'wrong-token')->assertUnauthorized();
+
+        $this->assertSame(DeploymentStatus::InProgress, $deployment->fresh()->status);
+    }
+
+    public function test_empty_secret_rejects_even_with_query_token(): void
+    {
+        CoolifySetting::query()->update(['webhook_secret' => null]);
+        config(['ops.coolify.webhook_secret' => null]);
+
+        $deployment = $this->inProgressDeployment();
+
+        $this->unsignedPost([
+            'event' => 'deployment_success',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+            'application_uuid' => $deployment->site->coolify_app_uuid,
+        ], 'any-token')->assertUnauthorized();
+
+        $this->unsignedPost([
+            'event' => 'deployment_success',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+        ], '')->assertUnauthorized();
+
+        $this->assertSame(DeploymentStatus::InProgress, $deployment->fresh()->status);
+    }
+
+    public function test_invalid_hmac_is_not_bypassed_by_query_token(): void
+    {
+        $deployment = $this->inProgressDeployment();
+        $payload = [
+            'event' => 'deployment_success',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+            'application_uuid' => $deployment->site->coolify_app_uuid,
+        ];
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+        $signature = CoolifyWebhookSignature::sign('wrong-secret', $body);
+
+        $this->call('POST', '/webhooks/coolify?token='.urlencode(self::SECRET), [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_COOLIFY_SIGNATURE' => $signature,
+        ], $body)->assertUnauthorized();
 
         $this->assertSame(DeploymentStatus::InProgress, $deployment->fresh()->status);
     }
@@ -167,6 +252,23 @@ class CoolifyWebhookTest extends TestCase
         });
     }
 
+    public function test_query_token_is_never_written_to_logs(): void
+    {
+        Log::spy();
+
+        $this->unsignedPost([
+            'event' => 'deployment_success',
+            'deployment_uuid' => 'missing',
+        ], 'visible-query-token-xyz')->assertUnauthorized();
+
+        Log::shouldHaveReceived('warning')->withArgs(function (string $message): bool {
+            $this->assertStringNotContainsString(self::SECRET, $message);
+            $this->assertStringNotContainsString('visible-query-token-xyz', $message);
+
+            return true;
+        });
+    }
+
     public function test_site_edit_shows_deployments_tab(): void
     {
         $deployment = $this->inProgressDeployment([
@@ -195,6 +297,21 @@ class CoolifyWebhookTest extends TestCase
         return $this->call('POST', '/webhooks/coolify', [], [], [], [
             'CONTENT_TYPE' => 'application/json',
             'HTTP_'.strtoupper(str_replace('-', '_', $header)) => $signature,
+        ], $body);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function unsignedPost(array $payload, string $token = self::SECRET, string $queryKey = 'token'): TestResponse
+    {
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+        $query = $token === ''
+            ? '?'.$queryKey.'='
+            : '?'.$queryKey.'='.rawurlencode($token);
+
+        return $this->call('POST', '/webhooks/coolify'.$query, [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
         ], $body);
     }
 

@@ -3,7 +3,7 @@
 @section('title', 'Settings')
 
 @section('content')
-    <p class="page-lede">Coolify API credentials for the fleet adapter. Token is encrypted in Plane’s database. Customer site CRUD is a separate screen.</p>
+    <p class="page-lede">GitHub App (tema kataloğu) burada. Coolify instance’ları sol menüdeki <strong>Coolify</strong> altında. Token asla gösterilmez.</p>
 
     @include('ops.settings.partials.coolify')
 

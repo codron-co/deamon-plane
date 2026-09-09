@@ -7,10 +7,10 @@ use PHPUnit\Framework\TestCase;
 
 class SiteStatusTest extends TestCase
 {
-    public function test_draft_only_moves_to_provisioning(): void
+    public function test_draft_moves_to_provisioning_or_active(): void
     {
         $this->assertTrue(SiteStatus::Draft->canTransitionTo(SiteStatus::Provisioning));
-        $this->assertFalse(SiteStatus::Draft->canTransitionTo(SiteStatus::Active));
+        $this->assertTrue(SiteStatus::Draft->canTransitionTo(SiteStatus::Active));
         $this->assertFalse(SiteStatus::Draft->canTransitionTo(SiteStatus::Archived));
     }
 

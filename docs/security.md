@@ -13,7 +13,7 @@ Müşteri CMS admin’i plane’e erişmez.
 |------|--------|--------|
 | Auth / CSRF | **done** | Fortify session + Blade CSRF. Login rate-limited by Fortify. |
 | Coolify / GitHub secret | **done** | Encrypted columns; never rendered after save; [token-rotation.md](runbooks/token-rotation.md) |
-| Coolify deploy webhook | **done** | HMAC raw body; empty secret rejected; `X-Coolify-Signature` |
+| Coolify deploy webhook | **done** | HMAC raw body **or** query `token`/`secret` (`hash_equals`); empty secret rejected; `X-Coolify-Signature` |
 | GitHub theme webhook | **done** | Distinct secret; `X-Hub-Signature-256`; empty rejected; throttle 60/min |
 | Site agent | **done** | Per-site HMAC; `{timestamp}.{nonce}.{rawBody}`; headers `X-Deamon-*`; clone_token never logged |
 | Tema | **done** | Org repos only; auto-update default **off**; no ZIP in Plane UI |
@@ -33,7 +33,7 @@ Müşteri CMS admin’i plane’e erişmez.
 
 ## Residual / hybrid
 
-- Coolify Notifications webhook POSTs are **unsigned** today — Plane HMAC 401s native Coolify until a signer sits in front. `PollDeploymentJob` is the working fallback.
+- Coolify Notifications webhook POSTs are **unsigned** — Plane accepts `?token=` matching the webhook signing secret. HMAC remains preferred when a signer exists. `PollDeploymentJob` remains the backup.
 - Agent secret inject after import is still **manual**.
 - Live GitHub App install is an operator step (catalog + tests do not require live credentials).
 - Live Plane Coolify deploy (Task 15) is optional/high-risk if the spike app is unhealthy — prefer the UI checklist.

@@ -6,23 +6,40 @@ Task 6. Coolify → Plane deploy events update the same `deployments` rows as `P
 
 `POST /webhooks/coolify` (no session, no CSRF). CSRF-exempt because the route is registered outside the `web` group.
 
-Paste this URL into Coolify **Notifications → Webhook**. There is no Coolify Public API to register the URL (spike: OpenAPI has no register-webhook method).
+There is no Coolify Public API to register the URL (spike: OpenAPI has no register-webhook method).
 
-## Assumed HMAC (Coolify does not sign today)
+## Coolify native (unsigned + query token)
 
-Coolify’s notification channel sends unsigned JSON (`Content-Type: application/json`). Plane still **requires** HMAC so a public URL cannot rewrite fleet status.
+Coolify **Notifications → Webhook** POSTs JSON (`Content-Type: application/json`) with **no** HMAC header. Paste this URL (same signing secret as Settings → Coolify → Webhook signing secret):
+
+```
+https://{plane-host}/webhooks/coolify?token=<webhook signing secret>
+```
+
+Example for this fleet: `https://plane.codron.co/webhooks/coolify?token=<same webhook signing secret>`.
 
 | Item | Value |
 |------|--------|
-| Secret | `coolify_settings.webhook_secret` (encrypted) or env `COOLIFY_WEBHOOK_SECRET` |
+| Query | `token` (preferred) or `secret` |
+| Match | `hash_equals` against `coolify_settings.webhook_secret` or env `COOLIFY_WEBHOOK_SECRET` |
+| Empty secret | Rejected (401). Never compare against `''`. |
+| Logging | Token and secret are never logged or rendered after save |
+
+If HMAC headers are **missing**, Plane accepts the request only when the query token matches. Wrong or missing token → **401**.
+
+## HMAC (preferred when a signer exists)
+
+If `X-Coolify-Signature`, `X-Hub-Signature-256`, or `X-Signature` is present, Plane verifies HMAC-SHA256 of the raw body. A present-but-invalid header is **401** (query token is not a bypass). Use this path for a signing proxy in front of `/webhooks/coolify`.
+
+| Item | Value |
+|------|--------|
+| Secret | Any `coolify_connections.webhook_secret` (encrypted), then `coolify_settings.webhook_secret`, then env `COOLIFY_WEBHOOK_SECRET` |
 | Preferred header | `X-Coolify-Signature: sha256=<hex>` |
 | Also accepted | `X-Hub-Signature-256`, `X-Signature` (`sha256=<hex>` or raw hex) |
 | MAC | `HMAC-SHA256(raw body, secret)` |
 | Empty secret | Rejected (401). Never `hash_hmac(..., '')`. |
 
-Invalid or missing signature → **401**. Secrets are never logged or rendered after save.
-
-If the Coolify instance cannot attach a signature header, put a signing proxy in front of `/webhooks/coolify` or keep relying on the 15–30s poll job.
+Neither HMAC nor token match → **401**.
 
 ## Payload → `deployments.status`
 
@@ -39,9 +56,10 @@ Terminal rows are not regressed by a later in-progress event (webhook and poll s
 
 ## UI
 
+- Settings → Coolify connection: **Deploy webhook URL** is the path only. The hint tells the operator to append `?token=` + the webhook signing secret. The live secret is never rendered after save.
 - Site detail **Deployments**: last 25 rows, status chip, duration, short SHA, **Open in Coolify** (assumed `{base}/project/{project}/environment/{environment_name}/application/{uuid}`).
 - Fleet dashboard KPIs (5): total sites, by channel, unhealthy (`status=error` **or** agent timeout / bad signature / `queue_ok=false` / stale), failed deploys, deploying. `needs_secret` does not count. See [agent-client.md](agent-client.md).
 
 ## Poll fallback
 
-`PollDeploymentJob` already polls `GET /deployments/{uuid}` every `ops.provision.poll_seconds` (default 15s). Webhooks are the fast path; poll remains required until Coolify can sign outbound notifications.
+`PollDeploymentJob` already polls `GET /deployments/{uuid}` every `ops.provision.poll_seconds` (default 15s). Webhooks are the fast path; poll remains the backup if notifications are misconfigured.

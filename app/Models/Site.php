@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\Channel;
+use App\Enums\CoolifyGitSourceKind;
 use App\Enums\SiteStatus;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -32,7 +34,13 @@ class Site extends Model
         'desired_channel',
         'status',
         'coolify_app_uuid',
+        'coolify_connection_id',
         'coolify_server_uuid',
+        'coolify_project_uuid',
+        'coolify_environment_uuid',
+        'coolify_git_source_uuid',
+        'coolify_git_source_kind',
+        'channel_needs_review',
         'git_repository',
         'app_key_encrypted',
         'agent_secret_encrypted',
@@ -60,6 +68,8 @@ class Site extends Model
         return [
             'channel' => Channel::class,
             'desired_channel' => Channel::class,
+            'coolify_git_source_kind' => CoolifyGitSourceKind::class,
+            'channel_needs_review' => 'boolean',
             'status' => SiteStatus::class,
             'app_key_encrypted' => 'encrypted',
             'agent_secret_encrypted' => 'encrypted',
@@ -90,6 +100,11 @@ class Site extends Model
                 Channel::assertAllowed($site->desired_channel);
             }
         });
+    }
+
+    public function coolifyConnection(): BelongsTo
+    {
+        return $this->belongsTo(CoolifyConnection::class);
     }
 
     public function domains(): HasMany

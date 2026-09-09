@@ -13,19 +13,36 @@ class VerifyCoolifyWebhook
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $secret = CoolifySetting::resolvedWebhookSecret();
-        if ($secret === null) {
+        $secrets = CoolifySetting::resolvedWebhookSecrets();
+        if ($secrets === []) {
             Log::warning('Coolify webhook rejected: signing secret is not configured');
 
             abort(401, 'Unauthorized.');
         }
 
         $header = CoolifyWebhookSignature::headerFromRequest($request);
-        if (! CoolifyWebhookSignature::matches($secret, $request->getContent(), $header)) {
+        if ($header !== null) {
+            foreach ($secrets as $secret) {
+                if (CoolifyWebhookSignature::matches($secret, $request->getContent(), $header)) {
+                    return $next($request);
+                }
+            }
+
             Log::warning('Coolify webhook rejected: invalid signature');
 
             abort(401, 'Unauthorized.');
         }
+
+        $token = CoolifyWebhookSignature::queryTokenFromRequest($request);
+        foreach ($secrets as $secret) {
+            if (CoolifyWebhookSignature::queryTokenMatches($secret, $token)) {
+                return $next($request);
+            }
+        }
+
+        Log::warning('Coolify webhook rejected: invalid signature');
+
+        abort(401, 'Unauthorized.');
 
         return $next($request);
     }

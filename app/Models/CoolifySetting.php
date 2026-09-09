@@ -59,20 +59,46 @@ class CoolifySetting extends Model
         return filled($this->webhook_secret);
     }
 
-    public static function resolvedWebhookSecret(): ?string
+    /**
+     * @return list<string>
+     */
+    public static function resolvedWebhookSecrets(): array
     {
+        $secrets = [];
+
+        foreach (CoolifyConnection::query()->whereNotNull('webhook_secret')->get() as $connection) {
+            if ($connection->hasWebhookSecret()) {
+                $secrets[] = (string) $connection->webhook_secret;
+            }
+        }
+
         $row = static::current();
         if ($row->hasWebhookSecret()) {
-            return (string) $row->webhook_secret;
+            $secrets[] = (string) $row->webhook_secret;
         }
 
         $fromEnv = trim((string) config('ops.coolify.webhook_secret'));
+        if ($fromEnv !== '') {
+            $secrets[] = $fromEnv;
+        }
 
-        return $fromEnv !== '' ? $fromEnv : null;
+        return array_values(array_unique($secrets));
     }
 
-    public function applicationUiUrl(?string $applicationUuid): ?string
+    public static function resolvedWebhookSecret(): ?string
     {
+        $secrets = static::resolvedWebhookSecrets();
+
+        return $secrets[0] ?? null;
+    }
+
+    public function applicationUiUrl(?string $applicationUuid, ?CoolifyConnection $connection = null): ?string
+    {
+        $connection ??= CoolifyConnection::default();
+        if ($connection instanceof CoolifyConnection) {
+            return $connection->applicationUiUrl($applicationUuid);
+        }
+
         $base = filled($this->base_url)
             ? (string) $this->base_url
             : (string) config('ops.coolify.base_url');

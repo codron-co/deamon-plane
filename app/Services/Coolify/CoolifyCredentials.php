@@ -2,6 +2,7 @@
 
 namespace App\Services\Coolify;
 
+use App\Models\CoolifyConnection;
 use App\Models\CoolifySetting;
 
 final class CoolifyCredentials
@@ -30,8 +31,13 @@ final class CoolifyCredentials
         return $this->baseUrl.'/api/v1';
     }
 
-    public static function resolve(?CoolifySetting $settings = null): self
+    public static function resolve(?CoolifySetting $settings = null, ?CoolifyConnection $connection = null): self
     {
+        $connection ??= CoolifyConnection::default();
+        if ($connection instanceof CoolifyConnection && ($connection->hasToken() || filled($connection->base_url))) {
+            return $connection->credentials();
+        }
+
         $settings ??= CoolifySetting::current();
 
         $base = filled($settings->base_url)

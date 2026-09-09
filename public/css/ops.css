@@ -1010,6 +1010,38 @@ code {
     }
 }
 
+.coolify-placement {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coolify-placement legend {
+    padding: 0 4px;
+}
+
+.coolify-advanced {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+}
+
+.coolify-advanced summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--warning);
+}
+
+.coolify-advanced[open] summary {
+    margin-bottom: 10px;
+}
+
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;

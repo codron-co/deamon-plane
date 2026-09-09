@@ -7,7 +7,7 @@
 @endsection
 
 @section('content')
-    <p class="page-lede">Desired state only. The record stays <strong>draft</strong>. APP_KEY and agent secret are generated at provision (Task 4).</p>
+    <p class="page-lede">Desired state. Coolify sunucu / proje / Git <strong>select</strong> — UUID yazılmaz. Compose her zaman <code>/docker-compose.coolify.yml</code>.</p>
 
     <form method="POST" action="{{ route('ops.sites.store') }}" class="ops-form settings-form">
         @csrf
@@ -17,4 +17,8 @@
             <a class="btn btn-ghost" href="{{ route('ops.sites') }}">Cancel</a>
         </div>
     </form>
+@endsection
+
+@section('scripts')
+    <script src="{{ asset('js/ops-coolify-form.js') }}" defer></script>
 @endsection

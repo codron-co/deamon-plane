@@ -8,6 +8,7 @@ use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Models\AuditLog;
+use App\Models\CoolifyConnection;
 use App\Models\CoolifySetting;
 use App\Models\Site;
 use App\Models\User;
@@ -128,6 +129,71 @@ class ProvisionSiteTest extends TestCase
         });
 
         $this->assertSecretsStayPrivate($site);
+    }
+
+    public function test_coolify_422_field_errors_appear_in_session_and_audit(): void
+    {
+        Http::fake(function (Request $request) {
+            if ($request->method() === 'POST' && str_contains($request->url(), '/applications/')) {
+                return Http::response([
+                    'message' => 'Validation failed.',
+                    'errors' => [
+                        'server_uuid' => ['The selected server uuid is invalid.'],
+                    ],
+                ], 422);
+            }
+
+            return Http::response(['error' => 'unexpected '.$request->url()], 404);
+        });
+
+        $site = $this->draftSite();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.provision', $site))
+            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertSessionHas('error');
+
+        $error = session('error');
+        $this->assertIsString($error);
+        $this->assertStringContainsString('Validation failed.', $error);
+        $this->assertStringContainsString('server_uuid', $error);
+
+        $failed = AuditLog::query()
+            ->where('subject_id', $site->id)
+            ->where('action', 'site.provision_failed')
+            ->first();
+        $this->assertNotNull($failed);
+        $this->assertStringContainsString('server_uuid', (string) ($failed->after['error'] ?? ''));
+    }
+
+    public function test_preflight_rejects_server_missing_from_list_servers(): void
+    {
+        CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.test',
+            'api_token' => 'test-coolify-token',
+            'is_default' => true,
+            'default_server_uuid' => 'srv_test',
+            'default_project_uuid' => 'proj_test',
+        ]);
+
+        Http::fake([
+            'https://coolify.test/api/v1/servers' => Http::response([
+                ['uuid' => 'other-server', 'name' => 'other'],
+            ], 200),
+        ]);
+
+        $site = $this->draftSite();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.provision', $site))
+            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertSessionHas('error');
+
+        $error = session('error');
+        $this->assertIsString($error);
+        $this->assertStringContainsStringIgnoringCase('sunucu', $error);
+        $this->assertSame(SiteStatus::Draft, $site->fresh()->status);
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request->url(), '/applications/'));
     }
 
     public function test_coolify_create_failure_marks_error_and_audits(): void

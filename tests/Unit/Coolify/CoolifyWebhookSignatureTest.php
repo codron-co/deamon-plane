@@ -28,4 +28,21 @@ class CoolifyWebhookSignatureTest extends TestCase
 
         $this->assertSame('sha256=bbbb', CoolifyWebhookSignature::headerFromRequest($request));
     }
+
+    public function test_query_token_matches_token_or_secret_param(): void
+    {
+        $tokenRequest = Request::create('/webhooks/coolify?token=plane-secret', 'POST');
+        $secretRequest = Request::create('/webhooks/coolify?secret=plane-secret', 'POST');
+        $emptyRequest = Request::create('/webhooks/coolify?token=', 'POST');
+
+        $this->assertSame('plane-secret', CoolifyWebhookSignature::queryTokenFromRequest($tokenRequest));
+        $this->assertSame('plane-secret', CoolifyWebhookSignature::queryTokenFromRequest($secretRequest));
+        $this->assertNull(CoolifyWebhookSignature::queryTokenFromRequest($emptyRequest));
+
+        $this->assertTrue(CoolifyWebhookSignature::queryTokenMatches('plane-secret', 'plane-secret'));
+        $this->assertFalse(CoolifyWebhookSignature::queryTokenMatches('plane-secret', 'wrong'));
+        $this->assertFalse(CoolifyWebhookSignature::queryTokenMatches('', 'plane-secret'));
+        $this->assertFalse(CoolifyWebhookSignature::queryTokenMatches('plane-secret', ''));
+        $this->assertFalse(CoolifyWebhookSignature::queryTokenMatches('plane-secret', null));
+    }
 }

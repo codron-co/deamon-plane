@@ -3,11 +3,14 @@
 namespace App\Services\Coolify;
 
 use App\Enums\Channel;
+use App\Models\CoolifyConnection;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Coolify\Dto\CoolifyDeployResult;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
+use App\Services\Coolify\Dto\CoolifyGitSource;
 use App\Services\Coolify\Dto\CoolifyProject;
+use App\Services\Coolify\Dto\CoolifyProjectEnvironment;
 use App\Services\Coolify\Dto\CoolifyServer;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use Illuminate\Support\Collection;
@@ -22,6 +25,16 @@ class CoolifyApplicationService
     public function __construct(
         private readonly CoolifyClient $client,
     ) {}
+
+    public static function forConnection(CoolifyConnection $connection): self
+    {
+        return new self(new CoolifyClient($connection->credentials()));
+    }
+
+    public function client(): CoolifyClient
+    {
+        return $this->client;
+    }
 
     /**
      * @return Collection<int, CoolifyApplication>
@@ -50,6 +63,30 @@ class CoolifyApplicationService
     public function listProjects(): Collection
     {
         return $this->client->listProjects();
+    }
+
+    /**
+     * @return Collection<int, CoolifyProjectEnvironment>
+     */
+    public function listEnvironments(string $projectUuid): Collection
+    {
+        return $this->client->listEnvironments($projectUuid);
+    }
+
+    /**
+     * @return Collection<int, CoolifyGitSource>|null
+     */
+    public function listGithubApps(): ?Collection
+    {
+        return $this->client->listGithubApps();
+    }
+
+    /**
+     * @return Collection<int, CoolifyGitSource>
+     */
+    public function listPrivateKeys(): Collection
+    {
+        return $this->client->listPrivateKeys();
     }
 
     public function createComposeApp(CreateComposeAppRequest $request): CoolifyApplication

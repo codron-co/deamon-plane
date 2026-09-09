@@ -14,13 +14,22 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/provision` | `ops.sites.provision` | operator, super_admin; draft or error only |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
+| POST | `/sites/{site}/agent-secret` | `ops.sites.agent-secret` | operator, super_admin; Coolify env inject |
 | DELETE | `/sites/{site}` | `ops.sites.destroy` | operator, super_admin |
+
+Coolify connections live under `/coolify` (`ops.coolify.*`) — left nav **Coolify**. See [coolify-client.md](coolify-client.md).
 
 Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 
 ## Fields
 
-Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + primary `site_domains` row), `channel` (`main` \| `beta` \| `alpha`), optional `coolify_server_uuid`, `notes`.
+Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + primary `site_domains` row), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional attach of an existing `codron-co/deamon` app, `notes`.
+
+Coolify UUIDs are **not** free-text on site create. Super Admin may open a collapsed, warned “Gelişmiş” paste. Compose file is never an operator field — always `/docker-compose.coolify.yml`.
+
+**Attach existing:** dropdown of customer apps on the selected connection (`CoolifyFleetClassifier`). Sets `coolify_app_uuid` + domain + channel from `git_branch` if it is `main|beta|alpha`; otherwise `channel_needs_review` (channel stays an allowlisted pick). Does **not** `POST` a second create.
+
+**Agent secret:** site edit **Generate & inject secret** (`POST /sites/{site}/agent-secret`) writes `CONTROL_PLANE_AGENT_SECRET` via Coolify `updateEnvs`. Encrypted on the site; never shown again. Provision also attempts inject after create. Runbook: [agent-secret-inject.md](../runbooks/agent-secret-inject.md).
 
 - Status is always **draft** on create. The form cannot change status.
 - `APP_KEY` / `agent_secret` are generated on **Provision**, stored encrypted, never shown in the form or audit payloads.
@@ -32,7 +41,8 @@ Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + pr
 `SiteProvisioner` + `ProvisionSiteJob` + `PollDeploymentJob`. Runbook: [provision-site.md](../runbooks/provision-site.md).
 
 - Eligible statuses: `draft`, `error` (retry). Viewer is forbidden.
-- Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env **only** `APP_KEY` + `DEAMON_SITE_NAME`; domain on compose service `app`.
+- Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env `APP_KEY` + `DEAMON_SITE_NAME` (+ `CONTROL_PLANE_AGENT_SECRET` inject). Domain on compose service `app`.
+- Preflight before create POST (Turkish): selected server in live `listServers`; Git source in live sources list. 422 `errors` are shown on the provision flash and in the audit error field.
 - Success → `coolify_app_uuid` + status `active`. Agent health is a separate poll (does not gate provision). Failure → `error` + audit.
 - Retry reuses an existing Coolify app uuid (does not DELETE the app).
 

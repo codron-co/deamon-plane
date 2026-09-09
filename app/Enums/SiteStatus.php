@@ -21,6 +21,7 @@ enum SiteStatus: string
 
     /**
      * Plan §4.2 — draft → provisioning → active ⇄ deploying → active;
+     * draft → active when attaching an existing Coolify app (no second create);
      * provisioning/deploying ↘ error; retry → deploying or provisioning; active → archived.
      *
      * @return list<self>
@@ -28,7 +29,7 @@ enum SiteStatus: string
     public function allowedTransitions(): array
     {
         return match ($this) {
-            self::Draft => [self::Provisioning],
+            self::Draft => [self::Provisioning, self::Active],
             self::Provisioning => [self::Active, self::Error],
             self::Active => [self::Deploying, self::Archived],
             self::Deploying => [self::Active, self::Error],
