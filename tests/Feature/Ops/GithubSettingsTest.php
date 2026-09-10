@@ -36,8 +36,15 @@ class GithubSettingsTest extends TestCase
             ->get(route('ops.settings'))
             ->assertOk()
             ->assertSee('GitHub theme catalog', false)
+            ->assertSee(__('settings.github.webhook'), false)
+            ->assertSee(__('settings.coolify.title'), false)
+            ->assertSee(route('ops.coolify.index'), false)
             ->assertSee('/webhooks/github', false)
-            ->assertDontSee(self::TOKEN, false);
+            ->assertSee('type="password"', false)
+            ->assertDontSee(self::TOKEN, false)
+            ->assertDontSee('name="current_password"', false)
+            ->assertDontSee('id="account_name"', false)
+            ->assertDontSee('coolify-connection-heading', false);
     }
 
     public function test_operator_saves_github_token_encrypted(): void
