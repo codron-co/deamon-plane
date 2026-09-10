@@ -78,4 +78,13 @@ return [
         'confirm' => 'Disconnect :name? Coolify applications are not deleted.',
         'label' => 'Disconnect',
     ],
+    'flash' => [
+        'saved' => 'Coolify connection saved. Sync servers and projects.',
+        'updated' => 'Coolify connection updated.',
+        'disconnected' => 'Coolify connection disconnected. Coolify applications were not deleted.',
+        'test_ok' => 'Coolify connection OK — :count servers.',
+        'sync' => 'Sync: :servers servers, :projects projects, :environments environments, :git Git sources, :sites sites filled.',
+        'sync_get' => 'Use the Sync button. GET /sync does not run a sync.',
+    ],
 ];
+

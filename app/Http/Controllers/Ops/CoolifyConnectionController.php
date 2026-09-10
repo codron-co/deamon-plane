@@ -196,11 +196,17 @@ class CoolifyConnectionController extends Controller
 
         $githubNote = $result['github_apps_available']
             ? ''
-            : ' GitHub App listesi bu instance’ta yok — deploy key’leri kullanın veya Super Admin gelişmiş alandan UUID yapıştırın.';
+            : ' '.__('coolify.show.github_apps_missing');
 
         return back()->with(
             'status',
-            'Senkron: '.$result['servers'].' sunucu, '.$result['projects'].' proje, '.$result['environments'].' ortam, '.$result['git_sources'].' Git kaynağı.'.$githubNote,
+            __('coolify.flash.sync', [
+                'servers' => $result['servers'],
+                'projects' => $result['projects'],
+                'environments' => $result['environments'],
+                'git' => $result['git_sources'],
+                'sites' => $result['sites'] ?? 0,
+            ]).$githubNote,
         );
     }
 

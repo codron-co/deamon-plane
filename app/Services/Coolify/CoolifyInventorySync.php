@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class CoolifyInventorySync
 {
     /**
-     * @return array{servers: int, projects: int, environments: int, git_sources: int, github_apps_available: bool}
+     * @return array{servers: int, projects: int, environments: int, git_sources: int, github_apps_available: bool, sites: int}
      */
     public function sync(CoolifyConnection $connection): array
     {
@@ -139,12 +139,15 @@ class CoolifyInventorySync
 
         $connection->refresh()->applyUnambiguousDefaults();
 
+        $sitesFilled = (new CoolifySiteTargetSync)->fill($connection, $coolify);
+
         return [
             'servers' => $servers->count(),
             'projects' => $projects->count(),
             'environments' => $environmentCount,
             'git_sources' => $gitSources->count(),
             'github_apps_available' => $githubAvailable,
+            'sites' => $sitesFilled,
         ];
     }
 }

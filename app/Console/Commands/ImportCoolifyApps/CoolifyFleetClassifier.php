@@ -253,19 +253,7 @@ class CoolifyFleetClassifier
 
     public function serverUuid(CoolifyApplication $app): ?string
     {
-        $candidates = [
-            $app->raw['server_uuid'] ?? null,
-            data_get($app->raw, 'destination.server.uuid'),
-            data_get($app->raw, 'server.uuid'),
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate) && trim($candidate) !== '') {
-                return trim($candidate);
-            }
-        }
-
-        return null;
+        return $app->serverUuid();
     }
 
     public function normalizeRepository(string $repository): string

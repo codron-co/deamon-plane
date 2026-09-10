@@ -78,4 +78,12 @@ return [
         'confirm' => ':name bağlantısını kes? Coolify uygulamaları silinmez.',
         'label' => 'Kes',
     ],
+    'flash' => [
+        'saved' => 'Coolify bağlantısı kaydedildi. Sunucu ve projeleri senkronlayın.',
+        'updated' => 'Coolify bağlantısı güncellendi.',
+        'disconnected' => 'Coolify bağlantısı kesildi. Coolify uygulamaları silinmedi.',
+        'test_ok' => 'Coolify bağlantısı tamam — :count sunucu.',
+        'sync' => 'Senkron: :servers sunucu, :projects proje, :environments ortam, :git Git kaynağı, :sites site dolduruldu.',
+        'sync_get' => 'Senkron için Senkron düğmesini kullanın. GET /sync senkron çalıştırmaz.',
+    ],
 ];

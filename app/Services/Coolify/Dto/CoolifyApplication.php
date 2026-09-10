@@ -2,6 +2,7 @@
 
 namespace App\Services\Coolify\Dto;
 
+use App\Enums\CoolifyGitSourceKind;
 use App\Services\Coolify\CoolifyDomainParser;
 
 final class CoolifyApplication
@@ -45,6 +46,60 @@ final class CoolifyApplication
             status: self::nullableString($payload['status'] ?? null),
             raw: $payload,
         );
+    }
+
+    public function projectUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['project_uuid'] ?? null,
+            data_get($this->raw, 'environment.project.uuid'),
+            data_get($this->raw, 'project.uuid'),
+        ]);
+    }
+
+    public function environmentUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['environment_uuid'] ?? null,
+            data_get($this->raw, 'environment.uuid'),
+        ]);
+    }
+
+    public function serverUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['server_uuid'] ?? null,
+            data_get($this->raw, 'destination.server.uuid'),
+            data_get($this->raw, 'server.uuid'),
+        ]);
+    }
+
+    /**
+     * @return array{kind: CoolifyGitSourceKind, uuid: string}|null
+     */
+    public function gitSource(): ?array
+    {
+        $github = self::firstUuid([
+            $this->raw['github_app_uuid'] ?? null,
+            data_get($this->raw, 'github_app.uuid'),
+            data_get($this->raw, 'source.github_app.uuid'),
+            data_get($this->raw, 'source.uuid'),
+        ]);
+
+        if ($github !== null) {
+            return ['kind' => CoolifyGitSourceKind::GithubApp, 'uuid' => $github];
+        }
+
+        $deployKey = self::firstUuid([
+            $this->raw['private_key_uuid'] ?? null,
+            data_get($this->raw, 'private_key.uuid'),
+        ]);
+
+        if ($deployKey !== null) {
+            return ['kind' => CoolifyGitSourceKind::DeployKey, 'uuid' => $deployKey];
+        }
+
+        return null;
     }
 
     public function primaryDomain(): ?string
@@ -99,6 +154,22 @@ final class CoolifyApplication
         }
 
         return strtolower(preg_replace('#^https?://#i', '', strtok($url, '/')) ?: '');
+    }
+
+    private static function firstUuid(array $candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (! is_string($candidate)) {
+                continue;
+            }
+
+            $value = trim($candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private static function nullableString(mixed $value): ?string
