@@ -448,9 +448,30 @@
         });
     }
 
+    function setupPendingForms() {
+        document.addEventListener("submit", function (event) {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement) || !form.hasAttribute("data-ops-pending")) {
+                return;
+            }
+            const button = event.submitter instanceof HTMLButtonElement
+                ? event.submitter
+                : form.querySelector("button[type='submit']");
+            if (!button || button.disabled) {
+                return;
+            }
+            button.disabled = true;
+            button.classList.add("is-pending");
+            if (button.dataset.pendingLabel) {
+                button.textContent = button.dataset.pendingLabel;
+            }
+        });
+    }
+
     setupThemeControls();
     setupUserMenu();
     setupClickableRows();
     setupSelects();
     setupCopyButtons();
+    setupPendingForms();
 })();

@@ -1,0 +1,52 @@
+<?php
+
+return [
+    'title' => 'Cloudflare',
+    'lede' => 'Singleton Cloudflare account for zone create and DNS upsert during Provision. The API token is encrypted and never shown after save.',
+    'connection' => 'Connection',
+    'permissions' => 'Required permissions',
+    'permissions_lede' => 'Create a scoped API token (not a Global API Key). The ready-made DNS Write template is not enough.',
+    'permissions_items' => [
+        'resource' => 'Resource: all zones in the account, including future zones. Do not pick a single domain.',
+        'dns' => 'DNS & Zones → DNS: Read + Edit',
+        'zone' => 'DNS & Zones → Zone: Read + Edit',
+        'template' => 'The DNS Write template is not enough: Zone must also have Edit.',
+    ],
+    'not_required' => 'Do not grant Developer Platform, AI, App Security, Rules, Zero Trust, Analytics, Network, Email Routing, Cache, SSL, Apps, or Page Shield. Plane writes MX/TXT with DNS Edit.',
+    'fields' => [
+        'account_id' => 'Account ID',
+        'account_id_hint' => '32-character hex from the Cloudflare dashboard. Not a secret.',
+        'api_token' => 'API token',
+        'token_saved' => 'Token saved. Leave blank to keep the current value.',
+        'token_hint' => 'Authorization: Bearer. Encrypted. Never logged.',
+        'origin_ipv4' => 'Origin IPv4',
+        'origin_ipv4_hint' => 'A records for @, www, and *. DNS-only (not proxied).',
+        'mail' => 'Hostinger mail template',
+        'mail_hint' => 'DKIM CNAME, MX, SPF, and DMARC. Toggle off if mail is handled elsewhere.',
+    ],
+    'probe' => [
+        'title' => 'Last permission probe',
+        'never' => 'Not tested yet. Use Test connection after saving.',
+        'ok' => 'Required permissions verified.',
+        'partial' => 'Missing: :missing',
+        'unverified_dns' => 'DNS Read/Edit not verified yet (no zones in the account).',
+    ],
+    'save' => 'Save Cloudflare',
+    'test' => 'Test connection',
+    'readonly' => 'Viewer role is read-only.',
+    'flash' => [
+        'saved' => 'Cloudflare settings saved. The token is encrypted and never shown again.',
+        'ok' => 'Cloudflare bağlantısı tamam. Zone oluşturma ve DNS yazma izinleri doğrulandı.',
+        'ok_dns_unverified' => 'Cloudflare bağlantısı tamam. Zone oluşturma doğrulandı. DNS Read/Edit henüz doğrulanamadı; yine de DNS Read+Edit verin.',
+        'partial' => 'Cloudflare token geçerli, ancak şu izinler eksik: :missing',
+        'token_invalid' => 'Token geçersiz / iptal.',
+        'account_invalid' => 'Account ID hatalı.',
+    ],
+    'errors' => [
+        'not_configured' => 'Cloudflare bağlı değil. Cloudflare menüsünden Account ID ve API token ekleyin.',
+        'domain_required' => 'Provision için birincil domain gerekli.',
+        'duplicate_zone' => 'Cloudflare’da :domain birden fazla zone ile eşleşiyor. Yanlış zone seçilmedi.',
+        'zone_edit_missing' => 'Cloudflare Zone → Edit izni yok. Yeni domain kaydı için DNS & Zones → Zone → Edit gerekli. “DNS Write” şablonu bunu vermez.',
+        'dns_edit_missing' => 'Cloudflare DNS → Edit izni yok. A/MX/TXT kayıtları için DNS & Zones → DNS → Edit gerekli.',
+    ],
+];

@@ -11,6 +11,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');
     require __DIR__.'/ops/sites.php';
     require __DIR__.'/ops/coolify.php';
+    require __DIR__.'/ops/cloudflare.php';
     require __DIR__.'/ops/themes.php';
 
     Route::get('/account', [AccountController::class, 'show'])->name('ops.account.show');

@@ -8,6 +8,7 @@ return [
         'fleet' => 'Fleet',
         'sites' => 'Sites',
         'coolify' => 'Coolify',
+        'cloudflare' => 'Cloudflare',
         'themes' => 'Themes',
         'settings' => 'Settings',
     ],

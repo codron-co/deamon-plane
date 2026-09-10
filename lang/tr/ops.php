@@ -8,6 +8,7 @@ return [
         'fleet' => 'Filo',
         'sites' => 'Siteler',
         'coolify' => 'Coolify',
+        'cloudflare' => 'Cloudflare',
         'themes' => 'Temalar',
         'settings' => 'Sistem',
     ],

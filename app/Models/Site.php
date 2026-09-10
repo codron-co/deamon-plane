@@ -48,6 +48,9 @@ class Site extends Model
         'notes',
         'last_health_at',
         'last_health_payload',
+        'cloudflare_zone_id',
+        'cloudflare_nameservers',
+        'dns_applied_at',
     ];
 
     /**
@@ -75,6 +78,8 @@ class Site extends Model
             'agent_secret_encrypted' => 'encrypted',
             'last_health_at' => 'datetime',
             'last_health_payload' => 'array',
+            'cloudflare_nameservers' => 'array',
+            'dns_applied_at' => 'datetime',
         ];
     }
 

@@ -3,163 +3,147 @@
 namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareSetting;
-use Throwable;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Log;
 
 class CloudflarePermissionProbe
 {
+    public const LABEL_ZONE_READ = 'DNS & Zones → Zone → Read';
+
+    public const LABEL_ZONE_EDIT = 'DNS & Zones → Zone → Edit';
+
+    public const LABEL_DNS_READ = 'DNS & Zones → DNS → Read';
+
+    public const LABEL_DNS_EDIT = 'DNS & Zones → DNS → Edit';
+
     public function probe(CloudflareSetting $settings): CloudflareProbeResult
     {
         $client = CloudflareClient::fromSettings($settings);
-        $missing = [];
-        $payload = [
-            'token' => 'unknown',
-            'zone_read' => false,
-            'zone_edit' => false,
-            'dns_read' => null,
-            'dns_edit' => null,
-            'zero_zones' => false,
-            'account_id_invalid' => false,
-            'missing' => [],
-        ];
+        $accountId = trim((string) $settings->account_id);
+
+        $tokenValid = false;
+        $zoneRead = false;
+        $zoneEdit = false;
+        $dnsRead = false;
+        $dnsEdit = false;
+        $dnsUnverified = false;
+        $accountIdInvalid = false;
+        $zones = [];
 
         try {
             $verify = $client->verifyToken();
-        } catch (Throwable $exception) {
-            $this->forgetException($exception);
-            $payload['token'] = 'invalid';
-
-            return new CloudflareProbeResult('error', __('cloudflare.flash.token_invalid'), $payload);
-        }
-
-        if (($verify['status'] ?? null) !== 'active') {
-            $payload['token'] = (string) ($verify['status'] ?? 'inactive');
-
-            return new CloudflareProbeResult('error', __('cloudflare.flash.token_invalid'), $payload);
-        }
-
-        $payload['token'] = 'active';
-
-        try {
-            $zones = $client->listZones(perPage: 1);
-            $payload['zone_read'] = true;
+            $tokenValid = strtolower((string) ($verify['status'] ?? '')) === 'active';
         } catch (CloudflareApiException $exception) {
-            $zones = [];
-            if ($exception->status === 403) {
-                $missing[] = __('cloudflare.permissions.zone_read');
-                $payload['zone_read'] = false;
-            } else {
-                $payload['zone_read'] = false;
+            Log::info('Cloudflare token verify failed', [
+                'status' => $exception->status,
+            ]);
+        }
 
-                return new CloudflareProbeResult(
-                    'error',
-                    $this->partialOrError($missing, $exception->getMessage()),
-                    $this->withMissing($payload, $missing),
-                );
+        if ($tokenValid && $accountId !== '') {
+            $list = $client->rawGet('/zones', [
+                'account.id' => $accountId,
+                'per_page' => 1,
+            ]);
+
+            if ($list->successful()) {
+                $zoneRead = true;
+                $zones = $this->zonesFrom($list);
+            }
+
+            $create = $client->probeZoneCreate($accountId);
+            if ($create->status() === 400) {
+                if ($this->isAccountNotFound($create)) {
+                    $accountIdInvalid = true;
+                } else {
+                    $zoneEdit = true;
+                }
+            }
+
+            if ($zoneRead && $zones !== []) {
+                $zoneId = (string) ($zones[0]['id'] ?? '');
+                if ($zoneId !== '') {
+                    $dnsList = $client->rawGet('/zones/'.$zoneId.'/dns_records', ['per_page' => 1]);
+                    $dnsRead = $dnsList->successful();
+
+                    $dnsPost = $client->probeDnsCreate($zoneId);
+                    if ($dnsPost->status() === 400) {
+                        $dnsEdit = true;
+                    }
+                }
+            } elseif ($zoneRead) {
+                $dnsUnverified = true;
             }
         }
 
-        $zoneEdit = $client->probeZoneCreate();
-        if ($zoneEdit->isAccountNotFound()) {
-            $payload['account_id_invalid'] = true;
-
-            return new CloudflareProbeResult('error', __('cloudflare.flash.account_id_invalid'), $this->withMissing($payload, $missing));
-        }
-
-        if ($zoneEdit->status === 403) {
-            $missing[] = __('cloudflare.permissions.zone_edit');
-            $payload['zone_edit'] = false;
-        } elseif ($zoneEdit->status === 400) {
-            $payload['zone_edit'] = true;
-        } else {
-            $missing[] = __('cloudflare.permissions.zone_edit');
-            $payload['zone_edit'] = false;
-        }
-
-        $firstZoneId = isset($zones[0]['id']) && is_string($zones[0]['id']) ? $zones[0]['id'] : null;
-        if ($firstZoneId === null) {
-            $payload['zero_zones'] = true;
-            $payload['dns_read'] = null;
-            $payload['dns_edit'] = null;
-
-            if ($missing !== []) {
-                return new CloudflareProbeResult('error', $this->partialMessage($missing), $this->withMissing($payload, $missing));
+        $missing = [];
+        if ($tokenValid && ! $accountIdInvalid) {
+            if (! $zoneRead) {
+                $missing[] = self::LABEL_ZONE_READ;
             }
-
-            return new CloudflareProbeResult(
-                'status',
-                trim(__('cloudflare.flash.ok').' '.__('cloudflare.flash.dns_unverified')),
-                $this->withMissing($payload, $missing),
-            );
-        }
-
-        try {
-            $client->listDnsRecords($firstZoneId, perPage: 1);
-            $payload['dns_read'] = true;
-        } catch (CloudflareApiException $exception) {
-            if ($exception->status === 403) {
-                $missing[] = __('cloudflare.permissions.dns_read');
-                $payload['dns_read'] = false;
-            } else {
-                $payload['dns_read'] = false;
-
-                return new CloudflareProbeResult(
-                    'error',
-                    $this->partialOrError($missing, $exception->getMessage()),
-                    $this->withMissing($payload, $missing),
-                );
+            if (! $zoneEdit) {
+                $missing[] = self::LABEL_ZONE_EDIT;
+            }
+            if (! $dnsUnverified) {
+                if (! $dnsRead) {
+                    $missing[] = self::LABEL_DNS_READ;
+                }
+                if (! $dnsEdit) {
+                    $missing[] = self::LABEL_DNS_EDIT;
+                }
             }
         }
 
-        $dnsEdit = $client->probeDnsCreate($firstZoneId);
-        if ($dnsEdit->status === 403) {
-            $missing[] = __('cloudflare.permissions.dns_edit');
-            $payload['dns_edit'] = false;
-        } elseif ($dnsEdit->status === 400) {
-            $payload['dns_edit'] = true;
-        } else {
-            $missing[] = __('cloudflare.permissions.dns_edit');
-            $payload['dns_edit'] = false;
+        $payload = [
+            'token_valid' => $tokenValid,
+            'zone_read' => $zoneRead,
+            'zone_edit' => $zoneEdit,
+            'dns_read' => $dnsRead,
+            'dns_edit' => $dnsEdit,
+            'dns_unverified' => $dnsUnverified,
+            'account_id_invalid' => $accountIdInvalid,
+            'missing' => $missing,
+        ];
+
+        return new CloudflareProbeResult(
+            tokenValid: $tokenValid,
+            zoneRead: $zoneRead,
+            zoneEdit: $zoneEdit,
+            dnsRead: $dnsRead,
+            dnsEdit: $dnsEdit,
+            dnsUnverified: $dnsUnverified,
+            accountIdInvalid: $accountIdInvalid,
+            missingLabels: $missing,
+            payload: $payload,
+        );
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function zonesFrom(Response $response): array
+    {
+        $result = $response->json('result');
+        if (! is_array($result) || ! array_is_list($result)) {
+            return [];
         }
 
-        $payload = $this->withMissing($payload, $missing);
+        return array_values(array_filter($result, is_array(...)));
+    }
 
-        if ($missing !== []) {
-            return new CloudflareProbeResult('error', $this->partialMessage($missing), $payload);
+    private function isAccountNotFound(Response $response): bool
+    {
+        $encoded = strtolower((string) json_encode($response->json(), JSON_UNESCAPED_SLASHES));
+
+        if ($encoded === '' || $encoded === 'null') {
+            return false;
         }
 
-        return new CloudflareProbeResult('status', __('cloudflare.flash.ok'), $payload);
-    }
+        $mentionsAccount = str_contains($encoded, 'account');
+        $notFound = str_contains($encoded, 'not found')
+            || str_contains($encoded, 'could not find')
+            || str_contains($encoded, 'unknown account')
+            || str_contains($encoded, 'invalid account');
 
-    /**
-     * @param  list<string>  $missing
-     */
-    private function partialMessage(array $missing): string
-    {
-        return __('cloudflare.flash.partial').' '.implode(' ', $missing);
-    }
-
-    /**
-     * @param  list<string>  $missing
-     */
-    private function partialOrError(array $missing, string $fallback): string
-    {
-        return $missing !== [] ? $this->partialMessage($missing) : $fallback;
-    }
-
-    /**
-     * @param  array<string, mixed>  $payload
-     * @param  list<string>  $missing
-     * @return array<string, mixed>
-     */
-    private function withMissing(array $payload, array $missing): array
-    {
-        $payload['missing'] = $missing;
-
-        return $payload;
-    }
-
-    private function forgetException(Throwable $exception): void
-    {
-        unset($exception);
+        return $mentionsAccount && $notFound;
     }
 }

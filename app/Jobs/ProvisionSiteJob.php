@@ -39,7 +39,7 @@ class ProvisionSiteJob implements ShouldBeUnique, ShouldQueue
         }
 
         try {
-            $provisioner->provisionOnCoolify($site, $this->actorUserId, $this->ip);
+            $provisioner->provision($site, $this->actorUserId, $this->ip);
         } catch (Throwable $exception) {
             $fresh = $site->fresh() ?? $site;
             $provisioner->markFailed(

@@ -5,28 +5,68 @@ namespace App\Services\Cloudflare;
 class CloudflareDnsTemplate
 {
     /**
-     * @return list<CloudflareDnsRecord>
+     * Exact Plane DNS template. Nothing else.
+     *
+     * @return list<array{type: string, name: string, content: string, ttl: int, proxied: bool, priority?: int}>
      */
-    public function records(string $originIpv4, bool $mailEnabled): array
+    public static function records(string $originIpv4, bool $mailEnabled): array
     {
-        $records = [
-            new CloudflareDnsRecord('A', '@', $originIpv4, proxied: false),
-            new CloudflareDnsRecord('A', 'www', $originIpv4, proxied: false),
-            new CloudflareDnsRecord('A', '*', $originIpv4, proxied: false),
-        ];
+        $records = [];
+
+        foreach (['@', 'www', '*'] as $name) {
+            $records[] = [
+                'type' => 'A',
+                'name' => $name,
+                'content' => $originIpv4,
+                'ttl' => 1,
+                'proxied' => false,
+            ];
+        }
 
         if (! $mailEnabled) {
             return $records;
         }
 
         foreach (['hostingermail-a._domainkey', 'hostingermail-b._domainkey', 'hostingermail-c._domainkey'] as $name) {
-            $records[] = new CloudflareDnsRecord('CNAME', $name, 'dkim.mail.hostinger.com', proxied: false);
+            $records[] = [
+                'type' => 'CNAME',
+                'name' => $name,
+                'content' => 'dkim.mail.hostinger.com',
+                'ttl' => 1,
+                'proxied' => false,
+            ];
         }
 
-        $records[] = new CloudflareDnsRecord('MX', '@', 'mx1.hostinger.com', priority: 5);
-        $records[] = new CloudflareDnsRecord('MX', '@', 'mx2.hostinger.com', priority: 10);
-        $records[] = new CloudflareDnsRecord('TXT', '@', 'v=spf1 include:_spf.mail.hostinger.com ~all');
-        $records[] = new CloudflareDnsRecord('TXT', '_dmarc', 'v=DMARC1; p=none');
+        $records[] = [
+            'type' => 'MX',
+            'name' => '@',
+            'content' => 'mx1.hostinger.com',
+            'ttl' => 1,
+            'proxied' => false,
+            'priority' => 5,
+        ];
+        $records[] = [
+            'type' => 'MX',
+            'name' => '@',
+            'content' => 'mx2.hostinger.com',
+            'ttl' => 1,
+            'proxied' => false,
+            'priority' => 10,
+        ];
+        $records[] = [
+            'type' => 'TXT',
+            'name' => '@',
+            'content' => 'v=spf1 include:_spf.mail.hostinger.com ~all',
+            'ttl' => 1,
+            'proxied' => false,
+        ];
+        $records[] = [
+            'type' => 'TXT',
+            'name' => '_dmarc',
+            'content' => 'v=DMARC1; p=none',
+            'ttl' => 1,
+            'proxied' => false,
+        ];
 
         return $records;
     }

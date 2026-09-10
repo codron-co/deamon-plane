@@ -9,11 +9,14 @@ use App\Enums\DeploymentTrigger;
 use App\Enums\SiteStatus;
 use App\Jobs\PollDeploymentJob;
 use App\Jobs\ProvisionSiteJob;
+use App\Models\CloudflareSetting;
 use App\Models\CoolifyConnection;
 use App\Models\CoolifySetting;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Cloudflare\CloudflareApiException;
+use App\Services\Cloudflare\CloudflareZoneService;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyCredentials;
@@ -32,6 +35,7 @@ class SiteProvisioner
         private readonly CoolifyApplicationService $coolify,
         private readonly CoolifyProvisionPreflight $preflight,
         private readonly SiteAgentSecretInjector $agentSecrets,
+        private readonly CloudflareZoneService $cloudflare,
     ) {}
 
     public function canStart(Site $site): bool
