@@ -83,9 +83,14 @@ class ChannelSwitchTest extends TestCase
         ]);
 
         Http::assertSent(function (Request $request): bool {
+            $data = $request->data();
+
             return $request->method() === 'PATCH'
                 && $request->url() === 'https://coolify.test/api/v1/applications/coolify-app-1'
-                && $request->data() === ['git_branch' => 'beta'];
+                && ($data['git_branch'] ?? null) === 'beta'
+                && array_key_exists('git_commit_sha', $data)
+                && $data['git_commit_sha'] === ''
+                && ! array_key_exists('fqdn', $data);
         });
 
         Http::assertSent(function (Request $request): bool {

@@ -729,6 +729,20 @@ code {
     color: var(--accent-hover);
 }
 
+.ops-domain-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.ops-domain-link:hover {
+    color: var(--accent-hover);
+}
+
+.ops-domain-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .site-slug {
     color: var(--text-faint);
     font-size: 12px;

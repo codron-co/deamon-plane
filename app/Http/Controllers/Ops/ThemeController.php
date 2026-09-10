@@ -4,17 +4,21 @@ namespace App\Http\Controllers\Ops;
 
 use App\Enums\ThemeVisibility;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
 use App\Models\Site;
 use App\Models\Theme;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
 use App\Services\Themes\ThemeCatalogSync;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class ThemeController extends Controller
 {
+    use QueuesOpsJob;
+
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Theme::class);
@@ -67,9 +71,13 @@ class ThemeController extends Controller
         ]);
     }
 
-    public function sync(Request $request, ThemeCatalogSync $sync): RedirectResponse
+    public function sync(Request $request, ThemeCatalogSync $sync): RedirectResponse|JsonResponse
     {
         $this->authorize('sync', Theme::class);
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'themes.catalog_sync', __('ops.jobs.catalog_sync'));
+        }
 
         try {
             $result = $sync->sync();
@@ -81,12 +89,11 @@ class ThemeController extends Controller
 
         return back()->with(
             'status',
-            sprintf(
-                'Catalog sync finished — %d created, %d updated, %d skipped.',
-                $result['created'],
-                $result['updated'],
-                $result['skipped'],
-            ),
+            __('themes.flash.sync', [
+                'created' => $result['created'],
+                'updated' => $result['updated'],
+                'skipped' => $result['skipped'],
+            ]),
         );
     }
 

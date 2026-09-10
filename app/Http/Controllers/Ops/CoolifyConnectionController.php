@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
 use App\Models\CoolifyConnection;
 use App\Models\CoolifyEnvironment;
 use App\Models\CoolifyGitSource;
@@ -21,6 +22,8 @@ use Illuminate\Http\Request;
 
 class CoolifyConnectionController extends Controller
 {
+    use QueuesOpsJob;
+
     public function index(): View
     {
         $this->authorize('viewAny', CoolifyConnection::class);
@@ -180,12 +183,18 @@ class CoolifyConnectionController extends Controller
             ->with('status', 'Senkron için Sync düğmesini kullanın. GET /sync senkron çalıştırmaz.');
     }
 
-    public function sync(CoolifyConnection $connection, CoolifyInventorySync $sync): RedirectResponse
+    public function sync(Request $request, CoolifyConnection $connection, CoolifyInventorySync $sync): RedirectResponse|JsonResponse
     {
         $this->authorize('sync', $connection);
 
         if (! $connection->hasToken()) {
             return back()->with('error', 'Senkron için API token kaydedin.');
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'coolify.inventory_sync', __('ops.jobs.inventory_sync'), [
+                'connection_id' => $connection->id,
+            ]);
         }
 
         try {

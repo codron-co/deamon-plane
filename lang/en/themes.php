@@ -123,4 +123,7 @@ return [
         'sync_heading' => 'Sync',
         'operations_heading' => 'Operations',
     ],
+    'flash' => [
+        'sync' => 'Catalog sync finished — :created created, :updated updated, :skipped skipped.',
+    ],
 ];

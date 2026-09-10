@@ -110,7 +110,7 @@
                                 $reportedVersion = $site->reportedDeamonVersion();
                                 $markLetter = $site->identityMarkLetter();
                             @endphp
-                            <tr data-href="{{ route('ops.sites.show', $site) }}" tabindex="0">
+                            <tr data-href="{{ route('ops.sites.show', $site) }}" data-site-id="{{ $site->id }}" tabindex="0">
                                 @can('create', \App\Models\Site::class)
                                     <td>
                                         <label>
@@ -143,7 +143,19 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td><code>{{ $site->primary_domain }}</code></td>
+                                <td>
+                                    @if (filled($site->primary_domain))
+                                        <a
+                                            class="ops-domain-link"
+                                            href="https://{{ $site->primary_domain }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            aria-label="{{ __('sites.columns.open_live', ['domain' => $site->primary_domain]) }}"
+                                        ><code>{{ $site->primary_domain }}</code></a>
+                                    @else
+                                        <span class="muted">{{ __('ops.none') }}</span>
+                                    @endif
+                                </td>
                                 <td>
                                     <div class="branch-version" aria-label="{{ __('sites.columns.repo_branch') }}">
                                         <span class="branch-chip">{{ $site->channel->value }}</span>
@@ -153,7 +165,7 @@
                                 @php($failure = $site->lastFailureMessage())
                                 <td><span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span></td>
                                 <td>
-                                    <span class="status-chip status-{{ $site->liveHttpTone() }}" @if ($site->last_live_checked_at) title="{{ $site->last_live_checked_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}" @endif>{{ $site->liveHttpLabel() }}</span>
+                                    <span class="status-chip status-{{ $site->liveHttpTone() }}" data-live-chip @if ($site->last_live_checked_at) title="{{ $site->last_live_checked_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}" @endif>{{ $site->liveHttpLabel() }}</span>
                                 </td>
                                 <td class="muted">{{ $site->reportedActiveThemeId() ?: __('ops.none') }}</td>
                                 <td class="ops-row-actions">

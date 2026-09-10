@@ -3,12 +3,15 @@
 use App\Http\Controllers\Ops\AccountController;
 use App\Http\Controllers\Ops\FleetController;
 use App\Http\Controllers\Ops\GithubSettingsController;
+use App\Http\Controllers\Ops\OpsJobController;
 use App\Http\Controllers\Ops\PreferencesController;
 use App\Http\Controllers\Ops\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');
+    Route::get('/jobs', [OpsJobController::class, 'index'])->name('ops.jobs');
+    Route::get('/jobs/{job}', [OpsJobController::class, 'show'])->name('ops.jobs.show');
     require __DIR__.'/ops/sites.php';
     require __DIR__.'/ops/coolify.php';
     require __DIR__.'/ops/cloudflare.php';

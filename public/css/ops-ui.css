@@ -1100,3 +1100,144 @@ html[data-theme="semidark"] .fleet-attention-list li {
     .site-next-action .btn,
     .site-next-action form { align-self: flex-start; margin-left: 0; }
 }
+
+.ops-jobs {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 30;
+    width: min(360px, calc(100vw - 24px));
+}
+
+.ops-jobs-panel {
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-popover);
+}
+
+.ops-jobs-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 4px 6px 4px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ops-jobs.is-collapsed .ops-jobs-header {
+    border-bottom: 0;
+}
+
+.ops-jobs-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ops-jobs-summary:focus-visible {
+    outline: 2px solid var(--focus, var(--accent));
+    outline-offset: 2px;
+}
+
+.ops-jobs-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface-overlay));
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.ops-jobs-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ops-jobs-body {
+    max-height: min(320px, 50vh);
+    overflow: auto;
+}
+
+.ops-jobs-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px 12px;
+    list-style: none;
+}
+
+.ops-jobs-item {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ops-jobs-item strong {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ops-jobs-meta {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.ops-jobs-item.is-failed .ops-jobs-meta {
+    color: var(--danger-text, var(--danger));
+}
+
+.ops-jobs-item.is-completed .ops-jobs-meta {
+    color: var(--success-text, var(--text-muted));
+}
+
+.ops-jobs-progress {
+    display: block;
+    height: 4px;
+    margin-top: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-overlay);
+}
+
+.ops-jobs-progress > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .ops-jobs-progress > span {
+        transition: width 180ms ease;
+    }
+}
+
+@media (max-width: 768px) {
+    .ops-jobs {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        width: auto;
+    }
+}

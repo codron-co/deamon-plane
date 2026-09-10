@@ -130,7 +130,10 @@ class ChannelSwitcher
             : Channel::from((string) $site->desired_channel);
 
         $coolify = CoolifyApplicationService::forSite($site);
-        $patch = ['git_branch' => $target->value];
+        $patch = [
+            'git_branch' => $target->value,
+            'git_commit_sha' => '',
+        ];
         $environmentUuid = ChannelEnvironmentMap::environmentUuid($site, $target);
         if ($environmentUuid !== null) {
             $patch['environment_uuid'] = $environmentUuid;

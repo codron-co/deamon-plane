@@ -180,7 +180,7 @@
                         </div>
 
                         <div class="ops-menu-section">
-                            <form method="POST" action="{{ url('/logout') }}">
+                            <form method="POST" action="{{ url('/logout') }}" data-ops-native>
                                 @csrf
                                 <button type="submit" class="ops-menu-button">{{ __('ops.user_menu.sign_out') }}</button>
                             </form>
@@ -219,8 +219,11 @@
         </div>
     </div>
     @include('ops.partials.confirm-modal')
+    @include('ops.partials.jobs-widget')
     <script src="{{ asset('js/ops-confirm.js') }}" defer></script>
     <script src="{{ asset('js/ops-ui.js') }}?v={{ filemtime(public_path('js/ops-ui.js')) }}" defer></script>
+    <script src="{{ asset('js/ops-jobs.js') }}?v={{ filemtime(public_path('js/ops-jobs.js')) }}" defer></script>
+    <script src="{{ asset('js/ops-async.js') }}?v={{ filemtime(public_path('js/ops-async.js')) }}" defer></script>
     @yield('scripts')
 </body>
 </html>

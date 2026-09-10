@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Ops;
 
 use App\Enums\Channel;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
 use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\PinSiteRequest;
 use App\Models\Site;
@@ -15,12 +16,15 @@ use App\Services\Sites\ComposePackException;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
 use App\Services\Sites\SiteLiveProbe;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class SiteCoolifyOpsController extends Controller
 {
+    use QueuesOpsJob;
+
     public function migrateCompose(Request $request, Site $site, ComposePackMigrator $migrator): RedirectResponse
     {
         $this->authorize('update', $site);
@@ -34,7 +38,7 @@ class SiteCoolifyOpsController extends Controller
         return back()->with('status', __('site_ops.pack.done', ['name' => $site->name]));
     }
 
-    public function bulkMigrateCompose(BulkSiteIdsRequest $request, ComposePackMigrator $migrator): RedirectResponse
+    public function bulkMigrateCompose(BulkSiteIdsRequest $request, ComposePackMigrator $migrator): RedirectResponse|JsonResponse
     {
         $sites = $this->sitesFromBulk($request);
         if ($request->boolean('all') || $request->boolean('all_dockerfile')) {
@@ -47,6 +51,13 @@ class SiteCoolifyOpsController extends Controller
 
         if ($sites->isEmpty()) {
             return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.bulk_compose', __('ops.jobs.bulk_compose'), [
+                'site_ids' => $sites->pluck('id')->all(),
+                'ip' => $request->ip(),
+            ]);
         }
 
         $result = $migrator->migrateMany($sites, $request->user(), $request->ip());
@@ -70,7 +81,7 @@ class SiteCoolifyOpsController extends Controller
             : __('site_ops.auto_deploy.off', ['name' => $site->name]));
     }
 
-    public function bulkAutoDeploy(BulkSiteIdsRequest $request, CoolifyDeploySettings $settings): RedirectResponse
+    public function bulkAutoDeploy(BulkSiteIdsRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
     {
         $sites = $this->sitesFromBulk($request);
 
@@ -80,6 +91,18 @@ class SiteCoolifyOpsController extends Controller
 
         if ($sites->isEmpty()) {
             return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        if ($request->expectsJson()) {
+            $payload = [
+                'site_ids' => $sites->pluck('id')->all(),
+                'ip' => $request->ip(),
+            ];
+            if ($request->exists('enabled')) {
+                $payload['enabled'] = $request->boolean('enabled');
+            }
+
+            return $this->queueOpsJob($request, 'sites.bulk_auto_deploy', __('ops.jobs.bulk_auto_deploy'), $payload);
         }
 
         $enabled = $request->exists('enabled')
@@ -106,9 +129,15 @@ class SiteCoolifyOpsController extends Controller
         return back()->with('status', __('site_ops.pin.done', ['name' => $site->name]));
     }
 
-    public function sync(Request $request, Site $site, CoolifySiteSync $sync): RedirectResponse
+    public function sync(Request $request, Site $site, CoolifySiteSync $sync): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $site);
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.coolify_sync', __('ops.jobs.coolify_sync'), [
+                'site_ids' => [$site->id],
+            ]);
+        }
 
         try {
             $result = $sync->sync($site);
@@ -125,7 +154,7 @@ class SiteCoolifyOpsController extends Controller
             ]));
     }
 
-    public function bulkSync(BulkSiteIdsRequest $request, CoolifySiteSync $sync): RedirectResponse
+    public function bulkSync(BulkSiteIdsRequest $request, CoolifySiteSync $sync): RedirectResponse|JsonResponse
     {
         $sites = $this->sitesFromBulk($request)
             ->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
@@ -136,6 +165,12 @@ class SiteCoolifyOpsController extends Controller
 
         if ($sites->isEmpty()) {
             return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.coolify_sync', __('ops.jobs.coolify_sync'), [
+                'site_ids' => $sites->pluck('id')->all(),
+            ]);
         }
 
         $ok = 0;
@@ -168,7 +203,7 @@ class SiteCoolifyOpsController extends Controller
             ->with('status', __('sites.flash.sync_get'));
     }
 
-    public function liveSync(BulkSiteIdsRequest $request, SiteLiveProbe $probe): RedirectResponse
+    public function liveSync(BulkSiteIdsRequest $request, SiteLiveProbe $probe): RedirectResponse|JsonResponse
     {
         $sites = $this->sitesFromBulk($request)
             ->filter(fn (Site $site): bool => filled($site->primary_domain));
@@ -179,6 +214,12 @@ class SiteCoolifyOpsController extends Controller
 
         if ($sites->isEmpty()) {
             return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.live_sync', __('ops.jobs.live_sync'), [
+                'site_ids' => $sites->pluck('id')->all(),
+            ]);
         }
 
         $result = $probe->probeMany($sites);
@@ -205,7 +246,7 @@ class SiteCoolifyOpsController extends Controller
             ->with('status', __('sites.flash.sync_get'));
     }
 
-    public function bulkChannel(BulkSiteIdsRequest $request, ChannelSwitcher $switcher): RedirectResponse
+    public function bulkChannel(BulkSiteIdsRequest $request, ChannelSwitcher $switcher): RedirectResponse|JsonResponse
     {
         $targetValue = (string) $request->validated('channel', '');
         if ($targetValue === '' || Channel::tryFrom($targetValue) === null) {
@@ -221,6 +262,16 @@ class SiteCoolifyOpsController extends Controller
 
         if ($sites->isEmpty()) {
             return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.bulk_channel', __('ops.jobs.bulk_channel'), [
+                'site_ids' => $sites->pluck('id')->all(),
+                'channel' => $target->value,
+                'confirmed' => $request->boolean('confirmed'),
+                'force' => $request->boolean('force'),
+                'ip' => $request->ip(),
+            ]);
         }
 
         $ok = 0;

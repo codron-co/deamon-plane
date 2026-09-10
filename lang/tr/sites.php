@@ -16,6 +16,7 @@ return [
     'columns' => [
         'site' => 'Site',
         'domain' => 'Domain',
+        'open_live' => ':domain adresini aç',
         'repo_branch' => 'Repo dalı',
         'status' => 'Durum',
         'live' => 'Canlı',

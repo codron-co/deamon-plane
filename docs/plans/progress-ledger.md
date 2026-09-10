@@ -123,7 +123,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 ## Slice 6 — dockerfile → compose + auto-deploy + pin (2026-09-10)
 
-- Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml`. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` via Coolify 4.3 `/envs` `{ key, value, is_literal }` (not `is_literally` / `available_in_services` / env `uuid`); `DB_*` not copied. Recreate → abort. Env restore API errors are flash, not 500. Auto-deploy `is_auto_deploy_enabled` (Coolify rejects `is_auto_deploy`). Pin SHA/tag + auto-deploy off; Follow HEAD unpins + auto-deploy on + branch deploy. ChannelSwitcher unchanged. Bulk selected + all Dockerfile, confirm on dangerous actions.
+- Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` **and** `docker_compose_domains` (from live compose domains, else `fqdn`, else `sites.primary_domain`). Omitting domains wipes the Coolify proxy. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` via Coolify 4.3 `/envs` `{ key, value, is_literal }` (not `is_literally` / `available_in_services` / env `uuid`); `DB_*` not copied. Recreate → abort. Env restore API errors are flash, not 500. Auto-deploy `is_auto_deploy_enabled` (Coolify rejects `is_auto_deploy`). Pin SHA/tag + auto-deploy off; Follow HEAD unpins + auto-deploy on + branch deploy. Channel switch also sends `git_commit_sha: ""` then `POST /deploy` so Coolify follows the new branch HEAD. Bulk selected + all Dockerfile, confirm on dangerous actions.
 
 ## Site Coolify / theme / confirm parity (2026-09-10)
 
@@ -136,6 +136,10 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 ## Sites list bulk selection (2026-09-10)
 
 - Status: **code**. Header checkbox selects every site matching current filters (`all=1`), not the page. Bulk actions show only when a selection exists: Change branch, Switch to Compose (Dockerfile leftovers only), Auto-deploy on/off (all on → off; all off → on; mixed → off). Channel switch writes `APP_ENV` / `DEAMON_CHANNEL` and moves `environment_uuid` when a Coolify env name matches. Tests: SiteBulkActionsTest, ChannelSwitchTest.
+
+## Background jobs widget + AJAX ops (2026-09-10)
+
+- Status: **code**. Syncs and list bulk (Coolify / Live / inventory / theme catalog / branch / compose / auto-deploy) queue `OpsBackgroundJob` on JSON and return immediately. HTML POST still redirects and runs inline. Other mutating ops stay in-request but return JSON instead of a reload (`ConvertOpsAjaxRedirect`). Bottom-right widget (`data-ops-jobs`) shows queue/progress/result; Live chips update from `result.sites`. Tests: OpsBackgroundJobTest (`Http::fake`).
 
 ## Sites list Sync + Live Sync (2026-09-10)
 

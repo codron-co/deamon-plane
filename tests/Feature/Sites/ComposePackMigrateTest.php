@@ -40,7 +40,7 @@ class ComposePackMigrateTest extends TestCase
             $method = $request->method();
 
             if ($method === 'GET' && str_ends_with($url, '/applications/'.self::APP)) {
-                return Http::response($this->appPayload('dockerfile'), 200);
+                return Http::response($this->appPayload('dockerfile', fqdn: 'https://legacy.example.test'), 200);
             }
 
             if ($method === 'GET' && str_contains($url, '/envs')) {
@@ -80,6 +80,10 @@ class ComposePackMigrateTest extends TestCase
 
             return ($body['build_pack'] ?? null) === 'dockercompose'
                 && ($body['docker_compose_location'] ?? null) === CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION
+                && ($body['docker_compose_domains'] ?? null) === [[
+                    'name' => 'app',
+                    'domain' => 'https://legacy.example.test',
+                ]]
                 && ! array_key_exists('fqdn', $body);
         });
 
@@ -117,6 +121,52 @@ class ComposePackMigrateTest extends TestCase
         });
 
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
+    }
+
+    public function test_compose_migrate_uses_site_domain_when_coolify_has_none(): void
+    {
+        $site = $this->dockerfileSite([
+            'primary_domain' => 'shop.izyem.example.test',
+        ]);
+
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if ($method === 'GET' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response($this->appPayload('dockerfile'), 200);
+            }
+            if ($method === 'GET' && str_contains($url, '/envs')) {
+                return Http::response([], 200);
+            }
+            if ($method === 'PATCH' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response($this->appPayload('dockercompose'), 200);
+            }
+            if (in_array($method, ['POST', 'PATCH'], true) && str_contains($url, '/envs')) {
+                return Http::response(['key' => $request->data()['key'] ?? 'APP_KEY'], 200);
+            }
+
+            return Http::response(['error' => 'unexpected '.$method.' '.$url], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.compose', $site))
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'PATCH' || ! str_ends_with($request->url(), '/applications/'.self::APP)) {
+                return false;
+            }
+
+            $body = $request->data();
+
+            return ($body['docker_compose_domains'] ?? null) === [[
+                'name' => 'app',
+                'domain' => 'https://shop.izyem.example.test',
+            ]];
+        });
     }
 
     public function test_env_restore_validation_error_is_flash_not_500(): void
@@ -289,9 +339,9 @@ class ComposePackMigrateTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function appPayload(string $pack, bool $autoDeploy = false): array
+    private function appPayload(string $pack, bool $autoDeploy = false, ?string $fqdn = null): array
     {
-        return [
+        $payload = [
             'uuid' => self::APP,
             'name' => 'Legacy',
             'build_pack' => $pack,
@@ -299,20 +349,28 @@ class ComposePackMigrateTest extends TestCase
             'is_auto_deploy' => $autoDeploy,
             'git_commit_sha' => null,
         ];
+        if ($fqdn !== null) {
+            $payload['fqdn'] = $fqdn;
+        }
+
+        return $payload;
     }
 
-    private function dockerfileSite(): Site
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function dockerfileSite(array $overrides = []): Site
     {
         $connection = CoolifyConnection::factory()->create([
             'base_url' => 'https://coolify.example',
             'api_token' => self::TOKEN,
         ]);
 
-        return Site::factory()->dockerfilePack()->withSecrets()->create([
+        return Site::factory()->dockerfilePack()->withSecrets()->create(array_merge([
             'status' => SiteStatus::Active,
             'coolify_app_uuid' => self::APP,
             'coolify_connection_id' => $connection->id,
-        ]);
+        ], $overrides));
     }
 
     private function operator(): User

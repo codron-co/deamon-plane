@@ -16,6 +16,7 @@ return [
     'columns' => [
         'site' => 'Site',
         'domain' => 'Domain',
+        'open_live' => 'Open :domain',
         'repo_branch' => 'Repo branch',
         'status' => 'Status',
         'live' => 'Live',

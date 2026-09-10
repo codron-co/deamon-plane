@@ -31,6 +31,12 @@ Coolify connections live under `/coolify` (`ops.coolify.*`) — left nav **Cooli
 
 Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 
+## Background jobs + no full-page POST
+
+Authenticated mutating forms in the ops shell submit over `fetch` (`Accept: application/json`). HTML POST still **redirects** (existing tests). JSON callers get `{ ok, message, type, redirect }` instead of following the 302 — `ConvertOpsAjaxRedirect` rewrites flash redirects and leaves existing `JsonResponse` (appearance/locale) alone. Navigate only when `redirect` pathname differs (create/destroy).
+
+Slow syncs and list bulk work queue `ops_background_jobs` and return `{ ok, job }` immediately. `ProcessOpsBackgroundJob` runs `afterResponse()` (`dispatchSync` after the HTTP response) so Plane does not need a queue worker. Job types: `sites.live_sync`, `sites.coolify_sync`, `coolify.inventory_sync`, `themes.catalog_sync`, `sites.bulk_channel`, `sites.bulk_compose`, `sites.bulk_auto_deploy`. Status is `GET /jobs` + `GET /jobs/{job}` (`ops.jobs`, `ops.jobs.show`) — writer only, own jobs. The bottom-right widget (`data-ops-jobs`, `ops-jobs.js`) polls ~1.5s and applies Live column/favicon from `result.sites` without reload. Logout and `data-ops-native` / `data-pref-form` stay native.
+
 ## Fields
 
 Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger credentials; order is matched per site domain — also changeable on the site detail Infrastructure tab), optional attach of an existing `codron-co/deamon` app, `notes`.
@@ -61,7 +67,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 `ChannelSwitcher` + `SwitchSiteChannelJob` + shared `PollDeploymentJob` (trigger `channel_switch`). Runbook: [channel-switch.md](../runbooks/channel-switch.md).
 
 - Eligible: `active` or `error` with `coolify_app_uuid`. Status `deploying` / `provisioning` is rejected.
-- Coolify: `PATCH git_branch` (+ matching Coolify `environment_uuid` when the project has an env named for that channel), `APP_ENV` / `DEAMON_CHANNEL` via `/envs/bulk`, then `deploy`. Never `DELETE` the application. Volumes persist (ADR-7). Same path for site detail and list **Branch Değiştir**.
+- Coolify: `PATCH git_branch` + `git_commit_sha: ""` (follow the new branch HEAD; a pin would keep the old commit) and matching Coolify `environment_uuid` when the project has an env named for that channel, `APP_ENV` / `DEAMON_CHANNEL` via `/envs/bulk`, then `deploy`. Never `DELETE` the application. Volumes persist (ADR-7). Same path for site detail and list **Branch Değiştir**.
 - During the switch: `desired_channel` is set and status is `deploying`. Success copies it to `channel` and clears `desired_channel`.
 - Policy config `config/ops.php` → `channel_switch`: `main` → `beta`/`alpha` requires confirm; `alpha`/`beta` → `main` is a version gate. When last health has `deamon_version`, the minimum is enforced. Missing health does **not** block. Force is Super Admin only.
 - Audit: `site.channel_switch_started`, `site.channel_switched`, `site.channel_switch_failed`.

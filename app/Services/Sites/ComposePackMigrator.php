@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyDomainParser;
+use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
 
@@ -46,11 +47,17 @@ class ComposePackMigrator
 
         $snapshot = $this->snapshotAppEnvs($coolify, $site, $uuid);
 
+        $payload = [
+            'build_pack' => 'dockercompose',
+            'docker_compose_location' => CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
+        ];
+        $domains = $this->domainsForCompose($app, $site);
+        if ($domains !== []) {
+            $payload['docker_compose_domains'] = $domains;
+        }
+
         try {
-            $coolify->patchApplication($uuid, [
-                'build_pack' => 'dockercompose',
-                'docker_compose_location' => CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
-            ]);
+            $coolify->patchApplication($uuid, $payload);
         } catch (CoolifyApiException $exception) {
             if ($this->requiresRecreate($exception)) {
                 throw new ComposePackException(__('site_ops.pack.recreate_aborted'), $exception->status, $exception);
@@ -89,6 +96,30 @@ class ComposePackMigrator
         }
 
         return ['ok' => $ok, 'failed' => $failed, 'errors' => $errors];
+    }
+
+    /**
+     * Dockerfile apps keep the host on `fqdn`. Compose PATCH must send
+     * `docker_compose_domains` or Coolify clears the proxy binding.
+     *
+     * @return list<array{name: string, domain: string}>
+     */
+    private function domainsForCompose(CoolifyApplication $app, Site $site): array
+    {
+        if ($app->composeDomains !== []) {
+            return CoolifyDomainParser::forPatch($app->composeDomains);
+        }
+
+        $fromApp = $app->primaryDomain();
+        if (is_string($fromApp) && $fromApp !== '') {
+            return CoolifyDomainParser::forPatch($fromApp);
+        }
+
+        if (filled($site->primary_domain)) {
+            return CoolifyDomainParser::forPatch((string) $site->primary_domain);
+        }
+
+        return [];
     }
 
     /**

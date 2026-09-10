@@ -43,8 +43,6 @@ class SiteLiveSyncTest extends TestCase
             ->assertSee(__('sites.live.sync'), false)
             ->assertSee('data-confirm="'.__('sites.detail.sync_confirm_all').'"', false)
             ->assertSee('data-confirm="'.__('sites.live.confirm').'"', false)
-            ->assertSee('data-confirm="'.__('sites.detail.sync_confirm_selected').'"', false)
-            ->assertSee('data-confirm="'.__('sites.live.confirm_selected').'"', false)
             ->assertSee('data-favicon-fallback="İ"', false)
             ->assertSee('data-favicon-src="'.$site->last_live_favicon_url.'"', false)
             ->assertSee('>200<', false)

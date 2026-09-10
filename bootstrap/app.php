@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ConvertOpsAjaxRedirect;
 use App\Http\Middleware\RestrictOpsByIp;
 use App\Http\Middleware\SetOpsLocale;
 use Illuminate\Foundation\Application;
@@ -39,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             RestrictOpsByIp::class,
             SetOpsLocale::class,
+            ConvertOpsAjaxRedirect::class,
         ]);
 
         $middleware->alias([

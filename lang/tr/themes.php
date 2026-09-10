@@ -123,4 +123,7 @@ return [
         'sync_heading' => 'Senkron',
         'operations_heading' => 'İşlemler',
     ],
+    'flash' => [
+        'sync' => 'Katalog senkronu bitti — :created oluşturuldu, :updated güncellendi, :skipped atlandı.',
+    ],
 ];

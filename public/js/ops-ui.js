@@ -626,6 +626,9 @@
             }
             button.disabled = true;
             button.classList.add("is-pending");
+            if (!button.dataset.originalLabel) {
+                button.dataset.originalLabel = button.textContent;
+            }
             if (button.dataset.pendingLabel) {
                 button.textContent = button.dataset.pendingLabel;
             }
@@ -797,47 +800,61 @@
         });
     }
 
-    function setupFaviconMarks() {
-        document.querySelectorAll("[data-favicon-host]").forEach(function (mark) {
-            const host = faviconHost(mark.getAttribute("data-favicon-host"));
-            const fallback = markLetter(mark.getAttribute("data-favicon-fallback") || mark.textContent);
-            if (!host) {
+    function loadFaviconMark(mark, src) {
+        const host = faviconHost(mark.getAttribute("data-favicon-host"));
+        const fallback = markLetter(mark.getAttribute("data-favicon-fallback") || mark.textContent);
+        if (!host) {
+            mark.textContent = fallback;
+            return;
+        }
+        if (src) {
+            mark.setAttribute("data-favicon-src", src);
+        }
+        const cached = String(mark.getAttribute("data-favicon-src") || "").trim();
+        const urls = [];
+        if (cached && /^(https?:)?\/\//i.test(cached) && cached.indexOf("..") === -1) {
+            urls.push(cached);
+        }
+        urls.push(
+            "https://" + host + "/favicon.ico",
+            "https://" + host + "/apple-touch-icon.png"
+        );
+        const tryAt = function (index) {
+            if (index >= urls.length) {
                 mark.textContent = fallback;
                 return;
             }
-            const cached = String(mark.getAttribute("data-favicon-src") || "").trim();
-            const urls = [];
-            if (cached && /^(https?:)?\/\//i.test(cached) && cached.indexOf("..") === -1) {
-                urls.push(cached);
-            }
-            urls.push(
-                "https://" + host + "/favicon.ico",
-                "https://" + host + "/apple-touch-icon.png"
-            );
-            const tryAt = function (index) {
-                if (index >= urls.length) {
-                    mark.textContent = fallback;
+            const img = document.createElement("img");
+            img.alt = "";
+            img.referrerPolicy = "no-referrer";
+            img.decoding = "async";
+            img.addEventListener("error", function () {
+                tryAt(index + 1);
+            });
+            img.addEventListener("load", function () {
+                if (img.naturalWidth < 2) {
+                    tryAt(index + 1);
                     return;
                 }
-                const img = document.createElement("img");
-                img.alt = "";
-                img.referrerPolicy = "no-referrer";
-                img.decoding = "async";
-                img.addEventListener("error", function () {
-                    tryAt(index + 1);
-                });
-                img.addEventListener("load", function () {
-                    if (img.naturalWidth < 2) {
-                        tryAt(index + 1);
-                        return;
-                    }
-                    mark.replaceChildren(img);
-                    mark.classList.add("has-favicon");
-                });
-                img.src = urls[index];
-            };
-            tryAt(0);
+                mark.replaceChildren(img);
+                mark.classList.add("has-favicon");
+            });
+            img.src = urls[index];
+        };
+        tryAt(0);
+    }
+
+    function setupFaviconMarks() {
+        document.querySelectorAll("[data-favicon-host]").forEach(function (mark) {
+            loadFaviconMark(mark);
         });
+        window.PlaneFavicon = {
+            refresh: function (mark, src) {
+                if (mark) {
+                    loadFaviconMark(mark, src);
+                }
+            },
+        };
     }
 
     function setupBulkSelection() {
