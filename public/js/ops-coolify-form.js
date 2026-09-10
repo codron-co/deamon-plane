@@ -132,13 +132,35 @@
     }
 
     const placement = document.querySelector("[data-coolify-placement]");
-    const attachField = document.querySelector("[data-attach-field]");
+    function setHidden(el, hide) {
+        if (el) {
+            el.hidden = hide;
+        }
+    }
+    function setControlsDisabled(root, disabled) {
+        if (!root) {
+            return;
+        }
+        root.querySelectorAll("select, textarea, input:not([name='placement'])").forEach(function (el) {
+            el.disabled = disabled;
+        });
+    }
     function syncPlacement() {
-        if (!placement || !attachField) {
+        if (!placement) {
             return;
         }
         const attach = placement.querySelector('input[name="placement"][value="attach"]');
-        attachField.hidden = !attach || !attach.checked;
+        const isAttach = Boolean(attach && attach.checked);
+        const locked = Boolean(placement.querySelector('input[name="placement"]:disabled'));
+        document.querySelectorAll("[data-attach-field]").forEach(function (el) {
+            setHidden(el, !isAttach);
+            if (!locked) {
+                setControlsDisabled(el, !isAttach);
+            }
+        });
+        document.querySelectorAll("[data-provision-field]").forEach(function (el) {
+            setHidden(el, isAttach);
+        });
     }
     if (placement) {
         placement.addEventListener("change", syncPlacement);

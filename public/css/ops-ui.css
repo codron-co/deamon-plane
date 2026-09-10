@@ -2,6 +2,10 @@
  * Keep page-specific styling in ops.css; shared interaction/layout primitives live here.
  */
 
+[hidden] {
+    display: none !important;
+}
+
 :root,
 html[data-theme="dark"] {
     color-scheme: dark;

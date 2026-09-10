@@ -81,7 +81,7 @@
             value="{{ $currentDomain }}"
             autocomplete="off"
             maxlength="255"
-            placeholder="shop.example.com"
+            placeholder="{{ __('sites.form.domain_placeholder') }}"
             @required(! $readonly)
             @readonly($readonly)
         >
@@ -140,6 +140,7 @@
     @if (! $site->exists)
         <fieldset class="coolify-placement" data-coolify-placement>
             <legend class="field-label">{{ __('sites.form.install') }}</legend>
+            <p class="field-hint">{{ __('sites.form.install_hint') }}</p>
             <label class="field-check">
                 <input type="radio" name="placement" value="provision" @checked($placement === 'provision') @disabled($readonly)>
                 {{ __('sites.form.provision_new') }}
@@ -148,24 +149,30 @@
                 <input type="radio" name="placement" value="attach" @checked($placement === 'attach') @disabled($readonly)>
                 {{ __('sites.form.attach_existing') }}
             </label>
-        </fieldset>
 
-        <div class="field" data-attach-field hidden>
-            <label class="field-label" for="attach_app">{{ __('sites.form.attach_app') }}</label>
-            <p class="field-hint">{{ __('sites.form.attach_hint', ['repo' => 'codron-co/deamon']) }}</p>
-            <select id="attach_app" class="field-input" name="attach_app_uuid" data-attach-apps @disabled($readonly)>
-                <option value="">{{ __('ops.none') }}</option>
-                @foreach ($attachableApps as $app)
-                    <option value="{{ $app['uuid'] }}" @selected(old('attach_app_uuid') === $app['uuid'])>
-                        {{ $app['name'] }}
-                        @if ($app['domain']) — {{ $app['domain'] }} @endif
-                        @if ($app['branch']) ({{ $app['branch'] }}) @endif
-                        @if ($app['needs_review']) · {{ __('sites.form.needs_review') }} @endif
-                    </option>
-                @endforeach
-            </select>
-            @error('attach_app_uuid') <p class="field-error">{{ $message }}</p> @enderror
-        </div>
+            <div class="field" data-attach-field @if ($placement !== 'attach') hidden @endif>
+                <label class="field-label" for="attach_app">{{ __('sites.form.attach_app') }}</label>
+                <p class="field-hint">{{ __('sites.form.attach_hint', ['repo' => 'codron-co/deamon']) }}</p>
+                <select
+                    id="attach_app"
+                    class="field-input"
+                    name="attach_app_uuid"
+                    data-attach-apps
+                    @disabled($readonly || $placement !== 'attach')
+                >
+                    <option value="">{{ __('ops.none') }}</option>
+                    @foreach ($attachableApps as $app)
+                        <option value="{{ $app['uuid'] }}" @selected(old('attach_app_uuid') === $app['uuid'])>
+                            {{ $app['name'] }}
+                            @if ($app['domain']) — {{ $app['domain'] }} @endif
+                            @if ($app['branch']) ({{ $app['branch'] }}) @endif
+                            @if ($app['needs_review']) · {{ __('sites.form.needs_review') }} @endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('attach_app_uuid') <p class="field-error">{{ $message }}</p> @enderror
+            </div>
+        </fieldset>
     @endif
 
     <div class="field" data-provision-field>

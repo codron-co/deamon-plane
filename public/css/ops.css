@@ -849,10 +849,6 @@ code {
     margin-top: 14px;
 }
 
-.ops-modal[hidden] {
-    display: none;
-}
-
 .ops-modal {
     position: fixed;
     inset: 0;
@@ -1050,6 +1046,19 @@ code {
 
 .coolify-placement legend {
     padding: 0 4px;
+}
+
+.coolify-placement .field-check:has(input:checked) {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.ops-form-section:has([name="placement"][value="attach"]:checked) [data-attach-field] {
+    display: grid !important;
+}
+
+.ops-form-section:has([name="placement"][value="attach"]:checked) [data-provision-field] {
+    display: none !important;
 }
 
 .coolify-advanced {

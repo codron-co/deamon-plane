@@ -45,6 +45,12 @@ class CoolifySiteFormTest extends TestCase
         $this->assertStringContainsString($connection->name, $html);
         $this->assertStringContainsString('value="env-prod"', $html);
         $this->assertStringNotContainsString('value="rw8flmmfzxkp0qnklzzi8lny"', $html);
+        $this->assertMatchesRegularExpression('/data-attach-field[^>]*\bhidden\b/', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/name="placement" value="attach"[^>]*checked/',
+            $html,
+        );
+        $this->assertMatchesRegularExpression('/name="placement" value="provision"[^>]*checked/', $html);
     }
 
     public function test_operator_cannot_pick_inactive_server(): void

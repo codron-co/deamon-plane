@@ -76,6 +76,8 @@ return [
         'connection_hint' => 'Yeni sitelerde varsayılan bağlantı seçili gelir. :link.',
         'connection_link' => 'Coolify menüsü',
         'install' => 'Kurulum',
+        'install_hint' => 'Yeni stack kur veya mevcut Deamon uygulamasını bağla. İkisi birden değil.',
+        'domain_placeholder' => 'ornek.com',
         'provision_new' => 'Yeni compose stack (provision)',
         'attach_existing' => 'Mevcut Coolify app bağla (ikinci create yok)',
         'attach_app' => 'Mevcut Deamon app',

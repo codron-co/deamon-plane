@@ -76,6 +76,8 @@ return [
         'connection_hint' => 'The default connection is selected for new sites. :link.',
         'connection_link' => 'Coolify menu',
         'install' => 'Install',
+        'install_hint' => 'Provision a new stack or attach an existing Deamon app. Not both.',
+        'domain_placeholder' => 'example.com',
         'provision_new' => 'New compose stack (provision)',
         'attach_existing' => 'Attach existing Coolify app (no second create)',
         'attach_app' => 'Existing Deamon app',
