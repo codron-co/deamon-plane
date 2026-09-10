@@ -60,6 +60,23 @@ class SiteAttacher
             $site->coolify_server_uuid = $described['server_uuid'];
         }
 
+        $project = $app->projectUuid();
+        if ($project !== null) {
+            $site->coolify_project_uuid = $project;
+        }
+
+        $environment = $app->environmentUuid();
+        if ($environment !== null) {
+            $site->coolify_environment_uuid = $environment;
+        }
+
+        $gitUuid = $app->gitSourceUuid();
+        $gitKind = $app->gitSourceKind();
+        if ($gitUuid !== null && $gitKind instanceof CoolifyGitSourceKind) {
+            $site->coolify_git_source_uuid = $gitUuid;
+            $site->coolify_git_source_kind = $gitKind;
+        }
+
         if (filled($app->gitRepository)) {
             $site->git_repository = $app->gitRepository;
         }

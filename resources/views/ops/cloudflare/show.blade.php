@@ -1,9 +1,20 @@
 @extends('layouts.ops')
 
-@section('title', __('cloudflare.title'))
+@section('title', $account->name)
+
+@section('breadcrumbs')
+    <a href="{{ route('ops.cloudflare.index') }}">{{ __('cloudflare.title') }}</a>
+    <span aria-hidden="true">/</span>
+    <span>{{ $account->name }}</span>
+@endsection
+
+@section('actions')
+    <a class="btn btn-ghost btn-sm" href="{{ route('ops.cloudflare.index') }}">{{ __('cloudflare.back') }}</a>
+    <a class="btn btn-ghost btn-sm" href="{{ route('ops.cloudflare.defaults') }}">{{ __('cloudflare.defaults.nav') }}</a>
+@endsection
 
 @section('content')
-    <p class="page-lede">{{ __('cloudflare.lede') }}</p>
+    <p class="page-lede">{{ __('cloudflare.show.lede') }}</p>
 
     <section class="ops-panel" aria-labelledby="cf-permissions-heading">
         <h2 id="cf-permissions-heading">{{ __('cloudflare.permissions') }}</h2>
@@ -14,111 +25,46 @@
             <li>{{ __('cloudflare.permissions_items.zone') }}</li>
         </ol>
         <p class="field-hint">{{ __('cloudflare.permissions_items.template') }}</p>
-        <p class="field-hint">{{ __('cloudflare.not_required') }}</p>
     </section>
 
     <section class="settings-panel" aria-labelledby="cf-connection-heading">
         <h2 id="cf-connection-heading">{{ __('cloudflare.connection') }}</h2>
-        <form method="POST" action="{{ route('ops.cloudflare.update') }}" class="ops-form settings-form">
+        <form method="POST" action="{{ route('ops.cloudflare.update', $account) }}" class="ops-form settings-form">
             @csrf
-
-            <div class="field">
-                <label class="field-label" for="cf-account-id">{{ __('cloudflare.fields.account_id') }}</label>
-                <p class="field-hint">{{ __('cloudflare.fields.account_id_hint') }}</p>
-                <input
-                    id="cf-account-id"
-                    class="field-input"
-                    type="text"
-                    name="account_id"
-                    value="{{ old('account_id', $settings->account_id) }}"
-                    maxlength="32"
-                    autocomplete="off"
-                    spellcheck="false"
-                    @disabled(! $canWrite)
-                    @required($canWrite)
-                >
-                @error('account_id')
-                    <p class="field-error">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div class="field">
-                <label class="field-label" for="cf-api-token">{{ __('cloudflare.fields.api_token') }}</label>
-                <p class="field-hint">
-                    {{ $hasToken ? __('cloudflare.fields.token_saved') : __('cloudflare.fields.token_hint') }}
-                </p>
-                <input
-                    id="cf-api-token"
-                    class="field-input"
-                    type="password"
-                    name="api_token"
-                    value=""
-                    placeholder="{{ $hasToken ? '••••••••' : __('cloudflare.fields.token_placeholder') }}"
-                    autocomplete="new-password"
-                    @disabled(! $canWrite)
-                >
-                @error('api_token')
-                    <p class="field-error">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div class="field">
-                <label class="field-label" for="cf-origin-ipv4">{{ __('cloudflare.fields.origin_ipv4') }}</label>
-                <p class="field-hint">{{ __('cloudflare.fields.origin_ipv4_hint') }}</p>
-                <input
-                    id="cf-origin-ipv4"
-                    class="field-input"
-                    type="text"
-                    name="origin_ipv4"
-                    value="{{ old('origin_ipv4', $settings->origin_ipv4 ?: config('ops.cloudflare.default_origin_ipv4')) }}"
-                    autocomplete="off"
-                    spellcheck="false"
-                    @disabled(! $canWrite)
-                    @required($canWrite)
-                >
-                @error('origin_ipv4')
-                    <p class="field-error">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div class="field">
-                <label class="field-check">
-                    <input type="hidden" name="mail_template_enabled" value="0">
-                    <input
-                        type="checkbox"
-                        name="mail_template_enabled"
-                        value="1"
-                        @checked(old('mail_template_enabled', $settings->mail_template_enabled ?? true))
-                        @disabled(! $canWrite)
-                    >
-                    <span>{{ __('cloudflare.fields.mail') }}</span>
-                </label>
-                <p class="field-hint">{{ __('cloudflare.fields.mail_hint') }}</p>
-            </div>
-
+            @method('PUT')
+            @include('ops.cloudflare._account-fields', ['account' => $account, 'canWrite' => $canWrite, 'requireToken' => false])
             @if ($canWrite)
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">{{ __('cloudflare.save') }}</button>
-                    <button type="submit" class="btn btn-secondary" formaction="{{ route('ops.cloudflare.test') }}">{{ __('cloudflare.test') }}</button>
                 </div>
             @else
                 <p class="field-hint">{{ __('cloudflare.readonly') }}</p>
             @endif
         </form>
+        @if ($canWrite)
+            <div class="form-actions">
+                <form method="POST" action="{{ route('ops.cloudflare.test', $account) }}" data-ops-pending>
+                    @csrf
+                    <button type="submit" class="btn btn-secondary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('cloudflare.test') }}</button>
+                </form>
+                @unless ($account->is_default)
+                    <form method="POST" action="{{ route('ops.cloudflare.default', $account) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost">{{ __('cloudflare.make_default') }}</button>
+                    </form>
+                @endunless
+            </div>
+        @endif
     </section>
 
     <section class="ops-panel" aria-labelledby="cf-probe-heading">
         <h2 id="cf-probe-heading">{{ __('cloudflare.probe.title') }}</h2>
         @php
-            $probe = is_array($settings->last_probe_payload) ? $settings->last_probe_payload : [];
+            $probe = is_array($account->last_probe_payload) ? $account->last_probe_payload : [];
             $missing = is_array($probe['missing'] ?? null) ? $probe['missing'] : [];
         @endphp
-        @if ($settings->last_probe_at)
-            <p>
-                <time datetime="{{ $settings->last_probe_at->toIso8601String() }}">
-                    {{ $settings->last_probe_at->toDateTimeString() }}
-                </time>
-            </p>
+        @if ($account->last_probe_at)
+            <p><time datetime="{{ $account->last_probe_at->toIso8601String() }}">{{ $account->last_probe_at->toDateTimeString() }}</time></p>
             @if (($probe['dns_unverified'] ?? false) === true)
                 <p class="ops-alert ops-alert-warning" role="status">{{ __('cloudflare.probe.unverified_dns') }}</p>
             @elseif ($missing !== [])
@@ -130,4 +76,86 @@
             <p class="field-hint">{{ __('cloudflare.probe.never') }}</p>
         @endif
     </section>
+
+    <section class="ops-panel" aria-labelledby="cf-zones-heading">
+        <h2 id="cf-zones-heading">{{ __('cloudflare.zones.title') }}</h2>
+        <p>{{ __('cloudflare.zones.lede') }}</p>
+        @if ($zonesError)
+            <p class="ops-alert" role="alert">{{ $zonesError }}</p>
+        @endif
+        @if ($canWrite && $account->hasCredentials())
+            <form method="POST" action="{{ route('ops.cloudflare.zones.store', $account) }}" class="ops-form ops-dns-add-domain" data-ops-pending>
+                @csrf
+                <div class="field">
+                    <label class="field-label" for="cf-zone-name">{{ __('cloudflare.zones.new_domain') }}</label>
+                    <input id="cf-zone-name" class="field-input" type="text" name="name" value="{{ old('name') }}" required maxlength="255" spellcheck="false" autocomplete="off" placeholder="example.com">
+                    @error('name') <p class="field-error" role="alert">{{ $message }}</p> @enderror
+                </div>
+                <div class="field">
+                    <label class="field-check">
+                        <input type="hidden" name="apply_defaults" value="0">
+                        <input type="checkbox" name="apply_defaults" value="1" @checked(old('apply_defaults', true))>
+                        <span>{{ __('cloudflare.zones.apply_defaults') }}</span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('cloudflare.zones.add') }}</button>
+                </div>
+            </form>
+        @endif
+        @if ($zones === [])
+            <p class="muted">{{ __('cloudflare.zones.empty') }}</p>
+        @else
+            <div class="sites-table-wrap">
+                <table class="ops-table">
+                    <thead>
+                        <tr>
+                            <th>{{ __('cloudflare.zones.domain') }}</th>
+                            <th>{{ __('cloudflare.zones.status') }}</th>
+                            <th>{{ __('cloudflare.zones.ns') }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($zones as $zone)
+                            @php
+                                $zoneId = (string) ($zone['id'] ?? '');
+                                $zoneName = (string) ($zone['name'] ?? $zoneId);
+                                $href = $zoneId !== '' ? route('ops.cloudflare.zones.show', ['account' => $account, 'zone' => $zoneId]) : null;
+                                $ns = is_array($zone['name_servers'] ?? null) ? implode(', ', $zone['name_servers']) : '';
+                            @endphp
+                            <tr @if ($href) data-href="{{ $href }}" tabindex="0" @endif>
+                                <td>
+                                    @if ($href)
+                                        <a class="site-name" href="{{ $href }}">{{ $zoneName }}</a>
+                                    @else
+                                        <span class="site-name">{{ $zoneName }}</span>
+                                    @endif
+                                </td>
+                                <td class="muted">{{ $zone['status'] ?? __('ops.unknown') }}</td>
+                                <td class="muted">{{ $ns !== '' ? $ns : __('ops.none') }}</td>
+                                <td class="ops-row-actions">
+                                    @if ($href)
+                                        <a class="btn btn-ghost btn-sm" href="{{ $href }}">{{ __('ops.actions.open') }}</a>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </section>
+
+    @if ($canWrite)
+        <div class="danger-zone">
+            <h2>{{ __('cloudflare.danger.title') }}</h2>
+            <p>{{ __('cloudflare.danger.lede') }}</p>
+            <form method="POST" action="{{ route('ops.cloudflare.destroy', $account) }}" data-confirm="{{ __('cloudflare.danger.confirm', ['name' => $account->name]) }}" data-confirm-title="{{ __('cloudflare.danger.confirm_title') }}" data-confirm-label="{{ __('cloudflare.danger.label') }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger">{{ __('cloudflare.danger.button') }}</button>
+            </form>
+        </div>
+    @endif
 @endsection

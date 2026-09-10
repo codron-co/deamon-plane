@@ -71,6 +71,7 @@ return [
         'api_base' => env('CLOUDFLARE_API_BASE', 'https://api.cloudflare.com/client/v4'),
         'timeout' => (int) env('CLOUDFLARE_HTTP_TIMEOUT', 20),
         'default_origin_ipv4' => env('CLOUDFLARE_ORIGIN_IPV4', '72.62.117.147'),
+        'wildcard_domain' => env('CLOUDFLARE_WILDCARD_DOMAIN', 'codron.co'),
     ],
 
     'coolify' => [
@@ -80,12 +81,6 @@ return [
         'default_server_uuid' => env('COOLIFY_DEFAULT_SERVER_UUID'),
         'webhook_secret' => env('COOLIFY_WEBHOOK_SECRET'),
         'timeout' => (int) env('COOLIFY_HTTP_TIMEOUT', 30),
-    ],
-
-    'cloudflare' => [
-        'api_base' => env('CLOUDFLARE_API_BASE', 'https://api.cloudflare.com/client/v4'),
-        'timeout' => (int) env('CLOUDFLARE_HTTP_TIMEOUT', 20),
-        'default_origin_ipv4' => env('CLOUDFLARE_ORIGIN_IPV4', '72.62.117.147'),
     ],
 
     'provision' => [

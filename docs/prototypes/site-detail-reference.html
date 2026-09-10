@@ -11,15 +11,16 @@
     .shell{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:16px 12px 12px;background:var(--sidebar);color:#fff;border-right:1px solid var(--sidebar-line)}
     .brand{display:flex;align-items:center;gap:9px;padding:1px 6px 20px}.logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#6a74e8,#8e96f2)}.brand strong{display:block;font-size:13px}.brand small{display:block;color:#777e8a;font-size:9px}.nav{display:grid;gap:3px}.nav a{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;color:var(--sidebar-text);font-size:12px}.nav a.active{background:#23252b;color:#fff}.nav i{width:14px;height:14px;border:1px solid currentColor;border-radius:4px;opacity:.8}.account{margin-top:auto;display:flex;align-items:center;gap:9px;padding:9px 7px;border-top:1px solid var(--sidebar-line)}.avatar{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:#292c33;color:#fff;font-size:10px}.account strong,.account small{display:block}.account strong{font-size:11px}.account small{color:#777e8a;font-size:9px}.chev{margin-left:auto;color:#777e8a}
     .main{min-width:0}.topbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 94%,transparent)}.crumb{color:var(--faint);font-size:11px}.crumb strong{display:block;color:var(--text);font-size:13px}.actions{display:flex;align-items:center;gap:7px}.btn{border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);padding:7px 10px;cursor:pointer;font-size:11px;font-weight:600}.btn.primary{border-color:var(--accent);background:var(--accent);color:#fff}.btn.danger{border-color:#e9b9bd;background:var(--red-soft);color:var(--red)}
-    .content{padding:22px 28px 48px}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:20px}.identity{display:flex;align-items:center;gap:12px}.mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #d9dcfa;border-radius:11px;background:var(--accent-soft);color:var(--accent);font-weight:800}.titleline{display:flex;align-items:center;gap:8px}.titleline h1{margin:0;font-size:18px}.domain{margin-top:3px;color:var(--faint);font-size:11px}.domain b{color:var(--muted);font-weight:500}.pill{display:inline-flex;align-items:center;min-height:21px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);font-size:10px}.pill.ok{border-color:#b8e3c8;background:var(--green-soft);color:var(--green)}.release{display:flex;gap:5px}
-    .tabs{position:sticky;top:0;z-index:4;display:flex;gap:2px;margin:0 -28px 22px;padding:0 28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 93%,transparent);backdrop-filter:blur(12px)}.tabs a{position:relative;padding:12px 11px;color:var(--muted);font-size:11px}.tabs a.active{color:var(--accent)}.tabs a.active:after{position:absolute;left:11px;right:11px;bottom:-1px;height:2px;background:var(--accent);content:""}.section[hidden]{display:none}
-    .section{padding:24px 0;scroll-margin-top:55px}.section+.section{border-top:1px solid var(--line)}.section-head{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:14px}.kicker{color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.section h2,.card h3{margin:3px 0 0;font-size:14px}.hint{position:relative;display:inline-grid;place-items:center;width:17px;height:17px;margin-left:4px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--panel2);color:var(--faint);font-size:10px;font-weight:700;vertical-align:1px;cursor:help}.hint em{position:absolute;z-index:20;top:25px;left:50%;width:max-content;max-width:min(280px,70vw);padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);box-shadow:var(--shadow);color:var(--muted);font-size:11px;font-style:normal;font-weight:400;line-height:1.45;text-align:left;transform:translate(-50%,-3px);opacity:0;visibility:hidden;pointer-events:none}.hint:hover em,.hint:focus em{opacity:1;visibility:visible;transform:translate(-50%,0)}
+    .content{padding:18px 28px 28px}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:16px}.identity{display:flex;align-items:center;gap:12px}.mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #d9dcfa;border-radius:11px;background:var(--accent-soft);color:var(--accent);font-weight:800;overflow:hidden}.mark.has-favicon{background:var(--panel);padding:6px}.mark img{width:100%;height:100%;object-fit:contain;display:block}.titleline{display:flex;align-items:center;gap:8px}.titleline h1{margin:0;font-size:18px}.domain{margin-top:3px;color:var(--faint);font-size:11px}.domain b{color:var(--muted);font-weight:500}.pill{display:inline-flex;align-items:center;min-height:21px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);font-size:10px}.pill.ok{border-color:#b8e3c8;background:var(--green-soft);color:var(--green)}.release{display:flex;align-items:center;gap:5px}
+    .tabs{position:sticky;top:0;z-index:4;display:flex;gap:2px;margin:0 -28px 10px;padding:0 28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 93%,transparent);backdrop-filter:blur(12px)}.tabs a{position:relative;padding:12px 11px;color:var(--muted);font-size:11px}.tabs a.active{color:var(--accent)}.tabs a.active:after{position:absolute;left:11px;right:11px;bottom:-1px;height:2px;background:var(--accent);content:""}.section[hidden]{display:none}
+    .section{padding:0;scroll-margin-top:55px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:12px}.kicker{color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.section h2,.card h3{margin:3px 0 0;font-size:14px}.hint{position:relative;display:inline-grid;place-items:center;width:17px;height:17px;margin-left:4px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--panel2);color:var(--faint);font-size:10px;font-weight:700;vertical-align:1px;cursor:help}.hint em{position:absolute;z-index:20;top:25px;left:50%;width:max-content;max-width:min(280px,70vw);padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);box-shadow:var(--shadow);color:var(--muted);font-size:11px;font-style:normal;font-weight:400;line-height:1.45;text-align:left;transform:translate(-50%,-3px);opacity:0;visibility:hidden;pointer-events:none}.hint:hover em,.hint:focus em{opacity:1;visibility:visible;transform:translate(-50%,0)}
     .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.metric{display:flex;align-items:center;gap:10px;min-width:0;padding:13px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.metric-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:var(--panel2)}.metric-icon:after{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 13%,transparent);content:""}.metric-icon.green:after{background:var(--green);box-shadow:0 0 0 4px color-mix(in srgb,var(--green) 13%,transparent)}.metric span,.metric strong,.metric small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.metric span{color:var(--faint);font-size:9px;font-weight:700;text-transform:uppercase}.metric strong{font-size:12px}.metric small{color:var(--muted);font-size:10px}
-    .overview{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(230px,.75fr);gap:9px;margin-top:9px}.card{min-width:0;padding:16px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}.facts{margin:0}.facts div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:15px;padding:8px 0;border-top:1px solid var(--line)}.facts dt{color:var(--faint);font-size:10px}.facts dd{margin:0;overflow-wrap:anywhere;font-size:11px}.next{background:color-mix(in srgb,var(--accent) 5%,var(--panel))}.next p{margin:7px 0 13px;color:var(--muted);font-size:11px}
-    .panel{border:1px solid var(--line);border-radius:9px;background:var(--panel);overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px}.panel-head h3{margin:0;font-size:13px}.panel-head p{margin:2px 0 0;color:var(--muted);font-size:10px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px 14px;border-top:1px solid var(--line);text-align:left;font-size:11px}th{color:var(--faint);background:var(--panel2);font-size:9px;text-transform:uppercase}tbody tr:hover{background:var(--panel2)}code{color:var(--muted);font:10px ui-monospace,SFMono-Regular,Consolas,monospace}
+    .overview{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(230px,.75fr);gap:9px;margin-top:9px}.card{min-width:0;padding:16px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}.facts{margin:0}.facts div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:15px;padding:8px 0;border-top:1px solid var(--line)}.facts dt{color:var(--faint);font-size:10px}.facts dd{margin:0;overflow-wrap:anywhere;font-size:11px}.next{display:flex;align-items:center;justify-content:space-between;gap:16px;background:color-mix(in srgb,var(--accent) 5%,var(--panel))}.next > div{min-width:0}.next p{margin:3px 0 0;color:var(--muted);font-size:11px}.next .btn{flex:0 0 auto;margin-left:auto}
+    .panel{border:1px solid var(--line);border-radius:9px;background:var(--panel);overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px}.panel-head h3{margin:0;font-size:13px}.panel-head p{margin:2px 0 0;color:var(--muted);font-size:10px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px 14px;border-top:1px solid var(--line);text-align:left;font-size:11px}th{color:var(--faint);background:var(--panel2);font-size:9px;text-transform:uppercase}tbody tr:hover{background:var(--panel2)}tbody tr[data-href]{cursor:pointer}tbody tr[data-href]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}code{color:var(--muted);font:10px ui-monospace,SFMono-Regular,Consolas,monospace}
     .theme-grid{display:grid;grid-template-columns:1fr 310px;gap:10px}.theme-preview{display:flex;align-items:center;gap:12px}.preview{width:92px;height:62px;border:1px solid var(--line);border-radius:7px;background:linear-gradient(145deg,#f7b229 0 42%,#fff 42% 100%);box-shadow:inset 0 0 0 5px #fff}.theme-copy h3{margin:0;font-size:13px}.theme-copy p{margin:3px 0 8px;color:var(--muted);font-size:10px}.form-row{display:grid;gap:8px}.field label{display:block;margin-bottom:4px;color:var(--muted);font-size:10px}.field select{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text)}
-    .infra{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,.7fr);gap:10px;align-items:start}.stack{display:grid;gap:10px}.operation{padding:15px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.operation h3{margin:0;font-size:12px}.operation p{margin:4px 0 11px;color:var(--muted);font-size:10px}.operation-line{display:flex;align-items:end;gap:8px}.operation-line .field{flex:1}.technical summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}.technical summary::-webkit-details-marker{display:none}.technical small{display:block;color:var(--faint);font-size:10px}.technical .facts{margin-top:12px}.technical .facts div{grid-template-columns:1fr;gap:2px}.danger{display:flex;align-items:center;justify-content:space-between;border-color:#edc4c7;background:var(--red-soft)}.danger p{margin:3px 0 0;color:var(--muted);font-size:10px}.theme-toggle{position:fixed;right:18px;bottom:18px;z-index:9;box-shadow:var(--shadow)}
-    @media(max-width:1050px){.metrics{grid-template-columns:repeat(2,1fr)}.overview,.theme-grid,.infra{grid-template-columns:1fr}}@media(max-width:700px){.shell{display:block}.sidebar{position:static;height:auto}.nav,.account{display:none}.topbar{padding:0 15px}.actions .btn:first-child{display:none}.content{padding:18px 15px}.hero,.section-head,.danger{align-items:flex-start;flex-direction:column}.tabs{margin-left:-15px;margin-right:-15px;padding:0 15px;overflow:auto}.metrics{grid-template-columns:1fr}.section-head p{text-align:left}.release{align-self:flex-start}.facts div{grid-template-columns:1fr;gap:3px}}
+    .infra{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,.7fr);gap:10px;align-items:start}.stack{display:grid;gap:10px}.operation{padding:15px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.operation h3{margin:0;font-size:12px}.operation > h3{margin-bottom:11px}.operation p{margin:4px 0 11px;color:var(--muted);font-size:10px}.operation-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}.operation-head h3{min-width:0}.operation-head .release{margin-left:auto;flex:0 0 auto;gap:8px}.operation-line{display:flex;align-items:end;flex-wrap:wrap;gap:8px}.operation-line .field{flex:1;min-width:180px}.operation-pin{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.operation-pin[hidden]{display:none}.pin-status{margin:0 0 10px;color:var(--muted);font-size:10px}.pin-status b{color:var(--text);font-weight:600}.technical summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}.technical summary::-webkit-details-marker{display:none}.technical small{display:block;color:var(--faint);font-size:10px}.technical .facts{margin-top:12px}.technical .facts div{grid-template-columns:1fr;gap:2px}.danger{display:flex;align-items:center;justify-content:space-between;border-color:#edc4c7;background:var(--red-soft)}.danger p{margin:3px 0 0;color:var(--muted);font-size:10px}.theme-toggle{position:fixed;right:18px;bottom:18px;z-index:9;box-shadow:var(--shadow)}
+    .btn[aria-pressed=true]{border-color:#b8e3c8;background:var(--green-soft);color:var(--green)}.btn[aria-pressed=false]{color:var(--muted)}
+    @media(max-width:1050px){.metrics{grid-template-columns:repeat(2,1fr)}.overview,.theme-grid,.infra{grid-template-columns:1fr}}@media(max-width:700px){.shell{display:block}.sidebar{position:static;height:auto}.nav,.account{display:none}.topbar{padding:0 15px}.actions .btn:first-child{display:none}.content{padding:18px 15px}.hero,.section-head,.danger,.next{align-items:flex-start;flex-direction:column}.next .btn,.release{align-self:flex-start;margin-left:0}.tabs{margin-left:-15px;margin-right:-15px;padding:0 15px;overflow:auto}.metrics{grid-template-columns:1fr}.section-head p{text-align:left}.facts div{grid-template-columns:1fr;gap:3px}}
   </style>
 </head>
 <body>
@@ -32,7 +33,8 @@
   <main class="main">
     <header class="topbar"><div class="crumb">Siteler / adanapelet.com.tr<strong>adanapelet.com.tr</strong></div><div class="actions"><button class="btn">Coolify'de aç</button><button class="btn">Siteyi düzenle</button><button class="btn primary">Sağlığı kontrol et</button></div></header>
     <div class="content">
-      <header class="hero"><div class="identity"><span class="mark">A</span><div><div class="titleline"><h1>adanapelet.com.tr</h1><span class="pill ok">● Aktif</span></div><div class="domain"><b>adanapelet.com.tr</b> · adanapelet</div></div></div><div class="release"><span class="pill">alpha</span><span class="pill">Sürüm bilinmiyor</span></div></header>
+      <!-- Identity mark: load favicon from the site's primary domain origin. Letter is the failure fallback. No third-party icon CDN. -->
+      <header class="hero"><div class="identity"><span class="mark" data-favicon-host="adanapelet.com.tr" data-favicon-fallback="A">A</span><div><div class="titleline"><h1>adanapelet.com.tr</h1><span class="pill ok">● Aktif</span></div><div class="domain"><b>adanapelet.com.tr</b> · adanapelet</div></div></div><div class="release"><span class="pill">alpha</span><span class="pill">Sürüm bilinmiyor</span></div></header>
       <nav class="tabs" role="tablist"><a class="active" href="#overview" role="tab" aria-selected="true">Genel bakış</a><a href="#deployments" role="tab" aria-selected="false">Dağıtımlar</a><a href="#theme" role="tab" aria-selected="false">Temalar</a><a href="#infrastructure" role="tab" aria-selected="false">Altyapı</a><a href="#danger" role="tab" aria-selected="false">Tehlikeli bölge</a></nav>
       <section class="section" id="overview">
         <div class="section-head"><div><span class="kicker">Operasyon merkezi</span><h2>Genel bakış <button class="hint" aria-label="Bilgi">i<em>Sağlık, yayın ve bağlantı durumunu tek bakışta kontrol edin.</em></button></h2></div></div>
@@ -44,13 +46,24 @@
         </div>
         <div class="overview">
           <article class="card"><div class="card-head"><div><span class="kicker">Mevcut yayın</span><h3>Yayındaki sürüm</h3></div><div class="release"><span class="pill">alpha</span><span class="pill">Bilinmiyor</span></div></div><dl class="facts"><div><dt>Git deposu</dt><dd><code>codron-co/deamon</code></dd></div><div><dt>Birincil domain</dt><dd>adanapelet.com.tr</dd></div><div><dt>Son dağıtım</dt><dd>10 Eylül 2026 · 07:02</dd></div></dl></article>
-          <aside class="card next"><span class="kicker">Sıradaki işlem</span><h3>Sağlık kontrolü gerekiyor</h3><p>CMS agent durumunu ve yayındaki sürümü yeniden doğrulayın.</p><button class="btn primary">Sağlığı kontrol et</button></aside>
+          <aside class="card next"><div><span class="kicker">Sıradaki işlem</span><h3>Sağlık kontrolü gerekiyor</h3><p>CMS agent durumunu ve yayındaki sürümü yeniden doğrulayın.</p></div><button class="btn primary">Sağlığı kontrol et</button></aside>
         </div>
       </section>
-      <section class="section" id="deployments"><div class="section-head"><div><span class="kicker">Geçmiş ve hata takibi</span><h2>Dağıtımlar</h2></div><p>Son dağıtımları izleyin; hata ve log ayrıntısına satırdan ulaşın.</p></div><div class="panel"><div class="panel-head"><div><h3>Son dağıtımlar</h3><p>3 kayıt gösteriliyor</p></div><button class="btn">Tümünü göster</button></div><div class="table-wrap"><table><thead><tr><th>Durum</th><th>Repo dalı</th><th>Tetik</th><th>Commit</th><th>Süre</th><th>Başlangıç</th></tr></thead><tbody><tr><td><span class="pill ok">Başarılı</span></td><td><span class="pill">alpha</span></td><td>Webhook</td><td><code>fb768be</code></td><td>1 dk 48 sn</td><td>10 Eyl · 07:02</td></tr><tr><td><span class="pill ok">Başarılı</span></td><td><span class="pill">alpha</span></td><td>Manuel</td><td><code>4f98bbf</code></td><td>2 dk 04 sn</td><td>10 Eyl · 06:21</td></tr><tr><td><span class="pill">İptal</span></td><td><span class="pill">beta</span></td><td>Dal değişimi</td><td><code>99f728a</code></td><td>—</td><td>10 Eyl · 05:58</td></tr></tbody></table></div></div></section>
+      <section class="section" id="deployments"><div class="section-head"><div><span class="kicker">Geçmiş ve hata takibi</span><h2>Dağıtımlar</h2></div><p>Son dağıtımları izleyin; hata ve log ayrıntısına satırdan ulaşın.</p></div><div class="panel"><div class="panel-head"><div><h3>Son dağıtımlar</h3><p>3 kayıt gösteriliyor</p></div><button class="btn">Tümünü göster</button></div><div class="table-wrap"><table><thead><tr><th>Durum</th><th>Repo dalı</th><th>Tetik</th><th>Commit</th><th>Süre</th><th>Başlangıç</th></tr></thead><tbody><tr data-href="#deployment-fb768be" tabindex="0"><td><span class="pill ok">Başarılı</span></td><td><span class="pill">alpha</span></td><td>Webhook</td><td><code>fb768be</code></td><td>1 dk 48 sn</td><td>10 Eyl · 07:02</td></tr><tr data-href="#deployment-4f98bbf" tabindex="0"><td><span class="pill ok">Başarılı</span></td><td><span class="pill">alpha</span></td><td>Manuel</td><td><code>4f98bbf</code></td><td>2 dk 04 sn</td><td>10 Eyl · 06:21</td></tr><tr data-href="#deployment-99f728a" tabindex="0"><td><span class="pill">İptal</span></td><td><span class="pill">beta</span></td><td>Dal değişimi</td><td><code>99f728a</code></td><td>—</td><td>10 Eyl · 05:58</td></tr></tbody></table></div></div></section>
       <section class="section" id="theme"><div class="section-head"><div><span class="kicker">Görünüm yönetimi</span><h2>Temalar</h2></div><p>Kurulu temayı, sürümünü ve senkronizasyon durumunu yönetin.</p></div><div class="theme-grid"><article class="card theme-preview"><div class="preview"></div><div class="theme-copy"><h3>Aktif tema bulunamadı</h3><p>Katalogdan uyumlu bir tema atayarak başlayın.</p><span class="pill">CMS agent ile kurulur</span></div></article><aside class="card"><div class="form-row"><div class="field"><label>Katalog teması</label><select><option>Tema seç</option><option>Nova Retail</option><option>Corporate Light</option></select></div><button class="btn primary">Tema ata</button></div></aside></div></section>
-      <section class="section" id="infrastructure"><div class="section-head"><div><span class="kicker">Gelişmiş kontroller</span><h2>Altyapı ve operasyonlar</h2></div><p>Branch, otomatik dağıtım, agent ve Coolify işlemlerini yönetin.</p></div><div class="infra"><div class="stack"><article class="operation"><h3>Repo dalını değiştir</h3><p>Coolify uygulaması yeniden dağıtılır; MySQL, Redis ve storage volume'ları korunur.</p><div class="operation-line"><div class="field"><label>Hedef repo dalı</label><select><option>main</option><option>beta</option><option selected>alpha</option></select></div><button class="btn">Dal değiştir</button></div></article><article class="operation"><h3>Otomatik dağıtım</h3><p>HEAD'i takip et veya yayını belirli bir commit/tag üzerinde sabitle.</p><div class="release"><span class="pill ok">Açık</span><button class="btn">Yapılandır</button></div></article><article class="operation"><h3>Agent sağlığı</h3><p>İmzalı health endpoint son kontrolde HTTP hatası döndürdü.</p><div class="release"><span class="pill" style="color:var(--red)">Sağlıksız · http_error</span><button class="btn">Tekrar kontrol et</button></div></article></div><aside class="stack"><details class="card technical"><summary><span><strong>Teknik kimlikler</strong><small>Coolify UUID ve hedef bilgileri</small></span><b>⌄</b></summary><dl class="facts"><div><dt>Uygulama UUID</dt><dd><code>w553nh3qtdtf9520oazu9ckv</code></dd></div><div><dt>Sunucu UUID</dt><dd><code>no48ksggg0k8sk4o4w08gks8</code></dd></div><div><dt>Proje UUID</dt><dd><code>z8ocg8k04ww8osssccc088c0</code></dd></div></dl></details><article class="card"><span class="kicker">Cloudflare DNS</span><dl class="facts"><div><dt>Zone</dt><dd>Bağlı değil</dd></div><div><dt>Nameserver</dt><dd>—</dd></div></dl></article></aside></div></section>
+      <section class="section" id="infrastructure"><div class="section-head"><div><span class="kicker">Gelişmiş kontroller</span><h2>Altyapı ve operasyonlar</h2></div><p>Branch, mail sunucusu, otomatik dağıtım, agent ve Coolify işlemlerini yönetin.</p></div><div class="infra"><div class="stack"><article class="operation"><h3>Repo dalını değiştir</h3><p>Coolify uygulaması yeniden dağıtılır; MySQL, Redis ve storage volume'ları korunur.</p><div class="operation-line"><div class="field"><select aria-label="Repo dalı"><option>main</option><option>beta</option><option selected>alpha</option></select></div><button class="btn">Dal değiştir</button></div></article><article class="operation"><h3>Mail sunucusu</h3><p>Sitenin MX/SPF kaydı ve webmail hedefi seçilen sunucuya bağlanır.</p><div class="operation-line"><div class="field"><select aria-label="Mail sunucusu"><option>Atanmamış</option><option selected>Hostinger</option><option>Mailcow</option></select></div><button class="btn">Ata</button></div></article><article class="operation" data-autodeploy><div class="operation-head"><h3>Otomatik dağıtım</h3><div class="release"><button class="btn" type="button" data-state-toggle aria-pressed="false">Kapalı</button></div></div><p>Açıkken HEAD takip edilir. Kapalıyken yayın sabit kalır: son commite güncelleyin, listeden bir commit seçin veya eski bir sürüme dönün. Geri alma kodu değiştirir; MySQL/Redis/storage volume geri sarılmaz.</p><div class="operation-pin"><div class="pin-status">Yayın <b>fb768be</b> üzerinde sabit. HEAD <b>c3e91aa</b> · 2 commit ileride.</div><div class="operation-line"><div class="field"><label>Commit</label><select data-commit-select><option value="c3e91aa">c3e91aa · HEAD · 10 Eyl 08:14</option><option value="a11b02c">a11b02c · 10 Eyl 07:40</option><option value="fb768be" selected>fb768be · yayında · 10 Eyl 07:02</option><option value="4f98bbf">4f98bbf · eski · 10 Eyl 06:21</option></select></div><button class="btn" type="button" data-pin-selected>Bu commite geç</button><button class="btn primary" type="button" data-pin-latest>Sonuncuya güncelle</button></div></div></article><article class="operation"><div class="operation-head"><h3>Agent sağlığı</h3><div class="release"><span class="pill" style="color:var(--red)">Sağlıksız · http_error</span><button class="btn">Tekrar kontrol et</button></div></div><p>İmzalı health endpoint son kontrolde HTTP hatası döndürdü.</p></article></div><aside class="stack"><details class="card technical"><summary><span><strong>Teknik kimlikler</strong><small>Coolify UUID ve hedef bilgileri</small></span><b>⌄</b></summary><dl class="facts"><div><dt>Uygulama UUID</dt><dd><code>w553nh3qtdtf9520oazu9ckv</code></dd></div><div><dt>Sunucu UUID</dt><dd><code>no48ksggg0k8sk4o4w08gks8</code></dd></div><div><dt>Proje UUID</dt><dd><code>z8ocg8k04ww8osssccc088c0</code></dd></div></dl></details><article class="card"><span class="kicker">Cloudflare DNS</span><dl class="facts"><div><dt>Zone</dt><dd>Bağlı değil</dd></div><div><dt>Nameserver</dt><dd>—</dd></div></dl></article></aside></div></section>
       <section class="section" id="danger"><article class="card danger"><div><span class="kicker">Tehlikeli bölge</span><h3>Siteyi arşivle</h3><p>Plane kaydını soft-delete eder; Coolify uygulamasına dokunmaz.</p></div><button class="btn danger">Siteyi arşivle</button></article></section>
+      <section class="section" id="deployment" hidden>
+        <div class="section-head">
+          <div><span class="kicker">Dağıtım ayrıntısı</span><h2 id="deployment-title">fb768be</h2></div>
+          <button class="btn" type="button" data-back="#deployments">Dağıtımlara dön</button>
+        </div>
+        <div class="metrics" id="deployment-metrics"></div>
+        <div class="overview">
+          <article class="card"><div class="card-head"><div><span class="kicker">Coolify çıktısı</span><h3>Hata ve log</h3></div></div><dl class="facts"><div><dt>Hata</dt><dd id="deployment-error">Kayıtlı hata yok</dd></div><div><dt>Log</dt><dd id="deployment-log">Kayıtlı log yok</dd></div></dl></article>
+          <aside class="card next"><div><span class="kicker">Sıradaki işlem</span><h3>Coolify'de incele</h3><p>Dağıtım kaydını Coolify uygulamasında açın veya raporu kopyalayın.</p></div><button class="btn">Coolify'de aç</button></aside>
+        </div>
+      </section>
     </div>
   </main>
 </div>
@@ -59,17 +72,41 @@
   (() => {
     const tabs = [...document.querySelectorAll('.tabs [role="tab"]')];
     const panels = [...document.querySelectorAll('.content > .section')];
-    const activate = id => {
-      if (!panels.some(panel => panel.id === id)) id = 'overview';
+    const detail = document.getElementById('deployment');
+    const deployments = {
+      fb768be: { status: 'Başarılı', ok: true, branch: 'alpha', trigger: 'Webhook', commit: 'fb768be', duration: '1 dk 48 sn', started: '10 Eyl · 07:02', finished: '10 Eyl · 07:04', error: 'Kayıtlı hata yok', log: 'Kayıtlı log yok' },
+      '4f98bbf': { status: 'Başarılı', ok: true, branch: 'alpha', trigger: 'Manuel', commit: '4f98bbf', duration: '2 dk 04 sn', started: '10 Eyl · 06:21', finished: '10 Eyl · 06:23', error: 'Kayıtlı hata yok', log: 'Kayıtlı log yok' },
+      '99f728a': { status: 'İptal', ok: false, branch: 'beta', trigger: 'Dal değişimi', commit: '99f728a', duration: '—', started: '10 Eyl · 05:58', finished: '—', error: 'Dağıtım iptal edildi', log: 'Kayıtlı log yok' }
+    };
+    const metric = (label, value, note, ok) => `<article class="metric"><span class="metric-icon${ok ? ' green' : ''}"></span><div><span>${label}</span><strong>${value}</strong><small>${note}</small></div></article>`;
+    const fillDetail = id => {
+      const row = deployments[id] || deployments.fb768be;
+      document.getElementById('deployment-title').textContent = row.commit;
+      document.getElementById('deployment-metrics').innerHTML = [
+        metric('Durum', row.status, row.trigger, row.ok),
+        metric('Repo dalı', row.branch, row.commit, true),
+        metric('Süre', row.duration, row.started, row.ok),
+        metric('Bitiş', row.finished, row.started, row.ok)
+      ].join('');
+      document.getElementById('deployment-error').textContent = row.error;
+      document.getElementById('deployment-log').textContent = row.log;
+    };
+    const activate = hash => {
+      const raw = (hash || '').replace(/^#/, '');
+      const deployId = raw.startsWith('deployment-') ? raw.slice('deployment-'.length) : '';
+      const showDetail = Boolean(deployId && deployments[deployId]);
+      const id = showDetail ? 'deployment' : (panels.some(panel => panel.id === raw) && raw !== 'deployment' ? raw : 'overview');
       tabs.forEach(tab => {
-        const active = tab.hash === `#${id}`;
+        const active = showDetail ? tab.hash === '#deployments' : tab.hash === `#${id}`;
         tab.classList.toggle('active', active);
         tab.setAttribute('aria-selected', active ? 'true' : 'false');
         tab.tabIndex = active ? 0 : -1;
       });
-      panels.forEach(panel => panel.hidden = panel.id !== id);
-      history.replaceState(null, '', `#${id}`);
+      panels.forEach(panel => panel.hidden = showDetail ? panel !== detail : panel.id !== id);
+      if (showDetail) fillDetail(deployId);
+      history.replaceState(null, '', showDetail ? `#deployment-${deployId}` : `#${id}`);
     };
+    const interactive = target => Boolean(target.closest('a, button, input, select, textarea, summary, details, [role="button"]'));
     tabs.forEach((tab, index) => {
       tab.addEventListener('click', event => { event.preventDefault(); activate(tab.hash.slice(1)); });
       tab.addEventListener('keydown', event => {
@@ -87,7 +124,65 @@
       hint.innerHTML = `i<em>${copy.textContent.trim()}</em>`;
       title.append(' ', hint); copy.remove();
     });
+    document.addEventListener('click', event => {
+      const toggle = event.target.closest('[data-state-toggle]');
+      if (toggle) {
+        const on = toggle.getAttribute('aria-pressed') !== 'true';
+        toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+        toggle.textContent = on ? 'Açık' : 'Kapalı';
+        const pin = toggle.closest('[data-autodeploy]')?.querySelector('.operation-pin');
+        if (pin) pin.hidden = on;
+        return;
+      }
+      const pinLatest = event.target.closest('[data-pin-latest]');
+      const pinSelected = event.target.closest('[data-pin-selected]');
+      if (pinLatest || pinSelected) {
+        const card = event.target.closest('[data-autodeploy]');
+        const select = card?.querySelector('[data-commit-select]');
+        const status = card?.querySelector('.pin-status');
+        if (select && status) {
+          if (pinLatest) select.selectedIndex = 0;
+          const sha = select.value;
+          const head = select.options[0].value;
+          status.innerHTML = sha === head
+            ? `Yayın <b>${sha}</b> üzerinde sabit (HEAD). Auto-deploy kapalı; yeni commit otomatik gelmez.`
+            : `Yayın <b>${sha}</b> üzerine alındı. Geri alma kodu değiştirir, volume geri sarılmaz.`;
+        }
+        return;
+      }
+      const back = event.target.closest('[data-back]');
+      if (back) { event.preventDefault(); activate(back.getAttribute('data-back')); return; }
+      const row = event.target.closest('tr[data-href]');
+      if (!row || interactive(event.target)) return;
+      activate(row.getAttribute('data-href'));
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      const row = event.target.closest('tr[data-href]');
+      if (!row || event.target !== row) return;
+      activate(row.getAttribute('data-href'));
+    });
     activate(location.hash.slice(1));
+    document.querySelectorAll('[data-favicon-host]').forEach(mark => {
+      const host = (mark.getAttribute('data-favicon-host') || '').trim().replace(/^https?:\/\//i, '').split('/')[0].toLowerCase();
+      const fallback = (mark.getAttribute('data-favicon-fallback') || mark.textContent || '?').trim().slice(0, 1).toUpperCase() || '?';
+      if (!host || host.includes('..') || !/^[a-z0-9.-]+$/i.test(host)) { mark.textContent = fallback; return; }
+      const urls = [`https://${host}/favicon.ico`, `https://${host}/apple-touch-icon.png`];
+      const tryAt = index => {
+        if (index >= urls.length) { mark.textContent = fallback; return; }
+        const img = new Image();
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('error', () => tryAt(index + 1));
+        img.addEventListener('load', () => {
+          if (img.naturalWidth < 2) { tryAt(index + 1); return; }
+          mark.replaceChildren(img);
+          mark.classList.add('has-favicon');
+        });
+        img.src = urls[index];
+      };
+      tryAt(0);
+    });
   })();
 </script>
 </body>

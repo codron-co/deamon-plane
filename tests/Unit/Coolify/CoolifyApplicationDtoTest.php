@@ -50,6 +50,18 @@ class CoolifyApplicationDtoTest extends TestCase
         $this->assertSame(CoolifyGitSourceKind::DeployKey, $app->gitSourceKind());
     }
 
+    public function test_numeric_github_app_id_is_used_when_uuid_is_absent(): void
+    {
+        $app = CoolifyApplication::fromArray([
+            'uuid' => 'app-4',
+            'name' => 'Numeric',
+            'github_app_id' => 3,
+        ]);
+
+        $this->assertSame('3', $app->gitSourceUuid());
+        $this->assertSame(CoolifyGitSourceKind::GithubApp, $app->gitSourceKind());
+    }
+
     public function test_git_helpers_are_null_when_no_source(): void
     {
         $app = CoolifyApplication::fromArray([

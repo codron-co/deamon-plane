@@ -25,6 +25,44 @@ class CloudflareApiException extends RuntimeException
         return $this->status === 403;
     }
 
+    public function isSubdomainRejection(): bool
+    {
+        $message = strtolower($this->getMessage());
+
+        return str_contains($message, 'root domain')
+            || str_contains($message, 'not any subdomains');
+    }
+
+    public function isDuplicateRecord(): bool
+    {
+        foreach ([81053, 81057, 81058] as $code) {
+            if ($this->hasErrorCode($code)) {
+                return true;
+            }
+        }
+
+        $message = strtolower($this->getMessage());
+
+        return str_contains($message, 'already exists')
+            || str_contains($message, 'record with that host');
+    }
+
+    public function hasErrorCode(int $code): bool
+    {
+        $errors = $this->payload['errors'] ?? [];
+        if (! is_array($errors)) {
+            return false;
+        }
+
+        foreach ($errors as $error) {
+            if (is_array($error) && (int) ($error['code'] ?? 0) === $code) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function fromResponse(Response $response, ?string $token = null): self
     {
         $json = $response->json();

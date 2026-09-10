@@ -44,6 +44,9 @@ final class SecretRedactor
         $replacements = [
             '/Bearer\s+\S+/i' => 'Bearer [redacted]',
             '/\bAPP_KEY\s*=\s*\S+/i' => 'APP_KEY=[redacted]',
+            '/\bDB_PASSWORD\s*=\s*\S+/i' => 'DB_PASSWORD=[redacted]',
+            '/\bMYSQL_ROOT_PASSWORD\s*=\s*\S+/i' => 'MYSQL_ROOT_PASSWORD=[redacted]',
+            '/\bDEAMON_DEFAULT_ADMIN_PASSWORD\s*=\s*\S+/i' => 'DEAMON_DEFAULT_ADMIN_PASSWORD=[redacted]',
             '/\bCONTROL_PLANE_AGENT_SECRET\s*=\s*\S+/i' => 'CONTROL_PLANE_AGENT_SECRET=[redacted]',
             '/\bbase64:[A-Za-z0-9+\/]{20,}={0,2}/' => 'base64:[redacted]',
         ];

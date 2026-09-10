@@ -58,6 +58,10 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 - Policy config `config/ops.php` → `channel_switch`: `main` → `beta`/`alpha` requires confirm; `alpha`/`beta` → `main` is a version gate. When last health has `deamon_version`, the minimum is enforced. Missing health does **not** block. Force is Super Admin only.
 - Audit: `site.channel_switch_started`, `site.channel_switched`, `site.channel_switch_failed`.
 
+## Site detail
+
+Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, next action, then Deployments / Themes / Infrastructure / Danger. **Edit** is a separate route. The identity mark loads the favicon from the site's primary domain origin (`https://{host}/favicon.ico`, then `/apple-touch-icon.png`) via `[data-favicon-host]`; the first letter of the site name is the no-JS / failure fallback. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
+
 ## Deployments
 
 Site detail and site edit include a **Deployments** table (`ops/deployments/index`): last 25 rows, status chip, duration, commit, **Open in Coolify**. The Coolify URL is `/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}` — environment **uuid**, not the name or git branch. Click a row (or **Show**) for `GET /sites/{site}/deployments/{deployment}` — status, channel, trigger, commit, duration, times, full Coolify error (`message` + `errors` JSON), truncated redacted logs in `<pre>`, and a copyable pasteable report. Poll (`PollDeploymentJob`) and Coolify webhook failures write this text onto the `deployments` row (`error_message` + `log_excerpt`); status `failed` alone is not enough. See [coolify-webhooks.md](coolify-webhooks.md).

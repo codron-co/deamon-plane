@@ -794,6 +794,17 @@ html[data-theme="semidark"] .fleet-attention-list li {
     color: var(--accent);
     font-size: 16px;
     font-weight: 700;
+    overflow: hidden;
+}
+.site-identity-mark.has-favicon {
+    background: var(--surface-raised);
+    padding: 6px;
+}
+.site-identity-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }
 .site-title-row { gap: 9px; flex-wrap: wrap; }
 .site-title-row h2 { margin: 0; color: var(--text); font-size: 18px; line-height: 1.3; }

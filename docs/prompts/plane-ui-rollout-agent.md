@@ -28,6 +28,7 @@ Bring Fleet, Sites, Coolify, Themes, Settings, Account, and all resource detail/
 - Reuse or extract shared primitives before adding page-specific variants.
 - Tables open the show/detail route from a non-interactive row click and Enter. Nested controls must not trigger row navigation.
 - Detail pages answer: what is it, is it healthy, what is live, what is connected, what happened recently, and what action is next.
+- Site identity marks load the live favicon from the site's **primary domain origin** (`https://{host}/favicon.ico`, then `/apple-touch-icon.png`). Keep the first letter as the no-JS / failure fallback. Do not use Google, DuckDuckGo, or any other third-party icon CDN. Reuse the same `[data-favicon-host]` primitive on Sites index if a mark is shown.
 - Edit forms are separate from operational detail pages.
 - Hide UUIDs and low-frequency infrastructure identifiers behind a clear technical-details disclosure unless they are required for the current task.
 - Destructive actions live in a visibly separate danger zone and keep their confirmation behavior.
@@ -65,6 +66,7 @@ For each screen:
 Consolidate these only when at least two screens need them:
 
 - resource hero/header
+- site identity mark (domain favicon, letter fallback)
 - sticky section navigation
 - summary metric row
 - section heading and kicker

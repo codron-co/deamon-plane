@@ -47,7 +47,7 @@ Sign-in: `/login`. Seed a local super_admin with `php artisan db:seed` using `OP
 
 API create must use **git + `build_pack=dockercompose`** + `docker_compose_location=/docker-compose.coolify.yml` (leading slash required) against **`codron-co/deamon`**, not this repo. Deprecated `POST /applications/dockercompose` (raw YAML, no git) is forbidden.
 
-Customer Coolify env: only `APP_KEY` + `DEAMON_SITE_NAME` (+ `SERVICE_*`). See CMS `docs/modules/deployment.md`.
+Customer Coolify env: `APP_KEY`, `DEAMON_SITE_NAME`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `DEAMON_DEFAULT_ADMIN_PASSWORD` (+ Coolify `SERVICE_*`). Compose interpolates the DB passwords into MySQL and the app. Empty DB values make MySQL exit (`password option is not specified`). Empty admin password fails first migrate (`DefaultAdminSeeder`). Pack-migrate still must **not** copy `DB_*` from a Dockerfile app. See CMS `docs/modules/deployment.md`.
 
 ## Access
 

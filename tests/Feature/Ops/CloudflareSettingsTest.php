@@ -6,6 +6,7 @@ use App\Enums\OpsRole;
 use App\Models\CloudflareSetting;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,106 +29,114 @@ class CloudflareSettingsTest extends TestCase
         Http::preventStrayRequests();
     }
 
-    public function test_cloudflare_page_never_renders_api_token(): void
+    public function test_index_never_renders_api_token(): void
     {
-        CloudflareSetting::factory()->create([
-            'account_id' => self::ACCOUNT_ID,
-            'api_token' => self::TOKEN,
-        ]);
+        $this->account();
 
         $this->actingAs($this->operator())
-            ->get(route('ops.cloudflare.show'))
+            ->get(route('ops.cloudflare.index'))
             ->assertOk()
             ->assertSee(__('cloudflare.title'), false)
-            ->assertSee('DNS & Zones', false)
+            ->assertSee('Prod CF', false)
             ->assertDontSee(self::TOKEN, false);
     }
 
-    public function test_operator_saves_cloudflare_token_encrypted(): void
+    public function test_show_never_renders_api_token(): void
+    {
+        $account = $this->account();
+        $this->fakeZoneList();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.cloudflare.show', $account))
+            ->assertOk()
+            ->assertSee('DNS & Zones', false)
+            ->assertSee(__('cloudflare.fields.token_saved'), false)
+            ->assertDontSee(self::TOKEN, false);
+    }
+
+    public function test_operator_stores_cloudflare_token_encrypted(): void
     {
         $this->actingAs($this->operator())
-            ->post(route('ops.cloudflare.update'), [
+            ->post(route('ops.cloudflare.store'), [
+                'name' => 'Prod CF',
                 'account_id' => self::ACCOUNT_ID,
                 'api_token' => self::TOKEN,
-                'origin_ipv4' => '72.62.117.147',
-                'mail_template_enabled' => '1',
+                'is_enabled' => '1',
+                'is_default' => '1',
             ])
-            ->assertRedirect(route('ops.cloudflare.show'));
+            ->assertRedirect();
 
-        $raw = DB::table('cloudflare_settings')->value('api_token');
-        $this->assertNotSame(self::TOKEN, $raw);
-        $this->assertSame(self::TOKEN, CloudflareSetting::current()->api_token);
-        $this->assertArrayNotHasKey('api_token', CloudflareSetting::current()->toArray());
-        $this->assertSame(self::ACCOUNT_ID, CloudflareSetting::current()->account_id);
-        $this->assertTrue(CloudflareSetting::current()->mail_template_enabled);
-        $this->assertFalse(CloudflareSetting::current()->proxied);
+        $account = CloudflareSetting::query()->first();
+        $this->assertNotNull($account);
+        $this->assertTrue($account->is_default);
+        $this->assertTrue($account->is_enabled);
+        $this->assertSame(self::TOKEN, $account->api_token);
+        $this->assertNotSame(self::TOKEN, DB::table('cloudflare_settings')->value('api_token'));
+        $this->assertArrayNotHasKey('api_token', $account->toArray());
+        $this->assertSame(self::ACCOUNT_ID, $account->account_id);
+
+        $this->fakeZoneList();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.cloudflare.show', $account))
+            ->assertOk()
+            ->assertDontSee(self::TOKEN, false);
     }
 
     public function test_blank_token_keeps_existing_value(): void
     {
-        CloudflareSetting::factory()->create([
-            'account_id' => self::ACCOUNT_ID,
-            'api_token' => self::TOKEN,
-            'origin_ipv4' => '72.62.117.147',
-        ]);
+        $account = $this->account();
 
         $this->actingAs($this->operator())
-            ->post(route('ops.cloudflare.update'), [
+            ->put(route('ops.cloudflare.update', $account), [
+                'name' => 'Renamed CF',
                 'account_id' => self::ACCOUNT_ID,
                 'api_token' => '',
-                'origin_ipv4' => '1.2.3.4',
-                'mail_template_enabled' => '0',
+                'is_enabled' => '1',
+                'is_default' => '1',
             ])
-            ->assertRedirect(route('ops.cloudflare.show'));
+            ->assertRedirect();
 
-        $settings = CloudflareSetting::current();
-        $this->assertSame(self::TOKEN, $settings->api_token);
-        $this->assertSame('1.2.3.4', $settings->origin_ipv4);
-        $this->assertFalse($settings->mail_template_enabled);
+        $account->refresh();
+        $this->assertSame(self::TOKEN, $account->api_token);
+        $this->assertSame('Renamed CF', $account->name);
     }
 
     public function test_probe_success_flashes_verified_copy(): void
     {
-        CloudflareSetting::factory()->create([
-            'account_id' => self::ACCOUNT_ID,
-            'api_token' => self::TOKEN,
-        ]);
-
+        $account = $this->account();
         $this->fakeProbeHappyPath();
 
         $this->actingAs($this->operator(['locale' => 'tr']))
-            ->from(route('ops.cloudflare.show'))
-            ->post(route('ops.cloudflare.test'))
-            ->assertRedirect(route('ops.cloudflare.show'))
+            ->from(route('ops.cloudflare.show', $account))
+            ->post(route('ops.cloudflare.test', $account))
+            ->assertRedirect(route('ops.cloudflare.show', $account))
             ->assertSessionHas('status', 'Cloudflare bağlantısı tamam. Zone oluşturma ve DNS yazma izinleri doğrulandı.');
 
         $status = session('status');
         $this->assertIsString($status);
         $this->assertStringNotContainsString(self::TOKEN, $status);
 
-        $payload = CloudflareSetting::current()->last_probe_payload;
+        $payload = $account->fresh()->last_probe_payload;
         $this->assertIsArray($payload);
         $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES);
         $this->assertIsString($encoded);
         $this->assertStringNotContainsString(self::TOKEN, $encoded);
-        $this->assertNotNull(CloudflareSetting::current()->last_probe_at);
+        $this->assertNotNull($account->fresh()->last_probe_at);
     }
 
     public function test_probe_zone_edit_403_lists_dashboard_label(): void
     {
-        CloudflareSetting::factory()->create([
-            'account_id' => self::ACCOUNT_ID,
-            'api_token' => self::TOKEN,
-        ]);
+        $account = $this->account();
 
         Http::fake(function (Request $request) {
             return $this->probeResponse($request, zoneEditStatus: 403);
         });
 
         $this->actingAs($this->operator(['locale' => 'tr']))
-            ->from(route('ops.cloudflare.show'))
-            ->post(route('ops.cloudflare.test'))
-            ->assertRedirect(route('ops.cloudflare.show'))
+            ->from(route('ops.cloudflare.show', $account))
+            ->post(route('ops.cloudflare.test', $account))
+            ->assertRedirect(route('ops.cloudflare.show', $account))
             ->assertSessionHas('error');
 
         $error = session('error');
@@ -139,19 +148,16 @@ class CloudflareSettingsTest extends TestCase
 
     public function test_probe_dns_edit_403_lists_dashboard_label(): void
     {
-        CloudflareSetting::factory()->create([
-            'account_id' => self::ACCOUNT_ID,
-            'api_token' => self::TOKEN,
-        ]);
+        $account = $this->account();
 
         Http::fake(function (Request $request) {
             return $this->probeResponse($request, dnsEditStatus: 403);
         });
 
         $this->actingAs($this->operator(['locale' => 'tr']))
-            ->from(route('ops.cloudflare.show'))
-            ->post(route('ops.cloudflare.test'))
-            ->assertRedirect(route('ops.cloudflare.show'))
+            ->from(route('ops.cloudflare.show', $account))
+            ->post(route('ops.cloudflare.test', $account))
+            ->assertRedirect(route('ops.cloudflare.show', $account))
             ->assertSessionHas('error');
 
         $error = session('error');
@@ -162,17 +168,13 @@ class CloudflareSettingsTest extends TestCase
 
     public function test_probe_never_posts_zones_with_a_name(): void
     {
-        CloudflareSetting::factory()->create([
-            'account_id' => self::ACCOUNT_ID,
-            'api_token' => self::TOKEN,
-        ]);
-
+        $account = $this->account();
         $this->fakeProbeHappyPath();
 
         $this->actingAs($this->operator())
-            ->from(route('ops.cloudflare.show'))
-            ->post(route('ops.cloudflare.test'))
-            ->assertRedirect(route('ops.cloudflare.show'));
+            ->from(route('ops.cloudflare.show', $account))
+            ->post(route('ops.cloudflare.test', $account))
+            ->assertRedirect(route('ops.cloudflare.show', $account));
 
         Http::assertSent(function (Request $request): bool {
             if ($request->method() !== 'POST' || $request->url() !== 'https://api.cloudflare.com/client/v4/zones') {
@@ -189,19 +191,16 @@ class CloudflareSettingsTest extends TestCase
 
     public function test_zero_zones_skips_dns_probes_and_warns(): void
     {
-        CloudflareSetting::factory()->create([
-            'account_id' => self::ACCOUNT_ID,
-            'api_token' => self::TOKEN,
-        ]);
+        $account = $this->account();
 
         Http::fake(function (Request $request) {
             return $this->probeResponse($request, zoneCount: 0);
         });
 
         $this->actingAs($this->operator(['locale' => 'tr']))
-            ->from(route('ops.cloudflare.show'))
-            ->post(route('ops.cloudflare.test'))
-            ->assertRedirect(route('ops.cloudflare.show'))
+            ->from(route('ops.cloudflare.show', $account))
+            ->post(route('ops.cloudflare.test', $account))
+            ->assertRedirect(route('ops.cloudflare.show', $account))
             ->assertSessionHas('status');
 
         $status = session('status');
@@ -215,22 +214,39 @@ class CloudflareSettingsTest extends TestCase
 
     public function test_viewer_cannot_save_or_test_cloudflare(): void
     {
+        $account = $this->account();
+        $this->fakeZoneList();
+
         $viewer = User::factory()->create(['locale' => 'en']);
         $viewer->assignRole(OpsRole::Viewer->value);
 
         $this->actingAs($viewer)
-            ->post(route('ops.cloudflare.update'), [
+            ->post(route('ops.cloudflare.store'), [
+                'name' => 'Other',
                 'account_id' => self::ACCOUNT_ID,
                 'api_token' => self::TOKEN,
             ])
             ->assertForbidden();
 
         $this->actingAs($viewer)
-            ->post(route('ops.cloudflare.test'))
+            ->put(route('ops.cloudflare.update', $account), [
+                'name' => 'Prod CF',
+                'account_id' => self::ACCOUNT_ID,
+                'api_token' => self::TOKEN,
+            ])
             ->assertForbidden();
 
         $this->actingAs($viewer)
-            ->get(route('ops.cloudflare.show'))
+            ->post(route('ops.cloudflare.test', $account))
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
+            ->get(route('ops.cloudflare.index'))
+            ->assertOk()
+            ->assertDontSee(self::TOKEN, false);
+
+        $this->actingAs($viewer)
+            ->get(route('ops.cloudflare.show', $account))
             ->assertOk()
             ->assertDontSee(self::TOKEN, false);
     }
@@ -246,6 +262,24 @@ class CloudflareSettingsTest extends TestCase
         return $operator;
     }
 
+    private function account(): CloudflareSetting
+    {
+        return CloudflareSetting::factory()->create([
+            'name' => 'Prod CF',
+            'account_id' => self::ACCOUNT_ID,
+            'api_token' => self::TOKEN,
+            'is_enabled' => true,
+            'is_default' => true,
+        ]);
+    }
+
+    private function fakeZoneList(): void
+    {
+        Http::fake(function (Request $request) {
+            return $this->probeResponse($request);
+        });
+    }
+
     private function fakeProbeHappyPath(): void
     {
         Http::fake(function (Request $request) {
@@ -258,7 +292,7 @@ class CloudflareSettingsTest extends TestCase
         int $zoneEditStatus = 400,
         int $dnsEditStatus = 400,
         int $zoneCount = 1,
-    ): \GuzzleHttp\Promise\PromiseInterface {
+    ): PromiseInterface {
         $url = $request->url();
         $method = $request->method();
 
@@ -271,13 +305,13 @@ class CloudflareSettingsTest extends TestCase
 
         if ($method === 'GET' && preg_match('#/client/v4/zones(\?|$)#', $url) === 1) {
             $zones = $zoneCount > 0
-                ? [['id' => 'zone-1', 'name' => 'existing.test', 'name_servers' => ['a.ns.cloudflare.com']]]
+                ? [['id' => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'name' => 'existing.test', 'name_servers' => ['a.ns.cloudflare.com'], 'account' => ['id' => self::ACCOUNT_ID]]]
                 : [];
 
             return Http::response([
                 'success' => true,
                 'result' => $zones,
-                'result_info' => ['count' => count($zones)],
+                'result_info' => ['count' => count($zones), 'total_pages' => 1],
             ], 200);
         }
 

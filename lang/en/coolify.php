@@ -50,7 +50,7 @@ return [
         'connection' => 'Connection',
         'environments_count' => 'Environments',
         'linked_sites' => 'Linked sites',
-        'no_sites' => 'No Plane sites use this record yet.',
+        'no_sites' => 'No Plane sites use this record yet. Sync the connection if existing sites still have empty Coolify targets.',
         'back_to_connection' => 'Back to connection',
         'lede' => ':kind in :name. This is a Plane inventory record from Coolify sync, not an edit form.',
     ],

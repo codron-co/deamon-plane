@@ -44,7 +44,15 @@
 
     <header class="site-hero">
         <div class="site-hero-main">
-            <div class="site-identity-mark" aria-hidden="true">{{ strtoupper(substr($site->name, 0, 1)) }}</div>
+            {{-- Identity mark: fetch favicon from the primary domain origin (`/favicon.ico`, then `/apple-touch-icon.png`). Keep the letter as the no-JS / failure fallback. Do not use a third-party icon CDN. --}}
+            <div
+                class="site-identity-mark"
+                aria-hidden="true"
+                @if (filled($primaryDomain))
+                    data-favicon-host="{{ $primaryDomain }}"
+                    data-favicon-fallback="{{ strtoupper(substr($site->name, 0, 1)) }}"
+                @endif
+            >{{ strtoupper(substr($site->name, 0, 1)) }}</div>
             <div class="site-identity-copy">
                 <div class="site-title-row">
                     <h2>{{ $site->name }}</h2>

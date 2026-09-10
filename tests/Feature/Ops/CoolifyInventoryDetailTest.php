@@ -80,6 +80,7 @@ class CoolifyInventoryDetailTest extends TestCase
             ->assertOk()
             ->assertSee('Deamon', false)
             ->assertSee('production', false)
+            ->assertSee('Linked Site', false)
             ->assertSee(route('ops.coolify.environments.show', [$connection, $environment]), false);
 
         $this->actingAs($operator)
@@ -87,13 +88,44 @@ class CoolifyInventoryDetailTest extends TestCase
             ->assertOk()
             ->assertSee('production', false)
             ->assertSee('Deamon', false)
+            ->assertSee('Linked Site', false)
             ->assertSee(route('ops.coolify.projects.show', [$connection, $project]), false);
 
         $this->actingAs($operator)
             ->get(route('ops.coolify.git-sources.show', [$connection, $source]))
             ->assertOk()
             ->assertSee('codron', false)
-            ->assertSee(__('coolify.kinds.github_app'), false);
+            ->assertSee(__('coolify.kinds.github_app'), false)
+            ->assertSee('Linked Site', false)
+            ->assertSee(route('ops.sites.show', $site), false);
+    }
+
+    public function test_default_connection_lists_sites_with_null_connection_id(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'name' => 'Prod Coolify',
+            'is_default' => true,
+        ]);
+        $source = CoolifyGitSource::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'kind' => CoolifyGitSourceKind::GithubApp,
+            'uuid' => 'gh-imported',
+            'name' => 'codron',
+            'is_active' => true,
+        ]);
+        $site = Site::factory()->create([
+            'name' => 'Imported Site',
+            'coolify_connection_id' => null,
+            'coolify_git_source_uuid' => $source->uuid,
+            'coolify_git_source_kind' => CoolifyGitSourceKind::GithubApp,
+        ]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.coolify.git-sources.show', [$connection, $source]))
+            ->assertOk()
+            ->assertSee('Imported Site', false)
+            ->assertSee(route('ops.sites.show', $site), false)
+            ->assertDontSee(__('coolify.detail.no_sites'), false);
     }
 
     public function test_inventory_from_another_connection_is_not_found(): void

@@ -8,11 +8,13 @@ use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Models\AuditLog;
+use App\Models\CloudflareSetting;
 use App\Models\CoolifyConnection;
 use App\Models\CoolifySetting;
 use App\Models\Site;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -34,6 +36,13 @@ class ProvisionSiteTest extends TestCase
             'api_token' => 'test-coolify-token',
             'default_project_uuid' => 'proj_test',
             'default_server_uuid' => 'srv_test',
+        ]);
+
+        CloudflareSetting::factory()->create([
+            'account_id' => 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
+            'api_token' => 'cf-provision-test-token',
+            'is_enabled' => true,
+            'is_default' => true,
         ]);
     }
 
@@ -107,8 +116,11 @@ class ProvisionSiteTest extends TestCase
             $pairs = $request->data()['data'] ?? [];
             $keys = array_column($pairs, 'key');
 
-            return $keys === ['APP_KEY', 'DEAMON_SITE_NAME']
-                && collect($pairs)->firstWhere('key', 'DEAMON_SITE_NAME')['value'] === 'Izyem';
+            return $keys === ['APP_KEY', 'DEAMON_SITE_NAME', 'DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'DEAMON_DEFAULT_ADMIN_PASSWORD']
+                && collect($pairs)->firstWhere('key', 'DEAMON_SITE_NAME')['value'] === 'Izyem'
+                && strlen((string) collect($pairs)->firstWhere('key', 'DB_PASSWORD')['value']) >= 32
+                && strlen((string) collect($pairs)->firstWhere('key', 'MYSQL_ROOT_PASSWORD')['value']) >= 32
+                && strlen((string) collect($pairs)->firstWhere('key', 'DEAMON_DEFAULT_ADMIN_PASSWORD')['value']) >= 12;
         });
 
         Http::assertSent(function (Request $request): bool {
@@ -139,6 +151,10 @@ class ProvisionSiteTest extends TestCase
     public function test_coolify_422_field_errors_appear_in_session_and_audit(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             if ($request->method() === 'POST' && str_contains($request->url(), '/applications/')) {
                 return Http::response([
                     'message' => 'Validation failed.',
@@ -225,6 +241,10 @@ class ProvisionSiteTest extends TestCase
     public function test_coolify_create_failure_marks_error_and_audits(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             if ($request->method() === 'POST' && str_contains($request->url(), '/applications/')) {
                 return Http::response(['message' => 'compose create failed'], 500);
             }
@@ -308,6 +328,18 @@ class ProvisionSiteTest extends TestCase
             return $request->method() === 'PATCH'
                 && str_contains($request->url(), '/applications/existing-app/envs/bulk');
         });
+
+        Http::assertNotSent(function (Request $request): bool {
+            if ($request->method() !== 'PATCH' || ! str_contains($request->url(), '/applications/existing-app/envs/bulk')) {
+                return false;
+            }
+
+            $keys = array_column($request->data()['data'] ?? [], 'key');
+
+            return in_array('DB_PASSWORD', $keys, true)
+                || in_array('MYSQL_ROOT_PASSWORD', $keys, true)
+                || in_array('DEAMON_DEFAULT_ADMIN_PASSWORD', $keys, true);
+        });
     }
 
     public function test_viewer_cannot_provision(): void
@@ -353,6 +385,10 @@ class ProvisionSiteTest extends TestCase
     public function test_poll_failure_stores_coolify_message_errors_and_truncated_logs(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             $url = $request->url();
             $method = $request->method();
 
@@ -364,6 +400,16 @@ class ProvisionSiteTest extends TestCase
                     'build_pack' => 'dockercompose',
                     'docker_compose_location' => '/docker-compose.coolify.yml',
                 ], 201);
+            }
+
+            if ($method === 'GET' && str_contains($url, '/envs')) {
+                return Http::response([
+                    ['key' => 'APP_KEY', 'value' => 'base64:keep', 'is_preview' => false],
+                    ['key' => 'DEAMON_SITE_NAME', 'value' => 'Izyem', 'is_preview' => false],
+                    ['key' => 'DB_PASSWORD', 'value' => '', 'is_preview' => false],
+                    ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => '', 'is_preview' => false],
+                    ['key' => 'DEAMON_DEFAULT_ADMIN_PASSWORD', 'value' => '', 'is_preview' => false],
+                ], 200);
             }
 
             if ($method === 'PATCH' && str_contains($url, '/envs/bulk')) {
@@ -446,6 +492,10 @@ class ProvisionSiteTest extends TestCase
     private function fakeCoolifyHappyPath(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             $url = $request->url();
             $method = $request->method();
 
@@ -461,6 +511,18 @@ class ProvisionSiteTest extends TestCase
                     'build_pack' => 'dockercompose',
                     'docker_compose_location' => '/docker-compose.coolify.yml',
                 ], 201);
+            }
+
+            if ($method === 'GET' && str_contains($url, '/envs')) {
+                $filled = str_contains($url, 'existing-app');
+
+                return Http::response([
+                    ['key' => 'APP_KEY', 'value' => 'base64:keep', 'is_preview' => false],
+                    ['key' => 'DEAMON_SITE_NAME', 'value' => 'Izyem', 'is_preview' => false],
+                    ['key' => 'DB_PASSWORD', 'value' => $filled ? 'already-set-db-password' : '', 'is_preview' => false],
+                    ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => $filled ? 'already-set-root-password' : '', 'is_preview' => false],
+                    ['key' => 'DEAMON_DEFAULT_ADMIN_PASSWORD', 'value' => $filled ? 'already-set-admin-password' : '', 'is_preview' => false],
+                ], 200);
             }
 
             if ($method === 'PATCH' && str_contains($url, '/envs/bulk')) {
@@ -523,6 +585,53 @@ class ProvisionSiteTest extends TestCase
         $this->assertStringNotContainsString($appKey, $html);
         $this->assertStringNotContainsString($agentSecret, $html);
         $this->assertStringNotContainsString('test-coolify-token', $html);
+    }
+
+    /**
+     * Covering-zone fake for provision. Never POST /zones.
+     */
+    private function cloudflareProvisionResponse(Request $request): ?PromiseInterface
+    {
+        if (! str_contains($request->url(), 'api.cloudflare.com')) {
+            return null;
+        }
+
+        $url = $request->url();
+        $method = $request->method();
+
+        if ($method === 'GET' && preg_match('#/client/v4/zones(\?|$)#', $url) === 1) {
+            $name = strtolower((string) ($request->data()['name'] ?? ''));
+            $zone = $name === '' ? null : [
+                'id' => 'zone-shop-izyem-example-test',
+                'name' => $name,
+                'name_servers' => ['ada.ns.cloudflare.com', 'bob.ns.cloudflare.com'],
+            ];
+
+            return Http::response([
+                'success' => true,
+                'result' => $zone !== null ? [$zone] : [],
+            ], 200);
+        }
+
+        if ($method === 'GET' && str_contains($url, '/dns_records')) {
+            return Http::response(['success' => true, 'result' => []], 200);
+        }
+
+        if ($method === 'POST' && str_contains($url, '/dns_records')) {
+            return Http::response([
+                'success' => true,
+                'result' => ['id' => 'rec-1', 'type' => $request->data()['type'] ?? 'A'],
+            ], 200);
+        }
+
+        if ($method === 'PUT' && str_contains($url, '/dns_records')) {
+            return Http::response([
+                'success' => true,
+                'result' => ['id' => 'rec-1', 'type' => $request->data()['type'] ?? 'A'],
+            ], 200);
+        }
+
+        return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
     }
 
     private function user(OpsRole $role): User

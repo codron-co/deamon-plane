@@ -43,6 +43,7 @@ class SiteDetailTest extends TestCase
             ->assertSee('href="#infrastructure"', false)
             ->assertSee('alpha', false)
             ->assertSee('1.8.4', false)
+            ->assertSee('data-favicon-host="'.$site->primary_domain.'"', false)
             ->assertSee(route('ops.sites.edit', $site), false);
 
         $this->assertNotSame(route('ops.sites.show', $site), route('ops.sites.edit', $site));

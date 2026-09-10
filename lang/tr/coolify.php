@@ -50,7 +50,7 @@ return [
         'connection' => 'Bağlantı',
         'environments_count' => 'Ortam',
         'linked_sites' => 'Bağlı siteler',
-        'no_sites' => 'Bu kaydı kullanan Plane sitesi yok.',
+        'no_sites' => 'Bu kaydı kullanan Plane sitesi yok. Siteler var ama Coolify hedefleri boşsa bağlantıyı senkronize edin.',
         'back_to_connection' => 'Bağlantıya dön',
         'lede' => ':name içindeki :kind. Coolify senkronundan gelen Plane envanter kaydı; düzenleme formu değil.',
     ],

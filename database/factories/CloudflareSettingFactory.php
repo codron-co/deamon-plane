@@ -16,11 +16,15 @@ class CloudflareSettingFactory extends Factory
     public function definition(): array
     {
         return [
+            'name' => 'Cloudflare',
             'account_id' => null,
             'api_token' => null,
             'origin_ipv4' => '72.62.117.147',
+            'wildcard_domain' => null,
             'proxied' => false,
             'mail_template_enabled' => true,
+            'is_enabled' => true,
+            'is_default' => true,
             'last_probe_at' => null,
             'last_probe_payload' => null,
         ];

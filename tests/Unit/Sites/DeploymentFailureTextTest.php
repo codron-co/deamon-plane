@@ -93,12 +93,14 @@ class DeploymentFailureTextTest extends TestCase
     public function test_secret_redactor_strips_env_patterns(): void
     {
         $text = SecretRedactor::redactSensitive(
-            'Bearer tok-aaa APP_KEY=base64:yyyy CONTROL_PLANE_AGENT_SECRET=shh',
+            'Bearer tok-aaa APP_KEY=base64:yyyy CONTROL_PLANE_AGENT_SECRET=shh DB_PASSWORD=dbsecret MYSQL_ROOT_PASSWORD=rootshh',
             [],
         );
 
         $this->assertStringNotContainsString('tok-aaa', $text);
         $this->assertStringNotContainsString('base64:yyyy', $text);
         $this->assertStringNotContainsString('shh', $text);
+        $this->assertStringNotContainsString('dbsecret', $text);
+        $this->assertStringNotContainsString('rootshh', $text);
     }
 }

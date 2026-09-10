@@ -84,6 +84,10 @@ final class CoolifyApplication
             data_get($this->raw, 'github_app.uuid'),
             data_get($this->raw, 'source.github_app.uuid'),
             data_get($this->raw, 'source.uuid'),
+        ]) ?? self::numericId([
+            $this->raw['github_app_id'] ?? null,
+            data_get($this->raw, 'github_app.id'),
+            data_get($this->raw, 'source.github_app.id'),
         ]);
 
         if ($github !== null) {
@@ -93,6 +97,9 @@ final class CoolifyApplication
         $deployKey = self::firstUuid([
             $this->raw['private_key_uuid'] ?? null,
             data_get($this->raw, 'private_key.uuid'),
+        ]) ?? self::numericId([
+            $this->raw['private_key_id'] ?? null,
+            data_get($this->raw, 'private_key.id'),
         ]);
 
         if ($deployKey !== null) {
@@ -223,6 +230,26 @@ final class CoolifyApplication
         }
 
         return $value;
+    }
+
+    /**
+     * Some Coolify list payloads only expose integer ids. Inventory may store those as uuid strings.
+     *
+     * @param  list<mixed>  $candidates
+     */
+    private static function numericId(array $candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (is_int($candidate) && $candidate > 0) {
+                return (string) $candidate;
+            }
+
+            if (is_string($candidate) && $candidate !== '' && ctype_digit($candidate) && (int) $candidate > 0) {
+                return (string) (int) $candidate;
+            }
+        }
+
+        return null;
     }
 
     private static function nullableString(mixed $value): ?string

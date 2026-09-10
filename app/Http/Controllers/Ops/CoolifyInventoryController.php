@@ -177,7 +177,13 @@ class CoolifyInventoryController extends Controller
                     'href' => route('ops.coolify.show', $connection),
                 ],
             ],
-            'sites' => $this->sitesFor($connection, 'coolify_git_source_uuid', $source->uuid),
+            'sites' => $this->sitesFor(
+                $connection,
+                'coolify_git_source_uuid',
+                $source->uuid,
+                'coolify_git_source_kind',
+                $source->kind?->value,
+            ),
             'environments' => collect(),
             'toggleRoute' => 'ops.coolify.git-sources.toggle',
             'toggleParam' => 'source',
@@ -193,11 +199,26 @@ class CoolifyInventoryController extends Controller
     /**
      * @return Collection<int, Site>
      */
-    private function sitesFor(CoolifyConnection $connection, string $column, string $uuid): Collection
-    {
+    private function sitesFor(
+        CoolifyConnection $connection,
+        string $column,
+        string $uuid,
+        ?string $kindColumn = null,
+        ?string $kindValue = null,
+    ): Collection {
         return Site::query()
-            ->where('coolify_connection_id', $connection->id)
             ->where($column, $uuid)
+            ->where(function ($query) use ($connection): void {
+                $query->where('coolify_connection_id', $connection->id);
+                if ($connection->is_default) {
+                    $query->orWhereNull('coolify_connection_id');
+                }
+            })
+            ->when($kindColumn !== null && $kindValue !== null, function ($query) use ($kindColumn, $kindValue): void {
+                $query->where(function ($inner) use ($kindColumn, $kindValue): void {
+                    $inner->where($kindColumn, $kindValue)->orWhereNull($kindColumn);
+                });
+            })
             ->orderBy('name')
             ->get();
     }

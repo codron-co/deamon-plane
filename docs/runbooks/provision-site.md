@@ -7,7 +7,7 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
 1. Coolify connection is saved in Plane **Coolify** menu (base URL + API token). Tests and CI use `Http::fake` — do not point a laptop at production Coolify to “try” provision.
 2. Default **project** UUID is set (Coolify menu or `COOLIFY_DEFAULT_PROJECT_UUID`).
 3. Target **server** UUID is on the draft site or in the Coolify menu (`COOLIFY_DEFAULT_SERVER_UUID`).
-4. DNS for the customer hostname is ready to aim at Coolify / Traefik (can be done right after provision).
+4. Cloudflare account is saved. `*.codron.co` already points at this server — Plane does not change registrar NS. Nested hosts (`test.deamon.codron.co`) attach an A on the covering zone and create `*` if it is missing. Unbound customer domains get `{adjective}-{noun}.codron.co`.
 5. Channel is one of `main` | `beta` | `alpha`.
 
 ## Create + provision
@@ -22,7 +22,7 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
    - Compose file `/docker-compose.coolify.yml` (Coolify `docker_compose_location` requires a leading slash)
    - Stack is **app + isolated MySQL + isolated Redis** (no shared DB/Redis)
    - Operator domain is sent on create as `docker_compose_domains` on service **`app`** only (`https://{operator-host}`). **Do not send `fqdn`** (Coolify: `This field is not allowed.`). Coolify may still generate `{uuid}.demo.codron.co` / `{uuid}.random.codron.co`; that must not become Plane’s primary.
-5. Env written to the **app** service only: `APP_KEY`, `DEAMON_SITE_NAME`. Coolify injects `SERVICE_URL_APP` / `SERVICE_FQDN_APP`. Do not add mailbox or extra secrets here.
+5. Env written as shared Coolify variables (compose interpolation, all services): `APP_KEY`, `DEAMON_SITE_NAME`, and if empty `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `DEAMON_DEFAULT_ADMIN_PASSWORD` (CMS compose MySQL will not start without DB passwords; first migrate will not seed `support@codron.co` without the admin password). Coolify injects `SERVICE_URL_APP` / `SERVICE_FQDN_APP`. Do not add mailbox secrets here. Retry must not rotate a DB/admin password that already has a value.
 6. Domain is bound again via `setDomains`: compose service **`app`** only (`force_domain_override` stays false). Do not send `fqdn`. Do not clear generate FQDNs on already-live apps without operator OK. Retry provision if the Coolify app uuid already exists — do **not** recreate.
 7. Deploy is triggered. A `deployments` row (`trigger=create`) is stored. Plane prefers a Coolify webhook (`POST /webhooks/coolify` — HMAC or query `token`) and falls back to polling every 15s until `finished` or `failed`.
 8. Success: `coolify_app_uuid` set, status **active**, audit `site.provision_succeeded`. Provision generates an agent secret (encrypted). Use **Check health** on the site to poll CMS `/internal/control/v1/health` — it does not gate this step.

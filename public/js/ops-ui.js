@@ -632,6 +632,52 @@
         });
     }
 
+    function faviconHost(value) {
+        const host = String(value || "").trim().replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
+        if (!host || host.length > 253 || host.indexOf("..") !== -1 || !/^[a-z0-9.-]+$/i.test(host)) {
+            return "";
+        }
+        return host;
+    }
+
+    function setupFaviconMarks() {
+        document.querySelectorAll("[data-favicon-host]").forEach(function (mark) {
+            const host = faviconHost(mark.getAttribute("data-favicon-host"));
+            const fallback = (mark.getAttribute("data-favicon-fallback") || mark.textContent || "?").trim().slice(0, 1).toUpperCase() || "?";
+            if (!host) {
+                mark.textContent = fallback;
+                return;
+            }
+            const urls = [
+                "https://" + host + "/favicon.ico",
+                "https://" + host + "/apple-touch-icon.png"
+            ];
+            const tryAt = function (index) {
+                if (index >= urls.length) {
+                    mark.textContent = fallback;
+                    return;
+                }
+                const img = document.createElement("img");
+                img.alt = "";
+                img.referrerPolicy = "no-referrer";
+                img.decoding = "async";
+                img.addEventListener("error", function () {
+                    tryAt(index + 1);
+                });
+                img.addEventListener("load", function () {
+                    if (img.naturalWidth < 2) {
+                        tryAt(index + 1);
+                        return;
+                    }
+                    mark.replaceChildren(img);
+                    mark.classList.add("has-favicon");
+                });
+                img.src = urls[index];
+            };
+            tryAt(0);
+        });
+    }
+
     setupThemeControls();
     setupUserMenu();
     setupPrefForms();
@@ -639,4 +685,5 @@
     setupSelects();
     setupCopyButtons();
     setupPendingForms();
+    setupFaviconMarks();
 })();

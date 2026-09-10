@@ -24,7 +24,7 @@ Existing Coolify app is **PATCH** only. Plane never DELETE / `delete_volumes`.
 
 | Action | HTTP | Notes |
 |--------|------|--------|
-| Dockerfile → compose | `PATCH /applications/{uuid}` `{ build_pack: dockercompose, docker_compose_location: /docker-compose.coolify.yml }` | Snapshot `APP_KEY` / `APP_URL` / `DEAMON_*` via `listEnvs` (never log values). Restore those keys onto compose service **`app`** (`available_in_services=app`). Do **not** copy `DB_*`. If Coolify says recreate is required, **abort**. |
+| Dockerfile → compose | `PATCH /applications/{uuid}` `{ build_pack: dockercompose, docker_compose_location: /docker-compose.coolify.yml }` | Snapshot `APP_KEY` / `APP_URL` / `DEAMON_*` via `listEnvs` (never log values). Restore those keys onto compose service **`app`** (`available_in_services=app`). Do **not** copy `DB_*` from a Dockerfile app. Provision itself **fills** empty `DB_PASSWORD` / `MYSQL_ROOT_PASSWORD` / `DEAMON_DEFAULT_ADMIN_PASSWORD` for compose MySQL and first admin seed. If Coolify says recreate is required, **abort**. |
 | Auto-deploy | `PATCH` `{ is_auto_deploy }` | Single + selected + all-Dockerfile bulk. Bulk off uses confirm. |
 | Pin | `PATCH` `{ git_commit_sha, is_auto_deploy: false }` then `POST /deploy` | SHA or release tag. |
 | Follow HEAD | `PATCH` `{ git_commit_sha: "", is_auto_deploy: true }` then `POST /deploy` | Clears pin. Does not require typing `HEAD`. |
@@ -103,7 +103,7 @@ Ops **Coolify** menu (`/coolify`): connections, API token, test, sync, aktif/pas
 | GET | `/coolify/{connection}/servers/{server}` | `ops.coolify.servers.show` | Server detail |
 | GET | `/coolify/{connection}/projects/{project}` | `ops.coolify.projects.show` | Project detail + environments |
 | GET | `/coolify/{connection}/environments/{environment}` | `ops.coolify.environments.show` | Environment detail |
-| GET | `/coolify/{connection}/git-sources/{source}` | `ops.coolify.git-sources.show` | Git source detail |
+| GET | `/coolify/{connection}/git-sources/{source}` | `ops.coolify.git-sources.show` | Git source detail. Linked sites match `coolify_git_source_uuid` on this connection (or `coolify_connection_id` null when this connection is default). |
 | POST | `/coolify/{connection}/sync` | `ops.coolify.sync` | Inventory sync (`CoolifyInventorySync`). CSRF. Operator / Super Admin |
 | GET | `/coolify/{connection}/sync` | `ops.coolify.sync.get` | **Does not sync.** 302 to show + flash “use the Sync button” |
 | POST | `/coolify/{connection}/test` | `ops.coolify.test` | `listServers` only |

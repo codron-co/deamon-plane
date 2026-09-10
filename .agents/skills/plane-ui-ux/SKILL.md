@@ -143,6 +143,7 @@ For Sites specifically:
 - display `Repo branch` when the value represents the deployed Git branch (`main`, `beta`, `alpha`).
 - keep an internal `channel` concept only where it truly represents release policy/orchestration.
 - display the reported Deamon/app version beside the repo branch as a badge. If unavailable, render a deliberate `Unknown`/`—` state rather than silently omitting the field.
+- Site identity marks load the favicon from the site's **primary domain origin** (`https://{host}/favicon.ico`, then `/apple-touch-icon.png`). Keep the first letter as the no-JS / failure fallback. Do not use a third-party icon CDN. Reuse `[data-favicon-host]` on Sites index if a mark is shown.
 
 ### 9. Replace browser-default selects with the Plane select primitive
 
@@ -266,6 +267,7 @@ Before adding page-specific CSS/JS, check whether the need belongs in a reusable
 - toast/flash
 - empty state
 - breadcrumbs
+- site identity mark (domain favicon)
 - pagination
 - skeleton/loading state
 

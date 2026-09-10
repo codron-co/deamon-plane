@@ -15,6 +15,7 @@ use App\Models\CoolifySetting;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Cloudflare\CloudflareApiException;
 use App\Services\Cloudflare\CloudflareZoneService;
 use App\Services\Coolify\CoolifyApiException;
@@ -22,6 +23,7 @@ use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyCredentials;
 use App\Services\Coolify\CoolifyProvisionPreflight;
 use App\Services\Coolify\Dto\CoolifyDeployment;
+use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\DB;
@@ -91,8 +93,11 @@ class SiteProvisioner
 
     public function provisionOnCloudflare(Site $site, ?int $actorUserId = null, ?string $ip = null): void
     {
-        $settings = CloudflareSetting::current();
+        $settings = CloudflareAccounts::default();
         $this->assertCloudflareReady($settings);
+        if (! $settings instanceof CloudflareSetting) {
+            throw new SiteProvisionException(__('cloudflare.errors.not_configured'));
+        }
 
         $this->cloudflare->ensureZoneAndDns($site, $settings);
         $site->refresh();
@@ -130,10 +135,7 @@ class SiteProvisioner
             $site->save();
         }
 
-        $coolify->updateEnvs($appUuid, [
-            'APP_KEY' => (string) $site->app_key_encrypted,
-            'DEAMON_SITE_NAME' => $site->name,
-        ]);
+        $coolify->updateEnvs($appUuid, $this->composeEnvPairs($coolify, $appUuid, $site));
 
         $coolify->setDomains($appUuid, $site->primary_domain);
 
@@ -344,11 +346,43 @@ class SiteProvisioner
         }
     }
 
+    /**
+     * CMS compose interpolates ${DB_PASSWORD} / ${MYSQL_ROOT_PASSWORD} into MySQL + app.
+     * Coolify creates those keys empty; an empty root password makes MySQL exit before the app starts.
+     * First migrate also requires DEAMON_DEFAULT_ADMIN_PASSWORD (min 12) to seed support@codron.co.
+     * Retry must not rotate a secret that already has a value (volume may already be initialized).
+     *
+     * @return array<string, string>
+     */
+    private function composeEnvPairs(CoolifyApplicationService $coolify, string $appUuid, Site $site): array
+    {
+        $pairs = [
+            'APP_KEY' => (string) $site->app_key_encrypted,
+            'DEAMON_SITE_NAME' => $site->name,
+        ];
+
+        $existing = $coolify->listEnvs($appUuid);
+
+        foreach (['DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'DEAMON_DEFAULT_ADMIN_PASSWORD'] as $key) {
+            $row = $existing->first(
+                static fn (CoolifyEnvironmentVariable $env): bool => $env->key === $key && ! $env->isPreview,
+            );
+
+            if ($row instanceof CoolifyEnvironmentVariable && filled($row->value())) {
+                continue;
+            }
+
+            $pairs[$key] = Str::password(40, symbols: false);
+        }
+
+        return $pairs;
+    }
+
     private function assertCloudflareReady(?CloudflareSetting $settings = null): void
     {
-        $settings ??= CloudflareSetting::current();
+        $settings ??= CloudflareAccounts::default();
 
-        if (! $settings->hasCredentials()) {
+        if ($settings === null || ! $settings->hasCredentials()) {
             throw new SiteProvisionException(__('cloudflare.errors.not_configured'));
         }
     }

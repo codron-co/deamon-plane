@@ -244,6 +244,7 @@ Avoid new one-off CSS for repeated patterns.
 - Custom Plane selects for filters.
 - Whole row opens Site detail.
 - Branch + version appear together.
+- Identity marks (if present) use the same domain-favicon primitive as Site detail.
 - Keep explicit row overflow/actions only for secondary actions.
 - Avoid putting destructive Delete directly in the dominant scan path if an overflow/detail danger zone can handle it safely.
 
@@ -252,6 +253,7 @@ Avoid new one-off CSS for repeated patterns.
 - Become the operational overview.
 - Do not start with a long editable form.
 - Put branch/version/status/health/domain above the fold.
+- The identity mark loads the site favicon from the primary domain (`https://{host}/favicon.ico`, then `/apple-touch-icon.png`). First letter is the fallback. No third-party icon CDN.
 - Group Agent, Themes, Deployments and Coolify information into clear sections.
 - Keep Edit explicit.
 
