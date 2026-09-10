@@ -7,13 +7,13 @@ use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyDomainParser;
-use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
+use App\Services\Coolify\Dto\CreateComposeAppRequest;
 
 class ComposePackMigrator
 {
     /**
-     * Keys restored onto compose service `app` only. DB_*/REDIS_*/mysql secrets are never copied.
+     * Keys restored onto compose service `app` only. Database and Redis secrets are never copied.
      *
      * @var list<string>
      */
