@@ -2,6 +2,8 @@
 
 @section('title', $connection->name)
 
+@section('content_class', 'ops-content-wide')
+
 @section('breadcrumbs')
     <a href="{{ route('ops.coolify.index') }}">{{ __('coolify.title') }}</a>
     <span aria-hidden="true">/</span>

@@ -176,6 +176,20 @@ class ProvisionSiteTest extends TestCase
         $this->assertStringContainsString('Validation failed.', (string) $deployment->error_message);
         $this->assertStringContainsString('server_uuid', (string) $deployment->error_message);
         $this->assertStringContainsString('Coolify errors:', (string) $deployment->error_message);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('Validation failed.', false)
+            ->assertSee('server_uuid', false)
+            ->assertSee('title="', false);
+
+        $html = $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('title="', $html);
+        $this->assertStringContainsString('Validation failed.', $html);
     }
 
     public function test_preflight_rejects_server_missing_from_list_servers(): void

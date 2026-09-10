@@ -19,6 +19,8 @@ return [
         'preferences' => 'Tercihler',
         'appearance' => 'Görünüm',
         'language' => 'Dil',
+        'cycle_appearance' => 'Görünüm: :mode. Değiştirmek için tıklayın.',
+        'cycle_language' => 'Dil: :locale. Değiştirmek için tıklayın.',
         'sign_out' => 'Çıkış',
     ],
     'locale' => [

@@ -2,6 +2,8 @@
 
 @section('title', __('coolify.title'))
 
+@section('content_class', 'ops-content-wide')
+
 @section('actions')
     @if ($canWrite)
         <a class="btn btn-primary btn-sm" href="{{ route('ops.coolify.create') }}">{{ __('coolify.add') }}</a>

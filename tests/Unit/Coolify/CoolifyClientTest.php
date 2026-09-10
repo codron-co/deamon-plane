@@ -518,6 +518,34 @@ class CoolifyClientTest extends TestCase
         $this->assertSame(self::TOKEN, $credentials->token());
     }
 
+    public function test_patch_application_strips_fqdn_and_never_deletes(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/applications/app-1' => Http::response([
+                'uuid' => 'app-1',
+                'build_pack' => 'dockercompose',
+            ], 200),
+        ]);
+
+        $this->client()->patchApplication('app-1', [
+            'build_pack' => 'dockercompose',
+            'docker_compose_location' => '/docker-compose.coolify.yml',
+            'fqdn' => 'https://should-not-send.example',
+            'delete_volumes' => true,
+        ]);
+
+        Http::assertSent(function (Request $request): bool {
+            $body = $request->data();
+
+            return $request->method() === 'PATCH'
+                && $request->url() === 'https://coolify.test/api/v1/applications/app-1'
+                && ($body['build_pack'] ?? null) === 'dockercompose'
+                && ! array_key_exists('fqdn', $body)
+                && ! array_key_exists('delete_volumes', $body);
+        });
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
+    }
+
     private function client(): CoolifyClient
     {
         return new CoolifyClient(new CoolifyCredentials(self::BASE, self::TOKEN));

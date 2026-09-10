@@ -77,7 +77,14 @@
         }
     }
 
-    function loadOptions(id) {
+    function pickValue(select, fallback, preserveCurrent) {
+        if (preserveCurrent && select && select.value) {
+            return select.value;
+        }
+        return fallback;
+    }
+
+    function loadOptions(id, preserveCurrent) {
         if (!id || !template) {
             return;
         }
@@ -91,26 +98,34 @@
             })
             .then(function (data) {
                 const defaults = data.defaults || {};
-                fillSelect(serverSelect, data.servers || [], "uuid", "label", defaults.server);
-                fillSelect(projectSelect, data.projects || [], "uuid", "label", defaults.project);
+                fillSelect(serverSelect, data.servers || [], "uuid", "label", pickValue(serverSelect, defaults.server, preserveCurrent));
+                fillSelect(projectSelect, data.projects || [], "uuid", "label", pickValue(projectSelect, defaults.project, preserveCurrent));
                 if (environmentSelect) {
                     environmentSelect.setAttribute("data-environment-options", JSON.stringify(data.environments || []));
                 }
-                applyEnvironmentFilter(defaults.environment);
-                fillSelect(gitSelect, data.git_sources || [], "value", "label", defaults.git);
+                applyEnvironmentFilter(pickValue(environmentSelect, defaults.environment, preserveCurrent));
+                fillSelect(gitSelect, data.git_sources || [], "value", "label", pickValue(gitSelect, defaults.git, preserveCurrent));
                 if (attachSelect) {
+                    const apps = data.apps || [];
+                    const review = attachSelect.getAttribute("data-needs-review-label") || "";
                     fillSelect(
                         attachSelect,
-                        (data.apps || []).map(function (app) {
+                        apps.map(function (app) {
                             return {
                                 uuid: app.uuid,
-                                label: app.name + (app.domain ? " — " + app.domain : "") + (app.branch ? " (" + app.branch + ")" : ""),
+                                label: app.name
+                                    + (app.domain ? " — " + app.domain : "")
+                                    + (app.branch ? " (" + app.branch + ")" : "")
+                                    + (app.needs_review && review ? " · " + review : ""),
                             };
                         }),
                         "uuid",
                         "label",
                         attachSelect.value
                     );
+                    document.querySelectorAll("[data-attach-empty]").forEach(function (el) {
+                        el.hidden = apps.length > 0;
+                    });
                 }
             })
             .catch(function () {
@@ -129,6 +144,9 @@
         connection.addEventListener("change", function () {
             loadOptions(connection.value);
         });
+        if (connection.value) {
+            loadOptions(connection.value, true);
+        }
     }
 
     const placement = document.querySelector("[data-coolify-placement]");

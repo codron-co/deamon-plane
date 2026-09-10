@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Ops\DeploymentShowController;
 use App\Http\Controllers\Ops\SiteController;
+use App\Http\Controllers\Ops\SiteCoolifyOpsController;
 use App\Http\Controllers\Ops\SiteDetailController;
 use App\Http\Controllers\Ops\SiteThemeController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/sites', [SiteController::class, 'index'])->name('ops.sites');
 Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.create');
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
+Route::post('/sites/bulk/compose', [SiteCoolifyOpsController::class, 'bulkMigrateCompose'])->name('ops.sites.bulk.compose');
+Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAutoDeploy'])->name('ops.sites.bulk.auto-deploy');
+Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateCompose'])->name('ops.sites.compose');
+Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
+Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');
+Route::post('/sites/{site}/follow-head', [SiteCoolifyOpsController::class, 'followHead'])->name('ops.sites.follow-head');
 Route::get('/sites/{site}', SiteDetailController::class)->name('ops.sites.show');
 Route::get('/sites/{site}/deployments/{deployment}', DeploymentShowController::class)
     ->scopeBindings()

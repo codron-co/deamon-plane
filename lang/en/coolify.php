@@ -40,10 +40,29 @@ return [
         'git_none' => '— public / none',
         'save_defaults' => 'Save defaults',
     ],
+    'detail' => [
+        'server' => 'Server',
+        'project' => 'Project',
+        'environment' => 'Environment',
+        'git' => 'Git source',
+        'type' => 'Type',
+        'uuid' => 'UUID',
+        'connection' => 'Connection',
+        'environments_count' => 'Environments',
+        'linked_sites' => 'Linked sites',
+        'no_sites' => 'No Plane sites use this record yet.',
+        'back_to_connection' => 'Back to connection',
+        'lede' => ':kind in :name. This is a Plane inventory record from Coolify sync, not an edit form.',
+    ],
+    'kinds' => [
+        'github_app' => 'GitHub App',
+        'deploy_key' => 'Deploy key',
+    ],
     'fields' => [
         'name' => 'Name',
         'base_url' => 'Coolify base URL',
         'base_url_hint' => 'Host or /api/v1 — Plane uses {base}/api/v1.',
+        'base_url_placeholder' => 'https://coolify.example',
         'token' => 'API token',
         'token_saved' => 'Token saved. Paste a new value to replace it.',
         'token_hint' => 'Coolify Keys & Tokens. Never shown after save.',
@@ -87,4 +106,3 @@ return [
         'sync_get' => 'Use the Sync button. GET /sync does not run a sync.',
     ],
 ];
-

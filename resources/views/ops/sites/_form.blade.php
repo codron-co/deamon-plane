@@ -158,6 +158,7 @@
                     class="field-input"
                     name="attach_app_uuid"
                     data-attach-apps
+                    data-needs-review-label="{{ __('sites.form.needs_review') }}"
                     @disabled($readonly || $placement !== 'attach')
                 >
                     <option value="">{{ __('ops.none') }}</option>
@@ -170,6 +171,9 @@
                         </option>
                     @endforeach
                 </select>
+                <p class="field-hint" data-attach-empty @if (count($attachableApps) > 0) hidden @endif>
+                    {{ __('sites.form.attach_empty') }}
+                </p>
                 @error('attach_app_uuid') <p class="field-error">{{ $message }}</p> @enderror
             </div>
         </fieldset>

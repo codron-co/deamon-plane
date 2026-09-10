@@ -33,7 +33,7 @@
                 type="password"
                 name="token"
                 value=""
-                placeholder="{{ $githubHasToken ? '••••••••' : 'github_pat_…' }}"
+                placeholder="{{ $githubHasToken ? '••••••••' : __('settings.github.token_placeholder') }}"
                 autocomplete="new-password"
                 @disabled(! $canWrite)
             >
@@ -104,7 +104,7 @@
                 type="password"
                 name="webhook_secret"
                 value=""
-                placeholder="{{ $githubHasWebhookSecret ? '••••••••' : 'HMAC secret' }}"
+                placeholder="{{ $githubHasWebhookSecret ? '••••••••' : __('settings.github.secret_placeholder') }}"
                 autocomplete="new-password"
                 @disabled(! $canWrite)
             >

@@ -154,6 +154,19 @@ class CoolifyApplicationService
         return $this->client->setDomains($uuid, $fqdn, $forceDomainOverride);
     }
 
+    /**
+     * @param  array<string, mixed>  $body
+     */
+    public function patchApplication(string $uuid, array $body): CoolifyApplication
+    {
+        return $this->client->patchApplication($uuid, $body);
+    }
+
+    public function upsertEnvOnService(string $uuid, string $key, string $value, string $service = 'app'): CoolifyEnvironmentVariable
+    {
+        return $this->client->upsertEnvOnService($uuid, $key, $value, $service);
+    }
+
     public function updateBranch(string $uuid, string $branch, bool $skipAllowlist = false): CoolifyApplication
     {
         if (! $skipAllowlist) {

@@ -116,6 +116,28 @@ final class CoolifyApplication
         return is_array($source) ? $source['kind'] : null;
     }
 
+    public function isAutoDeploy(): bool
+    {
+        $value = $this->raw['is_auto_deploy'] ?? false;
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    public function gitCommitSha(): ?string
+    {
+        return self::nullableString($this->raw['git_commit_sha'] ?? null);
+    }
+
+    public function isDockerfilePack(): bool
+    {
+        return strtolower((string) $this->buildPack) === 'dockerfile';
+    }
+
+    public function isComposePack(): bool
+    {
+        return strtolower((string) $this->buildPack) === 'dockercompose';
+    }
+
     public function primaryDomain(): ?string
     {
         $candidates = [];

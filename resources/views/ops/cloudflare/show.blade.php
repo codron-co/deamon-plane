@@ -53,7 +53,7 @@
                     type="password"
                     name="api_token"
                     value=""
-                    placeholder="{{ $hasToken ? '••••••••' : 'Cloudflare API token' }}"
+                    placeholder="{{ $hasToken ? '••••••••' : __('cloudflare.fields.token_placeholder') }}"
                     autocomplete="new-password"
                     @disabled(! $canWrite)
                 >
@@ -83,6 +83,7 @@
 
             <div class="field">
                 <label class="field-check">
+                    <input type="hidden" name="mail_template_enabled" value="0">
                     <input
                         type="checkbox"
                         name="mail_template_enabled"

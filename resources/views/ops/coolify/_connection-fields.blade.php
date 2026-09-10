@@ -12,7 +12,7 @@
 <div class="field">
     <label class="field-label" for="coolify-base-url">{{ __('coolify.fields.base_url') }}</label>
     <p class="field-hint">{{ __('coolify.fields.base_url_hint') }}</p>
-    <input id="coolify-base-url" class="field-input" type="url" name="base_url" value="{{ old('base_url', $connection->base_url) }}" required @disabled(! $canWrite) placeholder="https://coolify.example">
+    <input id="coolify-base-url" class="field-input" type="url" name="base_url" value="{{ old('base_url', $connection->base_url) }}" required @disabled(! $canWrite) placeholder="{{ __('coolify.fields.base_url_placeholder') }}">
     @error('base_url') <p class="field-error" role="alert">{{ $message }}</p> @enderror
 </div>
 

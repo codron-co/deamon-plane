@@ -36,6 +36,26 @@
         $avatarUrl = $opsUser?->avatarUrl();
         $currentAppearance = $opsAppearance;
         $currentLocale = app()->getLocale();
+        $appearanceOrder = ['light', 'semidark', 'dark'];
+        $localeOptions = config('ops.locales', ['en', 'tr']);
+        $appearanceIndex = array_search($currentAppearance, $appearanceOrder, true);
+        $nextAppearance = $appearanceOrder[(($appearanceIndex === false ? 2 : $appearanceIndex) + 1) % count($appearanceOrder)];
+        $localeIndex = array_search($currentLocale, $localeOptions, true);
+        $nextLocale = $localeOptions[(($localeIndex === false ? 0 : $localeIndex) + 1) % count($localeOptions)];
+        $appearanceChoices = [];
+        foreach ($appearanceOrder as $themeValue) {
+            $appearanceChoices[] = [
+                'value' => $themeValue,
+                'label' => __('account.appearance_modes.'.$themeValue),
+            ];
+        }
+        $localeChoices = [];
+        foreach ($localeOptions as $localeOption) {
+            $localeChoices[] = [
+                'value' => $localeOption,
+                'label' => __('ops.locale.'.$localeOption),
+            ];
+        }
     @endphp
     <div class="ops-shell">
         <aside class="ops-sidebar" aria-label="{{ __('ops.nav.primary') }}">
@@ -96,33 +116,62 @@
                         </div>
 
                         <a class="ops-menu-link {{ request()->routeIs('ops.account.show') ? 'is-active' : '' }}" href="{{ route('ops.account.show') }}">{{ __('ops.user_menu.account') }}</a>
-                        <a class="ops-menu-link {{ request()->routeIs('ops.account.preferences') ? 'is-active' : '' }}" href="{{ route('ops.account.preferences') }}">{{ __('ops.user_menu.preferences') }}</a>
 
                         <div class="ops-menu-section">
-                            <span class="ops-menu-label">{{ __('ops.user_menu.appearance') }}</span>
-                            <div class="ops-theme-choices" role="group" aria-label="{{ __('ops.user_menu.appearance') }}">
-                                @foreach (['light', 'semidark', 'dark'] as $themeValue)
-                                    <form method="POST" action="{{ route('ops.account.appearance') }}">
-                                        @csrf
-                                        <button class="ops-theme-choice {{ $currentAppearance === $themeValue ? 'is-active' : '' }}" type="submit" name="appearance" value="{{ $themeValue }}" data-theme-value="{{ $themeValue }}" aria-pressed="{{ $currentAppearance === $themeValue ? 'true' : 'false' }}">
-                                            {{ __('account.appearance_modes.'.$themeValue) }}
-                                        </button>
-                                    </form>
-                                @endforeach
-                            </div>
-                        </div>
+                            <span class="ops-menu-label">{{ __('ops.user_menu.preferences') }}</span>
+                            <div class="ops-pref-stack">
+                                <form method="POST" action="{{ route('ops.account.appearance') }}" data-pref-form="appearance">
+                                    @csrf
+                                    <input type="hidden" name="appearance" value="{{ $nextAppearance }}" data-pref-next>
+                                    <button
+                                        class="ops-pref-cycle"
+                                        type="submit"
+                                        data-pref="appearance"
+                                        data-current="{{ $currentAppearance }}"
+                                        data-options="{{ Js::from($appearanceChoices) }}"
+                                        data-aria-template="{{ __('ops.user_menu.cycle_appearance', ['mode' => ':mode']) }}"
+                                        aria-label="{{ __('ops.user_menu.cycle_appearance', ['mode' => __('account.appearance_modes.'.$currentAppearance)]) }}"
+                                    >
+                                        <svg data-icon="light" viewBox="0 0 16 16" aria-hidden="true" @if ($currentAppearance !== 'light') hidden @endif>
+                                            <circle cx="8" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.35"/>
+                                            <path d="M8 1.6v1.5M8 12.9v1.5M1.6 8h1.5M12.9 8h1.5M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M12.7 3.3l-1.1 1.1M4.4 11.6l-1.1 1.1" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                                        </svg>
+                                        <svg data-icon="semidark" viewBox="0 0 16 16" aria-hidden="true" @if ($currentAppearance !== 'semidark') hidden @endif>
+                                            <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.35"/>
+                                            <path d="M8 2.8v10.4A5.2 5.2 0 0 0 8 2.8Z" fill="currentColor"/>
+                                        </svg>
+                                        <svg data-icon="dark" viewBox="0 0 16 16" aria-hidden="true" @if ($currentAppearance !== 'dark') hidden @endif>
+                                            <path d="M10.6 2.7A5.4 5.4 0 1 0 13.4 10 4.4 4.4 0 0 1 10.6 2.7Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span class="ops-pref-cycle-copy">
+                                            <strong data-pref-label>{{ __('account.appearance_modes.'.$currentAppearance) }}</strong>
+                                            <span>{{ __('ops.user_menu.appearance') }}</span>
+                                        </span>
+                                    </button>
+                                </form>
 
-                        <div class="ops-menu-section">
-                            <span class="ops-menu-label">{{ __('ops.user_menu.language') }}</span>
-                            <div class="ops-theme-choices" role="group" aria-label="{{ __('ops.user_menu.language') }}">
-                                @foreach (config('ops.locales', ['en', 'tr']) as $localeOption)
-                                    <form method="POST" action="{{ route('ops.account.locale') }}">
-                                        @csrf
-                                        <button class="ops-theme-choice {{ $currentLocale === $localeOption ? 'is-active' : '' }}" type="submit" name="locale" value="{{ $localeOption }}" aria-pressed="{{ $currentLocale === $localeOption ? 'true' : 'false' }}">
-                                            {{ __('ops.locale.'.$localeOption) }}
-                                        </button>
-                                    </form>
-                                @endforeach
+                                <form method="POST" action="{{ route('ops.account.locale') }}" data-pref-form="locale">
+                                    @csrf
+                                    <input type="hidden" name="locale" value="{{ $nextLocale }}" data-pref-next>
+                                    <button
+                                        class="ops-pref-cycle"
+                                        type="submit"
+                                        data-pref="locale"
+                                        data-current="{{ $currentLocale }}"
+                                        data-options="{{ Js::from($localeChoices) }}"
+                                        data-aria-template="{{ __('ops.user_menu.cycle_language', ['locale' => ':locale']) }}"
+                                        aria-label="{{ __('ops.user_menu.cycle_language', ['locale' => __('ops.locale.'.$currentLocale)]) }}"
+                                    >
+                                        <svg viewBox="0 0 16 16" aria-hidden="true">
+                                            <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.35"/>
+                                            <path d="M2.8 8h10.4M8 2.8c1.6 1.7 2.4 3.5 2.4 5.2S9.6 11.5 8 13.2C6.4 11.5 5.6 9.7 5.6 8S6.4 4.5 8 2.8Z" fill="none" stroke="currentColor" stroke-width="1.25"/>
+                                        </svg>
+                                        <span class="ops-pref-cycle-copy">
+                                            <strong data-pref-label>{{ __('ops.locale.'.$currentLocale) }}</strong>
+                                            <span>{{ __('ops.user_menu.language') }}</span>
+                                        </span>
+                                    </button>
+                                </form>
                             </div>
                         </div>
 

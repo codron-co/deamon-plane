@@ -49,10 +49,17 @@
                 <a class="btn btn-ghost" href="{{ route('ops.sites') }}">{{ __('ops.actions.clear_filters') }}</a>
             </div>
         @else
+            <form method="POST" class="sites-bulk" id="sites-bulk-form">
+                @csrf
             <div class="sites-table-wrap">
                 <table class="ops-table">
                     <thead>
                         <tr>
+                            @can('create', \App\Models\Site::class)
+                                <th class="ops-check-col">
+                                    <span class="visually-hidden">{{ __('site_ops.bulk.selected') }}</span>
+                                </th>
+                            @endcan
                             <th>{{ __('sites.columns.site') }}</th>
                             <th>{{ __('sites.columns.domain') }}</th>
                             <th>{{ __('sites.columns.repo_branch') }}</th>
@@ -65,6 +72,14 @@
                         @foreach ($sites as $site)
                             @php($reportedVersion = $site->reportedDeamonVersion())
                             <tr data-href="{{ route('ops.sites.show', $site) }}" tabindex="0">
+                                @can('create', \App\Models\Site::class)
+                                    <td>
+                                        <label>
+                                            <span class="visually-hidden">{{ $site->name }}</span>
+                                            <input type="checkbox" name="site_ids[]" value="{{ $site->id }}">
+                                        </label>
+                                    </td>
+                                @endcan
                                 <td>
                                     <div class="site-name-row">
                                         <a class="site-name" href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
@@ -81,7 +96,8 @@
                                         <span class="version-chip">{{ $reportedVersion ?: __('sites.version_unknown') }}</span>
                                     </div>
                                 </td>
-                                <td><span class="status-chip status-{{ $site->status->value }}">{{ $site->status->label() }}</span></td>
+                                @php($failure = $site->lastFailureMessage())
+                                <td><span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span></td>
                                 <td class="muted">{{ $site->activeThemeInstallation?->theme?->theme_id ?: __('ops.none') }}</td>
                                 <td class="ops-row-actions">
                                     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
@@ -94,6 +110,46 @@
                     </tbody>
                 </table>
             </div>
+                @can('create', \App\Models\Site::class)
+                    <div class="form-actions">
+                        <button
+                            type="submit"
+                            class="btn btn-secondary btn-sm"
+                            formaction="{{ route('ops.sites.bulk.compose') }}"
+                            data-confirm="{{ __('site_ops.bulk.confirm_compose') }}"
+                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
+                            data-confirm-label="{{ __('site_ops.pack.confirm_label') }}"
+                        >{{ __('site_ops.bulk.compose') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.bulk.compose') }}"
+                            name="all_dockerfile"
+                            value="1"
+                            data-confirm="{{ __('site_ops.bulk.confirm_compose_all') }}"
+                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
+                            data-confirm-label="{{ __('site_ops.pack.confirm_label') }}"
+                        >{{ __('site_ops.bulk.compose_all') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
+                            name="enabled"
+                            value="1"
+                        >{{ __('site_ops.bulk.auto_on') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
+                            name="enabled"
+                            value="0"
+                            data-confirm="{{ __('site_ops.bulk.confirm_auto_off') }}"
+                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
+                            data-confirm-label="{{ __('site_ops.auto_deploy.off_button') }}"
+                        >{{ __('site_ops.bulk.auto_off') }}</button>
+                    </div>
+                @endcan
+            </form>
 
             @if ($sites->hasPages())
                 <nav class="ops-pagination" aria-label="{{ __('sites.pagination') }}">

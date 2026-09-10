@@ -300,18 +300,24 @@ class SiteProvisioner
         Log::warning('Site provision failed', [
             'site_id' => $site->id,
             'site_slug' => $site->slug,
+            'error' => $safe,
         ]);
     }
 
     public function safeFailureMessage(Site $site, Throwable $exception): string
     {
-        $fallback = $exception instanceof CoolifyApiException
-            || $exception instanceof CloudflareApiException
-            || $exception instanceof SiteProvisionException
-            ? $exception->getMessage()
-            : 'Provisioning failed.';
+        $message = trim($exception->getMessage());
+        if ($message === '') {
+            $message = $exception::class;
+        }
 
-        return DeploymentFailureText::fromException($site, $exception, $fallback)['error_message'];
+        if (! ($exception instanceof CoolifyApiException
+            || $exception instanceof CloudflareApiException
+            || $exception instanceof SiteProvisionException)) {
+            $message = class_basename($exception).': '.$message;
+        }
+
+        return DeploymentFailureText::fromException($site, $exception, $message)['error_message'];
     }
 
     public function mapRemoteStatus(?string $status): DeploymentStatus

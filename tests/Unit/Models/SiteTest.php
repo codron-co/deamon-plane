@@ -179,6 +179,20 @@ class SiteTest extends TestCase
         $this->assertFalse($unprovisioned->canSwitchChannel());
     }
 
+    public function test_last_failure_message_comes_from_latest_deployment(): void
+    {
+        $site = Site::factory()->create(['status' => SiteStatus::Error]);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'channel' => Channel::Main,
+            'trigger' => DeploymentTrigger::Create,
+            'status' => DeploymentStatus::Failed,
+            'error_message' => 'Cloudflare zone create failed: 403',
+        ]);
+
+        $this->assertSame('Cloudflare zone create failed: 403', $site->fresh()->lastFailureMessage());
+    }
+
     public function test_status_machine_rejects_illegal_transition(): void
     {
         $site = Site::factory()->create();

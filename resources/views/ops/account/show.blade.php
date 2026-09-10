@@ -2,6 +2,10 @@
 
 @section('title', __('account.title'))
 
+@section('actions')
+    <a class="btn btn-ghost btn-sm" href="{{ route('ops.account.preferences') }}">{{ __('account.preferences') }}</a>
+@endsection
+
 @section('breadcrumbs')
     <span>{{ __('account.title') }}</span>
 @endsection

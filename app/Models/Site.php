@@ -149,6 +149,36 @@ class Site extends Model
         return $this->hasMany(Deployment::class);
     }
 
+    public function latestDeployment(): HasOne
+    {
+        return $this->hasOne(Deployment::class)->latestOfMany();
+    }
+
+    /**
+     * Last Coolify/Cloudflare failure, redacted. Empty when the latest deployment has no error.
+     */
+    public function lastFailureMessage(): ?string
+    {
+        $deployment = $this->relationLoaded('latestDeployment')
+            ? $this->latestDeployment
+            : ($this->relationLoaded('deployments')
+                ? $this->deployments->first()
+                : $this->deployments()->latest('id')->first());
+
+        if (filled($deployment?->error_message)) {
+            return trim((string) $deployment->error_message);
+        }
+
+        $audit = $this->auditLogs()
+            ->whereIn('action', ['site.provision_failed', 'site.channel_switch_failed'])
+            ->latest('id')
+            ->first();
+
+        $detail = is_array($audit?->after) ? trim((string) ($audit->after['error'] ?? '')) : '';
+
+        return $detail !== '' ? $detail : null;
+    }
+
     public function auditLogs(): MorphMany
     {
         return $this->morphMany(AuditLog::class, 'subject');
@@ -260,5 +290,13 @@ class Site extends Model
     public function scopeWithDockerfileBuildPackWarning(Builder $query): Builder
     {
         return $query->where('notes', 'like', '%'.self::DOCKERFILE_BUILD_PACK_MARKER.'%');
+    }
+
+    public function clearDockerfileBuildPackWarning(): void
+    {
+        $notes = (string) $this->notes;
+        $pattern = '/(?:^|\n)\[import\]\s*'.preg_quote(self::DOCKERFILE_BUILD_PACK_MARKER, '/').':[^\n]*/';
+        $cleaned = trim((string) preg_replace($pattern, '', $notes));
+        $this->notes = $cleaned === '' ? null : $cleaned;
     }
 }

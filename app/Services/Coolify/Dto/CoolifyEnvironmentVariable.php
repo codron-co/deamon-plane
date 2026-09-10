@@ -10,6 +10,7 @@ final class CoolifyEnvironmentVariable
         private readonly ?string $value = null,
         public readonly bool $isPreview = false,
         public readonly bool $isLiteral = false,
+        public readonly ?string $serviceName = null,
     ) {}
 
     /**
@@ -19,12 +20,15 @@ final class CoolifyEnvironmentVariable
     {
         $value = $payload['value'] ?? null;
 
+        $service = $payload['available_in_services'] ?? $payload['service_name'] ?? $payload['compose_service'] ?? null;
+
         return new self(
             key: (string) ($payload['key'] ?? ''),
             uuid: isset($payload['uuid']) ? (string) $payload['uuid'] : null,
             value: is_string($value) ? $value : null,
             isPreview: (bool) ($payload['is_preview'] ?? false),
-            isLiteral: (bool) ($payload['is_literal'] ?? false),
+            isLiteral: (bool) ($payload['is_literal'] ?? $payload['is_literally'] ?? false),
+            serviceName: is_string($service) && $service !== '' ? $service : null,
         );
     }
 

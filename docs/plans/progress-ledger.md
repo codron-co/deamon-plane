@@ -117,6 +117,10 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 - Status: **ship**. Deep link is `{base}/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}`. Site uuids first, then connection defaults. Environment **name** or git channel (`alpha`) is never a path segment.
 
+## Slice 6 — dockerfile → compose + auto-deploy + pin (2026-09-10)
+
+- Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml`. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` onto service `app` only; `DB_*` not copied. Recreate → abort. Auto-deploy `is_auto_deploy`. Pin SHA/tag + auto-deploy off; Follow HEAD unpins + auto-deploy on + branch deploy. ChannelSwitcher unchanged. Bulk selected + all Dockerfile, confirm on dangerous actions.
+
 ## Slice 5 — sync fills site Coolify targets (2026-09-10)
 
 - Status: **ship**. `CoolifyInventorySync` still fills servers/projects/envs/git, then `CoolifySiteTargetSync` GETs each site’s Coolify app and writes project / env / server / git / allowlisted channel. Secrets and `status` unchanged. `develop` → `channel_needs_review` (channel kept). App 404 skips the site. Inventory `is_active` still not zeroed. Flash: `:sites` filled.

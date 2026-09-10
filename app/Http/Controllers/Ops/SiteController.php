@@ -42,7 +42,9 @@ class SiteController extends Controller
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
         $status = in_array($status, SiteStatus::values(), true) ? $status : '';
 
-        $query = Site::query()->with('activeThemeInstallation.theme')->orderBy('name');
+        $query = Site::query()
+            ->with(['activeThemeInstallation.theme', 'latestDeployment'])
+            ->orderBy('name');
 
         if ($search !== '') {
             $term = addcslashes($search, '%_\\');
@@ -503,7 +505,9 @@ class SiteController extends Controller
                     ->all()
                 : [],
             'coolifyGitSources' => $connection?->gitSources->where('is_active', true)->values() ?? collect(),
-            'attachableApps' => [],
+            'attachableApps' => $connection instanceof CoolifyConnection
+                ? app(SiteAttacher::class)->attachableApps($connection)
+                : [],
             'githubAppsListAvailable' => $connection?->github_apps_list_available,
             'isSuperAdmin' => $request->user()?->hasRole(OpsRole::SuperAdmin->value) ?? false,
             'optionsUrl' => $connection instanceof CoolifyConnection

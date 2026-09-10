@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/account/preferences', [PreferencesController::class, 'show'])->name('ops.account.preferences');
     Route::put('/account/preferences', [PreferencesController::class, 'update'])->name('ops.account.preferences.update');
     Route::post('/account/locale', [PreferencesController::class, 'updateLocale'])->name('ops.account.locale');
+    Route::get('/account/appearance', fn () => redirect()->route('ops.account.preferences'));
     Route::post('/account/appearance', [PreferencesController::class, 'updateAppearance'])->name('ops.account.appearance');
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('ops.settings');

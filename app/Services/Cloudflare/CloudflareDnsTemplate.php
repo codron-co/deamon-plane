@@ -5,8 +5,18 @@ namespace App\Services\Cloudflare;
 class CloudflareDnsTemplate
 {
     /**
-     * Exact Plane DNS template. Nothing else.
+     * Built-in Deamon DNS seed. Operators edit the live copy on Cloudflare → Deamon DNS.
      *
+     * @return list<array{type: string, name: string, content: string, ttl: int, proxied: bool, priority?: int}>
+     */
+    public static function builtin(): array
+    {
+        $origin = trim((string) config('ops.cloudflare.default_origin_ipv4', '72.62.117.147'));
+
+        return self::records($origin !== '' ? $origin : '72.62.117.147', true);
+    }
+
+    /**
      * @return list<array{type: string, name: string, content: string, ttl: int, proxied: bool, priority?: int}>
      */
     public static function records(string $originIpv4, bool $mailEnabled): array

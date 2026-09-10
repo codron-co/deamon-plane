@@ -19,6 +19,8 @@ return [
         'preferences' => 'Preferences',
         'appearance' => 'Appearance',
         'language' => 'Language',
+        'cycle_appearance' => 'Appearance: :mode. Click to change.',
+        'cycle_language' => 'Language: :locale. Click to change.',
         'sign_out' => 'Sign out',
     ],
     'locale' => [

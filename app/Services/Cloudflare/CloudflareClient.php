@@ -47,6 +47,32 @@ class CloudflareClient
     }
 
     /**
+     * @return list<array<string, mixed>>
+     */
+    public function listAllZones(?string $accountId = null, ?string $name = null): array
+    {
+        $query = [];
+        if (filled($accountId)) {
+            $query['account.id'] = $accountId;
+        }
+        if (filled($name)) {
+            $query['name'] = $name;
+        }
+
+        return $this->paginateList('/zones', $query);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getZone(string $zoneId): array
+    {
+        $result = $this->decode($this->http()->get('/zones/'.$zoneId));
+
+        return is_array($result) ? $result : [];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function createZone(string $accountId, string $name): array
@@ -58,6 +84,11 @@ class CloudflareClient
         ]));
 
         return is_array($result) ? $result : [];
+    }
+
+    public function deleteZone(string $zoneId): void
+    {
+        $this->decode($this->http()->delete('/zones/'.$zoneId));
     }
 
     /**
@@ -82,6 +113,14 @@ class CloudflareClient
     }
 
     /**
+     * @return list<array<string, mixed>>
+     */
+    public function listAllDnsRecords(string $zoneId): array
+    {
+        return $this->paginateList('/zones/'.$zoneId.'/dns_records');
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
@@ -101,6 +140,11 @@ class CloudflareClient
         $result = $this->decode($this->http()->put('/zones/'.$zoneId.'/dns_records/'.$recordId, $payload));
 
         return is_array($result) ? $result : [];
+    }
+
+    public function deleteDnsRecord(string $zoneId, string $recordId): void
+    {
+        $this->decode($this->http()->delete('/zones/'.$zoneId.'/dns_records/'.$recordId));
     }
 
     /**
@@ -125,7 +169,31 @@ class CloudflareClient
             ->timeout((int) config('ops.cloudflare.timeout', 20));
     }
 
-    private function decode(Response $response): mixed
+    /**
+     * @param  array<string, mixed>  $query
+     * @return list<array<string, mixed>>
+     */
+    private function paginateList(string $path, array $query = []): array
+    {
+        $page = 1;
+        $all = [];
+
+        do {
+            $query['per_page'] = 50;
+            $query['page'] = $page;
+            $json = $this->jsonEnvelope($this->http()->get($path, $query));
+            $all = array_merge($all, $this->asList($json['result'] ?? null));
+            $totalPages = (int) ($json['result_info']['total_pages'] ?? 1);
+            $page++;
+        } while ($page <= $totalPages && $page <= 20);
+
+        return $all;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function jsonEnvelope(Response $response): array
     {
         if ($response->failed()) {
             throw CloudflareApiException::fromResponse($response, $this->token);
@@ -136,7 +204,13 @@ class CloudflareClient
             throw CloudflareApiException::fromResponse($response, $this->token);
         }
 
-        if (is_array($json) && array_key_exists('result', $json)) {
+        return is_array($json) ? $json : [];
+    }
+
+    private function decode(Response $response): mixed
+    {
+        $json = $this->jsonEnvelope($response);
+        if (array_key_exists('result', $json)) {
             return $json['result'];
         }
 

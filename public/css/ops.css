@@ -252,11 +252,11 @@ code {
 
 .ops-content {
     padding: 20px 24px 32px;
-    max-width: 960px;
+    max-width: none;
 }
 
 .ops-content-wide {
-    max-width: 1120px;
+    max-width: none;
 }
 
 .page-lede {
@@ -504,7 +504,6 @@ code {
     margin-top: 32px;
     padding-top: 20px;
     border-top: 1px solid var(--border);
-    max-width: 520px;
 }
 
 .ops-panel h2 {
@@ -517,6 +516,7 @@ code {
     margin: 0 0 12px;
     color: var(--text-muted);
     font-size: 13px;
+    max-width: 68ch;
 }
 
 .danger-zone {
@@ -724,8 +724,9 @@ code {
     white-space: nowrap;
 }
 
-.channel-chip,
-.status-chip {
+.status-chip[title] {
+    cursor: help;
+}
     display: inline-flex;
     align-items: center;
     height: 20px;

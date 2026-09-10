@@ -74,7 +74,7 @@ Site detail and site edit include a **Deployments** table (`ops/deployments/inde
 
 GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status`. Search input debounces a GET submit (300 ms). No Coolify client on the list page.
 
-Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip next to the name; edit shows a warning that pack is dockerfile (not dockercompose), that provision/channel still use the existing app UUID, and that compose migration is later — not a skip. Fleet home keeps the same 5 KPI cards and lists those sites in a left attention row (**Dockerfile (eski pack)** / Compose'a geçirilmedi) — pack flag only, not CMS `deamon_version`.
+Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. Recreate required → abort. List bulk: selected or all Dockerfile, with confirm. Auto-deploy and pin/follow-HEAD are the same Coolify PATCH surface. Channel switch remains `ChannelSwitcher`.
 
 ## Import existing Coolify apps
 

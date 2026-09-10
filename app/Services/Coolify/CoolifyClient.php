@@ -164,6 +164,59 @@ class CoolifyClient
     }
 
     /**
+     * PATCH existing Coolify application. Never sends `fqdn`. Never DELETE.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    public function patchApplication(string $uuid, array $body): CoolifyApplication
+    {
+        unset($body['fqdn'], $body['delete_volumes']);
+
+        if ($body === []) {
+            throw new InvalidArgumentException('Coolify application PATCH body is empty.');
+        }
+
+        $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid), [], $body);
+
+        return CoolifyApplication::fromArray($this->unwrapResource($json));
+    }
+
+    /**
+     * Write one env onto compose service `app` (default). Does not log values.
+     */
+    public function upsertEnvOnService(string $uuid, string $key, string $value, string $service = CoolifyDomainParser::COMPOSE_SERVICE): CoolifyEnvironmentVariable
+    {
+        $key = trim($key);
+        if ($key === '') {
+            throw new InvalidArgumentException('Environment variable key is required.');
+        }
+
+        $existing = $this->listEnvs($uuid)->first(
+            static fn (CoolifyEnvironmentVariable $env): bool => $env->key === $key,
+        );
+
+        $payload = [
+            'key' => $key,
+            'value' => $value,
+            'is_literally' => true,
+            'available_in_services' => $service,
+        ];
+
+        if ($existing instanceof CoolifyEnvironmentVariable && filled($existing->uuid)) {
+            $payload['uuid'] = $existing->uuid;
+            $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid).'/envs', [], $payload);
+        } else {
+            $json = $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/envs', [], $payload);
+        }
+
+        if (! is_array($json)) {
+            return CoolifyEnvironmentVariable::fromArray(['key' => $key]);
+        }
+
+        return CoolifyEnvironmentVariable::fromArray($this->unwrapResource($json));
+    }
+
+    /**
      * @param  string|array<int|string, mixed>  $fqdn
      */
     public function setDomains(string $uuid, string|array $fqdn, bool $forceDomainOverride = false): CoolifyApplication

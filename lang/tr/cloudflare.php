@@ -19,6 +19,7 @@ return [
         'api_token' => 'API token',
         'token_saved' => 'Token kayıtlı. Mevcut değeri korumak için boş bırakın.',
         'token_hint' => 'Authorization: Bearer. Şifreli. Log’a yazılmaz.',
+        'token_placeholder' => 'Cloudflare API token',
         'origin_ipv4' => 'Origin IPv4',
         'origin_ipv4_hint' => '@, www ve * için A kayıtları. Yalnızca DNS (proxied kapalı).',
         'mail' => 'Hostinger mail şablonu',

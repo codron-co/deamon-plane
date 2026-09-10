@@ -1,5 +1,12 @@
 @php
     $extra = $extra ?? null;
+    $showRoute = match ($param) {
+        'server' => 'ops.coolify.servers.show',
+        'project' => 'ops.coolify.projects.show',
+        'environment' => 'ops.coolify.environments.show',
+        'source' => 'ops.coolify.git-sources.show',
+        default => null,
+    };
 @endphp
 
 <section class="ops-panel" aria-labelledby="allow-{{ $param }}-heading">
@@ -25,9 +32,13 @@
                 </thead>
                 <tbody>
                     @foreach ($rows as $row)
-                        <tr>
+                        <tr @if ($showRoute) data-href="{{ route($showRoute, ['connection' => $connection, $param => $row]) }}" tabindex="0" @endif>
                             <td>
-                                <span class="site-name">{{ $row->name ?: $row->uuid }}</span>
+                                @if ($showRoute)
+                                    <a class="site-name" href="{{ route($showRoute, ['connection' => $connection, $param => $row]) }}">{{ $row->name ?: $row->uuid }}</a>
+                                @else
+                                    <span class="site-name">{{ $row->name ?: $row->uuid }}</span>
+                                @endif
                                 <div class="site-slug">{{ $row->uuid }}</div>
                             </td>
                             @if ($extra === 'kind')

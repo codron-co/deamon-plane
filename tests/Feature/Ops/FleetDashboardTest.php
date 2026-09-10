@@ -92,8 +92,8 @@ class FleetDashboardTest extends TestCase
         $this->assertSame(1, substr_count($html, 'kpi-label">Unhealthy'));
         $this->assertMatchesRegularExpression('/Unhealthy<\/p>\s*<p class="kpi-value">2<\/p>/', $html);
         $this->assertSame(5, substr_count($html, 'class="kpi-card"'));
-        $this->assertStringNotContainsString('Dockerfile (eski pack)', $html);
-        $this->assertStringNotContainsString('Compose\'a geçirilmedi', $html);
+        $this->assertStringNotContainsString(__('fleet.attention.dockerfile_title'), $html);
+        $this->assertStringNotContainsString(__('fleet.attention.dockerfile_lede'), $html);
     }
 
     public function test_fleet_dashboard_lists_dockerfile_pack_sites_in_attention_row(): void
@@ -114,12 +114,11 @@ class FleetDashboardTest extends TestCase
         $html = $this->actingAs($operator)
             ->get(route('ops.fleet'))
             ->assertOk()
-            ->assertSee('Fleet snapshot', false)
-            ->assertSee('Dockerfile (eski pack)', false)
-            ->assertSee('Compose\'a geçirilmedi', false)
+            ->assertSee(__('fleet.attention.dockerfile_title'), false)
+            ->assertSee(__('fleet.attention.dockerfile_lede'), false)
             ->assertSee('Legacy Dockerfile Site', false)
             ->assertSee('legacy.example.test', false)
-            ->assertSee(route('ops.sites.edit', $legacy), false)
+            ->assertSee(route('ops.sites.show', $legacy), false)
             ->assertDontSee('Compose Site', false)
             ->getContent();
 

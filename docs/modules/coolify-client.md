@@ -18,6 +18,19 @@ Ops inventory (N connections, allowlists, site dropdowns): this page + [ops-site
 | `App\Models\CoolifyConnection` | N rows; `api_token` / `webhook_secret` encrypted + hidden; one `is_default` |
 | `App\Models\CoolifySetting` | Legacy singleton; webhook fallback + `resolvedWebhookSecrets()` (all connections + settings + env) |
 
+## Pack migrate / auto-deploy / pin
+
+Existing Coolify app is **PATCH** only. Plane never DELETE / `delete_volumes`.
+
+| Action | HTTP | Notes |
+|--------|------|--------|
+| Dockerfile → compose | `PATCH /applications/{uuid}` `{ build_pack: dockercompose, docker_compose_location: /docker-compose.coolify.yml }` | Snapshot `APP_KEY` / `APP_URL` / `DEAMON_*` via `listEnvs` (never log values). Restore those keys onto compose service **`app`** (`available_in_services=app`). Do **not** copy `DB_*`. If Coolify says recreate is required, **abort**. |
+| Auto-deploy | `PATCH` `{ is_auto_deploy }` | Single + selected + all-Dockerfile bulk. Bulk off uses confirm. |
+| Pin | `PATCH` `{ git_commit_sha, is_auto_deploy: false }` then `POST /deploy` | SHA or release tag. |
+| Follow HEAD | `PATCH` `{ git_commit_sha: "", is_auto_deploy: true }` then `POST /deploy` | Clears pin. Does not require typing `HEAD`. |
+
+Channel switch stays `ChannelSwitcher` (`PATCH git_branch` + deploy). `main`→beta/alpha confirm. Super Admin force unchanged.
+
 Do not call Coolify from tests with a live token. Use `Http::fake`. Never log `api_token` or env `value`.
 
 Provision consumes `CoolifyApplicationService` + preflight. Flow: [provision-site.md](../runbooks/provision-site.md).
@@ -86,7 +99,11 @@ Ops **Coolify** menu (`/coolify`): connections, API token, test, sync, aktif/pas
 
 | Method | Path | Name | Notes |
 |--------|------|------|-------|
-| GET | `/coolify/{connection}` | `ops.coolify.show` | Connection page |
+| GET | `/coolify/{connection}` | `ops.coolify.show` | Connection page. Inventory table rows open show/detail, never edit |
+| GET | `/coolify/{connection}/servers/{server}` | `ops.coolify.servers.show` | Server detail |
+| GET | `/coolify/{connection}/projects/{project}` | `ops.coolify.projects.show` | Project detail + environments |
+| GET | `/coolify/{connection}/environments/{environment}` | `ops.coolify.environments.show` | Environment detail |
+| GET | `/coolify/{connection}/git-sources/{source}` | `ops.coolify.git-sources.show` | Git source detail |
 | POST | `/coolify/{connection}/sync` | `ops.coolify.sync` | Inventory sync (`CoolifyInventorySync`). CSRF. Operator / Super Admin |
 | GET | `/coolify/{connection}/sync` | `ops.coolify.sync.get` | **Does not sync.** 302 to show + flash “use the Sync button” |
 | POST | `/coolify/{connection}/test` | `ops.coolify.test` | `listServers` only |

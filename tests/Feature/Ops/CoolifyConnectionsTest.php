@@ -33,7 +33,7 @@ class CoolifyConnectionsTest extends TestCase
             ->get(route('ops.coolify.index'))
             ->assertOk()
             ->assertSee('Coolify', false)
-            ->assertSee('Bağlantı ekle', false)
+            ->assertSee(__('coolify.add'), false)
             ->getContent();
 
         $this->assertStringContainsString(route('ops.coolify.index'), $html);
@@ -62,8 +62,8 @@ class CoolifyConnectionsTest extends TestCase
         $html = $this->actingAs($this->operator())
             ->get(route('ops.coolify.show', $connection))
             ->assertOk()
-            ->assertSee('Token kayıtlı', false)
-            ->assertSee('>Sync<', false)
+            ->assertSee(__('coolify.fields.token_saved'), false)
+            ->assertSee('>'.__('coolify.show.sync').'<', false)
             ->assertDontSee(self::TOKEN, false)
             ->getContent();
 
@@ -81,7 +81,7 @@ class CoolifyConnectionsTest extends TestCase
             'api_token' => self::TOKEN,
             'name' => 'Prod Coolify',
         ]);
-        CoolifyServer::query()->create([
+        $server = CoolifyServer::query()->create([
             'coolify_connection_id' => $connection->id,
             'uuid' => 'edge-1',
             'name' => 'edge',
@@ -94,7 +94,8 @@ class CoolifyConnectionsTest extends TestCase
             ->assertOk()
             ->assertSee('edge', false)
             ->assertSee('1.2.3.4', false)
-            ->assertSee(__('coolify.allowlist.servers'), false);
+            ->assertSee(__('coolify.allowlist.servers'), false)
+            ->assertSee('data-href="'.route('ops.coolify.servers.show', [$connection, $server]).'"', false);
     }
 
     public function test_get_sync_redirects_to_show_and_does_not_call_coolify(): void
@@ -339,7 +340,7 @@ class CoolifyConnectionsTest extends TestCase
         $html = $this->actingAs($this->operator())
             ->get(route('ops.coolify.show', $connection))
             ->assertOk()
-            ->assertSee('Bağlantıyı kes', false)
+            ->assertSee(__('coolify.danger.button'), false)
             ->assertSee('data-confirm=', false)
             ->getContent();
 

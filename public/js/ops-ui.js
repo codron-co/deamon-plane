@@ -5,6 +5,27 @@
     const THEMES = ["light", "semidark", "dark"];
     let openSelect = null;
 
+    function csrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute("content") : "";
+    }
+
+    function parseOptions(button) {
+        try {
+            const options = JSON.parse(button.getAttribute("data-options") || "[]");
+            return Array.isArray(options) ? options : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function optionIndex(options, value) {
+        const index = options.findIndex(function (item) {
+            return item && item.value === value;
+        });
+        return index >= 0 ? index : 0;
+    }
+
     function setTheme(theme) {
         const value = THEMES.indexOf(theme) !== -1 ? theme : "dark";
         document.documentElement.dataset.theme = value;
@@ -14,25 +35,70 @@
         } catch (error) {
             /* localStorage can be unavailable in privacy-restricted contexts */
         }
+    }
 
-        document.querySelectorAll("[data-theme-value]").forEach(function (button) {
-            const active = button.getAttribute("data-theme-value") === value;
-            button.classList.toggle("is-active", active);
-            button.setAttribute("aria-pressed", active ? "true" : "false");
+    function syncCycleButton(button, nextInput, current) {
+        const options = parseOptions(button);
+        if (!options.length) {
+            return;
+        }
+
+        const index = optionIndex(options, current);
+        const selected = options[index];
+        const following = options[(index + 1) % options.length];
+
+        button.setAttribute("data-current", current);
+        const label = button.querySelector("[data-pref-label]");
+        if (label && selected) {
+            label.textContent = selected.label;
+        }
+
+        button.querySelectorAll("[data-icon]").forEach(function (icon) {
+            icon.hidden = icon.getAttribute("data-icon") !== current;
         });
+
+        if (nextInput && following) {
+            nextInput.value = following.value;
+        }
+
+        if (selected) {
+            const template = button.getAttribute("data-aria-template");
+            button.setAttribute("aria-label", template ? template.replace(":mode", selected.label).replace(":locale", selected.label) : selected.label);
+        }
     }
 
     function setupThemeControls() {
-        const current = document.documentElement.dataset.theme || "dark";
-        setTheme(current);
+        setTheme(document.documentElement.dataset.theme || "dark");
+    }
 
-        document.addEventListener("click", function (event) {
-            const button = event.target.closest("[data-theme-value]");
-            if (!button) {
-                return;
-            }
-            setTheme(button.getAttribute("data-theme-value"));
-        });
+    function positionUserPopover(menu) {
+        const trigger = menu.querySelector(".ops-user-trigger");
+        const popover = menu.querySelector(".ops-user-popover");
+        if (!trigger || !popover || !menu.open) {
+            return;
+        }
+
+        const rect = trigger.getBoundingClientRect();
+        if (window.innerWidth <= 768) {
+            popover.style.left = "12px";
+            popover.style.right = "12px";
+            popover.style.width = "auto";
+            popover.style.top = "auto";
+            popover.style.bottom = "12px";
+            return;
+        }
+
+        const width = Math.min(320, window.innerWidth - 16);
+        let left = rect.right + 8;
+        if (left + width > window.innerWidth - 8) {
+            left = Math.max(8, rect.left);
+        }
+
+        popover.style.width = width + "px";
+        popover.style.left = left + "px";
+        popover.style.right = "auto";
+        popover.style.top = "auto";
+        popover.style.bottom = Math.max(8, window.innerHeight - rect.bottom) + "px";
     }
 
     function setupUserMenu() {
@@ -41,9 +107,23 @@
             return;
         }
 
+        function closeMenu() {
+            menu.removeAttribute("open");
+        }
+
+        menu.addEventListener("toggle", function () {
+            if (menu.open) {
+                positionUserPopover(menu);
+            }
+        });
+
+        window.addEventListener("resize", function () {
+            positionUserPopover(menu);
+        });
+
         document.addEventListener("click", function (event) {
             if (menu.open && !menu.contains(event.target)) {
-                menu.removeAttribute("open");
+                closeMenu();
             }
         });
 
@@ -51,11 +131,71 @@
             if (event.key !== "Escape" || !menu.open) {
                 return;
             }
-            menu.removeAttribute("open");
+            closeMenu();
             const summary = menu.querySelector("summary");
             if (summary) {
                 summary.focus();
             }
+        });
+    }
+
+    function setupPrefForms() {
+        document.querySelectorAll("[data-pref-form]").forEach(function (form) {
+            const kind = form.getAttribute("data-pref-form");
+            const button = form.querySelector("[data-pref]");
+            const nextInput = form.querySelector("[data-pref-next]");
+            if (!button || !nextInput) {
+                return;
+            }
+
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+                if (button.disabled) {
+                    return;
+                }
+
+                const field = kind === "locale" ? "locale" : "appearance";
+                const value = nextInput.value;
+                if (!value) {
+                    return;
+                }
+
+                button.disabled = true;
+                if (field === "appearance") {
+                    setTheme(value);
+                    syncCycleButton(button, null, value);
+                }
+
+                fetch(form.action, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                        "X-CSRF-TOKEN": csrfToken(),
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify(Object.fromEntries([[field, value]])),
+                }).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error("preference-failed");
+                    }
+                    return response.json();
+                }).then(function (payload) {
+                    if (field === "appearance") {
+                        const applied = payload.appearance || value;
+                        setTheme(applied);
+                        syncCycleButton(button, nextInput, applied);
+                        return;
+                    }
+
+                    window.location.reload();
+                }).catch(function () {
+                    form.submit();
+                }).finally(function () {
+                    button.disabled = false;
+                });
+            });
         });
     }
 
@@ -470,6 +610,7 @@
 
     setupThemeControls();
     setupUserMenu();
+    setupPrefForms();
     setupClickableRows();
     setupSelects();
     setupCopyButtons();

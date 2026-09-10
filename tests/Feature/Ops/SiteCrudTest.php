@@ -290,22 +290,19 @@ class SiteCrudTest extends TestCase
             ->get(route('ops.sites'))
             ->assertOk()
             ->assertSee('Legacy Dockerfile Site', false)
-            ->assertSee('Dockerfile (eski pack)', false)
+            ->assertSee(__('ops.dockerfile_chip'), false)
             ->assertSee('Compose Site', false);
 
         $this->actingAs($operator)
             ->get(route('ops.sites.edit', $legacy))
             ->assertOk()
-            ->assertSee('Coolify build pack is', false)
-            ->assertSee('dockerfile', false)
-            ->assertSee('dockercompose', false)
-            ->assertSee('existing app UUID', false);
+            ->assertSee(__('sites.edit.dockerfile'), false);
 
         $this->actingAs($operator)
             ->get(route('ops.sites.edit', $compose))
             ->assertOk()
-            ->assertDontSee('Dockerfile (eski pack)', false)
-            ->assertDontSee('Coolify build pack is', false);
+            ->assertDontSee(__('ops.dockerfile_chip'), false)
+            ->assertDontSee(__('sites.edit.dockerfile'), false);
     }
 
     public function test_index_and_edit_render_confirm_modal_for_destroy(): void
@@ -313,7 +310,7 @@ class SiteCrudTest extends TestCase
         $site = Site::factory()->create(['name' => 'Modal Site']);
 
         $html = $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites'))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->getContent();
 
@@ -322,10 +319,10 @@ class SiteCrudTest extends TestCase
         $this->assertStringNotContainsString('window.confirm', $html);
 
         $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('data-confirm=', false)
-            ->assertSee('Provision', false);
+            ->assertSee(__('sites.danger.button'), false);
     }
 
     /**

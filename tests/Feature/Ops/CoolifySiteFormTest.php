@@ -53,6 +53,49 @@ class CoolifySiteFormTest extends TestCase
         $this->assertMatchesRegularExpression('/name="placement" value="provision"[^>]*checked/', $html);
     }
 
+    public function test_create_form_lists_attachable_deamon_apps_for_selected_connection(): void
+    {
+        $connection = $this->seedConnection();
+
+        Http::fake([
+            'https://coolify.test/api/v1/applications*' => Http::response([
+                [
+                    'uuid' => 'crxguq6nodorlzy88wf9x305',
+                    'name' => 'Susa',
+                    'git_branch' => 'beta',
+                    'build_pack' => 'dockercompose',
+                    'git_repository' => 'https://github.com/codron-co/deamon.git',
+                    'docker_compose_domains' => '{"app":{"domain":"https://susa.demo.codron.co"}}',
+                ],
+                [
+                    'uuid' => 'plane-app',
+                    'name' => 'Plane',
+                    'git_branch' => 'alpha',
+                    'build_pack' => 'dockercompose',
+                    'git_repository' => 'https://github.com/codron-co/deamon-plane.git',
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.create'))
+            ->assertOk()
+            ->assertSee('value="crxguq6nodorlzy88wf9x305"', false)
+            ->assertSee('Susa', false)
+            ->assertSee('susa.demo.codron.co', false)
+            ->assertDontSee('value="plane-app"', false);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.coolify.options', $connection))
+            ->assertOk()
+            ->assertJsonFragment([
+                'uuid' => 'crxguq6nodorlzy88wf9x305',
+                'name' => 'Susa',
+                'domain' => 'susa.demo.codron.co',
+            ])
+            ->assertJsonMissing(['uuid' => 'plane-app']);
+    }
+
     public function test_operator_cannot_pick_inactive_server(): void
     {
         $connection = $this->seedConnection();
@@ -182,12 +225,12 @@ class CoolifySiteFormTest extends TestCase
         $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->get(route('ops.sites.create'))
             ->assertOk()
-            ->assertSee('Gelişmiş — UUID yapıştır', false);
+            ->assertSee(__('sites.form.advanced_summary'), false);
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->get(route('ops.sites.create'))
             ->assertOk()
-            ->assertDontSee('Gelişmiş — UUID yapıştır', false);
+            ->assertDontSee(__('sites.form.advanced_summary'), false);
     }
 
     private function seedConnection(): CoolifyConnection

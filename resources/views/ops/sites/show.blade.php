@@ -35,6 +35,7 @@
         $version = $site->reportedDeamonVersion();
         $themeId = $site->activeThemeInstallation?->theme?->theme_id;
         $latest = $deployments->first();
+        $failure = $site->lastFailureMessage();
     @endphp
 
     <p class="page-lede">
@@ -47,6 +48,10 @@
         </p>
     @endif
 
+    @if ($site->status === \App\Enums\SiteStatus::Error && filled($failure))
+        <p class="ops-alert" role="alert">{{ $failure }}</p>
+    @endif
+
     @if (($canProvision ?? false) === false && ! ($readonly ?? false) && $site->status === \App\Enums\SiteStatus::Provisioning)
         <p class="ops-flash" role="status">{{ __('sites.provision.in_progress') }}</p>
     @endif
@@ -55,7 +60,7 @@
         <section class="ops-detail-card">
             <span class="ops-detail-label">{{ __('sites.detail.status') }}</span>
             <div class="ops-detail-value">
-                <span class="status-chip status-{{ $site->status?->value }}">{{ $site->status?->label() ?? __('ops.unknown') }}</span>
+                <span class="status-chip status-{{ $site->status?->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status?->label() ?? __('ops.unknown') }}</span>
             </div>
         </section>
 
@@ -144,7 +149,49 @@
         </section>
     @endif
 
+    @if (filled($site->cloudflare_zone_id) || filled($site->cloudflare_nameservers) || filled($site->dns_applied_at))
+        <section class="ops-detail-section" aria-labelledby="site-cloudflare-heading">
+            <h2 id="site-cloudflare-heading">{{ __('sites.detail.cloudflare') }}</h2>
+            <p class="field-hint">{{ __('sites.detail.nameservers_hint') }}</p>
+            <dl class="spec-list">
+                <div>
+                    <dt>{{ __('sites.detail.zone') }}</dt>
+                    <dd><code>{{ $site->cloudflare_zone_id ?: __('ops.none') }}</code></dd>
+                </div>
+                <div>
+                    <dt>{{ __('sites.detail.nameservers') }}</dt>
+                    <dd>
+                        @php
+                            $nameservers = is_array($site->cloudflare_nameservers) ? $site->cloudflare_nameservers : [];
+                        @endphp
+                        @if ($nameservers === [])
+                            {{ __('ops.none') }}
+                        @else
+                            <ul class="ops-checklist">
+                                @foreach ($nameservers as $ns)
+                                    <li><code>{{ $ns }}</code></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </dd>
+                </div>
+                @if ($site->dns_applied_at)
+                    <div>
+                        <dt>{{ __('sites.detail.dns_applied') }}</dt>
+                        <dd>
+                            <time datetime="{{ $site->dns_applied_at->toIso8601String() }}">
+                                {{ $site->dns_applied_at->toDateTimeString() }}
+                            </time>
+                        </dd>
+                    </div>
+                @endif
+            </dl>
+        </section>
+    @endif
+
     @include('ops.sites._channel-switch')
+
+    @include('ops.sites._coolify-ops')
 
     @include('ops.sites._agent-health')
 

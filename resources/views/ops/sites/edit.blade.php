@@ -29,6 +29,8 @@
         @endif
     </p>
 
+    @include('ops.sites._coolify-ops')
+
     <form method="POST" action="{{ route('ops.sites.update', $site) }}" class="ops-form ops-form-stack">
         @csrf
         @method('PUT')
