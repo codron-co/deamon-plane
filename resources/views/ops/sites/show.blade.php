@@ -156,7 +156,7 @@
                 </dl>
             </article>
 
-            <aside class="site-card site-next-action site-card-head">
+            <aside class="site-card site-next-action">
                 <div>
                     <span class="site-section-kicker">{{ __('sites.detail.next_action') }}</span>
                     @if ($site->status === \App\Enums\SiteStatus::Error)
@@ -244,7 +244,3 @@
     @endif
 @endsection
 
-@section('scripts')
-    {{-- Page-local until the orchestrator folds this into public/js/ops-ui.js or the layout. Do not add the script to layouts/ops.blade.php from this worktree. --}}
-    <script src="{{ asset('js/ops-site-tabs.js') }}?v={{ filemtime(public_path('js/ops-site-tabs.js')) }}" defer></script>
-@endsection

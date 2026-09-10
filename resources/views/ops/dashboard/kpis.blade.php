@@ -6,11 +6,11 @@
 </div>
 
 <section class="kpi-grid" aria-label="{{ __('fleet.kpis.aria') }}">
-    <article class="kpi-card">
+    <article class="kpi-card{{ $kpis['unhealthy'] > 0 ? ' is-alert' : ' is-quiet' }}">
         <p class="kpi-label">{{ __('fleet.kpis.unhealthy') }} @include('ops.dashboard._hint', ['text' => __('fleet.kpis.unhealthy_hint')])</p>
         <p class="kpi-value{{ $kpis['unhealthy'] === 0 ? ' muted' : '' }}">{{ $kpis['unhealthy'] }}</p>
     </article>
-    <article class="kpi-card">
+    <article class="kpi-card{{ $kpis['failed_deploys'] > 0 ? ' is-alert' : ' is-quiet' }}">
         <p class="kpi-label">{{ __('fleet.kpis.failed') }} @include('ops.dashboard._hint', ['text' => __('fleet.kpis.failed_hint')])</p>
         <p class="kpi-value{{ $kpis['failed_deploys'] === 0 ? ' muted' : '' }}">{{ $kpis['failed_deploys'] }}</p>
     </article>

@@ -115,9 +115,11 @@
         </article>
 
         <aside class="site-card site-next-action">
+            <div>
             <span class="site-section-kicker">{{ __('sites.deployments.next_action') }}</span>
             <h3>{{ __('sites.deployments.next_inspect') }}</h3>
             <p>{{ __('sites.deployments.next_inspect_hint') }}</p>
+            </div>
             <div class="ops-copy-row">
                 <button type="button" class="btn btn-ghost btn-sm" data-copy-target="#deployment-paste" data-copied-label="{{ __('sites.deployments.copied') }}">{{ __('sites.deployments.copy_report') }}</button>
                 @if ($coolifyAppUrl)

@@ -14,7 +14,7 @@
     </div>
     <section class="fleet-body" aria-label="{{ __('fleet.attention.aria') }}">
         @if ($unhealthySites->isNotEmpty())
-            <aside class="fleet-attention" aria-labelledby="fleet-unhealthy-heading">
+            <aside class="fleet-attention is-danger" aria-labelledby="fleet-unhealthy-heading">
                 <div class="fleet-attention-head">
                     <div>
                         <h2 id="fleet-unhealthy-heading" class="fleet-attention-title">{{ __('fleet.attention.unhealthy_title') }} @include('ops.dashboard._hint', ['text' => __('fleet.attention.unhealthy_lede')])</h2>
@@ -42,7 +42,7 @@
         @endif
 
         @if ($failedDeploys->isNotEmpty())
-            <aside class="fleet-attention" aria-labelledby="fleet-failed-heading">
+            <aside class="fleet-attention is-danger" aria-labelledby="fleet-failed-heading">
                 <div class="fleet-attention-head">
                     <div>
                         <h2 id="fleet-failed-heading" class="fleet-attention-title">{{ __('fleet.attention.failed_title') }} @include('ops.dashboard._hint', ['text' => __('fleet.attention.failed_lede')])</h2>

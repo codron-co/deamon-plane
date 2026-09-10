@@ -167,25 +167,36 @@
             </article>
 
             <aside class="site-card site-next-action">
-                <span class="site-section-kicker">{{ __('themes.show.next_action') }}</span>
                 @if ($failedInstallations->isNotEmpty())
-                    <h3>{{ __('themes.show.next_failures') }}</h3>
-                    <p>{{ __('themes.show.next_failures_hint') }}</p>
+                    <div>
+                        <span class="site-section-kicker">{{ __('themes.show.next_action') }}</span>
+                        <h3>{{ __('themes.show.next_failures') }}</h3>
+                        <p>{{ __('themes.show.next_failures_hint') }}</p>
+                    </div>
                     <a class="btn btn-secondary btn-sm" href="#sync">{{ __('themes.show.next_review_sync') }}</a>
                 @elseif ($theme->last_synced_at === null && $canWrite)
-                    <h3>{{ __('themes.show.next_never') }}</h3>
-                    <p>{{ __('themes.show.next_never_hint') }}</p>
+                    <div>
+                        <span class="site-section-kicker">{{ __('themes.show.next_action') }}</span>
+                        <h3>{{ __('themes.show.next_never') }}</h3>
+                        <p>{{ __('themes.show.next_never_hint') }}</p>
+                    </div>
                     <form method="POST" action="{{ route('ops.themes.sync') }}" data-ops-pending>
                         @csrf
                         <button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('themes.sync') }}</button>
                     </form>
                 @elseif ($needsAllowlist && $canWrite)
-                    <h3>{{ __('themes.show.next_allowlist') }}</h3>
-                    <p>{{ __('themes.show.next_allowlist_hint') }}</p>
+                    <div>
+                        <span class="site-section-kicker">{{ __('themes.show.next_action') }}</span>
+                        <h3>{{ __('themes.show.next_allowlist') }}</h3>
+                        <p>{{ __('themes.show.next_allowlist_hint') }}</p>
+                    </div>
                     <a class="btn btn-secondary btn-sm" href="#sites">{{ __('themes.show.next_grant') }}</a>
                 @else
-                    <h3>{{ __('themes.show.next_none') }}</h3>
-                    <p>{{ __('themes.show.next_none_hint') }}</p>
+                    <div>
+                        <span class="site-section-kicker">{{ __('themes.show.next_action') }}</span>
+                        <h3>{{ __('themes.show.next_none') }}</h3>
+                        <p>{{ __('themes.show.next_none_hint') }}</p>
+                    </div>
                     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites') }}">{{ __('themes.show.next_open_sites') }}</a>
                 @endif
             </aside>
@@ -535,55 +546,4 @@
             </aside>
         </div>
     </section>
-@endsection
-
-@section('scripts')
-    <script>
-        (() => {
-            const tabs = [...document.querySelectorAll('[data-ops-tabs] [role="tab"]')];
-            const panels = [...document.querySelectorAll('[data-ops-panel]')];
-            if (! tabs.length || ! panels.length) return;
-
-            const activate = (id, updateHash = true) => {
-                if (! panels.some((panel) => panel.id === id)) id = panels[0].id;
-                tabs.forEach((tab) => {
-                    const active = tab.getAttribute('aria-controls') === id;
-                    tab.classList.toggle('is-active', active);
-                    tab.setAttribute('aria-selected', active ? 'true' : 'false');
-                    tab.tabIndex = active ? 0 : -1;
-                });
-                panels.forEach((panel) => { panel.hidden = panel.id !== id; });
-                if (updateHash) history.replaceState(null, '', `#${id}`);
-            };
-
-            tabs.forEach((tab, index) => {
-                tab.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    activate(tab.getAttribute('aria-controls'));
-                });
-                tab.addEventListener('keydown', (event) => {
-                    if (! ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-                    event.preventDefault();
-                    const target = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-                    tabs[target].focus();
-                    activate(tabs[target].getAttribute('aria-controls'));
-                });
-            });
-
-            document.addEventListener('click', (event) => {
-                const link = event.target.closest('a[href^="#"]');
-                if (! link || link.closest('[data-ops-tabs]')) {
-                    return;
-                }
-                const id = (link.getAttribute('href') || '').replace(/^#/, '');
-                if (! panels.some((panel) => panel.id === id)) {
-                    return;
-                }
-                event.preventDefault();
-                activate(id);
-            });
-
-            activate(location.hash.slice(1), false);
-        })();
-    </script>
 @endsection

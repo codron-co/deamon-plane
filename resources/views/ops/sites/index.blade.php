@@ -86,7 +86,7 @@
                                 <td>
                                     <div class="site-name-row">
                                         <div
-                                            class="site-identity-mark"
+                                            class="site-identity-mark is-compact"
                                             aria-hidden="true"
                                             @if (filled($site->primary_domain))
                                                 data-favicon-host="{{ $site->primary_domain }}"
@@ -186,6 +186,3 @@
     </div>
 @endsection
 
-@section('scripts')
-    <script src="{{ asset('js/ops-sites-list.js') }}" defer></script>
-@endsection

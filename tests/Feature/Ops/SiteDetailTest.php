@@ -52,7 +52,7 @@ class SiteDetailTest extends TestCase
             ->assertSee('1.8.4', false)
             ->assertSee('data-favicon-host="'.$site->primary_domain.'"', false)
             ->assertSee(route('ops.sites.edit', $site), false)
-            ->assertSee('js/ops-site-tabs.js', false)
+            ->assertSee('js/ops-ui.js', false)
             ->getContent();
 
         $this->assertNotSame(route('ops.sites.show', $site), route('ops.sites.edit', $site));
