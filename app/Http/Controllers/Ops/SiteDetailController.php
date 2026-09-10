@@ -45,6 +45,13 @@ class SiteDetailController extends Controller
                 && filled($site->coolify_app_uuid),
             'canSyncCoolify' => ($user?->can('update', $site) ?? false)
                 && filled($site->coolify_app_uuid),
+            'canLiveSync' => ($user?->can('update', $site) ?? false)
+                && filled($site->primary_domain),
+            'canActivate' => ($user?->can('update', $site) ?? false)
+                && $site->canBeActivated(),
+            'canDeactivate' => ($user?->can('update', $site) ?? false)
+                && $site->canBeDeactivated(),
+            'canForceDelete' => $user?->can('forceDelete', $site) ?? false,
             'agentHealth' => $agentHealth,
             'channelSwitchTargets' => $this->channelSwitchTargets($site),
             'channelSwitchInProgress' => $site->status === SiteStatus::Deploying,

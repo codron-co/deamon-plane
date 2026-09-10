@@ -55,8 +55,12 @@ class SiteDetailTest extends TestCase
             ->assertSee('data-favicon-host="'.$site->primary_domain.'"', false)
             ->assertSee('href="https://'.$site->primary_domain.'"', false)
             ->assertSee('href="https://'.$site->primary_domain.'/admin"', false)
-            ->assertSee(__('sites.detail.open_site'), false)
-            ->assertSee(__('sites.detail.open_admin'), false)
+            ->assertSee(__('sites.menu.home'), false)
+            ->assertSee(__('sites.menu.admin'), false)
+            ->assertSee(__('sites.menu.sync'), false)
+            ->assertSee(__('sites.menu.settings'), false)
+            ->assertSee(__('sites.menu.edit'), false)
+            ->assertSee('data-ops-action-menu', false)
             ->assertSee(route('ops.sites.edit', $site), false)
             ->assertSee('js/ops-ui.js', false)
             ->getContent();
@@ -66,6 +70,11 @@ class SiteDetailTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/id="(overview|deployments|theme|infrastructure|danger)"[^>]*\bhidden\b/', $html);
         $this->assertMatchesRegularExpression('/id="danger"/', $html);
         $this->assertMatchesRegularExpression('/aria-controls="danger"/', $html);
+        $this->assertStringContainsString('class="site-hint"', $html);
+        $this->assertStringNotContainsString('class="field-hint"', $html);
+        $this->assertStringNotContainsString(__('sites.detail.no_action'), $html);
+        $this->assertStringNotContainsString(__('sites.detail.no_action_hint'), $html);
+        $this->assertStringNotContainsString('class="site-open-links"', $html);
     }
 
     public function test_sites_index_targets_detail_and_displays_branch_with_reported_version(): void
@@ -165,6 +174,8 @@ class SiteDetailTest extends TestCase
             ->assertOk()
             ->assertSee('Read Only Detail', false)
             ->assertDontSee('Edit site', false)
+            ->assertDontSee(__('sites.menu.soft_delete'), false)
+            ->assertDontSee(__('sites.menu.hard_delete'), false)
             ->assertDontSee('href="#danger"', false)
             ->getContent();
 

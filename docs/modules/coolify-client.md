@@ -20,7 +20,9 @@ Ops inventory (N connections, allowlists, site dropdowns): this page + [ops-site
 
 ## Pack migrate / auto-deploy / pin
 
-Existing Coolify app is **PATCH** only. Plane never DELETE / `delete_volumes`.
+Existing Coolify app is **PATCH** only for pack migrate, auto-deploy, pin, follow HEAD, and channel switch. Those paths never DELETE / `delete_volumes`.
+
+**Hard delete** is the exception: `DELETE /applications/{uuid}?delete_volumes=true` (query sent explicitly) then Plane `forceDelete()`. Soft delete does not call Coolify. Cloudflare zones are not deleted.
 
 | Action | HTTP | Notes |
 |--------|------|--------|
@@ -74,6 +76,12 @@ Default Coolify environment **name** is `main` (1:1 with the main channel). `pro
 **Site fill (same POST Sync):** for each matching site, `GET /applications/{coolify_app_uuid}` and write project / environment / server / git source (GitHub App or deploy key) / `git_repository`. Then `GET /deployments/applications/{uuid}` upserts the last 25 Coolify deployments onto the site (match `coolify_deployment_uuid`; new rows `trigger=manual`). Historical failed rows do **not** flip `sites.status`. Allowlisted branch (`main` \| `beta` \| `alpha`) sets `channel` and clears `channel_needs_review`. Other branches (`develop`) set `channel_needs_review` and **do not** overwrite `channel`. Skip channel while status is `provisioning` or `deploying`. **Never** write `status`, `app_key_encrypted`, or `agent_secret_encrypted`. App 404 skips that site (inventory rows gone from Coolify may still be deleted; **sites are not auto-deleted**). Sync still does not write inventory `is_active` (does not zero it). Other connections’ sites are left alone. Flash includes the sites-filled count.
 
 **Per-site Sync:** `POST /sites/{site}/sync` (`ops.sites.sync`) does the same fill + deployment pull for one site. GET `/sites/{site}/sync` is a 302 to show (does not sync). Operator / Super Admin. Viewer forbidden.
+
+**Per-site Live Site:** `POST /sites/{site}/live-sync` probes that site’s public homepage (same as list Live Sync). GET is a 302 to show.
+
+**Activate / Deactivate:** `POST /applications/{uuid}/start|stop`, then Plane status `stopped` ⇄ `active`. Requires `coolify_app_uuid`. Not a soft delete.
+
+**Hard delete:** `DELETE /applications/{uuid}?delete_volumes=true` (flag always sent), then `$site->forceDelete()`. 404 from Coolify still purges the Plane row. Any other Coolify error aborts and leaves the Plane record. List bulk Hard Delete uses the same path. **Never** used by channel switch.
 
 **Sites list Sync:** `POST /sites/bulk/sync` (`ops.sites.bulk.sync`) runs that per-site fill for selected ids or `all=1` (sites without an app UUID are skipped). GET is a 302 to the list. Live homepage probe (HTTP status + favicon href) is a separate `POST /sites/bulk/live-sync` — not a Coolify call.
 

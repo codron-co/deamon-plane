@@ -14,11 +14,19 @@ class SiteStatusTest extends TestCase
         $this->assertFalse(SiteStatus::Draft->canTransitionTo(SiteStatus::Archived));
     }
 
-    public function test_active_deploys_and_archives(): void
+    public function test_active_deploys_stops_and_archives(): void
     {
         $this->assertTrue(SiteStatus::Active->canTransitionTo(SiteStatus::Deploying));
+        $this->assertTrue(SiteStatus::Active->canTransitionTo(SiteStatus::Stopped));
         $this->assertTrue(SiteStatus::Active->canTransitionTo(SiteStatus::Archived));
         $this->assertFalse(SiteStatus::Active->canTransitionTo(SiteStatus::Draft));
+    }
+
+    public function test_stopped_starts_or_archives(): void
+    {
+        $this->assertTrue(SiteStatus::Stopped->canTransitionTo(SiteStatus::Active));
+        $this->assertTrue(SiteStatus::Stopped->canTransitionTo(SiteStatus::Archived));
+        $this->assertFalse(SiteStatus::Stopped->canTransitionTo(SiteStatus::Draft));
     }
 
     public function test_deploying_returns_to_active_or_error(): void

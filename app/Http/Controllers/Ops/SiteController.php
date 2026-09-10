@@ -16,6 +16,7 @@ use App\Models\MailServer;
 use App\Models\Site;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\SiteHealthChecker;
+use App\Services\Coolify\CoolifyApiException;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailConfigureResult;
 use App\Services\Mail\SiteMailOrderBinder;
@@ -24,6 +25,8 @@ use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\SiteAgentSecretInjector;
 use App\Services\Sites\SiteAttacher;
+use App\Services\Sites\SiteLifecycle;
+use App\Services\Sites\SiteLifecycleException;
 use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
 use Illuminate\Contracts\View\View;
@@ -455,6 +458,32 @@ class SiteController extends Controller
             ->with('status', __('sites.flash.updated'));
     }
 
+    public function activate(Request $request, Site $site, SiteLifecycle $lifecycle): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        try {
+            $lifecycle->activate($site, $request->user(), $request->ip());
+        } catch (SiteLifecycleException|CoolifyApiException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('sites.flash.activated'));
+    }
+
+    public function deactivate(Request $request, Site $site, SiteLifecycle $lifecycle): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        try {
+            $lifecycle->deactivate($site, $request->user(), $request->ip());
+        } catch (SiteLifecycleException|CoolifyApiException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('sites.flash.deactivated'));
+    }
+
     public function destroy(Request $request, Site $site): RedirectResponse
     {
         $this->authorize('delete', $site);
@@ -475,6 +504,21 @@ class SiteController extends Controller
         return redirect()
             ->route('ops.sites')
             ->with('status', __('sites.flash.archived'));
+    }
+
+    public function purge(Request $request, Site $site, SiteLifecycle $lifecycle): RedirectResponse
+    {
+        $this->authorize('forceDelete', $site);
+
+        try {
+            $lifecycle->purge($site, $request->user(), $request->ip());
+        } catch (SiteLifecycleException|CoolifyApiException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return redirect()
+            ->route('ops.sites')
+            ->with('status', __('sites.flash.purged'));
     }
 
     private function syncPrimaryDomain(Site $site, string $domain): void

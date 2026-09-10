@@ -23,7 +23,7 @@
     <div class="site-section-heading">
         <div>
             <span class="site-section-kicker">{{ __('sites.themes.kicker') }}</span>
-            <h2 id="site-themes-heading">{{ __('sites.themes.title') }} <button class="site-hint" type="button" aria-label="{{ __('sites.themes.lede') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('sites.themes.lede') }}</span></button></h2>
+            <h2 id="site-themes-heading">{{ __('sites.themes.title') }} @include('ops.dashboard._hint', ['text' => __('sites.themes.lede')])</h2>
         </div>
     </div>
 
@@ -40,22 +40,20 @@
                 <p class="site-note">{{ $activeTheme->theme_id }} · {{ $activeInstallation->ref }}</p>
                 <span class="status-chip">{{ __('sites.themes.via_agent') }}</span>
                 @if ($healthDiffers)
-                    <p class="field-hint">{{ __('sites.themes.health_differs', ['theme' => $healthThemeId]) }}</p>
+                    <p class="ops-alert ops-alert-warning" role="status">{{ __('sites.themes.health_differs', ['theme' => $healthThemeId]) }}</p>
                 @endif
             @elseif ($healthOnly)
                 <div class="site-card-head">
                     <div>
                         <span class="site-section-kicker">{{ __('sites.themes.active_label') }}</span>
-                        <h3>{{ $displayThemeName }}</h3>
+                        <h3>{{ $displayThemeName }} @include('ops.dashboard._hint', ['text' => __('sites.themes.health_only_hint')])</h3>
                     </div>
                     <span class="status-chip">{{ __('sites.themes.via_health') }}</span>
                 </div>
                 <p class="site-note">{{ $reportedThemeId }}</p>
-                <p class="field-hint">{{ __('sites.themes.health_only_hint') }}</p>
             @else
                 <div>
-                    <h3>{{ __('sites.themes.empty_title') }}</h3>
-                    <p class="site-note">{{ __('sites.themes.empty_hint') }}</p>
+                    <h3>{{ __('sites.themes.empty_title') }} @include('ops.dashboard._hint', ['text' => __('sites.themes.empty_hint')])</h3>
                     <span class="status-chip">{{ __('sites.themes.via_agent') }}</span>
                 </div>
             @endif
@@ -84,8 +82,7 @@
                         </select>
                     </div>
                     <div class="field">
-                        <label class="field-label" for="site-theme-ref">{{ __('sites.themes.ref') }}</label>
-                        <p class="field-hint">{{ __('sites.themes.ref_hint') }}</p>
+                        <label class="field-label" for="site-theme-ref">{{ __('sites.themes.ref') }} @include('ops.dashboard._hint', ['text' => __('sites.themes.ref_hint')])</label>
                         <input id="site-theme-ref" class="field-input" type="text" name="ref" value="{{ old('ref') }}" placeholder="main">
                     </div>
                     <input type="hidden" name="activate" value="0">
@@ -106,11 +103,7 @@
         @endif
     </div>
 
-    @if ($themeInstallations->isEmpty())
-        @unless ($activeTheme || $healthOnly)
-            <p class="field-hint">{{ __('sites.themes.empty') }}</p>
-        @endunless
-    @else
+    @if ($themeInstallations->isNotEmpty())
         <div class="sites-table-wrap">
             <table class="ops-table">
                 <thead>

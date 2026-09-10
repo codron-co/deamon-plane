@@ -218,6 +218,14 @@
                             data-confirm-label="{{ __('site_ops.bulk.auto_toggle') }}"
                             data-confirm-danger="false"
                         >{{ __('site_ops.bulk.auto_toggle') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-danger btn-sm"
+                            formaction="{{ route('ops.sites.bulk.purge') }}"
+                            data-confirm="{{ __('sites.danger.hard_confirm_bulk') }}"
+                            data-confirm-title="{{ __('sites.danger.hard_confirm_title') }}"
+                            data-confirm-label="{{ __('sites.menu.hard_delete') }}"
+                        >{{ __('sites.menu.hard_delete') }}</button>
                     </div>
                 @endcan
             </form>

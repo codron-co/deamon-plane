@@ -32,6 +32,11 @@ class SitePolicy
         return $user->canWriteOps();
     }
 
+    public function forceDelete(User $user, Site $site): bool
+    {
+        return $user->canWriteOps();
+    }
+
     public function provision(User $user, Site $site): bool
     {
         return $user->canWriteOps();

@@ -236,6 +236,16 @@ class Site extends Model
         return in_array($this->status, [SiteStatus::Draft, SiteStatus::Error], true);
     }
 
+    public function canBeActivated(): bool
+    {
+        return $this->canStartCoolify();
+    }
+
+    public function canBeDeactivated(): bool
+    {
+        return $this->canStopCoolify();
+    }
+
     public function canSwitchChannel(): bool
     {
         if (blank($this->coolify_app_uuid)) {
@@ -243,6 +253,16 @@ class Site extends Model
         }
 
         return in_array($this->status, [SiteStatus::Active, SiteStatus::Error], true);
+    }
+
+    public function canStartCoolify(): bool
+    {
+        return filled($this->coolify_app_uuid) && $this->status === SiteStatus::Stopped;
+    }
+
+    public function canStopCoolify(): bool
+    {
+        return filled($this->coolify_app_uuid) && $this->status === SiteStatus::Active;
     }
 
     public function hasAgentSecret(): bool

@@ -162,7 +162,7 @@ class CoolifySiteSyncTest extends TestCase
         $html = $this->actingAs($this->operator())
             ->get(route('ops.sites.show', $site))
             ->assertOk()
-            ->assertSee(__('sites.detail.sync'), false)
+            ->assertSee(__('sites.menu.coolify'), false)
             ->assertSee('data-confirm="'.__('sites.detail.sync_confirm', ['name' => $site->name]).'"', false)
             ->getContent();
 

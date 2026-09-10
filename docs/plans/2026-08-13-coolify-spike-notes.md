@@ -48,7 +48,7 @@ Plane names ↔ Coolify HTTP. Paths are under `/api/v1`.
 | `listAppDeployments(appUuid)` | `GET /deployments/applications/{uuid}?skip&take` | Site Deployments tab + poll fallback. |
 | `listRunningDeployments()` | `GET /deployments` | Currently running only. |
 | `listStorages(uuid)` | `GET /applications/{uuid}/storages` | `{ persistent_storages, file_storages }` — volume persistence check. |
-| `start/stop/restart` | `POST /applications/{uuid}/start\|stop\|restart` | Not required for Faz A happy path. |
+| `start/stop/restart` | `POST /applications/{uuid}/start\|stop\|restart` | Start/stop used by site Activate / Deactivate (`active` ⇄ `stopped`). Restart unused. |
 
 ### Create body (git compose) — draft
 

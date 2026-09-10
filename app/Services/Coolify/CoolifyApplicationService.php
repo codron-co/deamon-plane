@@ -19,7 +19,8 @@ use InvalidArgumentException;
 
 /**
  * Thin wrappers over CoolifyClient for list / create / env / domain / branch / deploy.
- * Channel switch PATCHes git_branch + APP_ENV / DEAMON_CHANNEL, then deploys. Never DELETE the application.
+ * Channel switch PATCHes git_branch + APP_ENV / DEAMON_CHANNEL, then deploys.
+ * Never DELETE the application except explicit hard-delete (`deleteApplication` with delete_volumes).
  */
 class CoolifyApplicationService
 {
@@ -174,6 +175,24 @@ class CoolifyApplicationService
         }
 
         return $this->client->updateBranch($uuid, $branch);
+    }
+
+    public function startApplication(string $uuid): void
+    {
+        $this->client->startApplication($uuid);
+    }
+
+    public function stopApplication(string $uuid): void
+    {
+        $this->client->stopApplication($uuid);
+    }
+
+    /**
+     * Purge only. Channel switch, pack migrate, and provision retry must never call this.
+     */
+    public function deleteApplication(string $uuid, bool $deleteVolumes): void
+    {
+        $this->client->deleteApplication($uuid, $deleteVolumes);
     }
 
     public function deploy(string $uuid, bool $force = false): CoolifyDeployResult

@@ -278,6 +278,79 @@ html[data-theme="light"] {
     text-transform: uppercase;
 }
 
+.ops-action-menu {
+    position: relative;
+}
+
+.ops-action-menu > summary {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ops-action-menu > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ops-action-menu > summary::after {
+    content: "";
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    opacity: 0.7;
+}
+
+.ops-action-menu[open] > summary::after {
+    transform: rotate(180deg);
+}
+
+.ops-action-popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 50;
+    min-width: 196px;
+    padding: 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-popover);
+}
+
+.ops-action-popover form {
+    margin: 0;
+}
+
+.ops-action-sep {
+    height: 1px;
+    margin: 5px 6px;
+    background: var(--border);
+}
+
+.ops-menu-button.is-danger,
+.ops-menu-link.is-danger {
+    color: var(--danger-text, var(--danger));
+}
+
+.ops-menu-button.is-danger:hover,
+.ops-menu-link.is-danger:hover {
+    background: var(--danger-surface);
+    color: var(--danger-text-strong, var(--danger));
+}
+
+.danger-zone-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
 .ops-pref-stack {
     display: grid;
     gap: 6px;
@@ -847,24 +920,25 @@ html[data-theme="semidark"] .fleet-attention-list li {
 
 .site-section-nav {
     position: sticky;
-    top: 58px;
+    top: var(--topbar);
     z-index: 8;
     display: flex;
-    gap: 2px;
+    flex-wrap: wrap;
+    gap: 0 2px;
+    min-width: 0;
+    max-width: none;
     margin: 0 calc(-1 * var(--ops-content-inline, 24px)) 24px;
     padding: 0 var(--ops-content-inline, 24px);
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     background: color-mix(in srgb, var(--surface-base) 92%, transparent);
     backdrop-filter: blur(10px);
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
+    overflow: hidden;
 }
 .site-section-nav a {
     position: relative;
-    padding: 13px 12px;
+    flex: 0 0 auto;
+    padding: 10px 10px;
     color: var(--text-muted);
     font-size: 12px;
     font-weight: 500;
@@ -878,7 +952,7 @@ html[data-theme="semidark"] .fleet-attention-list li {
 [data-ops-tabs] [role="tab"]:focus-visible,
 [data-site-tabs] [role="tab"]:focus-visible {
     outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline-offset: -2px;
 }
 .site-section-nav a.is-active { color: var(--accent); }
 .site-section-nav a.is-active::after {

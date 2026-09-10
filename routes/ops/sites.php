@@ -18,12 +18,17 @@ Route::post('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'bulkSync'])->
 Route::get('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'redirectGetBulkSync'])->name('ops.sites.bulk.sync.get');
 Route::post('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'liveSync'])->name('ops.sites.live-sync');
 Route::get('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'redirectGetLiveSync'])->name('ops.sites.live-sync.get');
+Route::post('/sites/bulk/purge', [SiteCoolifyOpsController::class, 'bulkPurge'])->name('ops.sites.bulk.purge');
 Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateCompose'])->name('ops.sites.compose');
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
 Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');
 Route::post('/sites/{site}/follow-head', [SiteCoolifyOpsController::class, 'followHead'])->name('ops.sites.follow-head');
 Route::post('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'sync'])->name('ops.sites.sync');
 Route::get('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'redirectGetSync'])->name('ops.sites.sync.get');
+Route::post('/sites/{site}/live-sync', [SiteCoolifyOpsController::class, 'liveSyncOne'])->name('ops.sites.live-sync.one');
+Route::get('/sites/{site}/live-sync', [SiteCoolifyOpsController::class, 'redirectGetLiveSyncOne'])->name('ops.sites.live-sync.one.get');
+Route::post('/sites/{site}/activate', [SiteController::class, 'activate'])->name('ops.sites.activate');
+Route::post('/sites/{site}/deactivate', [SiteController::class, 'deactivate'])->name('ops.sites.deactivate');
 Route::get('/sites/{site}', SiteDetailController::class)->name('ops.sites.show');
 Route::get('/sites/{site}/deployments/{deployment}', DeploymentShowController::class)
     ->scopeBindings()
@@ -41,4 +46,5 @@ Route::post('/sites/{site}/themes/{installation}/update', [SiteThemeController::
 Route::post('/sites/{site}/themes/{installation}/sync', [SiteThemeController::class, 'sync'])->name('ops.sites.themes.sync');
 Route::post('/sites/{site}/themes/{installation}/activate', [SiteThemeController::class, 'activate'])->name('ops.sites.themes.activate');
 Route::post('/sites/{site}/themes/{installation}/auto-update', [SiteThemeController::class, 'autoUpdate'])->name('ops.sites.themes.auto-update');
+Route::delete('/sites/{site}/purge', [SiteController::class, 'purge'])->name('ops.sites.purge');
 Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name('ops.sites.destroy');

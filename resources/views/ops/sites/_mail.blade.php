@@ -6,14 +6,13 @@
 
 <article class="site-card site-operation" id="site-mail" aria-labelledby="site-mail-heading">
     <div class="site-card-head">
-        <h3 id="site-mail-heading">{{ __('sites.detail.mail') }} <button class="site-hint" type="button" aria-label="{{ __('mail.select_hint') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('mail.select_hint') }}</span></button></h3>
+        <h3 id="site-mail-heading">{{ __('sites.detail.mail') }} @include('ops.dashboard._hint', ['text' => __('mail.select_hint')])</h3>
         @if ($site->hasHostingerMailOrder())
             <span class="status-chip">{{ $site->mail_domain }}</span>
         @elseif ($site->mailServer)
             <span class="status-chip">{{ __('mail.sites.unmatched') }}</span>
         @endif
     </div>
-    <p class="field-hint">{{ __('mail.select_hint') }}</p>
 
     @if ($canEditMail)
         @php($selectedMailId = (string) old('mail_server_id', $site->mail_server_id))

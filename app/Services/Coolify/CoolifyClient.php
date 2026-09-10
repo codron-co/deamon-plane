@@ -257,6 +257,27 @@ class CoolifyClient
         return CoolifyApplication::fromArray($this->unwrapResource($json));
     }
 
+    public function startApplication(string $uuid): void
+    {
+        $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/start');
+    }
+
+    public function stopApplication(string $uuid): void
+    {
+        $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/stop');
+    }
+
+    /**
+     * Hard-delete only. Channel switch, retry, and pack migrate must never call this.
+     * Coolify defaults delete_volumes to true — always send the query explicitly.
+     */
+    public function deleteApplication(string $uuid, bool $deleteVolumes): void
+    {
+        $this->request('DELETE', '/applications/'.$this->assertUuid($uuid), [
+            'delete_volumes' => $deleteVolumes ? 'true' : 'false',
+        ]);
+    }
+
     public function deploy(string $uuid, bool $force = false): CoolifyDeployResult
     {
         $query = ['uuid' => $this->assertUuid($uuid)];
@@ -333,6 +354,9 @@ class CoolifyClient
                 ? $pending->post($path, $body ?? [])
                 : $pending->withQueryParameters($query)->post($path, $body ?? []),
             'PATCH' => $pending->patch($path, $body ?? []),
+            'DELETE' => $query === []
+                ? $pending->delete($path)
+                : $pending->withQueryParameters($query)->delete($path),
             default => throw new InvalidArgumentException("Unsupported Coolify HTTP method [{$method}]."),
         };
 
@@ -352,6 +376,10 @@ class CoolifyClient
     {
         if ($response->failed()) {
             throw CoolifyApiException::fromResponse($response, $token);
+        }
+
+        if ($response->body() === '') {
+            return null;
         }
 
         return $response->json();

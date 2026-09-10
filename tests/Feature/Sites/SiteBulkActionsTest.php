@@ -51,6 +51,7 @@ class SiteBulkActionsTest extends TestCase
             ->assertSee(__('site_ops.bulk.change_branch'), false)
             ->assertSee(__('site_ops.bulk.compose'), false)
             ->assertSee(__('site_ops.bulk.auto_toggle'), false)
+            ->assertSee(__('sites.menu.hard_delete'), false)
             ->assertDontSee(__('site_ops.bulk.compose_all'), false)
             ->assertDontSee(__('site_ops.bulk.auto_on'), false)
             ->assertDontSee(__('site_ops.bulk.auto_off'), false)
@@ -59,6 +60,7 @@ class SiteBulkActionsTest extends TestCase
         $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.channel').'"', $html);
         $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.compose').'"', $html);
         $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.auto-deploy').'"', $html);
+        $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.purge').'"', $html);
         $this->assertStringNotContainsString('formaction="'.route('ops.sites.bulk.sync').'"', $html);
         $this->assertStringNotContainsString('formaction="'.route('ops.sites.live-sync').'"', $html);
         $this->assertStringContainsString((string) $dockerfile->id, $html);

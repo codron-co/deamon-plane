@@ -111,6 +111,67 @@
         popover.style.bottom = Math.max(8, window.innerHeight - rect.top + 8) + "px";
     }
 
+    function setupActionMenus() {
+        const menus = Array.from(document.querySelectorAll("[data-ops-action-menu]"));
+        if (!menus.length) {
+            return;
+        }
+
+        function closeAll(except) {
+            menus.forEach(function (menu) {
+                if (menu !== except && menu.open) {
+                    menu.removeAttribute("open");
+                }
+            });
+        }
+
+        menus.forEach(function (menu) {
+            const summary = menu.querySelector("summary");
+            if (summary) {
+                summary.setAttribute("aria-haspopup", "menu");
+                summary.setAttribute("aria-expanded", menu.open ? "true" : "false");
+            }
+
+            menu.addEventListener("toggle", function () {
+                if (summary) {
+                    summary.setAttribute("aria-expanded", menu.open ? "true" : "false");
+                }
+                if (!menu.open) {
+                    return;
+                }
+                closeAll(menu);
+                const userMenu = document.querySelector("[data-user-menu]");
+                if (userMenu) {
+                    userMenu.removeAttribute("open");
+                }
+            });
+        });
+
+        document.addEventListener("click", function (event) {
+            if (event.target.closest("[data-ops-action-menu]")) {
+                return;
+            }
+            closeAll(null);
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key !== "Escape") {
+                return;
+            }
+            const openMenu = menus.find(function (menu) {
+                return menu.open;
+            });
+            if (!openMenu) {
+                return;
+            }
+            openMenu.removeAttribute("open");
+            const summary = openMenu.querySelector("summary");
+            if (summary) {
+                summary.focus();
+            }
+        });
+    }
+
     function setupUserMenu() {
         const menu = document.querySelector("[data-user-menu]");
         if (!menu) {
@@ -917,6 +978,7 @@
     }
 
     setupThemeControls();
+    setupActionMenus();
     setupUserMenu();
     setupPrefForms();
     setupClickableRows();

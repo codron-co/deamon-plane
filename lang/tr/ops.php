@@ -77,6 +77,7 @@ return [
         'provisioning' => 'kuruluyor',
         'active' => 'aktif',
         'deploying' => 'dağıtılıyor',
+        'stopped' => 'durduruldu',
         'error' => 'hata',
         'archived' => 'arşiv',
     ],

@@ -2,6 +2,12 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Site detail action menus + Coolify start/stop/hard delete (2026-09-10)
+
+- Status: **code**. Site show topbar is three menus: Sync (Coolify / Live Site / health), Site (homepage / admin), Settings (edit / activate-or-deactivate / soft delete / hard delete). Activate = Coolify `POST .../start` + status `stopped`→`active`. Deactivate = `POST .../stop` + `active`→`stopped`. Soft delete unchanged. Hard delete is the only Coolify `DELETE ?delete_volumes=true`, then `forceDelete`; also on `/sites` bulk. Tests: SiteLifecycleTest, CoolifyClientTest (`Http::fake`).
+
+## Site detail copy in i-hints (2026-09-10)
+
 ## Dalga 0 — Discovery / Spike
 
 - Status: **complete — Go**
@@ -157,9 +163,17 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 - Status: **ship**. Compose create/PATCH send only `docker_compose_domains` (`app` + `https://{operator-host}`). No `fqdn` field (Coolify: `This field is not allowed.`). `CoolifyApplication::primaryDomain()` prefers operator host over `{uuid}.demo.codron.co` / `.random.codron.co`. Plane does not promote generate-domain to `site_domains` primary. Retry provision if app uuid exists — do not recreate.
 
+## Site detail action menus + Coolify start/stop/hard delete (2026-09-10)
+
+- Status: **code**. Site show topbar is three menus: Sync (Coolify / Live Site / health), Site (homepage / admin), Settings (edit / activate-or-deactivate / soft delete / hard delete). Activate = Coolify `POST .../start` + status `stopped`→`active`. Deactivate = `POST .../stop` + `active`→`stopped`. Soft delete unchanged. Hard delete is the only Coolify `DELETE ?delete_volumes=true`, then `forceDelete`; also on `/sites` bulk. Tests: SiteLifecycleTest, CoolifyClientTest (`Http::fake`).
+
+## Site detail copy in i-hints (2026-09-10)
+
+- Status: **code**. Site show keeps operational facts and actions; explanatory ledes (`volume_note`, mail/agent/theme/pack/danger/next-action prose) live in `ops.dashboard._hint`. Idle “everything looks good” card and duplicate hero Open links are gone. Tests: SiteDetailTest, ChannelSwitchTest.
+
 ## Coolify environment name = main (2026-09-10)
 
-- Status: **code**. Default Coolify project environment name is `main` (1:1 with git channel / `sites.channel`). `config/ops.php` `COOLIFY_ENVIRONMENT_NAME`, `CreateComposeAppRequest`, provision fallback, and connection factory default to `main`. Leftover `production` / `prod` canonicalize to `main` on create; inventory still matches those aliases. Laravel `APP_ENV` stays `production` / `staging` / `local`. Tests: ChannelEnvironmentMapTest, ProvisionSiteTest, CoolifyClientTest (`Http::fake`).
+- Status: **code + live Deamon env**. Default Coolify project environment name is `main` (1:1 with git channel / `sites.channel`). `config/ops.php` `COOLIFY_ENVIRONMENT_NAME`, `CreateComposeAppRequest`, provision fallback, and connection factory default to `main`. Leftover `production` / `prod` canonicalize to `main` on create; inventory still matches those aliases. Laravel `APP_ENV` stays `production` / `staging` / `local`. Live: Deamon project env `i0sw4kk0cogg4o08oscwcssk` renamed `production` → `main` (same uuid, 18 apps). Other Coolify projects’ `production` envs left alone. Plane inventory row updated. Tests: ChannelEnvironmentMapTest, ProvisionSiteTest, CoolifyClientTest (`Http::fake`).
 
 ## Slice 1 — server IP (2026-09-10)
 

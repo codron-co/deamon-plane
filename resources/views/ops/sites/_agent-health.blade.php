@@ -10,12 +10,15 @@
     $queueOk = array_key_exists('queue_ok', $payload) ? $payload['queue_ok'] : null;
     $reason = is_string($payload['reason'] ?? null) ? $payload['reason'] : null;
     $agentHint = __('sites.agent.lede', ['path' => '/internal/control/v1/health']);
+    if (! $site->hasAgentSecret()) {
+        $agentHint .= ' '.__('sites.agent.missing_hint');
+    }
     $statusLabel = __('ops.health.'.$display).($reason ? ' · '.$reason : '');
 @endphp
 
 <article class="site-card site-operation" aria-labelledby="agent-health-heading">
     <div class="site-card-head">
-        <h3 id="agent-health-heading">{{ __('sites.agent.title') }} <button class="site-hint" type="button" aria-label="{{ $agentHint }}"><span aria-hidden="true">i</span><span role="tooltip">{{ $agentHint }}</span></button></h3>
+        <h3 id="agent-health-heading">{{ __('sites.agent.title') }} @include('ops.dashboard._hint', ['text' => $agentHint])</h3>
         <div class="branch-version">
             <span class="status-chip status-{{ $display }}">{{ $statusLabel }}</span>
             @if ($canWriteAgentSecret && $site->hasAgentSecret())
@@ -75,8 +78,4 @@
             <dd>{{ $site->hasAgentSecret() ? __('ops.health.configured') : __('ops.health.missing') }}</dd>
         </div>
     </dl>
-
-    @if (! $site->hasAgentSecret())
-        <p class="field-hint">{{ __('sites.agent.missing_hint') }}</p>
-    @endif
 </article>

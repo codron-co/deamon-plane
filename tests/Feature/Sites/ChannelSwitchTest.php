@@ -447,7 +447,7 @@ class ChannelSwitchTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_edit_shows_confirm_modal_and_volume_note_for_main_downgrade(): void
+    public function test_show_keeps_volume_note_in_hint_and_uses_confirm_modal(): void
     {
         $site = $this->activeSite();
 
@@ -463,6 +463,8 @@ class ChannelSwitchTest extends TestCase
             ->getContent();
 
         $this->assertStringNotContainsString('Force switch to main', $html);
+        $this->assertMatchesRegularExpression('/class="site-hint"[^>]*>[\s\S]*Never DELETE the Coolify application/', $html);
+        $this->assertStringNotContainsString('<p class="field-hint">', $html);
     }
 
     public function test_channel_switch_from_beta_still_uses_confirm_modal(): void

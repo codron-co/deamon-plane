@@ -27,6 +27,11 @@ class CoolifyApiException extends RuntimeException
         return $this->status === 409 || $this->conflicts !== [];
     }
 
+    public function isNotFound(): bool
+    {
+        return $this->status === 404;
+    }
+
     public static function fromResponse(Response $response, ?string $token = null): self
     {
         $json = $response->json();

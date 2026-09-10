@@ -179,6 +179,30 @@ class SiteTest extends TestCase
         $this->assertFalse($unprovisioned->canSwitchChannel());
     }
 
+    public function test_coolify_start_and_stop_follow_stopped_and_active(): void
+    {
+        $active = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'coolify_app_uuid' => 'app-1',
+        ]);
+        $this->assertTrue($active->canStopCoolify());
+        $this->assertFalse($active->canStartCoolify());
+
+        $stopped = Site::factory()->create([
+            'status' => SiteStatus::Stopped,
+            'coolify_app_uuid' => 'app-1',
+        ]);
+        $this->assertTrue($stopped->canStartCoolify());
+        $this->assertFalse($stopped->canStopCoolify());
+
+        $noApp = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'coolify_app_uuid' => null,
+        ]);
+        $this->assertFalse($noApp->canStopCoolify());
+        $this->assertFalse($noApp->canStartCoolify());
+    }
+
     public function test_last_failure_message_comes_from_latest_deployment(): void
     {
         $site = Site::factory()->create(['status' => SiteStatus::Error]);

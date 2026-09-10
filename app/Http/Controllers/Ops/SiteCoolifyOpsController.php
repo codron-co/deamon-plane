@@ -15,6 +15,7 @@ use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\ComposePackException;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
+use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLiveProbe;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -201,6 +202,56 @@ class SiteCoolifyOpsController extends Controller
         return redirect()
             ->route('ops.sites')
             ->with('status', __('sites.flash.sync_get'));
+    }
+
+    public function liveSyncOne(Request $request, Site $site, SiteLiveProbe $probe): RedirectResponse|JsonResponse
+    {
+        $this->authorize('update', $site);
+
+        if (blank($site->primary_domain)) {
+            return back()->with('error', __('sites.flash.live_sync_missing_domain'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.live_sync', __('ops.jobs.live_sync'), [
+                'site_ids' => [$site->id],
+            ]);
+        }
+
+        $result = $probe->probeMany(collect([$site]));
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('sites.flash.live_synced', [
+                'ok' => $result['ok'],
+                'failed' => $result['failed'],
+            ]));
+    }
+
+    public function redirectGetLiveSyncOne(Site $site): RedirectResponse
+    {
+        $this->authorize('view', $site);
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('sites.flash.live_sync_get'));
+    }
+
+    public function bulkPurge(BulkSiteIdsRequest $request, SiteLifecycle $lifecycle): RedirectResponse
+    {
+        $sites = $this->sitesFromBulk($request);
+
+        foreach ($sites as $site) {
+            $this->authorize('forceDelete', $site);
+        }
+
+        if ($sites->isEmpty()) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        $result = $lifecycle->purgeMany($sites, $request->user(), $request->ip());
+
+        return back()->with('status', $this->bulkFlash($result, __('sites.flash.bulk_purged')));
     }
 
     public function liveSync(BulkSiteIdsRequest $request, SiteLiveProbe $probe): RedirectResponse|JsonResponse

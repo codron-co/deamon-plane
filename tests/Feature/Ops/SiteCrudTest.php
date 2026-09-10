@@ -414,7 +414,9 @@ class SiteCrudTest extends TestCase
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('data-confirm=', false)
-            ->assertSee(__('sites.danger.button'), false);
+            ->assertSee(__('sites.menu.soft_delete'), false)
+            ->assertSee(__('sites.menu.hard_delete'), false)
+            ->assertSee('data-ops-action-menu', false);
     }
 
     /**

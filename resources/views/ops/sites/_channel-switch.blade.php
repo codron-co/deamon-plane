@@ -8,9 +8,10 @@
     $isDowngradeFromMain = $currentChannel === 'main';
     $defaultTarget = old('channel', $site->desired_channel?->value ?? ($channelSwitchTargets[0] ?? ''));
     $volumeNote = __('sites.channel_switch.volume_note');
-    $channelHint = $isDowngradeFromMain
+    $channelHint = ($isDowngradeFromMain
         ? __('sites.channel_switch.hint_leave_main').' '.__('sites.channel_switch.backup_hint')
-        : __('sites.channel_switch.hint_to_main').' '.__('sites.channel_switch.backup_hint');
+        : __('sites.channel_switch.hint_to_main').' '.__('sites.channel_switch.backup_hint')
+    ).' '.$volumeNote;
     $channelConfirm = $isDowngradeFromMain
         ? __('sites.channel_switch.confirm_leave', ['target' => $defaultTarget !== '' ? $defaultTarget : 'beta/alpha'])
         : __('sites.channel_switch.confirm_switch', ['site' => $site->name, 'target' => $defaultTarget !== '' ? $defaultTarget : 'main']);
@@ -25,21 +26,19 @@
 @if ($channelSwitchInProgress)
     <article class="site-card site-operation" aria-labelledby="channel-switch-heading">
         <div class="site-card-head">
-            <h3 id="channel-switch-heading">{{ __('sites.channel_switch.title') }} <button class="site-hint" type="button" aria-label="{{ $channelHint }}"><span aria-hidden="true">i</span><span role="tooltip">{{ $channelHint }}</span></button></h3>
+            <h3 id="channel-switch-heading">{{ __('sites.channel_switch.title') }} @include('ops.dashboard._hint', ['text' => $channelHint])</h3>
             <span class="status-chip">{{ $site->desired_channel?->value ?? $currentChannel }}</span>
         </div>
         <p class="ops-flash" role="status">
             {{ __('sites.channel_switch.in_progress', ['channel' => $site->desired_channel?->value ?? '']) }}
         </p>
-        <p class="field-hint">{{ $volumeNote }}</p>
     </article>
 @elseif ($canSwitchChannel)
     <article class="site-card site-operation" aria-labelledby="channel-switch-heading">
         <div class="site-card-head">
-            <h3 id="channel-switch-heading">{{ __('sites.channel_switch.title') }} <button class="site-hint" type="button" aria-label="{{ $channelHint }}"><span aria-hidden="true">i</span><span role="tooltip">{{ $channelHint }}</span></button></h3>
+            <h3 id="channel-switch-heading">{{ __('sites.channel_switch.title') }} @include('ops.dashboard._hint', ['text' => $channelHint])</h3>
             <span class="branch-chip">{{ $currentChannel }}</span>
         </div>
-        <p class="field-hint">{{ $volumeNote }}</p>
 
         <form
             method="POST"
@@ -72,8 +71,7 @@
 
             @if ($canForceChannel && $currentChannel !== 'main')
                 <div class="field">
-                    <span class="field-label">{{ __('sites.channel_switch.force') }}</span>
-                    <p class="field-hint">{{ __('sites.channel_switch.force_hint') }}</p>
+                    <span class="field-label">{{ __('sites.channel_switch.force') }} @include('ops.dashboard._hint', ['text' => __('sites.channel_switch.force_hint')])</span>
                     <input type="hidden" name="force" value="0">
                     <label class="field-check">
                         <input type="checkbox" name="force" value="1" @checked(old('force'))>

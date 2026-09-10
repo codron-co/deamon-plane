@@ -77,6 +77,7 @@ return [
         'provisioning' => 'provisioning',
         'active' => 'active',
         'deploying' => 'deploying',
+        'stopped' => 'stopped',
         'error' => 'error',
         'archived' => 'archived',
     ],

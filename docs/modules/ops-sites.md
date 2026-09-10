@@ -24,8 +24,14 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | GET | `/sites/bulk/live-sync` | `ops.sites.live-sync.get` | **Does not probe.** 302 to list |
 | POST | `/sites/{site}/sync` | `ops.sites.sync` | operator, super_admin; GET Coolify app + last 25 deployments |
 | GET | `/sites/{site}/sync` | `ops.sites.sync.get` | **Does not sync.** 302 to show |
+| POST | `/sites/{site}/live-sync` | `ops.sites.live-sync.one` | operator, super_admin; GET the site homepage |
+| GET | `/sites/{site}/live-sync` | `ops.sites.live-sync.one.get` | **Does not probe.** 302 to show |
+| POST | `/sites/{site}/activate` | `ops.sites.activate` | operator, super_admin; Coolify start + status `active` |
+| POST | `/sites/{site}/deactivate` | `ops.sites.deactivate` | operator, super_admin; Coolify stop + status `archived` |
+| POST | `/sites/bulk/purge` | `ops.sites.bulk.purge` | operator, super_admin; hard-delete selected sites |
 | POST | `/sites/{site}/agent-secret` | `ops.sites.agent-secret` | operator, super_admin; Coolify env inject |
-| DELETE | `/sites/{site}` | `ops.sites.destroy` | operator, super_admin |
+| DELETE | `/sites/{site}/purge` | `ops.sites.purge` | operator, super_admin; Coolify DELETE `delete_volumes=true` then `forceDelete` |
+| DELETE | `/sites/{site}` | `ops.sites.destroy` | operator, super_admin; **soft delete**. Coolify is not contacted |
 
 Coolify connections live under `/coolify` (`ops.coolify.*`) — left nav **Coolify**. See [coolify-client.md](coolify-client.md).
 
@@ -50,7 +56,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 - Status is always **draft** on create. The form cannot change status.
 - `APP_KEY` / `agent_secret` are generated on **Provision**, stored encrypted, never shown in the form or audit payloads.
 - Channel and slug are locked on the CRUD form once status is not `draft`. Live switches use the Channel switch panel (`ChannelSwitcher`).
-- Destroy is a **soft delete** with the ops confirm modal (`data-confirm` / `PlaneConfirm.ask`). `window.confirm` is not used. Mutating site ops (provision, Coolify sync, auto-deploy, pin / follow HEAD, channel switch, theme assign/update/sync/activate/auto-update, agent inject/rotate) use the same modal. Bulk buttons may put `data-confirm` on the submitter; `ops-confirm.js` reads the submitter and `requestSubmit(submitter)` so `formaction` is kept.
+- Destroy is a **soft delete** with the ops confirm modal (`data-confirm` / `PlaneConfirm.ask`). Coolify is not contacted. **Hard delete** (`DELETE /sites/{site}/purge` and list bulk Hard Delete) calls Coolify `DELETE /applications/{uuid}?delete_volumes=true` then `forceDelete()`s the Plane row. Channel switch still never DELETE. `window.confirm` is not used. Mutating site ops (provision, Coolify sync, live sync, activate/deactivate, auto-deploy, pin / follow HEAD, channel switch, theme assign/update/sync/activate/auto-update, agent inject/rotate) use the same modal. Bulk buttons may put `data-confirm` on the submitter; `ops-confirm.js` reads the submitter and `requestSubmit(submitter)` so `formaction` is kept.
 
 ## Provision
 
@@ -74,7 +80,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Site detail
 
-Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, next action, then Deployments / Themes / Infrastructure / Danger. **Edit** is a separate route. Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark uses `IdentityMark::letter()` (UTF-8 first character — not PHP `substr`) as the no-JS / failure fallback. JS prefers `data-favicon-src` from Live Sync, then `https://{host}/favicon.ico`, then `/apple-touch-icon.png`. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
+Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, then Deployments / Themes / Infrastructure / Danger. The topbar uses **Sync** (Coolify / Live Site / Health check), **Site** (homepage / admin panel), and **Settings** (Edit / Activate or Deactivate / Soft Delete / Hard Delete) dropdowns. Provision stays a primary button on draft/error. **Edit** is a separate route. Explanatory copy lives in `i` hints (`ops.dashboard._hint`), not page paragraphs. The next-action card appears only when there is work (error, provision, health). Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark uses `IdentityMark::letter()` (UTF-8 first character — not PHP `substr`) as the no-JS / failure fallback. JS prefers `data-favicon-src` from Live Sync, then `https://{host}/favicon.ico`, then `/apple-touch-icon.png`. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
 
 ## Deployments
 
@@ -82,7 +88,7 @@ Site detail includes a **Deployments** table (`ops/deployments/index`): last 25 
 
 ## Policy
 
-`App\Policies\SitePolicy`: viewer can `viewAny` / `view`. `create` / `update` / `delete` / `provision` / `switchChannel` / `checkHealth` require `User::canWriteOps()` (operator or super_admin). Force on the version gate is Super Admin only (enforced in `ChannelSwitcher`, not a separate Gate).
+`App\Policies\SitePolicy`: viewer can `viewAny` / `view`. `create` / `update` / `delete` / `forceDelete` / `provision` / `switchChannel` / `checkHealth` require `User::canWriteOps()` (operator or super_admin). Force on the version gate is Super Admin only (enforced in `ChannelSwitcher`, not a separate Gate).
 
 ## Agent health
 
@@ -98,7 +104,7 @@ GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `stat
 
 Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. Recreate required → abort.
 
-List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off). Confirm on each. Viewer forbidden.
+List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off), **Hard Delete**. Confirm on each. Viewer forbidden.
 
 ## Import existing Coolify apps
 

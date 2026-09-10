@@ -600,6 +600,37 @@ class CoolifyClientTest extends TestCase
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
     }
 
+    public function test_start_and_stop_application_post_to_coolify(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/applications/app-1/start' => Http::response(['message' => 'Starting'], 200),
+            'https://coolify.test/api/v1/applications/app-1/stop' => Http::response(['message' => 'Stopping'], 200),
+        ]);
+
+        $this->client()->startApplication('app-1');
+        $this->client()->stopApplication('app-1');
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://coolify.test/api/v1/applications/app-1/start');
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://coolify.test/api/v1/applications/app-1/stop');
+    }
+
+    public function test_delete_application_sends_delete_volumes_query_explicitly(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/applications/app-1*' => Http::response('', 200),
+        ]);
+
+        $this->client()->deleteApplication('app-1', true);
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'DELETE'
+                && str_starts_with($request->url(), 'https://coolify.test/api/v1/applications/app-1')
+                && str_contains($request->url(), 'delete_volumes=true');
+        });
+    }
+
     private function client(): CoolifyClient
     {
         return new CoolifyClient(new CoolifyCredentials(self::BASE, self::TOKEN));

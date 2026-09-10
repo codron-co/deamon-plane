@@ -45,14 +45,20 @@
         false => __('site_ops.auto_deploy.status_off'),
         default => __('site_ops.auto_deploy.status_unknown'),
     };
+    $autoDeployHint = __('site_ops.auto_deploy.lede');
+    if (! $autoDeployKnown) {
+        $autoDeployHint .= ' '.__('site_ops.auto_deploy.unknown_hint');
+    }
+    if ($autoDeployOn === false) {
+        $autoDeployHint .= ' '.__('site_ops.pin.lede').' '.__('site_ops.pin.volume_warning');
+    }
 @endphp
 
 @if ($showPack)
     <article class="site-card site-operation" aria-labelledby="coolify-pack-heading">
         <div class="site-card-head">
-            <h3 id="coolify-pack-heading">{{ __('site_ops.pack.title') }}</h3>
+            <h3 id="coolify-pack-heading">{{ __('site_ops.pack.title') }} @include('ops.dashboard._hint', ['text' => __('site_ops.pack.warning')])</h3>
         </div>
-        <p class="ops-alert ops-alert-warning" role="status">{{ __('site_ops.pack.warning') }}</p>
         @if ($canOps)
             <form
                 method="POST"
@@ -75,7 +81,7 @@
 @if (filled($site->coolify_app_uuid) && ($canOps || filled($snapshot['git_commit_sha']) || filled($snapshot['error'])))
     <article class="site-card site-operation" data-autodeploy aria-labelledby="coolify-ops-heading">
         <div class="site-card-head">
-            <h3 id="coolify-ops-heading">{{ __('site_ops.auto_deploy.title') }} <button class="site-hint" type="button" aria-label="{{ __('site_ops.auto_deploy.lede') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('site_ops.auto_deploy.lede') }}</span></button></h3>
+            <h3 id="coolify-ops-heading">{{ __('site_ops.auto_deploy.title') }} @include('ops.dashboard._hint', ['text' => $autoDeployHint])</h3>
             <div class="branch-version">
                 <span class="status-chip">{{ $autoDeployLabel }}</span>
                 @if ($canOps && $autoDeployOn !== false)
@@ -112,17 +118,14 @@
 
         @if ($snapshot['error'])
             <p class="ops-alert" role="alert">{{ $snapshot['error'] }}</p>
-        @elseif (! $autoDeployKnown)
-            <p class="field-hint" role="note">{{ __('site_ops.auto_deploy.unknown_hint') }}</p>
         @endif
 
         @if ($autoDeployOn === false)
-            <p class="field-hint" role="note">{{ __('site_ops.pin.volume_warning') }}</p>
             <p class="site-pin-status">
                 @if ($currentSha)
-                    {!! __('site_ops.pin.status_pinned', ['sha' => '<b>'.e($currentSha).'</b>']) !!}
+                    {{ __('site_ops.pin.current') }} <code>{{ $currentSha }}</code>
                 @else
-                    {{ __('site_ops.pin.status_unpinned') }}
+                    {{ __('site_ops.pin.none') }}
                 @endif
             </p>
 
