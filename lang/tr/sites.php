@@ -77,6 +77,7 @@ return [
         'technical_details' => 'Teknik kimlikler',
         'technical_details_hint' => 'Coolify UUID ve hedef bilgileri',
         'danger' => 'Tehlikeli bölge',
+        'not_linked' => 'Bağlı değil',
     ],
     'create' => [
         'title' => 'Yeni site',
@@ -192,8 +193,13 @@ return [
     ],
     'themes' => [
         'title' => 'Temalar',
+        'kicker' => 'Görünüm',
         'lede' => 'Atama CMS tema agent’ı üzerinden kurulur. Plane ZIP yüklemez ve rastgele PHP’yi Coolify volume’una kopyalamaz. Otomatik güncelleme siz açmadıkça kapalıdır.',
         'empty' => 'Bu sitede tema kurulumu yok.',
+        'empty_title' => 'Aktif tema bulunamadı',
+        'empty_hint' => 'Katalogdan uyumlu bir tema atayarak başlayın.',
+        'active_label' => 'Aktif tema',
+        'via_agent' => 'CMS agent ile kurulur',
         'columns' => [
             'theme' => 'Tema',
             'ref' => 'Ref / SHA',

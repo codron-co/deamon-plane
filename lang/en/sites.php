@@ -77,6 +77,7 @@ return [
         'technical_details' => 'Technical identifiers',
         'technical_details_hint' => 'Coolify UUID and target information',
         'danger' => 'Danger zone',
+        'not_linked' => 'Not connected',
     ],
     'create' => [
         'title' => 'New site',
@@ -192,8 +193,13 @@ return [
     ],
     'themes' => [
         'title' => 'Themes',
+        'kicker' => 'Appearance',
         'lede' => 'Assign installs via the CMS theme agent. Plane never uploads a ZIP and never copies random PHP onto Coolify volumes. Auto-update stays off unless you opt in.',
         'empty' => 'No theme installations on this site.',
+        'empty_title' => 'No active theme',
+        'empty_hint' => 'Assign a compatible catalog theme to get started.',
+        'active_label' => 'Active theme',
+        'via_agent' => 'Installed by the CMS agent',
         'columns' => [
             'theme' => 'Theme',
             'ref' => 'Ref / SHA',
