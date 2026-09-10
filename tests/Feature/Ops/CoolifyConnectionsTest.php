@@ -75,6 +75,28 @@ class CoolifyConnectionsTest extends TestCase
         );
     }
 
+    public function test_connection_show_renders_allowlist_without_ending_parent_section(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'api_token' => self::TOKEN,
+            'name' => 'Prod Coolify',
+        ]);
+        CoolifyServer::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'uuid' => 'edge-1',
+            'name' => 'edge',
+            'ip' => '1.2.3.4',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.coolify.show', $connection))
+            ->assertOk()
+            ->assertSee('edge', false)
+            ->assertSee('1.2.3.4', false)
+            ->assertSee(__('coolify.allowlist.servers'), false);
+    }
+
     public function test_get_sync_redirects_to_show_and_does_not_call_coolify(): void
     {
         Http::fake();
