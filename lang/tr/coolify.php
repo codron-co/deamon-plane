@@ -87,7 +87,7 @@ return [
         'projects' => 'Projeler',
         'projects_hint' => 'Coolify project. Ortamlar proje altında.',
         'environments' => 'Ortamlar',
-        'environments_hint' => 'Coolify environment (git dalı değil).',
+        'environments_hint' => 'Coolify ortamı. Varsayılan ad main (git kanalıyla 1:1); production eski bir takma ad.',
         'git' => 'Git kaynakları',
         'git_hint' => 'Coolify GitHub App ve deploy key. Plane tema kataloğu değil.',
         'empty' => 'Liste boş. Sync düğmesiyle API’den çekin.',

@@ -87,7 +87,7 @@ return [
         'projects' => 'Projects',
         'projects_hint' => 'Coolify project. Environments live under a project.',
         'environments' => 'Environments',
-        'environments_hint' => 'Coolify environment (not the git branch).',
+        'environments_hint' => 'Coolify environment. Default name is main (same as the git channel); production is a leftover alias.',
         'git' => 'Git sources',
         'git_hint' => 'Coolify GitHub App and deploy key. Not the Plane theme catalog.',
         'empty' => 'List is empty. Use Sync to pull from the API.',

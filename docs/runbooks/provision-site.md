@@ -18,6 +18,7 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
 4. Job creates a Coolify application:
    - Git repository from site / `DEAMON_GIT_REPOSITORY` (customer CMS repo, not this Plane repo)
    - Branch = site channel
+   - Coolify environment **name** defaults to `main` (1:1 with the main channel). Leftover connection name `production` / `prod` is rewritten to `main`. Laravel `APP_ENV` stays `production` / `staging` / `local`.
    - Build pack **Docker Compose** (`build_pack=dockercompose`)
    - Compose file `/docker-compose.coolify.yml` (Coolify `docker_compose_location` requires a leading slash)
    - Stack is **app + isolated MySQL + isolated Redis** (no shared DB/Redis)
