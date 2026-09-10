@@ -1,16 +1,12 @@
 <section class="settings-panel" aria-labelledby="github-connection-heading">
-    <h2 id="github-connection-heading">GitHub theme catalog</h2>
-    <p class="field-hint">
-        Org lock <code>{{ config('ops.themes.org') }}</code>, repo prefix <code>{{ $themeRepoPrefix }}</code>.
-        PAT or GitHub App credentials are encrypted. They never appear after save.
-        Distinct from Coolify’s GitHub App UUID (used to create customer compose apps).
-    </p>
+    <h2 id="github-connection-heading">{{ __('settings.github.title') }}</h2>
+    <p class="field-hint">{{ __('settings.github.lede', ['org' => config('ops.themes.org'), 'prefix' => $themeRepoPrefix]) }}</p>
 
     <form method="POST" action="{{ route('ops.settings.github.update') }}" class="ops-form settings-form">
         @csrf
 
         <div class="field">
-            <label class="field-label" for="github-org">Organization</label>
+            <label class="field-label" for="github-org">{{ __('settings.github.org') }}</label>
             <input
                 id="github-org"
                 class="field-input"
@@ -23,12 +19,12 @@
         </div>
 
         <div class="field">
-            <label class="field-label" for="github-token">Fine-grained PAT</label>
+            <label class="field-label" for="github-token">{{ __('settings.github.token') }}</label>
             <p class="field-hint">
                 @if ($githubHasToken)
-                    Token configured. Leave blank to keep the current value.
+                    {{ __('settings.github.token_configured') }}
                 @else
-                    Optional if a GitHub App is configured. Contents + metadata on <code>deamon-theme-*</code>.
+                    {{ __('settings.github.token_hint') }}
                 @endif
             </p>
             <input
@@ -44,7 +40,7 @@
         </div>
 
         <div class="field">
-            <label class="field-label" for="github-app-id">GitHub App id</label>
+            <label class="field-label" for="github-app-id">{{ __('settings.github.app_id') }}</label>
             <input
                 id="github-app-id"
                 class="field-input"
@@ -57,7 +53,7 @@
         </div>
 
         <div class="field">
-            <label class="field-label" for="github-installation-id">Installation id</label>
+            <label class="field-label" for="github-installation-id">{{ __('settings.github.installation') }}</label>
             <input
                 id="github-installation-id"
                 class="field-input"
@@ -70,12 +66,12 @@
         </div>
 
         <div class="field">
-            <label class="field-label" for="github-private-key">App private key (PEM)</label>
+            <label class="field-label" for="github-private-key">{{ __('settings.github.private_key') }}</label>
             <p class="field-hint">
                 @if ($githubHasApp)
-                    Private key configured. Leave blank to keep the current value.
+                    {{ __('settings.github.key_configured') }}
                 @else
-                    Encrypted. Used only to mint short-lived installation tokens. Never logged.
+                    {{ __('settings.github.key_hint') }}
                 @endif
             </p>
             <textarea
@@ -89,17 +85,17 @@
         </div>
 
         <div class="field">
-            <span class="field-label">Theme webhook URL</span>
-            <p class="field-hint">GitHub org/repo webhook → this URL. Not the Coolify deploy webhook.</p>
+            <span class="field-label">{{ __('settings.github.webhook_url') }}</span>
+            <p class="field-hint">{{ __('settings.github.webhook_url_hint') }}</p>
             <input class="field-input" type="text" value="{{ $githubWebhookUrl }}" readonly>
         </div>
 
         <div class="field">
-            <label class="field-label" for="github-webhook-secret">GitHub webhook secret</label>
+            <label class="field-label" for="github-webhook-secret">{{ __('settings.github.webhook_secret') }}</label>
             <p class="field-hint">
-                Encrypted. Header <code>X-Hub-Signature-256</code>. Empty secret is rejected.
+                {{ __('settings.github.webhook_secret_hint') }}
                 @if ($githubHasWebhookSecret)
-                    Secret configured. Leave blank to keep the current value.
+                    {{ __('settings.github.secret_configured') }}
                 @endif
             </p>
             <input
@@ -116,11 +112,11 @@
 
         @if ($canWrite)
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Save GitHub</button>
-                <button type="submit" class="btn btn-secondary" formaction="{{ route('ops.settings.github.test') }}">Test GitHub</button>
+                <button type="submit" class="btn btn-primary">{{ __('settings.github.save') }}</button>
+                <button type="submit" class="btn btn-secondary" formaction="{{ route('ops.settings.github.test') }}">{{ __('settings.github.test') }}</button>
             </div>
         @else
-            <p class="field-hint">Viewer role is read-only.</p>
+            <p class="field-hint">{{ __('ops.viewer_readonly') }}</p>
         @endif
     </form>
 </section>

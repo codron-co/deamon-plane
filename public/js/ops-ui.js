@@ -10,6 +10,7 @@
         document.documentElement.dataset.theme = value;
         try {
             window.localStorage.setItem(THEME_KEY, value);
+            document.cookie = THEME_KEY + "=" + encodeURIComponent(value) + ";path=/;max-age=" + String(60 * 60 * 24 * 400) + ";samesite=lax";
         } catch (error) {
             /* localStorage can be unavailable in privacy-restricted contexts */
         }

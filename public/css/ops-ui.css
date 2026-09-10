@@ -18,6 +18,12 @@ html[data-theme="semidark"] {
     --text: #f0f1f4;
     --text-muted: #a0a6b1;
     --text-faint: #777e8a;
+    --success-surface: #17301f;
+    --success-border: #234d32;
+    --warning-surface: #2c2412;
+    --warning-border: #5e4d18;
+    --danger-surface: #311416;
+    --danger-border: #522024;
     --shadow-popover: 0 16px 48px rgba(0, 0, 0, 0.32), 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
@@ -32,7 +38,16 @@ html[data-theme="light"] {
     --text-muted: #5e6672;
     --text-faint: #818995;
     --danger-text: #b4232d;
+    --danger-text-strong: #a32731;
     --focus: #4f5bc5;
+    --success-surface: #ecf9f0;
+    --success-border: #b9e4c6;
+    --success-text: #1e6b38;
+    --warning-surface: #fff9df;
+    --warning-border: #eadb89;
+    --warning-text: #66530c;
+    --danger-surface: #fff0f1;
+    --danger-border: #f2c4c8;
     --shadow-popover: 0 16px 48px rgba(19, 27, 38, 0.13), 0 2px 10px rgba(19, 27, 38, 0.08);
 }
 
@@ -116,6 +131,7 @@ html[data-theme="light"] {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
+    object-fit: cover;
 }
 
 .ops-user-copy {
@@ -522,6 +538,64 @@ html[data-theme="light"] {
     margin: 0 0 10px;
     font-size: 13px;
     font-weight: 600;
+}
+
+.ops-theme-choices form {
+    min-width: 0;
+}
+
+.ops-menu-link.is-active {
+    color: var(--text);
+    background: var(--surface-overlay);
+}
+
+.ops-form-stack {
+    display: grid;
+    gap: 18px;
+    max-width: 640px;
+}
+
+.ops-form-section {
+    display: grid;
+    gap: 14px;
+    padding: 0;
+}
+
+.ops-form-section h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ops-avatar-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.ops-avatar-preview,
+.ops-avatar-preview-fallback {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.ops-avatar-preview-fallback {
+    font-size: 22px;
+}
+
+.btn.is-pending {
+    opacity: 0.72;
+    cursor: wait;
+}
+
+.ops-skeleton {
+    display: block;
+    height: 12px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--text-faint) 18%, var(--surface-overlay));
 }
 
 /* Hard-coded dark status surfaces need light-theme counterparts until ops.css is fully tokenized. */

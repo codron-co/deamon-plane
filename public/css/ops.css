@@ -13,6 +13,16 @@
     --danger-text: #fca5a5;
     --success: #22c55e;
     --warning: #eab308;
+    --info: #60a5fa;
+    --success-surface: #14261c;
+    --success-border: #1f3d2c;
+    --success-text: #86efac;
+    --warning-surface: #2a2110;
+    --warning-border: #5c4a14;
+    --warning-text: #fde68a;
+    --danger-surface: #2a1214;
+    --danger-border: #4a1c20;
+    --danger-text-strong: #fecaca;
     --focus: #5e6ad2;
     --radius: 6px;
     --sidebar: 224px;
@@ -198,6 +208,24 @@ code {
     border-bottom: 1px solid var(--border);
 }
 
+.ops-topbar-start {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ops-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-faint);
+    font-size: 11px;
+}
+
+.ops-breadcrumbs a:hover {
+    color: var(--text);
+}
+
 .ops-page-title {
     margin: 0;
     font-size: 14px;
@@ -274,14 +302,14 @@ code {
 
 .fleet-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
+    grid-template-columns: 1fr;
     gap: 16px;
     margin-top: 20px;
 }
 
 .fleet-attention {
-    background: #1a1608;
-    border: 1px solid #5c4a14;
+    background: var(--warning-surface);
+    border: 1px solid var(--warning-border);
     border-radius: 8px;
     padding: 14px 16px;
 }
@@ -298,14 +326,14 @@ code {
     margin: 0;
     font-size: 13px;
     font-weight: 600;
-    color: #fde68a;
+    color: var(--warning-text);
 }
 
 .fleet-attention-lede {
     margin: 4px 0 0;
-    color: #c4b572;
+    color: var(--warning-text);
     font-size: 12px;
-    max-width: 52ch;
+    max-width: none;
 }
 
 .fleet-attention-list {
@@ -324,7 +352,7 @@ code {
     min-height: 36px;
     padding: 6px 8px;
     border-radius: var(--radius);
-    background: rgba(8, 10, 10, 0.35);
+    background: color-mix(in srgb, var(--surface-base) 55%, transparent);
 }
 
 .fleet-attention-list a {
@@ -339,7 +367,7 @@ code {
 }
 
 .fleet-attention-list a:hover .fleet-attention-name {
-    color: #fde68a;
+    color: var(--warning-text);
 }
 
 .fleet-attention-list code {
@@ -388,9 +416,9 @@ code {
     margin: 0 0 16px;
     padding: 10px 12px;
     border-radius: var(--radius);
-    background: #14261c;
-    border: 1px solid #1f3d2c;
-    color: #86efac;
+    background: var(--success-surface);
+    border: 1px solid var(--success-border);
+    color: var(--success-text);
     font-size: 13px;
 }
 
@@ -398,16 +426,16 @@ code {
     margin: 0 0 16px;
     padding: 10px 12px;
     border-radius: var(--radius);
-    background: #2a1214;
-    border: 1px solid #4a1c20;
-    color: #fca5a5;
+    background: var(--danger-surface);
+    border: 1px solid var(--danger-border);
+    color: var(--danger-text);
     font-size: 13px;
 }
 
 .ops-alert-warning {
-    background: #2a2110;
-    border-color: #5c4a14;
-    color: #fde68a;
+    background: var(--warning-surface);
+    border-color: var(--warning-border);
+    color: var(--warning-text);
 }
 
 .ops-form {
@@ -566,8 +594,8 @@ code {
 }
 
 .btn-danger-text:hover {
-    background: #2a1214;
-    color: #fecaca;
+    background: var(--danger-surface);
+    color: var(--danger-text-strong);
 }
 
 .btn-sm {
@@ -676,7 +704,7 @@ code {
 }
 
 .site-name:hover {
-    color: #c4c8f0;
+    color: var(--accent-hover);
 }
 
 .site-slug {
@@ -711,9 +739,9 @@ code {
 }
 
 .status-dockerfile {
-    color: #fde68a;
-    border-color: #3f3514;
-    background: #1f1a0a;
+    color: var(--warning-text);
+    border-color: var(--warning-border);
+    background: var(--warning-surface);
 }
 
 .status-draft {
@@ -722,18 +750,18 @@ code {
 
 .status-provisioning,
 .status-deploying {
-    color: #fde68a;
-    border-color: #3f3514;
+    color: var(--warning-text);
+    border-color: var(--warning-border);
 }
 
 .status-active {
-    color: #86efac;
-    border-color: #1f3d2c;
+    color: var(--success-text);
+    border-color: var(--success-border);
 }
 
 .status-error {
     color: var(--danger-text);
-    border-color: #4a1c20;
+    border-color: var(--danger-border);
 }
 
 .status-archived {
@@ -741,13 +769,13 @@ code {
 }
 
 .status-finished {
-    color: #86efac;
-    border-color: #1f3d2c;
+    color: var(--success-text);
+    border-color: var(--success-border);
 }
 
 .status-failed {
     color: var(--danger-text);
-    border-color: #4a1c20;
+    border-color: var(--danger-border);
 }
 
 .status-cancelled,
@@ -756,25 +784,25 @@ code {
 }
 
 .status-in_progress {
-    color: #fde68a;
-    border-color: #3f3514;
+    color: var(--warning-text);
+    border-color: var(--warning-border);
 }
 
 .status-ok {
-    color: #86efac;
-    border-color: #1f3d2c;
+    color: var(--success-text);
+    border-color: var(--success-border);
 }
 
 .status-unhealthy,
 .status-stale {
     color: var(--danger-text);
-    border-color: #4a1c20;
+    border-color: var(--danger-border);
 }
 
 .status-needs_secret,
 .status-unknown {
-    color: #fde68a;
-    border-color: #3f3514;
+    color: var(--warning-text);
+    border-color: var(--warning-border);
 }
 
 .deployments-panel {

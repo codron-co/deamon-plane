@@ -11,9 +11,9 @@ class OpsAppearance
 
     public static function fromRequest(Request $request): string
     {
-        $userValue = $request->user()?->appearance;
-        if (is_string($userValue) && in_array($userValue, Appearance::values(), true)) {
-            return $userValue;
+        $user = $request->user();
+        if ($user && method_exists($user, 'appearanceValue')) {
+            return $user->appearanceValue();
         }
 
         $cookie = $request->cookie(self::COOKIE);

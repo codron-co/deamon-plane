@@ -76,6 +76,12 @@ return [
         'timeout' => (int) env('COOLIFY_HTTP_TIMEOUT', 30),
     ],
 
+    'cloudflare' => [
+        'api_base' => env('CLOUDFLARE_API_BASE', 'https://api.cloudflare.com/client/v4'),
+        'timeout' => (int) env('CLOUDFLARE_HTTP_TIMEOUT', 20),
+        'default_origin_ipv4' => env('CLOUDFLARE_ORIGIN_IPV4', '72.62.117.147'),
+    ],
+
     'provision' => [
         'environment_name' => env('COOLIFY_ENVIRONMENT_NAME', 'production'),
         'poll_seconds' => (int) env('COOLIFY_DEPLOY_POLL_SECONDS', 15),
