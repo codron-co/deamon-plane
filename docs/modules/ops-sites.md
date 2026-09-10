@@ -57,7 +57,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 `SiteProvisioner` + `ProvisionSiteJob` + `PollDeploymentJob`. Runbook: [provision-site.md](../runbooks/provision-site.md).
 
 - Eligible statuses: `draft`, `error` (retry). Viewer is forbidden.
-- Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env `APP_KEY` + `DEAMON_SITE_NAME` (+ `CONTROL_PLANE_AGENT_SECRET` inject). Domain on compose service `app` only (`docker_compose_domains`). **Do not send `fqdn`.** Operator host stays primary even if Coolify generates `{uuid}.demo.codron.co` — see [coolify-client.md](coolify-client.md).
+- Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env `APP_KEY` + `DEAMON_SITE_NAME` (+ `CONTROL_PLANE_AGENT_SECRET` inject). Domain on compose service `app` only (`docker_compose_domains`). **Do not send `fqdn`.** Operator host stays primary even if Coolify generates `{uuid}.demo.codron.co` — see [coolify-client.md](coolify-client.md). Default Coolify **environment name** is `main` (1:1 with the git channel). Leftover `production` / `prod` names canonicalize to `main` on create. Laravel `APP_ENV` on the CMS stays `production` / `staging` / `local`.
 - Preflight before create POST (Turkish): selected server in live `listServers`; Git source in live sources list. 422 `errors` are shown on the provision flash and in the audit error field.
 - Success → `coolify_app_uuid` + status `active`. Agent health is a separate poll (does not gate provision). Failure → `error` + audit.
 - Retry reuses an existing Coolify app uuid (does not DELETE the app).
