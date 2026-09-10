@@ -5,6 +5,17 @@
 @section('content_class', 'ops-content-wide')
 
 @section('actions')
+    @if ($canWriteGit && $hasGithubApp)
+        <form method="POST" action="{{ route('ops.themes.git.connect-another') }}">
+            @csrf
+            <button type="submit" class="btn btn-secondary btn-sm">{{ __('themes.git.connect_another') }}</button>
+        </form>
+    @elseif ($canWriteGit && $appUrlIsPublic)
+        <form method="POST" action="{{ route('ops.themes.git.connect') }}">
+            @csrf
+            <button type="submit" class="btn btn-secondary btn-sm">{{ __('themes.git.connect') }}</button>
+        </form>
+    @endif
     @if ($canSync)
         <form method="POST" action="{{ route('ops.themes.sync') }}" data-ops-pending>
             @csrf
@@ -14,10 +25,12 @@
 @endsection
 
 @section('content')
+    @include('ops.themes.partials.connections')
+
     <div class="site-section-heading">
         <div>
             <span class="site-section-kicker">{{ __('themes.kicker') }}</span>
-            <h2>{{ __('themes.catalog') }} <button class="site-hint" type="button" aria-label="{{ __('themes.lede', ['org' => $org, 'prefix' => $prefix]) }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('themes.lede', ['org' => $org, 'prefix' => $prefix]) }}</span></button></h2>
+            <h2>{{ __('themes.catalog') }} <button class="site-hint" type="button" aria-label="{{ __('themes.lede') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('themes.lede') }}</span></button></h2>
         </div>
     </div>
 

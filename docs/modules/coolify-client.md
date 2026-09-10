@@ -109,7 +109,7 @@ Create and `setDomains` send **only** `docker_compose_domains: [{ "name": "app",
 
 ## Coolify menu (not Settings)
 
-Ops **Coolify** menu (`/coolify`): connections, API token, test, sync, aktif/pasif, defaults, deploy webhook URL. Encrypted `webhook_secret` per connection; env fallback `COOLIFY_WEBHOOK_SECRET`. Settings is GitHub theme catalog only — leftover `POST /settings` and `POST /settings/coolify/test` redirect here. Deploy webhooks: [coolify-webhooks.md](coolify-webhooks.md).
+Ops **Coolify** menu (`/coolify`): connections, API token, test, sync, aktif/pasif, defaults, deploy webhook URL. Encrypted `webhook_secret` per connection; env fallback `COOLIFY_WEBHOOK_SECRET`. Settings is customer / Coolify env defaults; theme GitHub connect lives under **Themes** (Manifest). Leftover `POST /settings` and `POST /settings/coolify/test` redirect here. Deploy webhooks: [coolify-webhooks.md](coolify-webhooks.md).
 
 ### Connection routes
 

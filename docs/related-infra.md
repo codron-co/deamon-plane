@@ -38,4 +38,4 @@ Nixpacks / tek Dockerfile pack yok. Detay: [modules/deployment.md](modules/deplo
 
 ## Theme org
 
-`deamon-themes` (veya config) altında `deamon-theme-{id}`; push webhook → plane → agent update (opt-in).
+Tarihsel: `deamon-themes` / `deamon-theme-{id}`. **2026-09-10:** birden fazla GitHub user/org connection (Themes Manifest). Push webhook → plane → agent update (opt-in). ZIP yok. Detay: [modules/theme-catalog.md](modules/theme-catalog.md).

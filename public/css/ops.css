@@ -1262,6 +1262,24 @@ div.ops-row-actions {
     white-space: pre-wrap;
 }
 
+.theme-git-pat {
+    margin-top: 16px;
+}
+
+.theme-git-repos {
+    margin: 16px 0;
+}
+
+.theme-git-repos h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.theme-git-repos .empty-panel {
+    margin-top: 12px;
+}
+
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;

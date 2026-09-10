@@ -83,7 +83,7 @@ class ControlPlaneAgentSignatureTest extends TestCase
             ControlPlaneAgentSignature::sign('secret', '1700000000', 'nonce1', $body),
             $signed['signature'],
         );
-        $this->assertSame('1.2.5', ControlPlaneAgentContract::CMS_VERSION);
+        $this->assertSame('1.2.7', ControlPlaneAgentContract::CMS_VERSION);
         $this->assertSame('/internal/control/v1/themes', ControlPlaneAgentContract::THEME_LIST_PATH);
         $this->assertSame(
             ['action' => 'sync_all', 'mode' => 'merge', 'theme_id' => 'beyazoglu'],

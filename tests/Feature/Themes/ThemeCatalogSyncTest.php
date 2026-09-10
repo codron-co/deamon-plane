@@ -4,8 +4,8 @@ namespace Tests\Feature\Themes;
 
 use App\Enums\OpsRole;
 use App\Enums\ThemeVisibility;
-use App\Models\GithubSetting;
 use App\Models\Theme;
+use App\Models\ThemeGitConnection;
 use App\Models\User;
 use App\Services\Themes\ThemeCatalogSync;
 use Database\Seeders\RoleSeeder;
@@ -24,7 +24,9 @@ class ThemeCatalogSyncTest extends TestCase
         $this->seed(RoleSeeder::class);
         Http::preventStrayRequests();
 
-        GithubSetting::factory()->withToken('github-test-token')->create();
+        ThemeGitConnection::factory()->pat('github-test-token')->organization('deamon-themes')->connected()->create([
+            'repo_name_prefix' => 'deamon-theme-',
+        ]);
     }
 
     public function test_sync_upserts_prefixed_repos_and_parses_theme_json(): void
@@ -73,6 +75,7 @@ class ThemeCatalogSyncTest extends TestCase
         $this->assertSame('abc123def456', $theme->latest_sha);
         $this->assertSame(ThemeVisibility::Private, $theme->visibility);
         $this->assertNotNull($theme->last_synced_at);
+        $this->assertNotNull($theme->theme_git_connection_id);
     }
 
     public function test_sync_falls_back_to_theme_slash_theme_json(): void

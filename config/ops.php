@@ -33,6 +33,7 @@ return [
     ],
 
     'themes' => [
+        // Legacy defaults for the Settings-paste backfill only — not a live catalog lock.
         'org' => env('GITHUB_ORG', 'deamon-themes'),
         'repo_prefix' => env('GITHUB_THEME_REPO_PREFIX', 'deamon-theme-'),
         'auto_update_default' => false,
@@ -42,6 +43,8 @@ return [
 
     'github' => [
         'api_base' => env('GITHUB_API_BASE', 'https://api.github.com'),
+        'web_base' => env('GITHUB_WEB_BASE', 'https://github.com'),
+        'app_name' => env('GITHUB_APP_NAME', 'Deamon Plane Themes'),
         'timeout' => (int) env('GITHUB_HTTP_TIMEOUT', 20),
         'token' => env('GITHUB_TOKEN'),
         'app_id' => env('GITHUB_APP_ID'),

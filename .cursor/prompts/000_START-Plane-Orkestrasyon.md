@@ -130,7 +130,7 @@ Spike / Dalga 0 sonunda kilitle; belirsizse kullanıcıya **tek batch** sor:
 | # | Soru | Önerilen default |
 |---|------|------------------|
 | 1 | Coolify project yapısı | **Tek project** + tag/slug |
-| 2 | Tema org adı | Config `GITHUB_ORG=deamon-themes`; mevcut `codron-co/deamon-theme-*` taşınacaksa not düş |
+| 2 | Tema org adı | **Superseded 2026-09-10:** Themes Manifest + N connections ([spec](../../docs/superpowers/specs/2026-09-10-theme-git-connections-design.md)). `GITHUB_ORG` is not a lock. |
 | 3 | Agent network | **Public HTTPS** + HMAC + opsiyonel IP allowlist (v1) |
 | 4 | Channel rollback | **Manuel** (v1); otomatik rollback v1.1 |
 | 5 | Theme auto-update | **Varsayılan off** (opt-in) |

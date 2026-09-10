@@ -7,6 +7,7 @@ use App\Models\GithubSetting;
 use App\Models\Site;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
+use App\Models\ThemeGitConnection;
 use App\Support\GitHubWebhookSignature;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -149,6 +150,48 @@ class GitHubWebhookTest extends TestCase
 
             return true;
         });
+    }
+
+    public function test_push_maps_installation_to_the_connection_theme(): void
+    {
+        $connection = ThemeGitConnection::factory()->githubApp('8811')->connected()->create();
+        $theme = Theme::factory()->publicCatalog()->create([
+            'repo_full_name' => 'acme/mapped-theme',
+            'theme_git_connection_id' => $connection->id,
+        ]);
+
+        $this->signedPost('push', [
+            'ref' => 'refs/heads/main',
+            'after' => 'map123aaa',
+            'installation' => ['id' => 8811],
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ])->assertOk()->assertJson([
+            'ok' => true,
+            'updated' => true,
+        ]);
+
+        $this->assertSame('map123aaa', $theme->fresh()->latest_sha);
+    }
+
+    public function test_selected_connection_ignores_excluded_repo_push(): void
+    {
+        $connection = ThemeGitConnection::factory()->githubApp('8812')->connected()->selected()->create();
+        $theme = Theme::factory()->create([
+            'repo_full_name' => 'acme/excluded-theme',
+            'theme_git_connection_id' => $connection->id,
+            'latest_sha' => null,
+        ]);
+
+        $this->signedPost('push', [
+            'ref' => 'refs/heads/main',
+            'after' => 'should-not-apply',
+            'installation' => ['id' => 8812],
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ])->assertOk()->assertJson([
+            'updated' => false,
+        ]);
+
+        $this->assertNull($theme->fresh()->latest_sha);
     }
 
     public function test_coolify_webhook_secret_does_not_validate_github(): void

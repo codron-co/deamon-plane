@@ -7,6 +7,7 @@ use Database\Factories\ThemeFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -30,6 +31,7 @@ class Theme extends Model
         'latest_tag',
         'last_synced_at',
         'description',
+        'theme_git_connection_id',
     ];
 
     /**
@@ -46,6 +48,11 @@ class Theme extends Model
     public function getRouteKeyName(): string
     {
         return 'theme_id';
+    }
+
+    public function gitConnection(): BelongsTo
+    {
+        return $this->belongsTo(ThemeGitConnection::class, 'theme_git_connection_id');
     }
 
     public function auditLogs(): MorphMany

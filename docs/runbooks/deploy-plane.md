@@ -19,7 +19,7 @@ Plane is **internal ops**. Production host: **`https://plane.codron.co`** (compo
 7. Queue worker + scheduler already run in the image (`supervisord`: php-fpm, nginx, `queue:work`, `schedule:work`).
 8. First boot: entrypoint `artisan migrate`. Create the first `super_admin` **out of band** (do not set `OPS_SEED_PASSWORD` in production).
 9. Restrict access: Coolify IP allowlist / VPN / SSO in front of the Plane domain, **and** optional `OPS_IP_ALLOWLIST` (comma-separated) in Plane. See [security.md](../security.md).
-10. Login → Coolify → Test connection → Settings → GitHub Test → Themes Sync catalog.
+10. Login → Coolify → Test connection → Themes → Connect GitHub (Manifest) → Sync catalog. Settings no longer hosts GitHub paste.
 11. Import fleet: `php artisan ops:import-coolify-apps` dry-run, then `--apply` — [import-coolify-apps.md](import-coolify-apps.md).
 12. Inject per-site agent secrets — [agent-secret-inject.md](agent-secret-inject.md).
 

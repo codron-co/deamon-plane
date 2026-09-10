@@ -1,8 +1,8 @@
 # Theme agent client
 
-Task 12. Plane asks each CMS instance to git-install a catalog theme. CMS Task 11 (**Deamon v1.2.5**) owns the installer in `codron-co/deamon`. This repo only has the signed HTTP client.
+Task 12. Plane asks each CMS instance to git-install a catalog theme. CMS Task 11 (**Deamon v1.2.7** — theme git install) owns the installer in `codron-co/deamon`. This repo only has the signed HTTP client.
 
-SoT: CMS `docs/modules/control-plane-agent.md`. Constants: `ControlPlaneAgentContract`.
+SoT: CMS `docs/modules/control-plane-agent.md` (Sürüm 1.2.7). Constants: `ControlPlaneAgentContract::CMS_VERSION` = `1.2.7` (comment: “Theme git install (CMS 1.2.7+)”). HMAC and `clone_token` unchanged from the v1.2.5 lock.
 
 ## HMAC (same as health)
 
@@ -10,7 +10,7 @@ Canonical string: `{timestamp}.{nonce}.{rawBody}`. GET body is empty `""`. POST 
 
 Headers: `X-Deamon-Timestamp` / `X-Deamon-Nonce` / `X-Deamon-Signature`. Never `X-Control-Plane-*`.
 
-## Endpoints (CMS v1.2.5)
+## Endpoints (CMS v1.2.7)
 
 Base: `/internal/control/v1`
 
@@ -25,9 +25,17 @@ Base: `/internal/control/v1`
 
 Install does **not** activate or data-sync. Assign flow is three separate calls: install → (optional) activate → (optional) sync.
 
-`repo` allow on CMS: `deamon-themes/premium-{id}`, `deamon-themes/deamon-theme-{id}`, or `https://github.com/deamon-themes/….git`. `source` omit or `"git"` only. ZIP/ssh/http → CMS 422 `unsupported_source`. `default` cannot install/update (`system_theme`). Plane refuses `theme_id=default` before calling.
+`repo` on the wire stays `owner/repo` (`ControlPlaneAgentContract::installBody`). CMS **v1.2.7** accepts any github.com owner when `source=git`:
 
-`clone_token` is a short-lived GitHub App installation token when App credentials exist. A PAT is **never** sent to the site. Token is not written to logs, audit `after`, or Blade.
+- `owner/name`
+- `https://github.com/owner/name`
+- `https://github.com/owner/name.git`
+
+Owner/name = `[A-Za-z0-9_.-]+`, no `..`. ZIP / ssh / `file://` / `http://` / non-github hosts → 422 `unsupported_source`. Old `deamon-themes/premium-*` and `deamon-themes/deamon-theme-*` still valid. Repo **name** no longer must match `theme_id` (`theme.json` id still must). `default` cannot install/update (`system_theme`). Plane refuses `theme_id=default` before calling.
+
+Plane remains the trust boundary: only connected/selected catalog rows are assigned. Coolify `GET /github-apps` is still a different object. ZIP stays out of Plane.
+
+`clone_token` is a short-lived GitHub App **installation** token minted for the theme’s `theme_git_connections.installation_id`. A PAT (`github_settings.token` leftover or `theme_git_connections.token`) is **never** sent to the site. Token is not written to logs, audit `after`, or Blade.
 
 CMS `auto_update` is always `false` in agent JSON. Opt-in lives on Plane `site_theme_installations`.
 

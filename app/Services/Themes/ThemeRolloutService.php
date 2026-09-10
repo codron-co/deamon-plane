@@ -322,7 +322,8 @@ class ThemeRolloutService
         $cloneToken = null;
 
         try {
-            $cloneToken = $this->github->mintCloneToken();
+            $theme->loadMissing('gitConnection');
+            $cloneToken = $this->github->mintCloneToken($theme->gitConnection);
         } catch (GitHubCredentialsException) {
             $cloneToken = null;
         }

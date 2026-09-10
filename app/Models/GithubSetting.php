@@ -19,6 +19,9 @@ class GithubSetting extends Model
         'token',
         'app_id',
         'installation_id',
+        'slug',
+        'client_id',
+        'client_secret',
         'private_key',
         'webhook_secret',
     ];
@@ -30,6 +33,7 @@ class GithubSetting extends Model
         'token',
         'private_key',
         'webhook_secret',
+        'client_secret',
     ];
 
     /**
@@ -41,6 +45,7 @@ class GithubSetting extends Model
             'token' => 'encrypted',
             'private_key' => 'encrypted',
             'webhook_secret' => 'encrypted',
+            'client_secret' => 'encrypted',
         ];
     }
 
@@ -56,9 +61,12 @@ class GithubSetting extends Model
 
     public function hasAppCredentials(): bool
     {
-        return filled($this->app_id)
-            && filled($this->installation_id)
-            && filled($this->private_key);
+        return filled($this->app_id) && filled($this->private_key);
+    }
+
+    public function hasManifestApp(): bool
+    {
+        return $this->hasAppCredentials() && filled($this->slug);
     }
 
     public function hasWebhookSecret(): bool

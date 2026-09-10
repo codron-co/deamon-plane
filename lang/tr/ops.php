@@ -99,6 +99,23 @@ return [
         'allowlist' => 'İzin listesi',
         'private' => 'Özel',
     ],
+    'theme_git_kind' => [
+        'github_app' => 'GitHub App',
+        'pat' => 'PAT',
+    ],
+    'theme_git_status' => [
+        'pending' => 'Bekliyor',
+        'connected' => 'Bağlı',
+        'error' => 'Hata',
+    ],
+    'theme_git_selection' => [
+        'all' => 'Tüm repolar',
+        'selected' => 'Seçili repolar',
+    ],
+    'theme_git_account' => [
+        'user' => 'Kullanıcı',
+        'organization' => 'Organizasyon',
+    ],
     'theme_install_status' => [
         'pending' => 'bekliyor',
         'installing' => 'kuruluyor',

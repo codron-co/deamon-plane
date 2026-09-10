@@ -12,13 +12,18 @@ Never paste live tokens into git, chat, or audit notes. After rotation, confirm 
 
 Webhook signing secret (`COOLIFY_WEBHOOK_SECRET` / Coolify menu webhook secret) is a **different** secret. Rotate it in Plane and in the Coolify Notifications URL (`?token=`) together, or unsigned POSTs 401. Signed proxies must update the HMAC key at the same time.
 
-## GitHub PAT / App
+## GitHub App (theme catalog)
 
-1. PAT: GitHub → Fine-grained token, org `deamon-themes`, contents read on `deamon-theme-*`.
-2. Or GitHub App: install on the org; paste App id, installation id, PEM into Settings → GitHub.
-3. Save. **Test GitHub**.
-4. Revoke the old PAT or rotate the App private key.
-5. Theme webhook secret (`GITHUB_WEBHOOK_SECRET`) is distinct from the Coolify webhook secret. Update the GitHub webhook and Plane together.
+Theme connections live under **Themes**, not Settings. Coolify `GET /github-apps` UUID is a different object — do not rotate or reuse it here.
+
+1. Preferred: Themes → **Connect GitHub** (Manifest creates the Plane App) then install on each user/org. **Connect another** reuses the same App.
+2. To rotate the App private key: GitHub → the Plane App → generate a new private key; code worker / operator must replace `github_settings.private_key` (encrypted). Manifest conversion already stored PEM / `client_secret` / `webhook_secret` — those values are never shown again.
+3. To rotate access to repos: GitHub → install settings (grant/revoke repos), or Plane picker (`all` / `selected`). Disconnect does not delete the App.
+4. Advanced PAT (local / no public callback): Themes → **Connect with token**. Fine-grained contents read on the chosen account’s theme repos. Blank token on save keeps the existing value. Revoke the old PAT at GitHub after save.
+5. Theme webhook secret is App-level (`github_settings.webhook_secret` or `GITHUB_WEBHOOK_SECRET`). Distinct from the Coolify webhook secret. Manifest sets the App webhook URL to `https://{plane}/webhooks/github`. Update GitHub and Plane together if you rotate the secret by hand.
+6. A PAT is never sent to a CMS site. `clone_token` is only a short-lived installation token.
+
+Legacy Settings → GitHub paste (org + PAT/PEM) is removed. Leftover `POST /settings/github` redirects to Themes.
 
 ## Site agent HMAC
 
@@ -28,4 +33,4 @@ Do not reuse one secret across all customer sites if you can avoid it.
 
 ## Plane `APP_KEY`
 
-Generated once (`php artisan key:generate --show`) and stored in Coolify env for the Plane app. Rotating `APP_KEY` invalidates encrypted columns (`coolify_settings`, `github_settings`, `sites.*_encrypted`). Treat as a break-glass rebuild, not a weekly rotate.
+Generated once (`php artisan key:generate --show`) and stored in Coolify env for the Plane app. Rotating `APP_KEY` invalidates encrypted columns (`coolify_settings`, `github_settings`, `theme_git_connections.token`, `sites.*_encrypted`). Treat as a break-glass rebuild, not a weekly rotate.

@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers\Ops;
 
+use App\Enums\ThemeGitAccountType;
+use App\Enums\ThemeGitSelectionMode;
 use App\Enums\ThemeVisibility;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
+use App\Models\GithubSetting;
 use App\Models\Site;
 use App\Models\Theme;
+use App\Models\ThemeGitConnection;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
 use App\Services\Themes\ThemeCatalogSync;
+use App\Support\PublicAppUrl;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -42,15 +47,28 @@ class ThemeController extends Controller
             $query->where('visibility', $visibility);
         }
 
+        $connections = ThemeGitConnection::query()
+            ->withCount([
+                'repos',
+                'themes',
+                'repos as included_repos_count' => static fn ($builder) => $builder->where('included', true),
+            ])
+            ->orderBy('account_login')
+            ->get();
+
         return view('ops.themes.index', [
             'themes' => $query->withCount(['installations', 'accessEntries'])->paginate(25)->withQueryString(),
             'search' => $search,
             'visibility' => $visibility,
             'visibilities' => ThemeVisibility::cases(),
             'filtersActive' => $search !== '' || $visibility !== '',
-            'org' => config('ops.themes.org'),
-            'prefix' => config('ops.themes.repo_prefix'),
+            'connections' => $connections,
+            'hasGithubApp' => GithubSetting::current()->hasManifestApp(),
+            'appUrlIsPublic' => PublicAppUrl::isPublic(),
+            'accountTypes' => ThemeGitAccountType::cases(),
+            'selectionModes' => ThemeGitSelectionMode::cases(),
             'canSync' => $request->user()?->can('sync', Theme::class) ?? false,
+            'canWriteGit' => $request->user()?->can('create', ThemeGitConnection::class) ?? false,
         ]);
     }
 

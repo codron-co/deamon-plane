@@ -11,7 +11,7 @@ class SyncThemeCatalogCommand extends Command
 {
     protected $signature = 'ops:sync-theme-catalog';
 
-    protected $description = 'Sync deamon-theme-* repos from the configured GitHub org into the Plane catalog';
+    protected $description = 'Sync theme repos from connected GitHub accounts into the Plane catalog';
 
     public function handle(ThemeCatalogSync $sync): int
     {

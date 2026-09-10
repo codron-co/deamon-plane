@@ -10,16 +10,17 @@ Kaynak: plan §11. Subagent’lar **exclusive path** ile fırlatılır; çakış
 |------|------|----------------------|
 | `app/Models/Site.php` | Fleet site | SCHEMA (1); sonra ana agent sıra |
 | `app/Models/Deployment.php` | Deploy kaydı | SCHEMA (1) |
-| `app/Models/Theme.php` | Katalog | THEME-CATALOG (10) |
+| `app/Models/Theme.php` | Katalog (`theme_git_connection_id`) | THEME-CATALOG (10) + 2026-09-10 |
+| `app/Models/ThemeGitConnection.php` | Themes GitHub user/org connection | 2026-09-10 theme-git-connections |
 | `app/Models/SiteThemeInstallation.php` | Kurulum | THEME-CATALOG (10) |
 | `app/Models/AuditLog.php` | Audit | SCHEMA (1) |
 | `app/Services/Coolify/CoolifyClient.php` | HTTP API | COOLIFY-CLIENT (2) |
 | `app/Services/Coolify/CoolifyApplicationService.php` | Provision/branch/domain | COOLIFY-CLIENT / PROVISION (2/4) |
-| `app/Services/GitHub/GitHubAppClient.php` | App auth + repos | THEME-CATALOG (10) |
+| `app/Services/GitHub/GitHubAppClient.php` | App auth + repos (per `theme_git_connections`; not Coolify `/github-apps`) | THEME-CATALOG (10) + 2026-09-10 connections |
 | `app/Services/Agent/SiteAgentClient.php` | İmzalı HTTP | PLANE-AGENT-CLIENT (9) |
 | `app/Services/Sites/SiteProvisioner.php` | Orkestrasyon | PROVISION (4) |
 | `app/Services/Sites/ChannelSwitcher.php` | Channel policy | CHANNEL (5) |
-| `app/Services/Themes/ThemeCatalogSync.php` | Org → DB | THEME-CATALOG (10) |
+| `app/Services/Themes/ThemeCatalogSync.php` | Connections → DB (not a single `GITHUB_ORG` lock) | THEME-CATALOG (10) + 2026-09-10 |
 | `app/Services/Themes/ThemeRolloutService.php` | Fan-out | THEME-ASSIGN (12) |
 | `app/Jobs/*` | Provision, poll, switch, theme | ilgili task |
 | `app/Http/Controllers/Ops/*` | Web UI | UI-SITES / themes / settings |

@@ -99,6 +99,23 @@ return [
         'allowlist' => 'Allowlist',
         'private' => 'Private',
     ],
+    'theme_git_kind' => [
+        'github_app' => 'GitHub App',
+        'pat' => 'PAT',
+    ],
+    'theme_git_status' => [
+        'pending' => 'Pending',
+        'connected' => 'Connected',
+        'error' => 'Error',
+    ],
+    'theme_git_selection' => [
+        'all' => 'All repos',
+        'selected' => 'Selected repos',
+    ],
+    'theme_git_account' => [
+        'user' => 'User',
+        'organization' => 'Organization',
+    ],
     'theme_install_status' => [
         'pending' => 'pending',
         'installing' => 'installing',

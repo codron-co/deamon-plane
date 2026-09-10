@@ -7,7 +7,6 @@ use App\Models\GithubSetting;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -25,7 +24,7 @@ class GithubSettingsTest extends TestCase
         Http::preventStrayRequests();
     }
 
-    public function test_settings_page_never_renders_github_token(): void
+    public function test_settings_page_points_to_themes_and_never_renders_a_credential_form(): void
     {
         GithubSetting::factory()->create([
             'token' => self::TOKEN,
@@ -36,55 +35,51 @@ class GithubSettingsTest extends TestCase
             ->get(route('ops.settings'))
             ->assertOk()
             ->assertSee('GitHub theme catalog', false)
-            ->assertSee(__('settings.github.webhook'), false)
+            ->assertSee(__('settings.github.pointer'), false)
+            ->assertSee(__('settings.github.open_themes'), false)
+            ->assertSee(route('ops.themes'), false)
             ->assertSee(__('settings.coolify.title'), false)
             ->assertSee(route('ops.coolify.index'), false)
             ->assertSee('/webhooks/github', false)
-            ->assertSee('type="password"', false)
             ->assertDontSee(self::TOKEN, false)
+            ->assertDontSee('name="token"', false)
+            ->assertDontSee('name="private_key"', false)
+            ->assertDontSee('name="installation_id"', false)
             ->assertDontSee('name="current_password"', false)
             ->assertDontSee('id="account_name"', false)
             ->assertDontSee('coolify-connection-heading', false);
     }
 
-    public function test_operator_saves_github_token_encrypted(): void
+    public function test_operator_cannot_save_github_credentials_on_settings(): void
     {
-        $this->actingAs($this->operator())
-            ->post(route('ops.settings.github.update'), [
-                'org' => 'deamon-themes',
-                'token' => self::TOKEN,
-                'webhook_secret' => 'gh-hook-secret',
-            ])
-            ->assertRedirect();
-
-        $raw = DB::table('github_settings')->value('token');
-        $this->assertNotSame(self::TOKEN, $raw);
-        $this->assertSame(self::TOKEN, GithubSetting::current()->token);
-        $this->assertArrayNotHasKey('token', GithubSetting::current()->toArray());
-        $this->assertArrayNotHasKey('webhook_secret', GithubSetting::current()->toArray());
-    }
-
-    public function test_test_connection_lists_prefixed_repos(): void
-    {
-        GithubSetting::factory()->withToken(self::TOKEN)->create();
-
-        Http::fake([
-            'https://api.github.com/orgs/deamon-themes/repos*' => Http::response([
-                ['name' => 'deamon-theme-a', 'full_name' => 'deamon-themes/deamon-theme-a', 'default_branch' => 'main'],
-                ['name' => 'readme', 'full_name' => 'deamon-themes/readme', 'default_branch' => 'main'],
-            ], 200),
+        GithubSetting::factory()->create([
+            'org' => 'deamon-themes',
+            'token' => null,
         ]);
 
         $this->actingAs($this->operator())
             ->from(route('ops.settings'))
-            ->post(route('ops.settings.github.test'))
-            ->assertRedirect(route('ops.settings'))
+            ->post(route('ops.settings.github.update'), [
+                'org' => 'hacked-org',
+                'token' => self::TOKEN,
+                'webhook_secret' => 'gh-hook-secret',
+            ])
+            ->assertRedirect(route('ops.themes'))
             ->assertSessionHas('status');
 
-        $status = session('status');
-        $this->assertIsString($status);
-        $this->assertStringContainsString('1 theme repo', $status);
-        $this->assertStringNotContainsString(self::TOKEN, $status);
+        $settings = GithubSetting::current();
+        $this->assertSame('deamon-themes', $settings->org);
+        $this->assertFalse($settings->hasToken());
+        $this->assertFalse($settings->hasWebhookSecret());
+    }
+
+    public function test_github_test_connection_redirects_to_themes(): void
+    {
+        $this->actingAs($this->operator())
+            ->from(route('ops.settings'))
+            ->post(route('ops.settings.github.test'))
+            ->assertRedirect(route('ops.themes'))
+            ->assertSessionHas('status');
     }
 
     public function test_viewer_cannot_save_github_settings(): void

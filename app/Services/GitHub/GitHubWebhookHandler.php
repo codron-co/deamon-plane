@@ -2,9 +2,11 @@
 
 namespace App\Services\GitHub;
 
+use App\Enums\ThemeGitSelectionMode;
 use App\Enums\ThemeInstallationStatus;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
+use App\Models\ThemeGitConnection;
 use App\Services\Themes\ThemeRolloutService;
 use Illuminate\Support\Carbon;
 
@@ -29,7 +31,14 @@ class GitHubWebhookHandler
             return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
         }
 
-        $theme = Theme::query()->where('repo_full_name', $repo)->first();
+        $connection = $this->connectionFromPayload($payload);
+        if ($connection !== null
+            && $connection->selection_mode === ThemeGitSelectionMode::Selected
+            && ! $connection->repos()->where('repo_full_name', $repo)->where('included', true)->exists()) {
+            return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
+        }
+
+        $theme = $this->themeForRepo($repo, $connection);
         if ($theme === null) {
             return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
         }
@@ -84,6 +93,36 @@ class GitHubWebhookHandler
             'fanout' => $fanout,
             'skipped' => $skipped,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function connectionFromPayload(array $payload): ?ThemeGitConnection
+    {
+        $installationId = $payload['installation']['id'] ?? null;
+        if ($installationId === null || $installationId === '') {
+            return null;
+        }
+
+        return ThemeGitConnection::query()
+            ->where('installation_id', (string) $installationId)
+            ->first();
+    }
+
+    private function themeForRepo(string $repo, ?ThemeGitConnection $connection): ?Theme
+    {
+        if ($connection !== null) {
+            $owned = Theme::query()
+                ->where('theme_git_connection_id', $connection->id)
+                ->where('repo_full_name', $repo)
+                ->first();
+            if ($owned !== null) {
+                return $owned;
+            }
+        }
+
+        return Theme::query()->where('repo_full_name', $repo)->first();
     }
 
     /**

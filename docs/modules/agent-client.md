@@ -1,6 +1,6 @@
 # Site agent client
 
-Task 9. Plane polls each Deamon CMS instance over a signed HTTP agent. CMS routes live in `codron-co/deamon` (Task 8 health, Task 11 themes **v1.2.5**). Do not copy CMS middleware here. CMS SoT: `docs/modules/control-plane-agent.md` in the Deamon repo. Theme POSTs: [theme-agent-client.md](theme-agent-client.md).
+Task 9. Plane polls each Deamon CMS instance over a signed HTTP agent. CMS routes live in `codron-co/deamon` (Task 8 health, Task 11 themes **v1.2.7**). Do not copy CMS middleware here. CMS SoT: `docs/modules/control-plane-agent.md` (Sürüm 1.2.7) in the Deamon repo. Theme POSTs: [theme-agent-client.md](theme-agent-client.md).
 
 ## Endpoint (CMS)
 

@@ -2,6 +2,14 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Theme Git connections — Settings paste → Themes Manifest (2026-09-10)
+
+- Status: **code**. Themes hosts Connect GitHub (Manifest), Connect another (same App), PAT fallback, all vs selected, Sync repos, Disconnect (App stays). Settings GitHub paste removed (one-line pointer; leftover POSTs 302 to Themes). Catalog walks every `theme_git_connections` row. CMS **1.2.7** theme-git `repo` allowlist **landed** (any github.com owner); do not re-edit `deamon` for that contract. Plane `ControlPlaneAgentContract::CMS_VERSION` is **1.2.7**.
+- Product: Coolify-style GitHub App Manifest (one Plane App, many user/org installations). Connections + all/selected picker under **Themes**. Settings GitHub paste removed (one-line pointer). Advanced PAT for local/no public URL. Coolify `/github-apps` UUID never reused. ZIP still out. First sync `private`. `clone_token` = installation token only.
+- Spec: [../superpowers/specs/2026-09-10-theme-git-connections-design.md](../superpowers/specs/2026-09-10-theme-git-connections-design.md)
+- Plan: [2026-09-10-theme-git-connections.md](2026-09-10-theme-git-connections.md)
+- Deferred (not blockers): install callback does not auto-refresh the repo picker (operator clicks **Sync repos**); Disconnect does not delete the GitHub App.
+
 ## Coolify env default catalogs (2026-09-10)
 
 - Status: **code**. Settings holds per-pack catalogs (`dockerfile` / `dockercompose`) on `coolify_env_defaults` (seeded). Normal view: static / required / generated / site / Coolify-injects. Developer view is an open KEY=value dump. `CoolifyAppEnvSync` runs on every Plane `deploy()` and after Dockerfile → compose. Empty/placeholder MySQL secrets are filled; filled secrets are not rotated; compose `DB_HOST` is forced to `mysql`. Tests: CoolifyAppEnvSyncTest, SettingsEnvDefaultsTest (`Http::fake`).
@@ -64,15 +72,15 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 - Status: **Plane track complete** (Tasks 10, 12, 13). Task 11 remains CMS repo.
 - ZIP in Plane UI: **yok** (asserted: no `type=file` / ZipArchive / `name=zip`)
 - Auto-update default: **off**
-- Theme agent: **locked to CMS v1.2.5** (`ControlPlaneAgentContract`). Paths `/internal/control/v1/themes` + install/update/activate/sync. HMAC `X-Deamon-*`. Install body includes `source=git`. Sync body `{action, mode, theme_id}`. Assign = install → activate → sync as separate POSTs.
+- Theme agent (historical overnight lock): **CMS v1.2.5** headers/paths/bodies. **Current SoT: CMS 1.2.7** — same HMAC/paths; `repo` now any github.com owner (see [theme-agent-client.md](../modules/theme-agent-client.md)). Paths `/internal/control/v1/themes` + install/update/activate/sync. HMAC `X-Deamon-*`. Install body includes `source=git`. Sync body `{action, mode, theme_id}`. Assign = install → activate → sync as separate POSTs.
 - HMAC: same `X-Deamon-*` helper as Task 9. Coolify webhook secret is separate.
-- Suite after CMS 1.2.5 lock: **163 passed** (805 assertions). Pint `--dirty` clean.
+- Suite after historical CMS 1.2.5 lock: **163 passed** (805 assertions). Pint `--dirty` clean.
 - Commit: not requested
 
 ```txt
 ## Dalga 4 raporu — Deamon Plane
 Subagents: closer implemented CATALOG / ASSIGN / WEBHOOKS in-repo (CMS-THEME is the other repo)
-CMS handoff Task 11: **done** (deamon v1.2.5) — Plane Task 12 headers/paths/bodies locked
+CMS handoff Task 11: **done** (historical: deamon v1.2.5 headers/paths; **current: v1.2.7** any github.com `repo`) — Plane Task 12 HMAC/paths/bodies unchanged
 ZIP in plane: yok (doğrulandı)
 Auto-update default: off
 Sonraki: Dalga 5 (done in same overnight pass)
@@ -111,16 +119,16 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 | 7 import | IMPORT | **done** |
 | 8 CMS health | CMS-AGENT-HEALTH (deamon) | **done** (separate repo; health since v1.1.43) |
 | 9 plane agent client | PLANE-AGENT-CLIENT | **done** |
-| 10 theme catalog | THEME-CATALOG | **done** (schema + GitHubAppClient + sync UI + Http::fake; live GitHub creds optional) |
-| 11 CMS theme agent | CMS-THEME-AGENT (deamon) | **done** (CMS **v1.2.5**; Plane client locked) |
-| 12 assign | THEME-ASSIGN | **done** (headers/paths/bodies locked to CMS 1.2.5; install→activate→sync separate) |
+| 10 theme catalog | THEME-CATALOG | **done** (2026-09-10): Themes Manifest + `theme_git_connections`; Settings paste retired (historical Task 10 was org+PAT/PEM on Settings) |
+| 11 CMS theme agent | CMS-THEME-AGENT (deamon) | **done** (CMS **v1.2.7** theme git `repo` = any github.com owner; HMAC/paths from v1.2.5 lock) |
+| 12 assign | THEME-ASSIGN | **done** (headers/paths/bodies locked; install→activate→sync separate; CMS **1.2.7** accepts any github.com `repo`) |
 | 13 GH webhooks | THEME-WEBHOOKS | **done** (`POST /webhooks/github`, distinct secret, fan-out + semver skip) |
 | 14 security | SECURITY | **done** (checklist closed in `docs/security.md`) |
 | 15 prod deploy plane | PROD-DEPLOY | **partial** — runbook complete; **live deploy skipped**; read-only status recorded above |
 
 ## Settings: Coolify panel removed (2026-09-10)
 
-- Settings (`/settings`) is GitHub theme catalog + customer defaults only. Coolify token / webhook / UUID / Test connection live under **Coolify** (`/coolify`).
+- Settings (`/settings`) is customer / Coolify env defaults. Theme GitHub connect lives under **Themes** (Manifest; code shipped 2026-09-10). Coolify token / webhook / UUID / Test connection live under **Coolify** (`/coolify`).
 - Leftover `POST /settings` and `POST /settings/coolify/test` redirect to Coolify connections.
 
 ## Coolify menu (ops — 2026-09-10)
@@ -135,8 +143,8 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 - Coolify Notifications remain unsigned — paste `https://{plane}/webhooks/coolify?token=<webhook signing secret>`. HMAC still preferred if a signer exists. Poll remains backup.
 - Agent secret inject is in the site UI (`Generate & inject secret`) when Coolify env API works; Coolify UI leftover if that PATCH fails.
-- GitHub App/PAT + org webhook secret must be pasted in Settings (not in git). Theme catalog ≠ Coolify Git source. Coolify API token lives under **Coolify** (`/coolify`), not Settings.
-- CMS Task 11 is live at v1.2.5 — site still needs `CONTROL_PLANE_AGENT_SECRET` injected before theme assign 200s.
+- Theme GitHub: **Settings paste → Themes Manifest** (code shipped 2026-09-10). Connect user/org under Themes; do not paste PAT/PEM on Settings; do not reuse Coolify `/github-apps` UUID. Theme catalog ≠ Coolify Git source. Coolify API token lives under **Coolify** (`/coolify`), not Settings. Deferred: Sync repos after install; App stays on last disconnect.
+- CMS Task 11 is live at **v1.2.7** (any github.com owner/name for `source=git`). Site still needs `CONTROL_PLANE_AGENT_SECRET` injected before theme assign 200s. Historical Task 11 ship was v1.2.5 (headers/paths only).
 - Plane app `d6ovbjzxgpao23faam3vrcve` domain **https://plane.codron.co**. Deploy that uuid only. Never touch Susa `crxguq6nodorlzy88wf9x305`.
 
 ## Open in Coolify — environment uuid (2026-09-10)

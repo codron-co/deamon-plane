@@ -56,6 +56,8 @@ Mod: subagent-driven — Dalga 0 spike ile başla; Laravel’i spike Go olmadan 
 
 Uygulama kapsamı: [docs/plans/2026-08-13-deamon-plane.md](../docs/plans/2026-08-13-deamon-plane.md)
 
+Tema GitHub: Settings PAT/PEM paste **değil** — [Themes Manifest spec](../docs/superpowers/specs/2026-09-10-theme-git-connections-design.md) · [plan](../docs/plans/2026-09-10-theme-git-connections.md). Coolify `GET /github-apps` UUID tema App’i değildir.
+
 **Yasak:** Bu ürünü Deamon CMS repo köküne koymak; paylaşımlı MySQL/Redis; Nixpacks; plane UI’da tema ZIP; müşteri self-serve v1; Mailcow’u bu build’e dahil etmek.
 
 Plane Coolify: Docker Compose + `docker-compose.coolify.yml` — [docs/modules/deployment.md](../docs/modules/deployment.md).

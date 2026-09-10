@@ -2,7 +2,10 @@
 
 namespace App\Services\GitHub;
 
+use App\Enums\ThemeGitAccountType;
+use App\Enums\ThemeGitConnectionKind;
 use App\Models\GithubSetting;
+use App\Models\ThemeGitConnection;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -10,6 +13,7 @@ class GitHubAppClient
 {
     public function __construct(
         private readonly ?GithubSetting $settings = null,
+        private readonly ?ThemeGitConnection $connection = null,
     ) {}
 
     public static function fromSettings(?GithubSetting $settings = null): self
@@ -17,52 +21,163 @@ class GitHubAppClient
         return new self($settings ?? GithubSetting::current());
     }
 
-    /**
-     * @return list<array{name: string, full_name: string, default_branch: string, private: bool, html_url: string}>
-     */
-    public function listThemeRepos(): array
+    public static function fromConnection(ThemeGitConnection $connection): self
     {
-        $org = $this->org();
-        $prefix = (string) config('ops.themes.repo_prefix', 'deamon-theme-');
-        $repos = [];
+        return new self(GithubSetting::current(), $connection);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function convertAppManifest(string $code): array
+    {
+        $response = $this->unauthenticatedHttp()
+            ->post($this->apiUrl('/app-manifests/'.$code.'/conversions'));
+
+        if ($response->failed()) {
+            throw new GitHubApiException(
+                'GitHub App manifest conversion failed with HTTP '.$response->status().'.',
+                $response->status(),
+            );
+        }
+
+        $json = $response->json();
+        if (! is_array($json)) {
+            throw new GitHubApiException('GitHub App manifest conversion returned a non-JSON body.', $response->status());
+        }
+
+        return $json;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getInstallation(string $installationId): array
+    {
+        return $this->getJson('/app/installations/'.$installationId, [], $this->appJwt());
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listAppInstallations(): array
+    {
+        $installations = [];
         $page = 1;
 
         do {
-            $payload = $this->getJson('/orgs/'.$org.'/repos', [
+            $payload = $this->getJson('/app/installations', [
                 'per_page' => 100,
                 'page' => $page,
-                'type' => 'all',
-                'sort' => 'full_name',
-            ]);
+            ], $this->appJwt());
 
-            if (! is_array($payload)) {
-                throw new GitHubApiException('GitHub org repo list was not a JSON array.');
+            if (! array_is_list($payload)) {
+                throw new GitHubApiException('GitHub App installation list was not a JSON array.');
             }
 
             foreach ($payload as $row) {
-                if (! is_array($row)) {
-                    continue;
+                if (is_array($row)) {
+                    $installations[] = $row;
                 }
-
-                $name = (string) ($row['name'] ?? '');
-                if ($name === '' || ! str_starts_with($name, $prefix)) {
-                    continue;
-                }
-
-                $repos[] = [
-                    'name' => $name,
-                    'full_name' => (string) ($row['full_name'] ?? $org.'/'.$name),
-                    'default_branch' => (string) ($row['default_branch'] ?? 'main'),
-                    'private' => (bool) ($row['private'] ?? true),
-                    'html_url' => (string) ($row['html_url'] ?? ''),
-                ];
             }
 
             $count = count($payload);
             $page++;
         } while ($count === 100 && $page <= 20);
 
-        return $repos;
+        return $installations;
+    }
+
+    /**
+     * @return list<array{name: string, full_name: string, default_branch: string, private: bool, html_url: string, id: string|null}>
+     */
+    public function listInstallationRepos(string $installationId): array
+    {
+        $token = $this->installationAccessTokenFor($installationId);
+
+        return $this->paginateRepos(function (int $page) use ($token): array {
+            $payload = $this->getJson('/installation/repositories', [
+                'per_page' => 100,
+                'page' => $page,
+            ], $token);
+
+            $rows = $payload['repositories'] ?? null;
+
+            return is_array($rows) ? $rows : [];
+        });
+    }
+
+    /**
+     * @return list<array{name: string, full_name: string, default_branch: string, private: bool, html_url: string, id: string|null}>
+     */
+    public function listPatRepos(ThemeGitConnection $connection): array
+    {
+        $login = $connection->account_login;
+        $accountType = $connection->account_type instanceof ThemeGitAccountType
+            ? $connection->account_type
+            : ThemeGitAccountType::fromGitHub((string) $connection->account_type);
+
+        return $this->paginateRepos(function (int $page) use ($login, $accountType): array {
+            if ($accountType === ThemeGitAccountType::Organization) {
+                return $this->getJson('/orgs/'.$login.'/repos', [
+                    'per_page' => 100,
+                    'page' => $page,
+                    'type' => 'all',
+                    'sort' => 'full_name',
+                ]);
+            }
+
+            return $this->getJson('/user/repos', [
+                'per_page' => 100,
+                'page' => $page,
+                'affiliation' => 'owner,collaborator,organization_member',
+                'sort' => 'full_name',
+            ]);
+        }, $login);
+    }
+
+    /**
+     * @return list<array{name: string, full_name: string, default_branch: string, private: bool, html_url: string, id: string|null}>
+     */
+    public function listAccessibleRepos(?ThemeGitConnection $connection = null): array
+    {
+        $connection ??= $this->connection;
+        if ($connection === null) {
+            throw new GitHubCredentialsException(
+                'GitHub theme connections are not configured. Connect GitHub under Themes.',
+            );
+        }
+
+        if ($connection->isGithubApp()) {
+            $installationId = trim((string) $connection->installation_id);
+            if ($installationId === '') {
+                throw new GitHubCredentialsException('This GitHub App connection has no installation.');
+            }
+
+            return $this->listInstallationRepos($installationId);
+        }
+
+        return $this->listPatRepos($connection);
+    }
+
+    /**
+     * @return list<array{name: string, full_name: string, default_branch: string, private: bool, html_url: string}>
+     */
+    public function listThemeRepos(): array
+    {
+        if ($this->connection !== null) {
+            return array_map(static fn (array $repo): array => [
+                'name' => $repo['name'],
+                'full_name' => $repo['full_name'],
+                'default_branch' => $repo['default_branch'],
+                'private' => $repo['private'],
+                'html_url' => $repo['html_url'],
+            ], $this->listAccessibleRepos($this->connection));
+        }
+
+        throw new GitHubCredentialsException(
+            'GitHub theme connections are not configured. Connect GitHub under Themes.',
+        );
     }
 
     public function fetchThemeManifest(string $repoFullName, string $ref = 'main'): ?ThemeManifest
@@ -72,7 +187,7 @@ class GitHubAppClient
             $paths = ['theme.json', 'theme/theme.json'];
         }
 
-        $fallbackId = $this->themeIdFromRepo($repoFullName);
+        $fallbackId = $this->themeIdFromRepo($repoFullName, $this->connection?->normalizedPrefix());
 
         foreach ($paths as $path) {
             if (! is_string($path) || $path === '') {
@@ -148,113 +263,27 @@ class GitHubAppClient
     }
 
     /**
-     * Short-lived installation token for a one-time CMS clone. Never log the value.
+     * Short-lived installation token for a one-time CMS clone. Never a PAT. Never log the value.
      */
-    public function mintCloneToken(): ?string
+    public function mintCloneToken(?ThemeGitConnection $connection = null): ?string
     {
-        $settings = $this->settings ?? GithubSetting::current();
-        if (! $this->hasAppCredentials($settings)) {
+        $connection ??= $this->connection;
+        if ($connection === null || ! $connection->isGithubApp()) {
             return null;
         }
 
-        return $this->installationAccessToken($settings);
-    }
-
-    public function ping(): int
-    {
-        $org = $this->org();
-        $payload = $this->getJson('/orgs/'.$org);
-
-        return is_array($payload) ? 1 : 0;
-    }
-
-    public function themeIdFromRepo(string $repoFullName): string
-    {
-        $name = str_contains($repoFullName, '/')
-            ? (string) substr($repoFullName, strrpos($repoFullName, '/') + 1)
-            : $repoFullName;
-        $prefix = (string) config('ops.themes.repo_prefix', 'deamon-theme-');
-
-        if (str_starts_with($name, $prefix)) {
-            return substr($name, strlen($prefix));
+        $installationId = trim((string) $connection->installation_id);
+        if ($installationId === '') {
+            return null;
         }
 
-        return $name;
+        return $this->installationAccessTokenFor($installationId);
     }
 
-    /**
-     * @param  array<string, scalar>  $query
-     * @return array<int|string, mixed>
-     */
-    private function getJson(string $path, array $query = []): array
+    public function installationAccessTokenFor(string $installationId): string
     {
-        $response = $this->http()->get($this->apiUrl($path), $query);
-
-        if ($response->failed()) {
-            throw new GitHubApiException(
-                'GitHub API '.$path.' returned HTTP '.$response->status().'.',
-                $response->status(),
-            );
-        }
-
-        $json = $response->json();
-        if (! is_array($json)) {
-            throw new GitHubApiException('GitHub API '.$path.' returned a non-JSON body.', $response->status());
-        }
-
-        return $json;
-    }
-
-    private function http(): PendingRequest
-    {
-        $timeout = max(1, (int) config('ops.github.timeout', 20));
-
-        return Http::timeout($timeout)
-            ->accept('application/vnd.github+json')
-            ->withHeaders([
-                'X-GitHub-Api-Version' => '2022-11-28',
-                'User-Agent' => 'deamon-plane',
-                'Authorization' => 'Bearer '.$this->accessToken(),
-            ]);
-    }
-
-    private function accessToken(): string
-    {
-        $settings = $this->settings ?? GithubSetting::current();
-
-        if ($this->hasAppCredentials($settings)) {
-            return $this->installationAccessToken($settings);
-        }
-
-        $token = $this->resolvedPat($settings);
-        if ($token !== null) {
-            return $token;
-        }
-
-        throw new GitHubCredentialsException(
-            'GitHub credentials are not configured. Add a PAT or GitHub App in Settings.',
-        );
-    }
-
-    private function installationAccessToken(GithubSetting $settings): string
-    {
-        $appId = $this->resolvedAppId($settings);
-        $installationId = $this->resolvedInstallationId($settings);
-        $privateKey = $this->resolvedPrivateKey($settings);
-
-        if ($appId === null || $installationId === null || $privateKey === null) {
-            throw new GitHubCredentialsException('GitHub App id, installation id, and private key are required.');
-        }
-
-        $jwt = GitHubAppJwt::encode($appId, $privateKey);
-        $timeout = max(1, (int) config('ops.github.timeout', 20));
-        $response = Http::timeout($timeout)
-            ->accept('application/vnd.github+json')
-            ->withHeaders([
-                'X-GitHub-Api-Version' => '2022-11-28',
-                'User-Agent' => 'deamon-plane',
-                'Authorization' => 'Bearer '.$jwt,
-            ])
+        $jwt = $this->appJwt();
+        $response = $this->http($jwt)
             ->post($this->apiUrl('/app/installations/'.$installationId.'/access_tokens'));
 
         if ($response->failed()) {
@@ -272,27 +301,176 @@ class GitHubAppClient
         return $token;
     }
 
-    private function resolvedPat(GithubSetting $settings): ?string
+    public function themeIdFromRepo(string $repoFullName, ?string $prefix = null): string
     {
-        if ($settings->hasToken()) {
-            return (string) $settings->token;
+        $name = str_contains($repoFullName, '/')
+            ? (string) substr($repoFullName, strrpos($repoFullName, '/') + 1)
+            : $repoFullName;
+        $prefix = trim((string) $prefix);
+
+        if ($prefix !== '' && str_starts_with($name, $prefix)) {
+            return substr($name, strlen($prefix));
         }
 
-        $fromEnv = trim((string) config('ops.github.token'));
+        return $name;
+    }
 
-        return $fromEnv !== '' ? $fromEnv : null;
+    /**
+     * @param  callable(int): mixed  $pageFetcher
+     * @return list<array{name: string, full_name: string, default_branch: string, private: bool, html_url: string, id: string|null}>
+     */
+    private function paginateRepos(callable $pageFetcher, ?string $ownerLogin = null): array
+    {
+        $repos = [];
+        $page = 1;
+
+        do {
+            $payload = $pageFetcher($page);
+            if (! is_array($payload)) {
+                throw new GitHubApiException('GitHub repo list was not a JSON array.');
+            }
+
+            foreach ($payload as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
+                $mapped = $this->mapRepo($row, $ownerLogin);
+                if ($mapped !== null) {
+                    $repos[] = $mapped;
+                }
+            }
+
+            $count = count($payload);
+            $page++;
+        } while ($count === 100 && $page <= 20);
+
+        return $repos;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array{name: string, full_name: string, default_branch: string, private: bool, html_url: string, id: string|null}|null
+     */
+    private function mapRepo(array $row, ?string $ownerLogin = null): ?array
+    {
+        $name = trim((string) ($row['name'] ?? ''));
+        if ($name === '') {
+            return null;
+        }
+
+        $fullName = trim((string) ($row['full_name'] ?? ''));
+        if ($fullName === '') {
+            $fullName = $ownerLogin !== null ? $ownerLogin.'/'.$name : $name;
+        }
+
+        if ($ownerLogin !== null && ! str_starts_with(strtolower($fullName), strtolower($ownerLogin).'/')) {
+            return null;
+        }
+
+        $id = $row['id'] ?? null;
+
+        return [
+            'name' => $name,
+            'full_name' => $fullName,
+            'default_branch' => (string) ($row['default_branch'] ?? 'main'),
+            'private' => (bool) ($row['private'] ?? true),
+            'html_url' => (string) ($row['html_url'] ?? ''),
+            'id' => $id !== null && $id !== '' ? (string) $id : null,
+        ];
+    }
+
+    /**
+     * @param  array<string, scalar>  $query
+     * @return array<int|string, mixed>
+     */
+    private function getJson(string $path, array $query = [], ?string $token = null): array
+    {
+        $response = $this->http($token)->get($this->apiUrl($path), $query);
+
+        if ($response->failed()) {
+            throw new GitHubApiException(
+                'GitHub API '.$path.' returned HTTP '.$response->status().'.',
+                $response->status(),
+            );
+        }
+
+        $json = $response->json();
+        if (! is_array($json)) {
+            throw new GitHubApiException('GitHub API '.$path.' returned a non-JSON body.', $response->status());
+        }
+
+        return $json;
+    }
+
+    private function http(?string $token = null): PendingRequest
+    {
+        $timeout = max(1, (int) config('ops.github.timeout', 20));
+
+        return Http::timeout($timeout)
+            ->accept('application/vnd.github+json')
+            ->withHeaders([
+                'X-GitHub-Api-Version' => '2022-11-28',
+                'User-Agent' => 'deamon-plane',
+                'Authorization' => 'Bearer '.($token ?? $this->accessToken()),
+            ]);
+    }
+
+    private function unauthenticatedHttp(): PendingRequest
+    {
+        $timeout = max(1, (int) config('ops.github.timeout', 20));
+
+        return Http::timeout($timeout)
+            ->accept('application/vnd.github+json')
+            ->withHeaders([
+                'X-GitHub-Api-Version' => '2022-11-28',
+                'User-Agent' => 'deamon-plane',
+            ]);
+    }
+
+    private function accessToken(): string
+    {
+        if ($this->connection !== null) {
+            if ($this->connection->kind === ThemeGitConnectionKind::Pat) {
+                $token = trim((string) $this->connection->token);
+                if ($token === '') {
+                    throw new GitHubCredentialsException('This PAT connection has no token.');
+                }
+
+                return $token;
+            }
+
+            $installationId = trim((string) $this->connection->installation_id);
+            if ($installationId === '') {
+                throw new GitHubCredentialsException('This GitHub App connection has no installation.');
+            }
+
+            return $this->installationAccessTokenFor($installationId);
+        }
+
+        throw new GitHubCredentialsException(
+            'GitHub theme connections are not configured. Connect GitHub under Themes.',
+        );
+    }
+
+    private function appJwt(): string
+    {
+        $settings = $this->settings ?? GithubSetting::current();
+        $appId = $this->resolvedAppId($settings);
+        $privateKey = $this->resolvedPrivateKey($settings);
+
+        if ($appId === null || $privateKey === null) {
+            throw new GitHubCredentialsException(
+                'GitHub App is not configured. Connect GitHub under Themes.',
+            );
+        }
+
+        return GitHubAppJwt::encode($appId, $privateKey);
     }
 
     private function resolvedAppId(GithubSetting $settings): ?string
     {
         $value = trim((string) ($settings->app_id ?: config('ops.github.app_id')));
-
-        return $value !== '' ? $value : null;
-    }
-
-    private function resolvedInstallationId(GithubSetting $settings): ?string
-    {
-        $value = trim((string) ($settings->installation_id ?: config('ops.github.installation_id')));
 
         return $value !== '' ? $value : null;
     }
@@ -303,18 +481,6 @@ class GitHubAppClient
         $value = str_replace('\\n', "\n", trim($value));
 
         return $value !== '' ? $value : null;
-    }
-
-    private function hasAppCredentials(GithubSetting $settings): bool
-    {
-        return $this->resolvedAppId($settings) !== null
-            && $this->resolvedInstallationId($settings) !== null
-            && $this->resolvedPrivateKey($settings) !== null;
-    }
-
-    private function org(): string
-    {
-        return ($this->settings ?? GithubSetting::current())->resolvedOrg();
     }
 
     private function apiUrl(string $path): string

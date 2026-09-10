@@ -3,7 +3,8 @@
 namespace App\Services\Agent;
 
 /**
- * Locked CMS agent contract (Task 8 health + Task 11 themes, Deamon v1.2.5).
+ * Locked CMS agent contract (Task 8 health + Task 11 themes, Deamon v1.2.7).
+ * Theme git install (CMS 1.2.7+): any github.com owner/name (and https / .git).
  *
  * SoT: deamon `docs/modules/control-plane-agent.md`.
  * Canonical string is HMAC-SHA256 of `{timestamp}.{nonce}.{rawBody}`
@@ -13,7 +14,7 @@ namespace App\Services\Agent;
  */
 final class ControlPlaneAgentContract
 {
-    public const CMS_VERSION = '1.2.5';
+    public const CMS_VERSION = '1.2.7';
 
     public const BASE_PATH = '/internal/control/v1';
 

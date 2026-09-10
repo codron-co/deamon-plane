@@ -302,6 +302,8 @@ Middleware: `EnsureControlPlaneSignature` (HMAC-SHA256: `timestamp.nonce.body`; 
 
 ## 7. Tema mağazası (Faz B)
 
+> **2026-09-10:** Tek `GITHUB_ORG` + Settings PAT/PEM paste **superseded**. SoT: [../superpowers/specs/2026-09-10-theme-git-connections-design.md](../superpowers/specs/2026-09-10-theme-git-connections-design.md). Aşağıdaki 7.1 metni tarihsel Faz B kilididir.
+
 ### 7.1 Katalog
 
 - GitHub App: org’daki `deamon-theme-*` repolarını senkronize et → `themes` tablosu.
@@ -356,7 +358,7 @@ Internal denser ops UI (Vercel/Linear tarzı):
 - **Sites list:** toolbar search/filter (channel, status); row: domain, channel chip, deploy status, theme.
 - **Site detail tabs:** Overview · Domains · Channel · Deployments · Themes · Audit.
 - **Themes (Faz B):** catalog grid/list; detail; access; installations.
-- **Settings:** Coolify connection test; GitHub connection test; default server/project.
+- **Settings (historical Faz B):** Coolify / GitHub connection tests. **Current:** Settings is env defaults; theme GitHub is Themes Manifest; Coolify token lives under Coolify.
 - Tehlikeli işlemler: confirm modal (channel switch, destroy, force deploy).
 - UI skill kapısı: control plane kendi UI’ında UI UX Pro Max + UI Design Brain (ayrı app).
 
@@ -831,7 +833,7 @@ Paralel: Deamon agent (Task 8/11) ile control plane UI aynı anda gidebilir.
 **Dalga 0 kilit (2026-08-13, önerilen default’lar uygulandı):**
 
 1. **Coolify proje yapısı:** **Tek project + tag/slug** (`GET /applications?tag=`).
-2. **GitHub org adı:** Config `GITHUB_ORG=deamon-themes`. Mevcut `codron-co/deamon-theme-*` taşıması **ayrı iş** (bu build değil).
+2. **GitHub org adı:** Config `GITHUB_ORG=deamon-themes`. Mevcut `codron-co/deamon-theme-*` taşıması **ayrı iş** (bu build değil). **Superseded 2026-09-10:** Themes Manifest + N user/org connections; `GITHUB_ORG` is not a catalog lock.
 3. **Agent network:** **Public HTTPS + HMAC** + opsiyonel IP allowlist (v1). WireGuard sonra.
 4. **Channel switch rollback:** **Manuel** v1; otomatik rollback v1.1.
 5. **Theme auto-update:** varsayılan **off** (opt-in).

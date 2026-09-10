@@ -10,6 +10,8 @@
 - **[Implementation plan](plans/2026-08-13-deamon-plane.md)** — fleet, Coolify, agent, tema mağazası, task checklist
 - [Coolify spike notes (Dalga 0)](plans/2026-08-13-coolify-spike-notes.md) — API map; **Go**
 - [Progress ledger](plans/progress-ledger.md)
+- [Theme Git connections spec](superpowers/specs/2026-09-10-theme-git-connections-design.md) — one Plane GitHub App, many Themes installations (Settings paste retired)
+- [Theme Git connections plan](plans/2026-09-10-theme-git-connections.md) — code-worker todos; CMS **1.2.7** git `repo` allowlist already landed in `deamon`
 
 ## Referans
 
@@ -23,7 +25,7 @@
 - [Coolify HTTP adapter](modules/coolify-client.md) — N connections, allowlists, site dropdowns
 - [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC or query token + deployments UI + fleet KPI
 - [Site agent client](modules/agent-client.md) — HMAC health poll + version gate + unhealthy KPI
-- [Theme catalog](modules/theme-catalog.md) — GitHub `deamon-theme-*` sync (no ZIP)
+- [Theme catalog](modules/theme-catalog.md) — Git connections under Themes (Manifest + all/selected; no ZIP)
 - [Theme agent client](modules/theme-agent-client.md) — assign via CMS `X-Deamon-*` HMAC
 - [GitHub theme webhooks](modules/github-webhooks.md) — distinct from Coolify deploy webhooks
 - [Cloudflare HTTP adapter](modules/cloudflare-client.md) — token, parent-zone A attach, preview wildcard, DNS template

@@ -42,7 +42,7 @@ Bu dosya subagent’lara **göömülecek** küresel kısıtları çıkarır.
 - **Plane stack:** aynı — bu repo `docker-compose.coolify.yml` (`plane_*` volumes); müşteri siteleriyle DB/Redis paylaşmaz
 - Channels allowlist: `main` | `beta` | `alpha`
 - Müşteri Coolify env (app): `APP_KEY` + `DEAMON_SITE_NAME` (+ Coolify `SERVICE_*`)
-- Tema SoT: GitHub org (config) + `deamon-theme-{theme_id}`
+- Tema SoT: Git-only catalog from Themes Git connections (one Plane GitHub App, many user/org installs). Legacy org+`deamon-theme-*` prefix is a migrated default, not a lock. Settings PAT/PEM paste is retired — [theme-git-connections spec](../../../docs/superpowers/specs/2026-09-10-theme-git-connections-design.md).
 - Secrets: encrypted cast/vault; log/git yok
 - Audit: create, channel, domain, deploy, theme assign/update
 - Confirm: channel downgrade, destroy
@@ -85,7 +85,7 @@ Handoff: imza şeması, env key’leri, JSON contract — kod kopyası değil.
 Plan §18 — Dalga 0’da kilitle:
 
 1. **Coolify project:** tek project + tag/slug  
-2. **Theme org:** `GITHUB_ORG=deamon-themes` (taşıma ayrı)  
+2. **Theme org:** `GITHUB_ORG=deamon-themes` was the Dalga 0 lock; **superseded 2026-09-10** by Themes Manifest + N connections (legacy prefix kept on migrate).
 3. **Agent network:** public HTTPS + HMAC (+ IP allowlist)  
 4. **Rollback:** manuel v1  
 5. **Theme auto-update:** default **off**  

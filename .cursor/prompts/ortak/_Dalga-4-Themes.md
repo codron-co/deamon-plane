@@ -10,6 +10,8 @@
 
 `deamon-themes` (config) kataloğu; site’e git-bağlı tema; allowlist/public/private; push → opt-in auto update. **ZIP yok.**
 
+**2026-09-10:** Settings → GitHub PAT/PEM paste artık tek yol değil. SoT: [docs/superpowers/specs/2026-09-10-theme-git-connections-design.md](../../../docs/superpowers/specs/2026-09-10-theme-git-connections-design.md) (Themes Manifest, çoklu user/org connection).
+
 ---
 
 ## Paralel plan
