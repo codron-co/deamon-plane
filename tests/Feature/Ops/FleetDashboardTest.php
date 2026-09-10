@@ -37,16 +37,25 @@ class FleetDashboardTest extends TestCase
         $operator = User::factory()->create();
         $operator->assignRole(OpsRole::Operator->value);
 
-        $this->actingAs($operator)
+        $html = $this->actingAs($operator)
             ->get(route('ops.fleet'))
             ->assertOk()
+            ->assertSee('ops-content-wide', false)
             ->assertSee('Fleet snapshot', false)
             ->assertSee('Unhealthy', false)
             ->assertSee('Failed deploys', false)
             ->assertSee('Status error or agent health fail', false)
             ->assertSee('main 1', false)
             ->assertSee('beta 1', false)
-            ->assertSee('alpha 1', false);
+            ->assertSee('alpha 1', false)
+            ->assertSee(route('ops.sites.show', $error), false)
+            ->assertDontSee(route('ops.sites.edit', $error), false)
+            ->getContent();
+
+        $this->assertLessThan(
+            strpos($html, 'id="fleet-failed-heading"'),
+            strpos($html, 'id="fleet-unhealthy-heading"')
+        );
     }
 
     public function test_unhealthy_kpi_includes_agent_failures_without_double_counting_error(): void
@@ -90,7 +99,7 @@ class FleetDashboardTest extends TestCase
             ->getContent();
 
         $this->assertSame(1, substr_count($html, 'kpi-label">Unhealthy'));
-        $this->assertMatchesRegularExpression('/Unhealthy<\/p>\s*<p class="kpi-value">2<\/p>/', $html);
+        $this->assertMatchesRegularExpression('/kpi-label">Unhealthy[\s\S]{0,400}?kpi-value[^>]*>2<\/p>/', $html);
         $this->assertSame(5, substr_count($html, 'class="kpi-card"'));
         $this->assertStringNotContainsString(__('fleet.attention.dockerfile_title'), $html);
         $this->assertStringNotContainsString(__('fleet.attention.dockerfile_lede'), $html);
@@ -119,11 +128,56 @@ class FleetDashboardTest extends TestCase
             ->assertSee('Legacy Dockerfile Site', false)
             ->assertSee('legacy.example.test', false)
             ->assertSee(route('ops.sites.show', $legacy), false)
+            ->assertDontSee(route('ops.sites.edit', $legacy), false)
             ->assertDontSee('Compose Site', false)
             ->getContent();
 
         $this->assertSame(5, substr_count($html, 'class="kpi-card"'));
         $this->assertSame(1, substr_count($html, 'id="fleet-attention-heading"'));
         $this->assertStringNotContainsString('eski sürüm', $html);
+        $this->assertStringContainsString('class="site-hint"', $html);
+    }
+
+    public function test_fleet_attention_lists_unhealthy_and_failed_before_dockerfile(): void
+    {
+        $unhealthy = Site::factory()->create([
+            'name' => 'Unhealthy Attention Site',
+            'primary_domain' => 'unhealthy.example.test',
+            'status' => SiteStatus::Error,
+        ]);
+        $failed = Deployment::factory()->create([
+            'status' => DeploymentStatus::Failed,
+            'error_message' => 'Compose pull failed.',
+        ]);
+        $legacy = Site::factory()->dockerfilePack()->create([
+            'name' => 'Legacy Pack Site',
+            'primary_domain' => 'legacy-pack.example.test',
+        ]);
+
+        $operator = User::factory()->create();
+        $operator->assignRole(OpsRole::Operator->value);
+
+        $html = $this->actingAs($operator)
+            ->get(route('ops.fleet'))
+            ->assertOk()
+            ->assertSee('Unhealthy Attention Site', false)
+            ->assertSee('Compose pull failed.', false)
+            ->assertSee('Legacy Pack Site', false)
+            ->assertSee(route('ops.sites.show', $unhealthy), false)
+            ->assertSee(route('ops.sites.show', $failed->site), false)
+            ->assertSee(route('ops.sites.show', $legacy), false)
+            ->assertDontSee(route('ops.sites.edit', $unhealthy), false)
+            ->assertDontSee(route('ops.sites.edit', $failed->site), false)
+            ->getContent();
+
+        $unhealthyPos = strpos($html, 'id="fleet-unhealthy-heading"');
+        $failedPos = strpos($html, 'id="fleet-failed-heading"');
+        $dockerfilePos = strpos($html, 'id="fleet-attention-heading"');
+
+        $this->assertNotFalse($unhealthyPos);
+        $this->assertNotFalse($failedPos);
+        $this->assertNotFalse($dockerfilePos);
+        $this->assertLessThan($failedPos, $unhealthyPos);
+        $this->assertLessThan($dockerfilePos, $failedPos);
     }
 }

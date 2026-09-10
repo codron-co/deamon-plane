@@ -3,6 +3,9 @@
 return [
     'title' => 'Fleet',
     'lede' => 'Coolify-hosted Deamon sites. Deploy status updates from Coolify webhooks (HMAC or query token), with poll as fallback.',
+    'kicker' => 'Operations',
+    'heading' => 'Needs attention',
+    'snapshot_kicker' => 'Snapshot',
     'kpis' => [
         'aria' => 'Fleet snapshot',
         'sites' => 'Sites',
