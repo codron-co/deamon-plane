@@ -177,6 +177,11 @@ class CoolifyClient
             unset($body['is_auto_deploy']);
         }
 
+        if (array_key_exists('git_commit_sha', $body)) {
+            $sha = trim((string) ($body['git_commit_sha'] ?? ''));
+            $body['git_commit_sha'] = $sha === '' ? CoolifyApplication::HEAD_REF : $sha;
+        }
+
         if ($body === []) {
             throw new InvalidArgumentException('Coolify application PATCH body is empty.');
         }

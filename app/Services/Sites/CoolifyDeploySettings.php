@@ -90,7 +90,7 @@ class CoolifyDeploySettings
 
         try {
             $app = $coolify->patchApplication($uuid, [
-                'git_commit_sha' => '',
+                'git_commit_sha' => CoolifyApplication::HEAD_REF,
                 'is_auto_deploy_enabled' => true,
             ]);
             $coolify->deploy($uuid);

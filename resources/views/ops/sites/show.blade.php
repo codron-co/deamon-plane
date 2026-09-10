@@ -25,6 +25,10 @@
             <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.detail.sync') }}</button>
         </form>
     @endif
+    @if (filled($site->primary_domain))
+        <a class="btn btn-ghost btn-sm" href="https://{{ $site->primary_domain }}" target="_blank" rel="noopener noreferrer">{{ __('sites.detail.open_site') }}</a>
+        <a class="btn btn-ghost btn-sm" href="https://{{ $site->primary_domain }}/admin" target="_blank" rel="noopener noreferrer">{{ __('sites.detail.open_admin') }}</a>
+    @endif
     @if ($coolifyAppUrl)
         <a class="btn btn-ghost btn-sm" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.deployments.open_coolify') }}</a>
     @endif
@@ -60,6 +64,7 @@
         $failure = $site->lastFailureMessage();
         $primaryDomain = $site->primary_domain;
         $siteUrl = filled($primaryDomain) ? 'https://'.$primaryDomain : null;
+        $adminUrl = $siteUrl ? $siteUrl.'/admin' : null;
         $healthDisplay = $agentHealth->displayStatus($site);
         $nameservers = is_array($site->cloudflare_nameservers) ? $site->cloudflare_nameservers : [];
     @endphp
@@ -92,6 +97,12 @@
                     <span aria-hidden="true">·</span>
                     <span>{{ $site->slug }}</span>
                 </div>
+                @if ($siteUrl && $adminUrl)
+                    <div class="site-open-links">
+                        <a href="{{ $siteUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.detail.open_site') }}</a>
+                        <a href="{{ $adminUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.detail.open_admin') }}</a>
+                    </div>
+                @endif
             </div>
         </div>
         <div class="site-hero-meta" aria-label="{{ __('sites.detail.release') }}">
@@ -186,7 +197,18 @@
                 </div>
                 <dl class="site-fact-list">
                     <div><dt>{{ __('sites.detail.git') }}</dt><dd><code>{{ $site->git_repository ?: __('ops.none') }}</code></dd></div>
-                    <div><dt>{{ __('sites.detail.domain') }}</dt><dd>{{ $primaryDomain ?: __('ops.none') }}</dd></div>
+                    <div>
+                        <dt>{{ __('sites.detail.domain') }}</dt>
+                        <dd>
+                            @if ($siteUrl && $adminUrl)
+                                <a href="{{ $siteUrl }}" target="_blank" rel="noopener noreferrer">{{ $primaryDomain }}</a>
+                                <span aria-hidden="true">·</span>
+                                <a href="{{ $adminUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.detail.open_admin') }}</a>
+                            @else
+                                {{ $primaryDomain ?: __('ops.none') }}
+                            @endif
+                        </dd>
+                    </div>
                     <div><dt>{{ __('sites.detail.latest_deployment') }}</dt><dd>{{ $latest?->started_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.none') }}</dd></div>
                 </dl>
             </article>

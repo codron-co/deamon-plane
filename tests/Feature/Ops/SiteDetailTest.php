@@ -53,6 +53,10 @@ class SiteDetailTest extends TestCase
             ->assertSee('alpha', false)
             ->assertSee('1.8.4', false)
             ->assertSee('data-favicon-host="'.$site->primary_domain.'"', false)
+            ->assertSee('href="https://'.$site->primary_domain.'"', false)
+            ->assertSee('href="https://'.$site->primary_domain.'/admin"', false)
+            ->assertSee(__('sites.detail.open_site'), false)
+            ->assertSee(__('sites.detail.open_admin'), false)
             ->assertSee(route('ops.sites.edit', $site), false)
             ->assertSee('js/ops-ui.js', false)
             ->getContent();

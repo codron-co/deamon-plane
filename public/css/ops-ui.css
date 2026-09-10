@@ -826,6 +826,22 @@ html[data-theme="semidark"] .fleet-attention-list li {
 .site-domain-row { gap: 7px; margin-top: 4px; color: var(--text-faint); font-size: 12px; }
 .site-domain-row a { color: var(--text-muted); text-decoration: none; }
 .site-domain-row a:hover { color: var(--accent); }
+.site-open-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+}
+.site-open-links a {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+}
+.site-open-links a:hover,
+.site-open-links a:focus-visible {
+    color: var(--accent-hover);
+}
 .site-hero-meta { gap: 6px; }
 
 .site-section-nav {

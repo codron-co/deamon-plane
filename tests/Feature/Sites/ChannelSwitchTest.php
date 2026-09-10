@@ -89,7 +89,7 @@ class ChannelSwitchTest extends TestCase
                 && $request->url() === 'https://coolify.test/api/v1/applications/coolify-app-1'
                 && ($data['git_branch'] ?? null) === 'beta'
                 && array_key_exists('git_commit_sha', $data)
-                && $data['git_commit_sha'] === ''
+                && $data['git_commit_sha'] === 'HEAD'
                 && ! array_key_exists('fqdn', $data);
         });
 
@@ -108,7 +108,7 @@ class ChannelSwitchTest extends TestCase
         $this->assertSecretsStayPrivate($site);
     }
 
-    public function test_channel_switch_moves_coolify_environment_and_writes_app_env(): void
+    public function test_channel_switch_writes_app_env_without_environment_uuid_patch(): void
     {
         $connection = CoolifyConnection::factory()->create([
             'base_url' => 'https://coolify.test',
@@ -155,7 +155,7 @@ class ChannelSwitchTest extends TestCase
                 && $request->url() === 'https://coolify.test/api/v1/applications/coolify-app-1'
                 && ($data['git_branch'] ?? null) === 'beta'
                 && array_key_exists('git_commit_sha', $data)
-                && $data['git_commit_sha'] === ''
+                && $data['git_commit_sha'] === 'HEAD'
                 && ! array_key_exists('environment_uuid', $data);
         });
         Http::assertSent(function (Request $request): bool {

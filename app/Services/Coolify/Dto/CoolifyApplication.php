@@ -8,6 +8,9 @@ use Illuminate\Support\Arr;
 
 final class CoolifyApplication
 {
+    /** Coolify follows the branch tip. Empty string fails PATCH validation. */
+    public const HEAD_REF = 'HEAD';
+
     /**
      * @param  list<array{name: string, domain: string}>  $composeDomains
      * @param  array<string, mixed>  $raw

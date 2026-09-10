@@ -67,7 +67,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 `ChannelSwitcher` + `SwitchSiteChannelJob` + shared `PollDeploymentJob` (trigger `channel_switch`). Runbook: [channel-switch.md](../runbooks/channel-switch.md).
 
 - Eligible: `active` or `error` with `coolify_app_uuid`. Status `deploying` / `provisioning` is rejected.
-- Coolify: `PATCH git_branch` + `git_commit_sha: ""` (follow the new branch HEAD; a pin would keep the old commit). Do **not** send `environment_uuid` — Coolify 4.x rejects it on application PATCH (`This field is not allowed`) and the whole branch update fails. `APP_ENV` / `DEAMON_CHANNEL` go via `/envs/bulk`, then `deploy`. Never `DELETE` the application. Volumes persist (ADR-7). Same path for site detail and list **Branch Değiştir**.
+- Coolify: `PATCH git_branch` + `git_commit_sha: "HEAD"` (follow the new branch tip; empty SHA fails Coolify validation). Do **not** send `environment_uuid` — Coolify 4.x rejects it on application PATCH (`This field is not allowed`) and the whole branch update fails. `APP_ENV` / `DEAMON_CHANNEL` go via `/envs/bulk`, then `deploy`. Never `DELETE` the application. Volumes persist (ADR-7). Same path for site detail and list **Branch Değiştir**.
 - During the switch: `desired_channel` is set and status is `deploying`. Success copies it to `channel` and clears `desired_channel`.
 - Policy config `config/ops.php` → `channel_switch`: `main` → `beta`/`alpha` requires confirm; `alpha`/`beta` → `main` is a version gate. When last health has `deamon_version`, the minimum is enforced. Missing health does **not** block. Force is Super Admin only.
 - Audit: `site.channel_switch_started`, `site.channel_switched`, `site.channel_switch_failed`.

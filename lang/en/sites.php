@@ -44,6 +44,8 @@ return [
         'branch_version' => 'Repo branch · version',
         'version_unknown' => 'Unknown version',
         'domain' => 'Primary domain',
+        'open_site' => 'Open site',
+        'open_admin' => 'Admin panel',
         'theme' => 'Active theme',
         'connection' => 'Coolify connection',
         'last_health' => 'Last health check',

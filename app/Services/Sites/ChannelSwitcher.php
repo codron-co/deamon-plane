@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyCredentials;
+use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -132,7 +133,7 @@ class ChannelSwitcher
         $coolify = CoolifyApplicationService::forSite($site);
         $patch = [
             'git_branch' => $target->value,
-            'git_commit_sha' => '',
+            'git_commit_sha' => CoolifyApplication::HEAD_REF,
         ];
 
         $coolify->patchApplication($appUuid, $patch);

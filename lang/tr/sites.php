@@ -44,6 +44,8 @@ return [
         'branch_version' => 'Repo dalı · sürüm',
         'version_unknown' => 'Sürüm bilinmiyor',
         'domain' => 'Birincil domain',
+        'open_site' => 'Site',
+        'open_admin' => 'Admin paneli',
         'theme' => 'Aktif tema',
         'connection' => 'Coolify bağlantısı',
         'last_health' => 'Son sağlık kontrolü',

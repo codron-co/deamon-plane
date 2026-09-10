@@ -115,7 +115,7 @@ class CoolifyDeploySettingsTest extends TestCase
 
             return $request->method() === 'PATCH'
                 && array_key_exists('git_commit_sha', $body)
-                && $body['git_commit_sha'] === ''
+                && $body['git_commit_sha'] === 'HEAD'
                 && ($body['is_auto_deploy_enabled'] ?? null) === true
                 && ! array_key_exists('is_auto_deploy', $body);
         });

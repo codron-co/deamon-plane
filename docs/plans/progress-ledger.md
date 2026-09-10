@@ -123,7 +123,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 ## Slice 6 — dockerfile → compose + auto-deploy + pin (2026-09-10)
 
-- Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` **and** `docker_compose_domains` (from live compose domains, else `fqdn`, else `sites.primary_domain`). Omitting domains wipes the Coolify proxy. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` via Coolify 4.3 `/envs` `{ key, value, is_literal }` (not `is_literally` / `available_in_services` / env `uuid`); `DB_*` not copied. Recreate → abort. Env restore API errors are flash, not 500. Auto-deploy `is_auto_deploy_enabled` (Coolify rejects `is_auto_deploy`). Pin SHA/tag + auto-deploy off; Follow HEAD unpins + auto-deploy on + branch deploy. Channel switch also sends `git_commit_sha: ""` then `POST /deploy` so Coolify follows the new branch HEAD. Bulk selected + all Dockerfile, confirm on dangerous actions.
+- Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` **and** `docker_compose_domains` (from live compose domains, else `fqdn`, else `sites.primary_domain`). Omitting domains wipes the Coolify proxy. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` via Coolify 4.3 `/envs` `{ key, value, is_literal }` (not `is_literally` / `available_in_services` / env `uuid`); `DB_*` not copied. Recreate → abort. Env restore API errors are flash, not 500. Auto-deploy `is_auto_deploy_enabled` (Coolify rejects `is_auto_deploy`). Pin SHA/tag + auto-deploy off; Follow HEAD sends `git_commit_sha: "HEAD"` (empty string is invalid on Coolify 4.x) + auto-deploy on + branch deploy. Channel switch uses the same `HEAD` SHA then `POST /deploy`. Bulk selected + all Dockerfile, confirm on dangerous actions.
 
 ## Site Coolify / theme / confirm parity (2026-09-10)
 
@@ -135,7 +135,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 ## Sites list bulk selection (2026-09-10)
 
-- Status: **code**. Header checkbox selects every site matching current filters (`all=1`), not the page. Bulk actions show only when a selection exists: Change branch, Switch to Compose (Dockerfile leftovers only), Auto-deploy on/off (all on → off; all off → on; mixed → off). Channel switch writes `APP_ENV` / `DEAMON_CHANNEL` and `git_branch` + empty `git_commit_sha` (HEAD). Coolify application PATCH must not send `environment_uuid` (API rejects it). Tests: SiteBulkActionsTest, ChannelSwitchTest.
+- Status: **code**. Header checkbox selects every site matching current filters (`all=1`), not the page. Bulk actions show only when a selection exists: Change branch, Switch to Compose (Dockerfile leftovers only), Auto-deploy on/off (all on → off; all off → on; mixed → off). Channel switch writes `APP_ENV` / `DEAMON_CHANNEL` and `git_branch` + `git_commit_sha: HEAD`. Coolify application PATCH must not send `environment_uuid` (API rejects it). Tests: SiteBulkActionsTest, ChannelSwitchTest.
 
 ## Background jobs widget + AJAX ops (2026-09-10)
 
