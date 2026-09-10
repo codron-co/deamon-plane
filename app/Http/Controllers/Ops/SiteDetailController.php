@@ -6,7 +6,6 @@ use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
-use App\Models\CoolifyConnection;
 use App\Models\Site;
 use App\Models\Theme;
 use App\Services\Agent\SiteHealthEvaluator;
@@ -28,7 +27,6 @@ class SiteDetailController extends Controller
             'activeThemeInstallation.theme',
         ]);
 
-        $connection = $site->coolifyConnection ?: CoolifyConnection::default();
         $user = $request->user();
 
         return view('ops.sites.show', [
@@ -51,9 +49,7 @@ class SiteDetailController extends Controller
                 ->latest('id')
                 ->limit(25)
                 ->get(),
-            'coolifyAppUrl' => $connection instanceof CoolifyConnection
-                ? $connection->applicationUiUrl($site->coolify_app_uuid)
-                : null,
+            'coolifyAppUrl' => $site->coolifyUiUrl(),
             'themeInstallations' => $site->themeInstallations,
             'assignableThemes' => $this->assignableThemes($site),
             'canAssignTheme' => $user?->can('assign', Theme::class) ?? false,

@@ -54,6 +54,8 @@ Existing `coolify_settings` row is copied into the first connection on migrate (
 
 If `GET /github-apps` is missing, UI shows a hybrid note: pick a deploy key from `/security/keys`, or Super Admin pastes a Coolify GitHub App UUID in the collapsed advanced field. Link: [Coolify GitHub Apps API](https://github.com/coollabsio/coolify/blob/v4.x/routes/api.php) (`GET /github-apps` exists on current v4.x; older 4.3 instances may 404).
 
+**Open in Coolify:** `{base}/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}`. Use the site’s `coolify_project_uuid` / `coolify_environment_uuid` (fallback: connection defaults). Never the environment **name** or git channel (`alpha` / `production`) — Coolify 404s those.
+
 **Site fill (same POST Sync):** for each matching site, `GET /applications/{coolify_app_uuid}` and write project / environment / server / git source (GitHub App or deploy key) / `git_repository`. Allowlisted branch (`main` \| `beta` \| `alpha`) sets `channel` and clears `channel_needs_review`. Other branches (`develop`) set `channel_needs_review` and **do not** overwrite `channel`. Skip channel while status is `provisioning` or `deploying`. **Never** write `status`, `app_key_encrypted`, or `agent_secret_encrypted`. App 404 skips that site (inventory rows gone from Coolify may still be deleted; **sites are not auto-deleted**). Sync still does not write inventory `is_active` (does not zero it). Other connections’ sites are left alone. Flash includes the sites-filled count.
 
 ## Create path

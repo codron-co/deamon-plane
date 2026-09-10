@@ -112,6 +112,28 @@ class Site extends Model
         return $this->belongsTo(CoolifyConnection::class);
     }
 
+    /**
+     * Coolify UI deep link. Path uses project + environment uuids, never the env/channel name.
+     */
+    public function coolifyUiUrl(): ?string
+    {
+        $connection = $this->coolifyConnection ?: CoolifyConnection::default();
+        if ($connection instanceof CoolifyConnection) {
+            return $connection->applicationUiUrl(
+                $this->coolify_app_uuid,
+                $this->coolify_project_uuid,
+                $this->coolify_environment_uuid,
+            );
+        }
+
+        return CoolifySetting::current()->applicationUiUrl(
+            $this->coolify_app_uuid,
+            null,
+            $this->coolify_project_uuid,
+            $this->coolify_environment_uuid,
+        );
+    }
+
     public function domains(): HasMany
     {
         return $this->hasMany(SiteDomain::class);

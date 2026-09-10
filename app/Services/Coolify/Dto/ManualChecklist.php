@@ -10,7 +10,7 @@ final class ManualChecklist
     public function __construct(
         public readonly string $operation,
         public readonly array $steps,
-        public readonly ?string $deepLinkHint = '{base}/project/{project}/environment/{env}/application/{uuid}',
+        public readonly ?string $deepLinkHint = '{base}/project/{project_uuid}/environment/{environment_uuid}/application/{uuid}',
     ) {}
 
     public static function createComposeApp(): self

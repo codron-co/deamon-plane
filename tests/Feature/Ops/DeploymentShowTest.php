@@ -7,6 +7,7 @@ use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
+use App\Models\CoolifyConnection;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\User;
@@ -59,6 +60,42 @@ class DeploymentShowTest extends TestCase
             ->assertSee('f2a368dabc', false)
             ->assertSee('create', false)
             ->assertDontSee((string) $site->app_key_encrypted, false);
+    }
+
+    public function test_open_in_coolify_uses_environment_uuid_not_name(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://dev.codron.cloud',
+            'is_default' => true,
+            'default_project_uuid' => 'z8ocg8k04ww8osssccc088c0',
+            'default_environment_uuid' => 'sns276euzsz2fprqg3xgfz17',
+            'default_environment_name' => 'alpha',
+        ]);
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Alpha,
+            'coolify_app_uuid' => 'a3p6sgysfwjqhv4yntth1n85',
+            'coolify_connection_id' => $connection->id,
+            'coolify_project_uuid' => 'z8ocg8k04ww8osssccc088c0',
+            'coolify_environment_uuid' => 'i0sw4kk0cogg4o08oscwcssk',
+        ]);
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Finished,
+        ]);
+        $href = 'https://dev.codron.cloud/project/z8ocg8k04ww8osssccc088c0/environment/i0sw4kk0cogg4o08oscwcssk/application/a3p6sgysfwjqhv4yntth1n85';
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee($href, false)
+            ->assertDontSee('/environment/alpha/', false);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.deployments.show', [$site, $deployment]))
+            ->assertOk()
+            ->assertSee($href, false)
+            ->assertDontSee('/environment/alpha/', false);
     }
 
     public function test_site_edit_and_show_rows_target_deployment_detail(): void

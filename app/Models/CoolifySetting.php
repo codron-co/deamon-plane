@@ -92,11 +92,15 @@ class CoolifySetting extends Model
         return $secrets[0] ?? null;
     }
 
-    public function applicationUiUrl(?string $applicationUuid, ?CoolifyConnection $connection = null): ?string
-    {
+    public function applicationUiUrl(
+        ?string $applicationUuid,
+        ?CoolifyConnection $connection = null,
+        ?string $projectUuid = null,
+        ?string $environmentUuid = null,
+    ): ?string {
         $connection ??= CoolifyConnection::default();
         if ($connection instanceof CoolifyConnection) {
-            return $connection->applicationUiUrl($applicationUuid);
+            return $connection->applicationUiUrl($applicationUuid, $projectUuid, $environmentUuid);
         }
 
         $base = filled($this->base_url)
@@ -106,15 +110,6 @@ class CoolifySetting extends Model
 
         if ($base === '' || blank($applicationUuid)) {
             return null;
-        }
-
-        $project = filled($this->default_project_uuid)
-            ? (string) $this->default_project_uuid
-            : (string) config('ops.coolify.default_project_uuid');
-        $environment = (string) config('ops.provision.environment_name', 'production');
-
-        if ($project !== '') {
-            return $base.'/project/'.$project.'/environment/'.$environment.'/application/'.$applicationUuid;
         }
 
         return $base;

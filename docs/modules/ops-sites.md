@@ -60,7 +60,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Deployments
 
-Site detail and site edit include a **Deployments** table (`ops/deployments/index`): last 25 rows, status chip, duration, commit, **Open in Coolify**. Click a row (or **Show**) for `GET /sites/{site}/deployments/{deployment}` — status, channel, trigger, commit, duration, times, full Coolify error (`message` + `errors` JSON), truncated redacted logs in `<pre>`, and a copyable pasteable report. Poll (`PollDeploymentJob`) and Coolify webhook failures write this text onto the `deployments` row (`error_message` + `log_excerpt`); status `failed` alone is not enough. See [coolify-webhooks.md](coolify-webhooks.md).
+Site detail and site edit include a **Deployments** table (`ops/deployments/index`): last 25 rows, status chip, duration, commit, **Open in Coolify**. The Coolify URL is `/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}` — environment **uuid**, not the name or git branch. Click a row (or **Show**) for `GET /sites/{site}/deployments/{deployment}` — status, channel, trigger, commit, duration, times, full Coolify error (`message` + `errors` JSON), truncated redacted logs in `<pre>`, and a copyable pasteable report. Poll (`PollDeploymentJob`) and Coolify webhook failures write this text onto the `deployments` row (`error_message` + `log_excerpt`); status `failed` alone is not enough. See [coolify-webhooks.md](coolify-webhooks.md).
 
 ## Policy
 

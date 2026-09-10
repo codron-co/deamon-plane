@@ -218,7 +218,7 @@ class CoolifyConnection extends Model
         });
     }
 
-    public function applicationUiUrl(?string $applicationUuid, ?string $projectUuid = null, ?string $environment = null): ?string
+    public function applicationUiUrl(?string $applicationUuid, ?string $projectUuid = null, ?string $environmentUuid = null): ?string
     {
         $base = filled($this->base_url)
             ? (string) $this->base_url
@@ -229,16 +229,37 @@ class CoolifyConnection extends Model
             return null;
         }
 
-        $project = $projectUuid
-            ?: (filled($this->default_project_uuid) ? (string) $this->default_project_uuid : (string) config('ops.coolify.default_project_uuid'));
-        $environment ??= filled($this->default_environment_name)
-            ? (string) $this->default_environment_name
-            : (string) config('ops.provision.environment_name', 'production');
+        $project = $this->uiUuid($projectUuid)
+            ?? $this->uiUuid($this->default_project_uuid)
+            ?? $this->uiUuid(config('ops.coolify.default_project_uuid'));
+        $environment = $this->uiUuid($environmentUuid)
+            ?? $this->uiUuid($this->default_environment_uuid);
 
-        if ($project !== '') {
+        if ($project !== null && $environment !== null) {
             return $base.'/project/'.$project.'/environment/'.$environment.'/application/'.$applicationUuid;
         }
 
         return $base;
+    }
+
+    /**
+     * Coolify UI paths use project/environment uuids. Names (`alpha`, `production`) 404.
+     */
+    private function uiUuid(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+        if ($value === '' || str_contains($value, '/') || str_contains($value, '..')) {
+            return null;
+        }
+
+        if (! preg_match('/[0-9]/', $value) || ! preg_match('/[A-Za-z]/', $value)) {
+            return null;
+        }
+
+        return $value;
     }
 }

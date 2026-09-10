@@ -140,7 +140,7 @@ Use only for gaps proven on the **staging** instance:
 1. Create compose app in Coolify UI (Git + Docker Compose + `docker-compose.coolify.yml`) if create-from-git API rejects private repo without GH App UUID.
 2. Bind domain in Coolify UI if `docker_compose_domains` 409/400.
 3. Configure outbound deploy webhook in Coolify UI if no API.
-4. Always: “Coolify’de aç” deep link ` {base}/project/{project}/environment/{env}/application/{uuid} ` (exact path confirm on instance).
+4. Always: “Coolify’de aç” deep link `{base}/project/{project_uuid}/environment/{environment_uuid}/application/{uuid}` (environment uuid, not name).
 
 Do **not** add shared DB/Redis or Mailcow to this list.
 
