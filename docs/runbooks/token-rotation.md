@@ -12,6 +12,19 @@ Never paste live tokens into git, chat, or audit notes. After rotation, confirm 
 
 Webhook signing secret (`COOLIFY_WEBHOOK_SECRET` / Coolify menu webhook secret) is a **different** secret. Rotate it in Plane and in the Coolify Notifications URL (`?token=`) together, or unsigned POSTs 401. Signed proxies must update the HMAC key at the same time.
 
+## Cloudflare API token
+
+1. Cloudflare dashboard → **My Profile → API Tokens → Create Token**.
+2. Custom token (do not use the **DNS Write** template alone).
+3. Required permission groups:
+   - **DNS & Zones → DNS:** Read + Edit
+   - **DNS & Zones → Zone:** Read + Edit
+4. Resource: **All zones in the account, including future zones**. A zone-scoped token cannot `POST /zones`.
+5. Do not grant Developer Platform, AI, App Security, Rules, Zero Trust, Analytics, Network, Email Routing, Cache, SSL, Apps, or Page Shield.
+6. Plane → **Cloudflare** → paste Account ID + token (leave token blank later to keep). Save.
+7. **Test connection** (probes verify + Zone Read + Zone Edit via nameless `POST /zones` + DNS Read/Edit if a zone exists). Never creates a real zone.
+8. Revoke the previous token.
+
 ## GitHub PAT / App
 
 1. PAT: GitHub → Fine-grained token, org `deamon-themes`, contents read on `deamon-theme-*`.

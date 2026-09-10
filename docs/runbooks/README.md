@@ -10,4 +10,4 @@ Uygulama ilerledikçe doldurulur. Özet akışlar plan §15’te.
 | [channel-switch.md](channel-switch.md) | Task 5 — PATCH git_branch + deploy; confirm / version gate from last health; no DELETE |
 | [agent-secret-inject.md](agent-secret-inject.md) | Task 9 — manual `CONTROL_PLANE_AGENT_SECRET` on CMS Coolify (import does not invent secrets) |
 | [theme-rollout.md](theme-rollout.md) | Task 12–13 — git assign via CMS agent; webhook opt-in |
-| [token-rotation.md](token-rotation.md) | Task 14 — Coolify / GitHub / agent / APP_KEY |
+| [token-rotation.md](token-rotation.md) | Task 14 — Coolify / GitHub / Cloudflare / agent / APP_KEY |

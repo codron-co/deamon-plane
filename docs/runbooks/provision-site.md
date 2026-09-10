@@ -7,15 +7,17 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
 1. Coolify connection is saved in Plane **Coolify** menu (base URL + API token). Tests and CI use `Http::fake` — do not point a laptop at production Coolify to “try” provision.
 2. Default **project** UUID is set (Coolify menu or `COOLIFY_DEFAULT_PROJECT_UUID`).
 3. Target **server** UUID is on the draft site or in the Coolify menu (`COOLIFY_DEFAULT_SERVER_UUID`).
-4. DNS for the customer hostname is ready to aim at Coolify / Traefik (can be done right after provision).
-5. Channel is one of `main` | `beta` | `alpha`.
+4. Cloudflare is saved in Plane **Cloudflare** menu (Account ID + scoped API token). Token must have **DNS & Zones → DNS** Read+Edit and **DNS & Zones → Zone** Read+Edit, resource **all zones including future**. The ready-made “DNS Write” template is not enough (no Zone Edit). **Test connection** probes these without creating a zone.
+5. After provision, set the site’s Cloudflare nameservers at the **registrar**. Plane cannot change registrar NS.
+6. Channel is one of `main` | `beta` | `alpha`.
 
 ## Create + provision
 
 1. Plane → **Sites → New site**. Fill slug, name, primary domain, channel, optional server UUID. Save. Record stays **draft**. No Coolify call yet.
 2. Open the site → **Provision** (operator or super_admin). Viewers cannot provision. Confirm is not required (unlike destroy / channel downgrade).
 3. Plane generates `APP_KEY` and a per-site agent secret, stores both **encrypted**, sets status **provisioning**, writes `site.provision_started`.
-4. Job creates a Coolify application:
+4. Job talks to Cloudflare **before** Coolify: find or create the zone for the primary domain; upsert A `@`/`www`/`*` (origin IPv4, DNS-only) and, if the mail template is on, Hostinger DKIM/MX/SPF/DMARC. No DNS deletes. Persist zone id + nameservers; audit `site.cloudflare_ready`. If Cloudflare fails, status `error` and **no** Coolify app is created.
+5. Job creates a Coolify application:
    - Git repository from site / `DEAMON_GIT_REPOSITORY` (customer CMS repo, not this Plane repo)
    - Branch = site channel
    - Build pack **Docker Compose** (`build_pack=dockercompose`)

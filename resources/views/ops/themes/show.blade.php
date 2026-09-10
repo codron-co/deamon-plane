@@ -145,7 +145,7 @@
                 </thead>
                 <tbody>
                     @foreach ($theme->installations as $installation)
-                        <tr>
+                        <tr @if ($installation->site) data-href="{{ route('ops.sites.show', $installation->site) }}" tabindex="0" @endif>
                             <td>
                                 @if ($installation->site)
                                     <a href="{{ route('ops.sites.show', $installation->site) }}">{{ $installation->site->name }}</a>

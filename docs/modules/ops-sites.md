@@ -40,13 +40,16 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Provision
 
-`SiteProvisioner` + `ProvisionSiteJob` + `PollDeploymentJob`. Runbook: [provision-site.md](../runbooks/provision-site.md).
+`SiteProvisioner` + `ProvisionSiteJob` + `PollDeploymentJob`. Runbook: [provision-site.md](../runbooks/provision-site.md). Cloudflare adapter: [cloudflare-client.md](cloudflare-client.md).
 
 - Eligible statuses: `draft`, `error` (retry). Viewer is forbidden.
+- Preflight: Coolify URL+token+targets **and** Cloudflare Account ID + API token. Missing Cloudflare → do not start (same class of flash as Coolify-not-configured).
+- **Cloudflare first:** find or create the zone for `primary_domain`; upsert the panel DNS template (A `@`/`www`/`*` DNS-only + optional Hostinger mail). Persist `cloudflare_zone_id`, `cloudflare_nameservers`, `dns_applied_at`. Audit `site.cloudflare_ready` (no token). If this step fails, **do not** create a Coolify app.
 - Coolify: git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml`; env `APP_KEY` + `DEAMON_SITE_NAME` (+ `CONTROL_PLANE_AGENT_SECRET` inject). Domain on compose service `app` only (`docker_compose_domains`). **Do not send `fqdn`.** Operator host stays primary even if Coolify generates `{uuid}.demo.codron.co` — see [coolify-client.md](coolify-client.md).
-- Preflight before create POST (Turkish): selected server in live `listServers`; Git source in live sources list. 422 `errors` are shown on the provision flash and in the audit error field.
-- Success → `coolify_app_uuid` + status `active`. Agent health is a separate poll (does not gate provision). Failure → `error` + audit.
-- Retry reuses an existing Coolify app uuid (does not DELETE the app).
+- Preflight before Coolify create POST (Turkish): selected server in live `listServers`; Git source in live sources list. 422 `errors` are shown on the provision flash and in the audit error field.
+- Success → `coolify_app_uuid` + status `active`. Agent health is a separate poll (does not gate provision). Failure → `error` + audit. Coolify failure after DNS leaves the Cloudflare zone in place (retry is idempotent; no DNS deletes).
+- Retry reuses an existing Coolify app uuid (does not DELETE the app) and re-upserts Cloudflare DNS.
+- Site detail shows Cloudflare NS + “set these at the registrar.” Provision can succeed while the domain is still at the old NS.
 
 ## Channel switch
 

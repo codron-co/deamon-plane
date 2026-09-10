@@ -34,7 +34,7 @@ class PreferencesController extends Controller
         return redirect()
             ->route('ops.account.preferences')
             ->with('status', __('account.flash.preferences_updated'))
-            ->withCookie($this->appearanceCookie($user->appearance));
+            ->withCookie($this->appearanceCookie($user->appearanceValue()));
     }
 
     public function updateLocale(Request $request): RedirectResponse
@@ -63,11 +63,13 @@ class PreferencesController extends Controller
 
         return back()
             ->with('status', __('account.flash.appearance_updated'))
-            ->withCookie($this->appearanceCookie($user->appearance));
+            ->withCookie($this->appearanceCookie($user->appearanceValue()));
     }
 
-    private function appearanceCookie(string $appearance): Cookie
+    private function appearanceCookie(Appearance|string $appearance): Cookie
     {
-        return cookie(OpsAppearance::COOKIE, $appearance, 60 * 24 * 400, '/', null, false, false, false, 'lax');
+        $value = $appearance instanceof Appearance ? $appearance->value : $appearance;
+
+        return cookie(OpsAppearance::COOKIE, $value, 60 * 24 * 400, '/', null, false, false, false, 'lax');
     }
 }

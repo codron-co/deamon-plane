@@ -58,7 +58,7 @@
                 <ul class="fleet-attention-list">
                     @foreach ($failedDeploys as $deployment)
                         <li>
-                            <a href="{{ route('ops.sites.show', $deployment->site) }}">
+                            <a href="{{ route('ops.sites.deployments.show', [$deployment->site, $deployment]) }}">
                                 <span class="fleet-attention-name">{{ $deployment->site?->name ?? __('ops.none') }}</span>
                                 <code>{{ $deployment->channel?->value }}</code>
                             </a>

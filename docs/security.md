@@ -4,7 +4,7 @@ Kaynak plan: [plans/2026-08-13-deamon-plane.md](plans/2026-08-13-deamon-plane.md
 
 ## Trust boundary
 
-Ops browser → **Deamon Plane** → (Coolify API | GitHub | Site agent).  
+Ops browser → **Deamon Plane** → (Coolify API | GitHub | Site agent | **Cloudflare API v4**).  
 Müşteri CMS admin’i plane’e erişmez.
 
 ## v1 checklist (Task 14 — closed)
@@ -12,7 +12,7 @@ Müşteri CMS admin’i plane’e erişmez.
 | Alan | Durum | Kural |
 |------|--------|--------|
 | Auth / CSRF | **done** | Fortify session + Blade CSRF. Login rate-limited by Fortify. |
-| Coolify / GitHub secret | **done** | Encrypted columns; never rendered after save; [token-rotation.md](runbooks/token-rotation.md) |
+| Coolify / GitHub / Cloudflare secret | **done** | Encrypted columns; never rendered after save; [token-rotation.md](runbooks/token-rotation.md). Cloudflare is a scoped API token (`Authorization: Bearer`), not a Global API Key. Probe and provision never log the raw token. |
 | Coolify deploy webhook | **done** | HMAC raw body **or** query `token`/`secret` (`hash_equals`); empty secret rejected; `X-Coolify-Signature` |
 | GitHub theme webhook | **done** | Distinct secret; `X-Hub-Signature-256`; empty rejected; throttle 60/min |
 | Site agent | **done** | Per-site HMAC; `{timestamp}.{nonce}.{rawBody}`; headers `X-Deamon-*`; clone_token never logged |

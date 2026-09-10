@@ -8,11 +8,13 @@ use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Models\AuditLog;
+use App\Models\CloudflareSetting;
 use App\Models\CoolifyConnection;
 use App\Models\CoolifySetting;
 use App\Models\Site;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -34,6 +36,14 @@ class ProvisionSiteTest extends TestCase
             'api_token' => 'test-coolify-token',
             'default_project_uuid' => 'proj_test',
             'default_server_uuid' => 'srv_test',
+        ]);
+
+        CloudflareSetting::factory()->create([
+            'account_id' => 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
+            'api_token' => 'test-cloudflare-token',
+            'origin_ipv4' => '72.62.117.147',
+            'mail_template_enabled' => true,
+            'proxied' => false,
         ]);
     }
 
@@ -139,6 +149,10 @@ class ProvisionSiteTest extends TestCase
     public function test_coolify_422_field_errors_appear_in_session_and_audit(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             if ($request->method() === 'POST' && str_contains($request->url(), '/applications/')) {
                 return Http::response([
                     'message' => 'Validation failed.',
@@ -211,6 +225,10 @@ class ProvisionSiteTest extends TestCase
     public function test_coolify_create_failure_marks_error_and_audits(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             if ($request->method() === 'POST' && str_contains($request->url(), '/applications/')) {
                 return Http::response(['message' => 'compose create failed'], 500);
             }
@@ -339,6 +357,10 @@ class ProvisionSiteTest extends TestCase
     public function test_poll_failure_stores_coolify_message_errors_and_truncated_logs(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             $url = $request->url();
             $method = $request->method();
 
@@ -429,9 +451,54 @@ class ProvisionSiteTest extends TestCase
         ], $overrides));
     }
 
+    private function cloudflareProvisionResponse(Request $request): ?PromiseInterface
+    {
+        if (! str_contains($request->url(), 'api.cloudflare.com')) {
+            return null;
+        }
+
+        $url = $request->url();
+        $method = $request->method();
+
+        if ($method === 'GET' && preg_match('#/client/v4/zones(\?|$)#', $url) === 1) {
+            return Http::response([
+                'success' => true,
+                'result' => [[
+                    'id' => 'zone-existing',
+                    'name' => 'shop.izyem.example.test',
+                    'name_servers' => ['ada.ns.cloudflare.com', 'bob.ns.cloudflare.com'],
+                ]],
+            ], 200);
+        }
+
+        if ($method === 'GET' && str_contains($url, '/dns_records')) {
+            return Http::response(['success' => true, 'result' => []], 200);
+        }
+
+        if ($method === 'POST' && str_contains($url, '/dns_records')) {
+            return Http::response([
+                'success' => true,
+                'result' => ['id' => 'rec-1', 'type' => $request->data()['type'] ?? 'A'],
+            ], 200);
+        }
+
+        if ($method === 'PUT' && str_contains($url, '/dns_records')) {
+            return Http::response([
+                'success' => true,
+                'result' => ['id' => 'rec-1', 'type' => $request->data()['type'] ?? 'A'],
+            ], 200);
+        }
+
+        return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
+    }
+
     private function fakeCoolifyHappyPath(): void
     {
         Http::fake(function (Request $request) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
             $url = $request->url();
             $method = $request->method();
 
@@ -504,6 +571,10 @@ class ProvisionSiteTest extends TestCase
             $this->assertStringNotContainsString($appKey, $encoded);
             $this->assertStringNotContainsString($agentSecret, $encoded);
         }
+
+        $html = $this->get(route('ops.sites.show', $site))->assertOk()->getContent();
+        $this->assertStringNotContainsString($appKey, $html);
+        $this->assertStringNotContainsString($agentSecret, $html);
 
         $html = $this->get(route('ops.sites.edit', $site))->assertOk()->getContent();
         $this->assertStringNotContainsString($appKey, $html);

@@ -321,10 +321,10 @@ class CoolifyWebhookTest extends TestCase
         $this->actingAs($operator)
             ->get(route('ops.sites.show', $deployment->site))
             ->assertOk()
-            ->assertSee('Deployments', false)
+            ->assertSee(__('sites.deployments.title'), false)
             ->assertSee('in progress', false)
             ->assertSee('abcdef1', false)
-            ->assertSee('Open in Coolify', false)
+            ->assertSee(__('sites.deployments.open_coolify'), false)
             ->assertSee('data-href="'.route('ops.sites.deployments.show', [$deployment->site, $deployment]).'"', false);
     }
 

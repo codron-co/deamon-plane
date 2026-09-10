@@ -2,6 +2,7 @@
 
 namespace App\Services\Coolify\Dto;
 
+use App\Enums\CoolifyGitSourceKind;
 use App\Services\Coolify\CoolifyDomainParser;
 
 final class CoolifyApplication
@@ -75,6 +76,70 @@ final class CoolifyApplication
         return $candidates[0] ?? CoolifyDomainParser::firstDomain($this->composeDomains);
     }
 
+    public function serverUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['server_uuid'] ?? null,
+            data_get($this->raw, 'destination.server.uuid'),
+            data_get($this->raw, 'server.uuid'),
+        ]);
+    }
+
+    public function projectUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['project_uuid'] ?? null,
+            data_get($this->raw, 'environment.project.uuid'),
+            data_get($this->raw, 'environment.project_uuid'),
+            data_get($this->raw, 'project.uuid'),
+        ]);
+    }
+
+    public function environmentUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['environment_uuid'] ?? null,
+            data_get($this->raw, 'environment.uuid'),
+        ]);
+    }
+
+    public function gitSourceKind(): ?CoolifyGitSourceKind
+    {
+        if ($this->githubAppUuid() !== null) {
+            return CoolifyGitSourceKind::GithubApp;
+        }
+
+        if ($this->privateKeyUuid() !== null) {
+            return CoolifyGitSourceKind::DeployKey;
+        }
+
+        return null;
+    }
+
+    public function gitSourceUuid(): ?string
+    {
+        return $this->githubAppUuid() ?? $this->privateKeyUuid();
+    }
+
+    public function githubAppUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['github_app_uuid'] ?? null,
+            data_get($this->raw, 'github_app.uuid'),
+            data_get($this->raw, 'githubApp.uuid'),
+            data_get($this->raw, 'source.github_app.uuid'),
+        ]);
+    }
+
+    public function privateKeyUuid(): ?string
+    {
+        return self::firstUuid([
+            $this->raw['private_key_uuid'] ?? null,
+            data_get($this->raw, 'private_key.uuid'),
+            data_get($this->raw, 'privateKey.uuid'),
+        ]);
+    }
+
     /**
      * @return list<string>
      */
@@ -99,6 +164,39 @@ final class CoolifyApplication
         }
 
         return strtolower(preg_replace('#^https?://#i', '', strtok($url, '/')) ?: '');
+    }
+
+    /**
+     * @param  list<mixed>  $candidates
+     */
+    private static function firstUuid(array $candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            $uuid = self::uuidish($candidate);
+            if ($uuid !== null) {
+                return $uuid;
+            }
+        }
+
+        return null;
+    }
+
+    private static function uuidish(mixed $value): ?string
+    {
+        if (! is_string($value) && ! is_int($value)) {
+            return null;
+        }
+
+        $uuid = trim((string) $value);
+        if ($uuid === '' || preg_match('/^[A-Za-z0-9_-]{8,64}$/', $uuid) !== 1) {
+            return null;
+        }
+
+        if (ctype_digit($uuid)) {
+            return null;
+        }
+
+        return $uuid;
     }
 
     private static function nullableString(mixed $value): ?string

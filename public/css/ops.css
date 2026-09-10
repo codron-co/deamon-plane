@@ -395,6 +395,15 @@ code {
     max-width: 68ch;
 }
 
+.ops-checklist {
+    margin: 12px 0 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 8px;
+    color: var(--text-muted);
+    max-width: 72ch;
+}
+
 .spec-list {
     display: grid;
     gap: 12px;

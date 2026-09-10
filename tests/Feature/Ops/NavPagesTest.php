@@ -28,6 +28,8 @@ class NavPagesTest extends TestCase
         $this->actingAs($operator)->get(route('ops.sites'))->assertOk();
         $this->actingAs($operator)->get(route('ops.themes'))->assertOk()->assertSee('git-only', false);
         $this->actingAs($operator)->get(route('ops.coolify.index'))->assertOk()->assertSee('Coolify', false);
+        $this->actingAs($operator)->get(route('ops.account.show'))->assertOk()->assertSee('Account', false);
+        $this->actingAs($operator)->get(route('ops.account.preferences'))->assertOk();
         $this->actingAs($operator)
             ->get(route('ops.settings'))
             ->assertOk()

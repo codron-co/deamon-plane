@@ -6,6 +6,7 @@ use App\Enums\OpsRole;
 use App\Models\CloudflareSetting;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,7 @@ class CloudflareSettingsTest extends TestCase
             ->get(route('ops.cloudflare.show'))
             ->assertOk()
             ->assertSee(__('cloudflare.title'), false)
-            ->assertSee('DNS & Zones', false)
+            ->assertSee(__('cloudflare.permissions_items.dns'))
             ->assertDontSee(self::TOKEN, false);
     }
 
@@ -258,7 +259,7 @@ class CloudflareSettingsTest extends TestCase
         int $zoneEditStatus = 400,
         int $dnsEditStatus = 400,
         int $zoneCount = 1,
-    ): \GuzzleHttp\Promise\PromiseInterface {
+    ): PromiseInterface {
         $url = $request->url();
         $method = $request->method();
 

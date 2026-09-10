@@ -124,3 +124,9 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 ## Slice 1 — server IP (2026-09-10)
 
 - Status: **ship**. `coolify_servers.ip` from Coolify `public_ip`/`public` else `ip`. Connection show table has IP column. Sync does not write `is_active` (does not zero it).
+
+## UI/UX remediation (2026-09-10)
+
+- Status: **code complete in this worktree** (plan `docs/plans/2026-09-10-ui-ux-remediation.md`). Viewport-stable sidebar + account menu; Light/Semi-dark/Dark tokens; TR/EN; My Account + Preferences; Sites show vs edit; Repo branch + version; Plane custom select; table rows open show/detail.
+- Duplicate Cloudflare migrations (`2026_09_10_160000` / `160001`) removed; keep `040000` / `040100`. Duplicate `config/ops.php` `cloudflare` key removed.
+- Commit: not requested

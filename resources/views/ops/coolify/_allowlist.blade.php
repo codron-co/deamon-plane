@@ -54,4 +54,4 @@
             </table>
         </div>
     @endif
-@endsection
+</section>

@@ -45,6 +45,12 @@ return [
         'environment' => 'Environment UUID',
         'notes' => 'Notes',
         'dockerfile' => 'Coolify is still using the legacy Dockerfile build pack. Migrate this app to the Docker Compose path when scheduled.',
+        'cloudflare' => 'Cloudflare DNS',
+        'zone_id' => 'Zone ID',
+        'nameservers' => 'Nameservers',
+        'nameservers_hint' => 'Set these nameservers at the domain registrar. Cloudflare cannot change registrar NS.',
+        'dns_applied' => 'DNS template applied',
+        'dns_not_applied' => 'DNS template not applied yet. Provision writes A/MX/TXT after the zone exists.',
     ],
     'create' => [
         'title' => 'New site',

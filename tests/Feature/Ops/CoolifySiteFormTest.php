@@ -176,12 +176,12 @@ class CoolifySiteFormTest extends TestCase
         $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->get(route('ops.sites.create'))
             ->assertOk()
-            ->assertSee('Gelişmiş — UUID yapıştır', false);
+            ->assertSee(__('sites.form.advanced_summary'), false);
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->get(route('ops.sites.create'))
             ->assertOk()
-            ->assertDontSee('Gelişmiş — UUID yapıştır', false);
+            ->assertDontSee(__('sites.form.advanced_summary'), false);
     }
 
     private function seedConnection(): CoolifyConnection

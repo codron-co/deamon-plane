@@ -73,6 +73,11 @@
         </section>
 
         <section class="ops-detail-card">
+            <span class="ops-detail-label">{{ __('sites.detail.git') }}</span>
+            <div class="ops-detail-value"><code>{{ $site->git_repository ?: __('ops.none') }}</code></div>
+        </section>
+
+        <section class="ops-detail-card">
             <span class="ops-detail-label">{{ __('sites.detail.theme') }}</span>
             <div class="ops-detail-value">{{ $themeId ?: __('ops.none') }}</div>
         </section>
@@ -102,13 +107,49 @@
         </section>
     </div>
 
+    @if (filled($site->cloudflare_zone_id) || filled($site->cloudflare_nameservers))
+        <section class="ops-detail-section" aria-labelledby="site-cloudflare-heading">
+            <h2 id="site-cloudflare-heading">{{ __('sites.detail.cloudflare') }}</h2>
+            <p class="page-lede">{{ __('sites.detail.nameservers_hint') }}</p>
+            <dl class="spec-list">
+                <div>
+                    <dt>{{ __('sites.detail.zone_id') }}</dt>
+                    <dd><code>{{ $site->cloudflare_zone_id ?: __('ops.none') }}</code></dd>
+                </div>
+                <div>
+                    <dt>{{ __('sites.detail.nameservers') }}</dt>
+                    <dd>
+                        @php
+                            $nameservers = is_array($site->cloudflare_nameservers) ? $site->cloudflare_nameservers : [];
+                        @endphp
+                        @if ($nameservers !== [])
+                            <ul>
+                                @foreach ($nameservers as $ns)
+                                    <li><code>{{ $ns }}</code></li>
+                                @endforeach
+                            </ul>
+                        @else
+                            {{ __('ops.none') }}
+                        @endif
+                    </dd>
+                </div>
+                <div>
+                    <dt>{{ __('sites.detail.dns_applied') }}</dt>
+                    <dd>
+                        @if ($site->dns_applied_at)
+                            <time datetime="{{ $site->dns_applied_at->toIso8601String() }}">{{ $site->dns_applied_at->toDateTimeString() }}</time>
+                        @else
+                            {{ __('sites.detail.dns_not_applied') }}
+                        @endif
+                    </dd>
+                </div>
+            </dl>
+        </section>
+    @endif
+
     <section class="ops-detail-section" aria-labelledby="site-runtime-heading">
         <h2 id="site-runtime-heading">{{ __('sites.detail.runtime') }}</h2>
         <dl class="spec-list">
-            <div>
-                <dt>{{ __('sites.detail.git') }}</dt>
-                <dd><code>{{ $site->git_repository ?: __('ops.none') }}</code></dd>
-            </div>
             <div>
                 <dt>{{ __('sites.detail.app_uuid') }}</dt>
                 <dd><code>{{ $site->coolify_app_uuid ?: __('ops.none') }}</code></dd>

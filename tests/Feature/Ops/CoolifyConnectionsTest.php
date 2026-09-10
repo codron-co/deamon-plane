@@ -33,7 +33,7 @@ class CoolifyConnectionsTest extends TestCase
             ->get(route('ops.coolify.index'))
             ->assertOk()
             ->assertSee('Coolify', false)
-            ->assertSee('Bağlantı ekle', false)
+            ->assertSee(__('coolify.add'), false)
             ->getContent();
 
         $this->assertStringContainsString(route('ops.coolify.index'), $html);
@@ -62,7 +62,7 @@ class CoolifyConnectionsTest extends TestCase
         $html = $this->actingAs($this->operator())
             ->get(route('ops.coolify.show', $connection))
             ->assertOk()
-            ->assertSee('Token kayıtlı', false)
+            ->assertSee(__('coolify.fields.token_saved'), false)
             ->assertSee('>Sync<', false)
             ->assertDontSee(self::TOKEN, false)
             ->getContent();
@@ -317,7 +317,7 @@ class CoolifyConnectionsTest extends TestCase
         $html = $this->actingAs($this->operator())
             ->get(route('ops.coolify.show', $connection))
             ->assertOk()
-            ->assertSee('Bağlantıyı kes', false)
+            ->assertSee(__('coolify.danger.button'), false)
             ->assertSee('data-confirm=', false)
             ->getContent();
 

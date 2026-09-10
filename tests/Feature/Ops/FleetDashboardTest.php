@@ -92,7 +92,7 @@ class FleetDashboardTest extends TestCase
         $this->assertSame(1, substr_count($html, 'kpi-label">Unhealthy'));
         $this->assertMatchesRegularExpression('/Unhealthy<\/p>\s*<p class="kpi-value">2<\/p>/', $html);
         $this->assertSame(5, substr_count($html, 'class="kpi-card"'));
-        $this->assertStringNotContainsString('Dockerfile (eski pack)', $html);
+        $this->assertStringNotContainsString('Dockerfile (legacy pack)', $html);
         $this->assertStringNotContainsString('Compose\'a geçirilmedi', $html);
     }
 
@@ -115,11 +115,11 @@ class FleetDashboardTest extends TestCase
             ->get(route('ops.fleet'))
             ->assertOk()
             ->assertSee('Fleet snapshot', false)
-            ->assertSee('Dockerfile (eski pack)', false)
-            ->assertSee('Compose\'a geçirilmedi', false)
+            ->assertSee('Dockerfile (legacy pack)', false)
+            ->assertSee('Not migrated to Compose', false)
             ->assertSee('Legacy Dockerfile Site', false)
             ->assertSee('legacy.example.test', false)
-            ->assertSee(route('ops.sites.edit', $legacy), false)
+            ->assertSee(route('ops.sites.show', $legacy), false)
             ->assertDontSee('Compose Site', false)
             ->getContent();
 

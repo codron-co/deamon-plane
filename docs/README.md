@@ -25,6 +25,8 @@
 - [Theme catalog](modules/theme-catalog.md) — GitHub `deamon-theme-*` sync (no ZIP)
 - [Theme agent client](modules/theme-agent-client.md) — assign via CMS `X-Deamon-*` HMAC
 - [GitHub theme webhooks](modules/github-webhooks.md) — distinct from Coolify deploy webhooks
+- [Cloudflare HTTP adapter](modules/cloudflare-client.md) — singleton token, permission probe, zone + DNS template
+- [Cloudflare provision spec](superpowers/specs/2026-09-10-cloudflare-provision-design.md) · [implementation plan](superpowers/plans/2026-09-10-cloudflare-provision.md)
 - [Runbooks](runbooks/README.md) — deploy-plane / provision / import / channel-switch / agent-secret-inject / theme-rollout / token-rotation
 
 ## Sınır

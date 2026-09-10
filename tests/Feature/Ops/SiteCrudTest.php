@@ -290,7 +290,7 @@ class SiteCrudTest extends TestCase
             ->get(route('ops.sites'))
             ->assertOk()
             ->assertSee('Legacy Dockerfile Site', false)
-            ->assertSee('Dockerfile (eski pack)', false)
+            ->assertSee('Dockerfile (legacy pack)', false)
             ->assertSee('Compose Site', false);
 
         $this->actingAs($operator)
@@ -304,11 +304,11 @@ class SiteCrudTest extends TestCase
         $this->actingAs($operator)
             ->get(route('ops.sites.edit', $compose))
             ->assertOk()
-            ->assertDontSee('Dockerfile (eski pack)', false)
+            ->assertDontSee('Dockerfile (legacy pack)', false)
             ->assertDontSee('Coolify build pack is', false);
     }
 
-    public function test_index_and_edit_render_confirm_modal_for_destroy(): void
+    public function test_index_and_show_render_confirm_modal_for_destroy(): void
     {
         $site = Site::factory()->create(['name' => 'Modal Site']);
 
@@ -318,11 +318,10 @@ class SiteCrudTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('data-ops-confirm-modal', $html);
-        $this->assertStringContainsString('data-confirm=', $html);
         $this->assertStringNotContainsString('window.confirm', $html);
 
         $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('data-confirm=', false)
             ->assertSee('Provision', false);

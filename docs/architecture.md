@@ -8,17 +8,20 @@ Living özet. Detay ve task’lar: [plans/2026-08-13-deamon-plane.md](plans/2026
 ┌─────────────────────────────────────────────────────────────┐
 │  Deamon Plane (bu repo — Laravel)                           │
 │  Sites / Domains / Channels / Deploys / Themes / Audit      │
-└───────────────┬─────────────────────────────┬───────────────┘
-                │ Coolify API                 │ GitHub App
-                ▼                             ▼
-┌───────────────────────────┐     ┌───────────────────────────┐
-│ Coolify                   │     │ Theme org                 │
-│ App per customer:         │     │ deamon-theme-{id}         │
-│  app + mysql + redis      │     │ push webhook → plane      │
-│  branch = channel         │     └─────────────┬─────────────┘
-└─────────────┬─────────────┘                   │
-              │ signed agent                    │ git clone/pull
-              ▼                                   ▼
+└──────┬──────────────────┬──────────────────┬────────────────┘
+       │ Coolify API      │ GitHub App       │ Cloudflare API v4
+       ▼                  ▼                  ▼
+┌──────────────┐   ┌──────────────┐   ┌─────────────────────┐
+│ Coolify      │   │ Theme org    │   │ Zone + DNS template │
+│ app+mysql+   │   │ deamon-theme │   │ (Bearer token)      │
+│ redis / site │   │ -{id}        │   └─────────────────────┘
+└──────┬───────┘   └──────┬───────┘
+       │ signed agent     │ git clone/pull
+       ▼                  ▼
+┌───────────────────────────┐
+│ Deamon CMS instance       │
+│ /internal/control/v1/*    │
+└───────────────────────────� ▼
 ┌───────────────────────────┐
 │ Deamon CMS instance       │
 │ /internal/control/v1/*    │
@@ -37,3 +40,4 @@ Living özet. Detay ve task’lar: [plans/2026-08-13-deamon-plane.md](plans/2026
 8. Deploy visibility (Task 6): `POST /webhooks/coolify` (HMAC or query `token`) updates `deployments.status` (same rows as `PollDeploymentJob`). Fleet home KPIs: total sites, by channel, unhealthy (`status=error` or agent fail/stale), failed deploys, deploying. Auth scheme: [modules/coolify-webhooks.md](modules/coolify-webhooks.md). GitHub theme webhooks: [modules/github-webhooks.md](modules/github-webhooks.md).
 9. Site agent (Task 9): [modules/agent-client.md](modules/agent-client.md). Plane signs `GET /internal/control/v1/health` (HMAC `{timestamp}.{nonce}.{rawBody}`) with locked CMS headers `X-Deamon-Timestamp` / `X-Deamon-Nonce` / `X-Deamon-Signature` (Task 8, Deamon v1.1.43). Theme assign (Task 12): [modules/theme-agent-client.md](modules/theme-agent-client.md) — same headers; catalog [modules/theme-catalog.md](modules/theme-catalog.md).
 10. Harden (Task 14): [security.md](security.md). Plane production deploy checklist: [runbooks/deploy-plane.md](runbooks/deploy-plane.md) (live Coolify mutate of the Plane app is optional/high-risk).
+11. Cloudflare (singleton `/cloudflare`): encrypted API token + Account ID. Provision creates/reuses the zone, upserts the DNS template (A `@`/`www`/`*` DNS-only + optional Hostinger mail), stores NS on the site. Registrar NS change is operator work. Client: [modules/cloudflare-client.md](modules/cloudflare-client.md). Spec: [superpowers/specs/2026-09-10-cloudflare-provision-design.md](superpowers/specs/2026-09-10-cloudflare-provision-design.md).

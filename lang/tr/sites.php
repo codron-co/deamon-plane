@@ -45,6 +45,12 @@ return [
         'environment' => 'Ortam UUID',
         'notes' => 'Notlar',
         'dockerfile' => 'Coolify hâlâ eski Dockerfile build pack kullanıyor. Planlandığında Docker Compose yoluna geçin.',
+        'cloudflare' => 'Cloudflare DNS',
+        'zone_id' => 'Zone ID',
+        'nameservers' => 'Nameserver’lar',
+        'nameservers_hint' => 'Registrar’da bu NS’leri ayarlayın. Cloudflare registrar NS’ini değiştiremez.',
+        'dns_applied' => 'DNS şablonu uygulandı',
+        'dns_not_applied' => 'DNS şablonu henüz yazılmadı. Provision, zone oluşunca A/MX/TXT yazar.',
     ],
     'create' => [
         'title' => 'Yeni site',
