@@ -82,6 +82,34 @@ class SiteProvisioner
         ProvisionSiteJob::dispatch($siteId, $actor?->id, $ip);
     }
 
+    public function provision(Site $site, ?int $actorUserId = null, ?string $ip = null): Deployment
+    {
+        $this->provisionOnCloudflare($site, $actorUserId, $ip);
+
+        return $this->provisionOnCoolify($site, $actorUserId, $ip);
+    }
+
+    public function provisionOnCloudflare(Site $site, ?int $actorUserId = null, ?string $ip = null): void
+    {
+        $settings = CloudflareSetting::current();
+        $this->assertCloudflareReady($settings);
+
+        $this->cloudflare->ensureZoneAndDns($site, $settings);
+        $site->refresh();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actorUserId,
+            'action' => 'site.cloudflare_ready',
+            'after' => [
+                'slug' => $site->slug,
+                'primary_domain' => $site->primary_domain,
+                'cloudflare_zone_id' => $site->cloudflare_zone_id,
+                'cloudflare_nameservers' => $site->cloudflare_nameservers,
+            ],
+            'ip' => $ip,
+        ]);
+    }
+
     public function provisionOnCoolify(Site $site, ?int $actorUserId = null, ?string $ip = null): Deployment
     {
         $connection = $this->connectionFor($site);
@@ -277,7 +305,9 @@ class SiteProvisioner
 
     public function safeFailureMessage(Site $site, Throwable $exception): string
     {
-        $fallback = $exception instanceof CoolifyApiException || $exception instanceof SiteProvisionException
+        $fallback = $exception instanceof CoolifyApiException
+            || $exception instanceof CloudflareApiException
+            || $exception instanceof SiteProvisionException
             ? $exception->getMessage()
             : 'Provisioning failed.';
 
@@ -305,6 +335,15 @@ class SiteProvisioner
 
         if (blank($site->agent_secret_encrypted)) {
             $site->agent_secret_encrypted = Str::password(64, symbols: false);
+        }
+    }
+
+    private function assertCloudflareReady(?CloudflareSetting $settings = null): void
+    {
+        $settings ??= CloudflareSetting::current();
+
+        if (! $settings->hasCredentials()) {
+            throw new SiteProvisionException(__('cloudflare.errors.not_configured'));
         }
     }
 
