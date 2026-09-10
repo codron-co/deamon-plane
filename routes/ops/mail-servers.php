@@ -10,4 +10,3 @@ Route::get('/mail-servers/{mailServer}', [MailServerOpsController::class, 'show'
 Route::put('/mail-servers/{mailServer}', [MailServerOpsController::class, 'update'])->name('ops.mail-servers.update');
 Route::delete('/mail-servers/{mailServer}', [MailServerOpsController::class, 'destroy'])->name('ops.mail-servers.destroy');
 Route::post('/mail-servers/{mailServer}/test', [MailServerOpsController::class, 'test'])->name('ops.mail-servers.test');
-Route::post('/mail-servers/{mailServer}/order', [MailServerOpsController::class, 'selectOrder'])->name('ops.mail-servers.order');

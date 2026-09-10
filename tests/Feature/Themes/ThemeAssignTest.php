@@ -267,6 +267,39 @@ class ThemeAssignTest extends TestCase
         $this->assertStringNotContainsString('accept=".zip"', $html);
     }
 
+    public function test_themes_tab_shows_health_theme_and_confirms_mutations(): void
+    {
+        $site = $this->readySite([
+            'last_health_payload' => [
+                'ok' => true,
+                'active_theme_id' => 'izyem',
+            ],
+        ]);
+        $theme = Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'izyem',
+            'name' => 'Izyem',
+        ]);
+        $installation = SiteThemeInstallation::factory()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+            'is_active' => false,
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('izyem', false)
+            ->assertSee('Izyem', false)
+            ->assertSee(__('sites.themes.via_health'), false)
+            ->assertSee('data-confirm="'.__('sites.themes.update_confirm', ['theme' => 'izyem']).'"', false)
+            ->assertSee('data-confirm="'.__('sites.themes.sync_confirm', ['theme' => 'izyem']).'"', false)
+            ->assertSee('data-confirm="'.__('sites.themes.auto_update_confirm', ['theme' => 'izyem']).'"', false)
+            ->assertDontSee(__('sites.themes.empty'), false)
+            ->getContent();
+
+        $this->assertStringContainsString((string) $installation->id, $html);
+    }
+
     public function test_viewer_cannot_assign(): void
     {
         $site = $this->readySite();

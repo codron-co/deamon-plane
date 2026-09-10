@@ -6,6 +6,7 @@ use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
+use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\Theme;
 use App\Services\Agent\SiteHealthEvaluator;
@@ -42,6 +43,8 @@ class SiteDetailController extends Controller
             'canCheckHealth' => $user?->can('checkHealth', $site) ?? false,
             'canInjectAgentSecret' => ($user?->can('update', $site) ?? false)
                 && filled($site->coolify_app_uuid),
+            'canSyncCoolify' => ($user?->can('update', $site) ?? false)
+                && filled($site->coolify_app_uuid),
             'agentHealth' => $agentHealth,
             'channelSwitchTargets' => $this->channelSwitchTargets($site),
             'channelSwitchInProgress' => $site->status === SiteStatus::Deploying,
@@ -54,6 +57,7 @@ class SiteDetailController extends Controller
             'themeInstallations' => $site->themeInstallations,
             'assignableThemes' => $this->assignableThemes($site),
             'canAssignTheme' => $user?->can('assign', Theme::class) ?? false,
+            'mailServers' => MailServer::query()->where('is_enabled', true)->orderBy('name')->get(),
         ]);
     }
 }

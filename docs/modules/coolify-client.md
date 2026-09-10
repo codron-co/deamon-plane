@@ -24,10 +24,10 @@ Existing Coolify app is **PATCH** only. Plane never DELETE / `delete_volumes`.
 
 | Action | HTTP | Notes |
 |--------|------|--------|
-| Dockerfile → compose | `PATCH /applications/{uuid}` `{ build_pack: dockercompose, docker_compose_location: /docker-compose.coolify.yml }` | Snapshot `APP_KEY` / `APP_URL` / `DEAMON_*` via `listEnvs` (never log values). Restore those keys onto compose service **`app`** (`available_in_services=app`). Do **not** copy `DB_*` from a Dockerfile app. Provision itself **fills** empty `DB_PASSWORD` / `MYSQL_ROOT_PASSWORD` / `DEAMON_DEFAULT_ADMIN_PASSWORD` for compose MySQL and first admin seed. If Coolify says recreate is required, **abort**. |
-| Auto-deploy | `PATCH` `{ is_auto_deploy }` | Single + selected + all-Dockerfile bulk. Bulk off uses confirm. |
-| Pin | `PATCH` `{ git_commit_sha, is_auto_deploy: false }` then `POST /deploy` | SHA or release tag. |
-| Follow HEAD | `PATCH` `{ git_commit_sha: "", is_auto_deploy: true }` then `POST /deploy` | Clears pin. Does not require typing `HEAD`. |
+| Dockerfile → compose | `PATCH /applications/{uuid}` `{ build_pack: dockercompose, docker_compose_location: /docker-compose.coolify.yml }` | Snapshot `APP_KEY` / `APP_URL` / `DEAMON_*` via `listEnvs` (never log values). Restore those keys with `POST`/`PATCH /applications/{uuid}/envs` `{ key, value, is_literal: true }` (Coolify 4.3 rejects `is_literally`, `available_in_services`, env `uuid`). Application envs apply to compose service **`app`**. Do **not** copy `DB_*` from a Dockerfile app. Provision itself **fills** empty `DB_PASSWORD` / `MYSQL_ROOT_PASSWORD` / `DEAMON_DEFAULT_ADMIN_PASSWORD` for compose MySQL and first admin seed. If Coolify says recreate is required, **abort**. Env restore 422 becomes a flash, not 500. |
+| Auto-deploy | `PATCH` `{ is_auto_deploy_enabled }` | Coolify rejects `is_auto_deploy`. Single + selected + all-Dockerfile bulk. Confirm on on/off (including bulk). GET reads `settings.is_auto_deploy_enabled`, then `settings.is_auto_deploy`, then top-level aliases. Missing flag is **unknown**, not off. |
+| Pin | `PATCH` `{ git_commit_sha, is_auto_deploy_enabled: false }` then `POST /deploy` | SHA or release tag. |
+| Follow HEAD | `PATCH` `{ git_commit_sha: "", is_auto_deploy_enabled: true }` then `POST /deploy` | Clears pin. Does not require typing `HEAD`. |
 
 Channel switch stays `ChannelSwitcher` (`PATCH git_branch` + deploy). `main`→beta/alpha confirm. Super Admin force unchanged.
 
@@ -69,7 +69,9 @@ If `GET /github-apps` is missing, UI shows a hybrid note: pick a deploy key from
 
 **Open in Coolify:** `{base}/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}`. Use the site’s `coolify_project_uuid` / `coolify_environment_uuid` (fallback: connection defaults). Never the environment **name** or git channel (`alpha` / `production`) — Coolify 404s those.
 
-**Site fill (same POST Sync):** for each matching site, `GET /applications/{coolify_app_uuid}` and write project / environment / server / git source (GitHub App or deploy key) / `git_repository`. Allowlisted branch (`main` \| `beta` \| `alpha`) sets `channel` and clears `channel_needs_review`. Other branches (`develop`) set `channel_needs_review` and **do not** overwrite `channel`. Skip channel while status is `provisioning` or `deploying`. **Never** write `status`, `app_key_encrypted`, or `agent_secret_encrypted`. App 404 skips that site (inventory rows gone from Coolify may still be deleted; **sites are not auto-deleted**). Sync still does not write inventory `is_active` (does not zero it). Other connections’ sites are left alone. Flash includes the sites-filled count.
+**Site fill (same POST Sync):** for each matching site, `GET /applications/{coolify_app_uuid}` and write project / environment / server / git source (GitHub App or deploy key) / `git_repository`. Then `GET /deployments/applications/{uuid}` upserts the last 25 Coolify deployments onto the site (match `coolify_deployment_uuid`; new rows `trigger=manual`). Historical failed rows do **not** flip `sites.status`. Allowlisted branch (`main` \| `beta` \| `alpha`) sets `channel` and clears `channel_needs_review`. Other branches (`develop`) set `channel_needs_review` and **do not** overwrite `channel`. Skip channel while status is `provisioning` or `deploying`. **Never** write `status`, `app_key_encrypted`, or `agent_secret_encrypted`. App 404 skips that site (inventory rows gone from Coolify may still be deleted; **sites are not auto-deleted**). Sync still does not write inventory `is_active` (does not zero it). Other connections’ sites are left alone. Flash includes the sites-filled count.
+
+**Per-site Sync:** `POST /sites/{site}/sync` (`ops.sites.sync`) does the same fill + deployment pull for one site. GET `/sites/{site}/sync` is a 302 to show (does not sync). Operator / Super Admin. Viewer forbidden.
 
 ## Create path
 

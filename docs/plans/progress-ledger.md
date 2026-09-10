@@ -119,11 +119,19 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 ## Slice 7 — Hostinger mail servers (2026-09-10)
 
-- Status: **code**. `mail_servers` + `sites.mail_server_id`. Token encrypted, never shown. Mailcow coming soon (cannot save). Assign site → signed CMS `POST /internal/control/v1/mail/configure` (no token). CMS mailbox HMAC proxy `/internal/site/v1/mail`. Tests: MailServerOpsTest, SiteMailAssignTest, SiteMailProxyTest (`Http::fake`). Docs: [modules/mail-servers.md](../modules/mail-servers.md).
+- Status: **code**. `mail_servers` hold Hostinger API tokens only. Each site matches `GET /api/mail/v1/orders?domain=` against `sites.primary_domain` (exact). No server-wide order picker. Hostinger Mail cannot create orders. Assign/provision → bind then signed CMS configure (no token). Tests: MailServerOpsTest, SiteMailAssignTest, SiteMailProxyTest. Docs: [modules/mail-servers.md](../modules/mail-servers.md).
 
 ## Slice 6 — dockerfile → compose + auto-deploy + pin (2026-09-10)
 
-- Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml`. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` onto service `app` only; `DB_*` not copied. Recreate → abort. Auto-deploy `is_auto_deploy`. Pin SHA/tag + auto-deploy off; Follow HEAD unpins + auto-deploy on + branch deploy. ChannelSwitcher unchanged. Bulk selected + all Dockerfile, confirm on dangerous actions.
+- Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml`. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` via Coolify 4.3 `/envs` `{ key, value, is_literal }` (not `is_literally` / `available_in_services` / env `uuid`); `DB_*` not copied. Recreate → abort. Env restore API errors are flash, not 500. Auto-deploy `is_auto_deploy_enabled` (Coolify rejects `is_auto_deploy`). Pin SHA/tag + auto-deploy off; Follow HEAD unpins + auto-deploy on + branch deploy. ChannelSwitcher unchanged. Bulk selected + all Dockerfile, confirm on dangerous actions.
+
+## Site Coolify / theme / confirm parity (2026-09-10)
+
+- Status: **code**. Auto-deploy chip is On / Off / Unknown. GET reads `settings.is_auto_deploy` as well as `is_auto_deploy_enabled`; a missing flag is not shown as Off. Theme tab / overview / list use health `active_theme_id` when Plane has no installation row. Agent secret: generate only when missing; rotate icon when set. Mutating site ops and Coolify connection Sync / Make default use `PlaneConfirm` (`data-confirm` on form or submitter). Mail assign/refresh confirm only — mail backend unchanged.
+
+## Site Coolify sync + deployments pull (2026-09-10)
+
+- Status: **code**. Site detail **Sync Coolify** (`POST /sites/{site}/sync`) GETs the Coolify app (project/env/server/git/channel) and last 25 `GET /deployments/applications/{uuid}` rows. Upsert by `coolify_deployment_uuid`; new rows `trigger=manual`. Does not write secrets or flip `sites.status` from historical failures. Connection inventory Sync does the same deployment pull per site. GET `/sites/{site}/sync` is a 302. Tests: CoolifySiteSyncTest, CoolifyDeploySettingsTest (`Http::fake`).
 
 ## Slice 5 — sync fills site Coolify targets (2026-09-10)
 

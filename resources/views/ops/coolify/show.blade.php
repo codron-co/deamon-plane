@@ -13,7 +13,7 @@
 @section('actions')
     <a class="btn btn-ghost btn-sm" href="{{ route('ops.coolify.index') }}">{{ __('coolify.back') }}</a>
     @if ($canWrite)
-        <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}" data-ops-pending>
+        <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}" data-ops-pending data-confirm="{{ __('coolify.show.sync_confirm', ['name' => $connection->name]) }}" data-confirm-title="{{ __('coolify.show.sync_confirm_title') }}" data-confirm-label="{{ __('coolify.show.sync') }}" data-confirm-danger="false">
             @csrf
             <button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('coolify.show.sync') }}</button>
         </form>
@@ -186,7 +186,7 @@
                     <h3>{{ __('coolify.next.sync_title') }}</h3>
                     <p>{{ __('coolify.next.sync_hint') }}</p>
                     @if ($canWrite)
-                        <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}" data-ops-pending>
+                        <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}" data-ops-pending data-confirm="{{ __('coolify.show.sync_confirm', ['name' => $connection->name]) }}" data-confirm-title="{{ __('coolify.show.sync_confirm_title') }}" data-confirm-label="{{ __('coolify.show.sync') }}" data-confirm-danger="false">
                             @csrf
                             <button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('coolify.show.sync') }}</button>
                         </form>
@@ -295,12 +295,12 @@
                                 @csrf
                                 <button type="submit" class="btn btn-secondary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('coolify.show.test') }}</button>
                             </form>
-                            <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}" data-ops-pending>
+                            <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}" data-ops-pending data-confirm="{{ __('coolify.show.sync_confirm', ['name' => $connection->name]) }}" data-confirm-title="{{ __('coolify.show.sync_confirm_title') }}" data-confirm-label="{{ __('coolify.show.sync') }}" data-confirm-danger="false">
                                 @csrf
                                 <button type="submit" class="btn btn-secondary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('coolify.show.sync') }}</button>
                             </form>
                             @unless ($connection->is_default)
-                                <form method="POST" action="{{ route('ops.coolify.default', $connection) }}">
+                                <form method="POST" action="{{ route('ops.coolify.default', $connection) }}" data-confirm="{{ __('coolify.show.make_default_confirm', ['name' => $connection->name]) }}" data-confirm-title="{{ __('coolify.show.make_default') }}" data-confirm-label="{{ __('coolify.show.make_default') }}" data-confirm-danger="false">
                                     @csrf
                                     <button type="submit" class="btn btn-ghost">{{ __('coolify.show.make_default') }}</button>
                                 </form>

@@ -23,4 +23,4 @@ Live GitHub credentials are optional for development. Tests use `Http::fake` onl
 
 ## Agent install
 
-Assign is Task 12 (`ThemeRolloutService`) via the CMS theme agent — [theme-agent-client.md](theme-agent-client.md). GitHub push fan-out is Task 13 — [github-webhooks.md](github-webhooks.md).
+Assign is Task 12 (`ThemeRolloutService`) via the CMS theme agent — [theme-agent-client.md](theme-agent-client.md). GitHub push fan-out is Task 13 — [github-webhooks.md](github-webhooks.md). Site Themes tab / list / overview show a Plane installation when one exists; otherwise they show `last_health_payload.active_theme_id` as reported-by-health and do not claim the site has no theme.

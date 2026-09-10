@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 
 class SiteAgentSecretInjector
 {
-    public function inject(Site $site, ?User $actor = null, ?string $ip = null): void
+    public function inject(Site $site, ?User $actor = null, ?string $ip = null, bool $rotate = false): void
     {
         if (blank($site->coolify_app_uuid)) {
             throw new SiteProvisionException('Coolify uygulama UUID’si yok. Önce provision edin veya mevcut uygulamayı bağlayın.');
@@ -22,7 +22,7 @@ class SiteAgentSecretInjector
             throw new SiteProvisionException('Coolify bağlantısı yok. Coolify menüsünden bir bağlantı ekleyin.');
         }
 
-        if (blank($site->agent_secret_encrypted)) {
+        if ($rotate || blank($site->agent_secret_encrypted)) {
             $site->agent_secret_encrypted = Str::password(64, symbols: false);
             $site->save();
         }
@@ -37,10 +37,11 @@ class SiteAgentSecretInjector
 
         $site->auditLogs()->create([
             'actor_user_id' => $actor?->id,
-            'action' => 'site.agent_secret_injected',
+            'action' => $rotate ? 'site.agent_secret_rotated' : 'site.agent_secret_injected',
             'after' => [
                 'coolify_app_uuid' => $site->coolify_app_uuid,
                 'injected' => true,
+                'rotated' => $rotate,
             ],
             'ip' => $ip,
         ]);

@@ -4,7 +4,7 @@ Internal ops only. Do not paste `CONTROL_PLANE_AGENT_SECRET`, `APP_KEY`, or Cool
 
 Import (`ops:import-coolify-apps`) and leftover sites **do not** get an agent secret. Plane will skip health polls and mark the site `needs_secret` until the CMS env and the Plane row match.
 
-Plane **Generate & inject secret** on site edit calls Coolify `PATCH /applications/{uuid}/envs/bulk` with `CONTROL_PLANE_AGENT_SECRET`. The value is generated if missing, stored encrypted on the site, and never rendered. Provision also attempts this after compose create. Tinker is leftover only if the Coolify env API fails.
+Plane **Generate & inject secret** (only when the site has no secret) calls Coolify `PATCH /applications/{uuid}/envs/bulk` with `CONTROL_PLANE_AGENT_SECRET`. The value is generated if missing, stored encrypted on the site, and never rendered. When a secret already exists, use the rotate icon on Agent health — that generates a new value and rewrites Coolify env (confirm first; health fails until the app reloads env). Provision also attempts inject after compose create and does not rotate an existing secret. Tinker is leftover only if the Coolify env API fails.
 
 ## Preconditions
 
@@ -14,7 +14,7 @@ Plane **Generate & inject secret** on site edit calls Coolify `PATCH /applicatio
 
 ## Steps
 
-1. Plane → site edit → **Generate & inject secret**.
+1. Plane → site detail → Infrastructure: **Generate & inject secret** if missing, or the rotate icon if the secret is already configured.
 2. If Coolify env write fails, use Coolify UI on the **app** service only (not MySQL/Redis). Redeploy; do not DELETE the application. Do not paste the secret into tickets.
 3. Plane → site edit → **Check health**. Expect status `ok` and a `deamon_version`.
 4. CMS Task 8 (`/internal/control/v1/health`) must be deployed. Headers: `X-Deamon-Timestamp`, `X-Deamon-Nonce`, `X-Deamon-Signature`.

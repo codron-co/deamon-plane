@@ -52,6 +52,8 @@ class Site extends Model
         'cloudflare_nameservers',
         'dns_applied_at',
         'mail_server_id',
+        'hostinger_order_id',
+        'mail_domain',
     ];
 
     /**
@@ -249,6 +251,11 @@ class Site extends Model
         return is_string($attribute) && $attribute !== '';
     }
 
+    public function hasHostingerMailOrder(): bool
+    {
+        return filled($this->hostinger_order_id) && filled($this->mail_domain);
+    }
+
     public function resolvedAgentBaseUrl(): ?string
     {
         $base = trim((string) ($this->agent_base_url ?? ''));
@@ -277,6 +284,49 @@ class Site extends Model
         }
 
         return trim($version);
+    }
+
+    /**
+     * Plane installation wins; otherwise the last signed health payload.
+     */
+    public function reportedActiveThemeId(): ?string
+    {
+        $installed = $this->activeThemeInstallation?->theme?->theme_id;
+        if (is_string($installed) && trim($installed) !== '') {
+            return trim($installed);
+        }
+
+        $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
+        $reported = $payload['active_theme_id'] ?? null;
+        if (! is_string($reported) || trim($reported) === '') {
+            return null;
+        }
+
+        return trim($reported);
+    }
+
+    /**
+     * @return 'installation'|'health'|null
+     */
+    public function reportedThemeSource(): ?string
+    {
+        $installed = $this->activeThemeInstallation?->theme?->theme_id;
+        if (is_string($installed) && trim($installed) !== '') {
+            return 'installation';
+        }
+
+        return $this->reportedActiveThemeId() !== null ? 'health' : null;
+    }
+
+    public function healthReportedThemeId(): ?string
+    {
+        $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
+        $reported = $payload['active_theme_id'] ?? null;
+        if (! is_string($reported) || trim($reported) === '') {
+            return null;
+        }
+
+        return trim($reported);
     }
 
     public const DOCKERFILE_BUILD_PACK_MARKER = 'dockerfile_build_pack';

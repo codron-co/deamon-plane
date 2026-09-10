@@ -172,6 +172,11 @@ class CoolifyClient
     {
         unset($body['fqdn'], $body['delete_volumes']);
 
+        if (array_key_exists('is_auto_deploy', $body)) {
+            $body['is_auto_deploy_enabled'] = (bool) $body['is_auto_deploy'];
+            unset($body['is_auto_deploy']);
+        }
+
         if ($body === []) {
             throw new InvalidArgumentException('Coolify application PATCH body is empty.');
         }
@@ -182,7 +187,9 @@ class CoolifyClient
     }
 
     /**
-     * Write one env onto compose service `app` (default). Does not log values.
+     * Write one application env (compose services inherit these). Coolify 4.3
+     * `/envs` accepts only key/value/is_literal/is_preview/is_multiline/is_shown_once.
+     * Does not log values.
      */
     public function upsertEnvOnService(string $uuid, string $key, string $value, string $service = CoolifyDomainParser::COMPOSE_SERVICE): CoolifyEnvironmentVariable
     {
@@ -191,6 +198,9 @@ class CoolifyClient
             throw new InvalidArgumentException('Environment variable key is required.');
         }
 
+        // Coolify 4.3 has no per-service env field; $service is call-site intent only.
+        unset($service);
+
         $existing = $this->listEnvs($uuid)->first(
             static fn (CoolifyEnvironmentVariable $env): bool => $env->key === $key,
         );
@@ -198,12 +208,10 @@ class CoolifyClient
         $payload = [
             'key' => $key,
             'value' => $value,
-            'is_literally' => true,
-            'available_in_services' => $service,
+            'is_literal' => true,
         ];
 
         if ($existing instanceof CoolifyEnvironmentVariable && filled($existing->uuid)) {
-            $payload['uuid'] = $existing->uuid;
             $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid).'/envs', [], $payload);
         } else {
             $json = $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/envs', [], $payload);

@@ -4,6 +4,19 @@
     $canAssignTheme = $canAssignTheme ?? false;
     $activeInstallation = $site->activeThemeInstallation;
     $activeTheme = $activeInstallation?->theme;
+    $reportedThemeId = $site->reportedActiveThemeId();
+    $healthThemeId = $site->healthReportedThemeId();
+    $themeSource = $site->reportedThemeSource();
+    $healthOnly = $themeSource === 'health' && filled($reportedThemeId);
+    $healthTheme = $healthOnly
+        ? \App\Models\Theme::query()->where('theme_id', $reportedThemeId)->first()
+        : null;
+    $displayThemeName = $activeTheme?->displayName()
+        ?? $healthTheme?->displayName()
+        ?? $reportedThemeId;
+    $healthDiffers = $activeTheme
+        && filled($healthThemeId)
+        && $healthThemeId !== $activeTheme->theme_id;
 @endphp
 
 <section class="site-theme-section" aria-labelledby="site-themes-heading">
@@ -26,6 +39,19 @@
                 </div>
                 <p class="site-note">{{ $activeTheme->theme_id }} · {{ $activeInstallation->ref }}</p>
                 <span class="status-chip">{{ __('sites.themes.via_agent') }}</span>
+                @if ($healthDiffers)
+                    <p class="field-hint">{{ __('sites.themes.health_differs', ['theme' => $healthThemeId]) }}</p>
+                @endif
+            @elseif ($healthOnly)
+                <div class="site-card-head">
+                    <div>
+                        <span class="site-section-kicker">{{ __('sites.themes.active_label') }}</span>
+                        <h3>{{ $displayThemeName }}</h3>
+                    </div>
+                    <span class="status-chip">{{ __('sites.themes.via_health') }}</span>
+                </div>
+                <p class="site-note">{{ $reportedThemeId }}</p>
+                <p class="field-hint">{{ __('sites.themes.health_only_hint') }}</p>
             @else
                 <div>
                     <h3>{{ __('sites.themes.empty_title') }}</h3>
@@ -81,7 +107,7 @@
     </div>
 
     @if ($themeInstallations->isEmpty())
-        @unless ($activeTheme)
+        @unless ($activeTheme || $healthOnly)
             <p class="field-hint">{{ __('sites.themes.empty') }}</p>
         @endunless
     @else
@@ -125,11 +151,25 @@
                             <td>{{ $installation->auto_update ? __('ops.on') : __('ops.off') }}</td>
                             <td class="ops-row-actions">
                                 @if ($canAssignTheme)
-                                    <form method="POST" action="{{ route('ops.sites.themes.update', [$site, $installation]) }}">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('ops.sites.themes.update', [$site, $installation]) }}"
+                                        data-confirm="{{ __('sites.themes.update_confirm', ['theme' => $installedTheme?->theme_id]) }}"
+                                        data-confirm-title="{{ __('sites.themes.update_title') }}"
+                                        data-confirm-label="{{ __('sites.themes.update_latest') }}"
+                                        data-confirm-danger="false"
+                                    >
                                         @csrf
                                         <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.update_latest') }}</button>
                                     </form>
-                                    <form method="POST" action="{{ route('ops.sites.themes.sync', [$site, $installation]) }}">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('ops.sites.themes.sync', [$site, $installation]) }}"
+                                        data-confirm="{{ __('sites.themes.sync_confirm', ['theme' => $installedTheme?->theme_id]) }}"
+                                        data-confirm-title="{{ __('sites.themes.sync_title') }}"
+                                        data-confirm-label="{{ __('sites.themes.sync') }}"
+                                        data-confirm-danger="false"
+                                    >
                                         @csrf
                                         <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync') }}</button>
                                     </form>
@@ -146,7 +186,14 @@
                                             <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.activate') }}</button>
                                         </form>
                                     @endif
-                                    <form method="POST" action="{{ route('ops.sites.themes.auto-update', [$site, $installation]) }}">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('ops.sites.themes.auto-update', [$site, $installation]) }}"
+                                        data-confirm="{{ $installation->auto_update ? __('sites.themes.auto_update_off_confirm', ['theme' => $installedTheme?->theme_id]) : __('sites.themes.auto_update_confirm', ['theme' => $installedTheme?->theme_id]) }}"
+                                        data-confirm-title="{{ __('sites.themes.auto_update_title') }}"
+                                        data-confirm-label="{{ $installation->auto_update ? __('sites.themes.disable_auto') : __('sites.themes.enable_auto') }}"
+                                        data-confirm-danger="{{ $installation->auto_update ? 'false' : 'true' }}"
+                                    >
                                         @csrf
                                         <input type="hidden" name="auto_update" value="{{ $installation->auto_update ? 0 : 1 }}">
                                         <button type="submit" class="btn btn-ghost btn-sm">

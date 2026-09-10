@@ -57,7 +57,7 @@ Terminal rows are not regressed by a later in-progress event (webhook and poll s
 ## UI
 
 - Coolify menu → connection: **Deploy webhook URL** is the path only. The hint tells the operator to append `?token=` + the webhook signing secret. The live secret is never rendered after save.
-- Site detail and site edit **Deployments**: last 25 rows, status chip, duration, short SHA, **Open in Coolify**. Row click opens the deployment **show** page (full Coolify `message` + `errors` JSON, truncated redacted logs, copy).
+- Site detail **Deployments**: last 25 rows, status chip, duration, short SHA, **Sync Coolify**, **Open in Coolify**. Sync pulls Coolify’s application + `GET /deployments/applications/{uuid}`. Row click opens the deployment **show** page (full Coolify `message` + `errors` JSON, truncated redacted logs, copy).
 - Poll and webhook **failure** persist `error_message` (Coolify message + `errors` JSON) and `log_excerpt` (truncated, secrets redacted). A webhook failure with a deployment uuid will GET `/deployments/{uuid}` when the site connection has a token, so logs are not missing just because the notification body was thin.
 - Fleet dashboard KPIs (5): total sites, by channel, unhealthy (`status=error` **or** agent timeout / bad signature / `queue_ok=false` / stale), failed deploys, deploying. `needs_secret` does not count. See [agent-client.md](agent-client.md).
 

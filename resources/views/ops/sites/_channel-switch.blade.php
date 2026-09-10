@@ -11,6 +11,15 @@
     $channelHint = $isDowngradeFromMain
         ? __('sites.channel_switch.hint_leave_main').' '.__('sites.channel_switch.backup_hint')
         : __('sites.channel_switch.hint_to_main').' '.__('sites.channel_switch.backup_hint');
+    $channelConfirm = $isDowngradeFromMain
+        ? __('sites.channel_switch.confirm_leave', ['target' => $defaultTarget !== '' ? $defaultTarget : 'beta/alpha'])
+        : __('sites.channel_switch.confirm_switch', ['site' => $site->name, 'target' => $defaultTarget !== '' ? $defaultTarget : 'main']);
+    $channelConfirmTitle = $isDowngradeFromMain
+        ? __('sites.channel_switch.confirm_title')
+        : __('sites.channel_switch.confirm_switch_title');
+    $channelConfirmTemplate = $isDowngradeFromMain
+        ? __('sites.channel_switch.confirm_leave', ['target' => '__TARGET__'])
+        : __('sites.channel_switch.confirm_switch', ['site' => $site->name, 'target' => '__TARGET__']);
 @endphp
 
 @if ($channelSwitchInProgress)
@@ -36,11 +45,9 @@
             method="POST"
             action="{{ route('ops.sites.channel', $site) }}"
             class="ops-form"
-            @if ($isDowngradeFromMain)
-                data-confirm="{{ __('sites.channel_switch.confirm_leave', ['target' => $defaultTarget !== '' ? $defaultTarget : 'beta/alpha']) }}"
-                data-confirm-title="{{ __('sites.channel_switch.confirm_title') }}"
-                data-confirm-label="{{ __('sites.channel_switch.confirm_label') }}"
-            @endif
+            data-confirm="{{ $channelConfirm }}"
+            data-confirm-title="{{ $channelConfirmTitle }}"
+            data-confirm-label="{{ __('sites.channel_switch.confirm_label') }}"
         >
             @csrf
             <input type="hidden" name="confirmed" value="0">
@@ -76,21 +83,19 @@
             @endif
         </form>
     </article>
-    @if ($isDowngradeFromMain)
-        <script>
-            (() => {
-                const select = document.getElementById('site_switch_channel');
-                const form = select?.form;
-                if (! select || ! form || ! form.hasAttribute('data-confirm')) {
-                    return;
-                }
-                const template = @json(__('sites.channel_switch.confirm_leave', ['target' => '__TARGET__']));
-                const sync = () => {
-                    form.dataset.confirm = template.replace('__TARGET__', select.value);
-                };
-                select.addEventListener('change', sync);
-                sync();
-            })();
-        </script>
-    @endif
+    <script>
+        (() => {
+            const select = document.getElementById('site_switch_channel');
+            const form = select?.form;
+            if (! select || ! form || ! form.hasAttribute('data-confirm')) {
+                return;
+            }
+            const template = @json($channelConfirmTemplate);
+            const sync = () => {
+                form.dataset.confirm = template.replace('__TARGET__', select.value);
+            };
+            select.addEventListener('change', sync);
+            sync();
+        })();
+    </script>
 @endif

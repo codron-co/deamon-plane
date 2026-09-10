@@ -186,6 +186,14 @@ class CoolifyApplicationService
         return $this->client->getDeployment($deploymentUuid);
     }
 
+    /**
+     * @return Collection<int, CoolifyDeployment>
+     */
+    public function listAppDeployments(string $appUuid, ?int $skip = null, ?int $take = null): Collection
+    {
+        return $this->client->listAppDeployments($appUuid, $skip, $take);
+    }
+
     private function assertChannel(string $branch): void
     {
         $channel = Channel::tryFrom($branch);

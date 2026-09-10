@@ -28,13 +28,6 @@
 </div>
 
 <div class="field">
-    <label class="field-label" for="mail-order">{{ __('mail.fields.order_id') }}</label>
-    <p class="field-hint">{{ __('mail.fields.order_hint') }}</p>
-    <input id="mail-order" class="field-input" type="text" name="hostinger_order_id" value="{{ old('hostinger_order_id', $server->hostinger_order_id) }}" maxlength="64" autocomplete="off" spellcheck="false" @disabled(! $canWrite)>
-    @error('hostinger_order_id') <p class="field-error" role="alert">{{ $message }}</p> @enderror
-</div>
-
-<div class="field">
     <label class="field-check">
         <input type="hidden" name="is_enabled" value="0">
         <input type="checkbox" name="is_enabled" value="1" @checked(old('is_enabled', $server->is_enabled ?? true)) @disabled(! $canWrite)>

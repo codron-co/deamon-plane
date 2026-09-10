@@ -109,7 +109,7 @@ class MailServerOpsTest extends TestCase
     {
         $server = $this->server();
         Http::fake([
-            'https://developers.hostinger.com/api/mail/v1/orders' => Http::response([
+            'https://developers.hostinger.com/api/mail/v1/orders*' => Http::response([
                 'data' => [[
                     'id' => 'OR1a2b3c4d5e6f7g',
                     'status' => 'active',
@@ -127,8 +127,8 @@ class MailServerOpsTest extends TestCase
             ->assertSessionMissing('error');
 
         $server->refresh();
-        $this->assertSame('example.com', $server->mail_domain);
-        $this->assertSame('OR1a2b3c4d5e6f7g', $server->hostinger_order_id);
+        $this->assertNull($server->mail_domain);
+        $this->assertNull($server->hostinger_order_id);
         $this->assertSame(self::TOKEN, $server->api_token);
 
         $encoded = json_encode($server->last_probe_payload);
@@ -137,7 +137,7 @@ class MailServerOpsTest extends TestCase
 
         Http::assertSent(function (Request $request): bool {
             return $request->method() === 'GET'
-                && str_ends_with($request->url(), '/api/mail/v1/orders')
+                && str_contains($request->url(), '/api/mail/v1/orders')
                 && $request->hasHeader('Authorization', 'Bearer '.self::TOKEN);
         });
     }
@@ -153,6 +153,17 @@ class MailServerOpsTest extends TestCase
 
         $this->assertStringContainsString(route('ops.mail-servers.show', $server), $html);
         $this->assertStringNotContainsString('/mail-servers/'.$server->id.'/edit', $html);
+    }
+
+    public function test_show_has_no_global_order_picker(): void
+    {
+        $server = $this->server();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.mail-servers.show', $server))
+            ->assertOk()
+            ->assertDontSee('name="hostinger_order_id"', false)
+            ->assertDontSee('id="mail-order"', false);
     }
 
     private function operator(): User

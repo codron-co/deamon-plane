@@ -23,7 +23,7 @@
                     <tr>
                         <th>{{ __('mail.columns.name') }}</th>
                         <th>{{ __('mail.columns.provider') }}</th>
-                        <th>{{ __('mail.columns.domain') }}</th>
+                        <th>{{ __('mail.columns.sites') }}</th>
                         <th>{{ __('mail.columns.status') }}</th>
                         <th>{{ __('mail.columns.probe') }}</th>
                         <th></th>
@@ -36,7 +36,7 @@
                                 <a class="site-name" href="{{ route('ops.mail-servers.show', $server) }}">{{ $server->name }}</a>
                             </td>
                             <td>{{ $server->provider?->label() }}</td>
-                            <td class="muted">{{ $server->mail_domain ?: __('ops.none') }}</td>
+                            <td class="muted">{{ $server->sites_count }}</td>
                             <td>
                                 <span class="status-chip status-{{ $server->is_enabled ? 'active' : 'error' }}">
                                     {{ $server->is_enabled ? __('ops.enabled') : __('ops.disabled') }}

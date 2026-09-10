@@ -4,6 +4,7 @@ namespace App\Services\Coolify\Dto;
 
 use App\Enums\CoolifyGitSourceKind;
 use App\Services\Coolify\CoolifyDomainParser;
+use Illuminate\Support\Arr;
 
 final class CoolifyApplication
 {
@@ -125,9 +126,29 @@ final class CoolifyApplication
 
     public function isAutoDeploy(): bool
     {
-        $value = $this->raw['is_auto_deploy'] ?? false;
+        return $this->autoDeployState() === true;
+    }
 
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    /**
+     * Coolify GET may nest the flag under settings and still use the 4.3 column
+     * `is_auto_deploy`. Missing keys are unknown — do not treat them as off.
+     */
+    public function autoDeployState(): ?bool
+    {
+        foreach ([
+            'settings.is_auto_deploy_enabled',
+            'settings.is_auto_deploy',
+            'is_auto_deploy_enabled',
+            'is_auto_deploy',
+        ] as $path) {
+            if (! Arr::has($this->raw, $path)) {
+                continue;
+            }
+
+            return filter_var(data_get($this->raw, $path), FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return null;
     }
 
     public function gitCommitSha(): ?string

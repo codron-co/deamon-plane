@@ -73,4 +73,34 @@ class CoolifyApplicationDtoTest extends TestCase
         $this->assertNull($app->gitSourceUuid());
         $this->assertNull($app->gitSourceKind());
     }
+
+    public function test_auto_deploy_reads_nested_settings_field(): void
+    {
+        $nested = CoolifyApplication::fromArray([
+            'uuid' => 'app-5',
+            'settings' => ['is_auto_deploy_enabled' => true],
+        ]);
+        $legacyNested = CoolifyApplication::fromArray([
+            'uuid' => 'app-5b',
+            'settings' => ['is_auto_deploy' => 1],
+        ]);
+        $legacy = CoolifyApplication::fromArray([
+            'uuid' => 'app-6',
+            'is_auto_deploy' => true,
+        ]);
+        $off = CoolifyApplication::fromArray([
+            'uuid' => 'app-6b',
+            'settings' => ['is_auto_deploy' => false],
+        ]);
+        $unknown = CoolifyApplication::fromArray(['uuid' => 'app-7']);
+
+        $this->assertTrue($nested->isAutoDeploy());
+        $this->assertTrue($nested->autoDeployState());
+        $this->assertTrue($legacyNested->isAutoDeploy());
+        $this->assertTrue($legacy->isAutoDeploy());
+        $this->assertFalse($off->isAutoDeploy());
+        $this->assertFalse($off->autoDeployState());
+        $this->assertFalse($unknown->isAutoDeploy());
+        $this->assertNull($unknown->autoDeployState());
+    }
 }

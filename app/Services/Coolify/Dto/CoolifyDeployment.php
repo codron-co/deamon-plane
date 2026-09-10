@@ -2,6 +2,9 @@
 
 namespace App\Services\Coolify\Dto;
 
+use Carbon\CarbonImmutable;
+use Throwable;
+
 final class CoolifyDeployment
 {
     /**
@@ -48,6 +51,16 @@ final class CoolifyDeployment
         );
     }
 
+    public function startedAt(): ?CarbonImmutable
+    {
+        return $this->parseTime($this->raw['created_at'] ?? $this->raw['started_at'] ?? null);
+    }
+
+    public function finishedAt(): ?CarbonImmutable
+    {
+        return $this->parseTime($this->raw['finished_at'] ?? $this->raw['updated_at'] ?? null);
+    }
+
     public function mergedWith(self $other): self
     {
         return new self(
@@ -60,6 +73,19 @@ final class CoolifyDeployment
             errors: ($this->errors !== null && $this->errors !== []) ? $this->errors : $other->errors,
             logsExcerpt: filled($this->logsExcerpt) ? $this->logsExcerpt : $other->logsExcerpt,
         );
+    }
+
+    private function parseTime(mixed $value): ?CarbonImmutable
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private static function stringifyLogs(mixed $logs): ?string
