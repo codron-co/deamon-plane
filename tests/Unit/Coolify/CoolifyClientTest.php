@@ -5,6 +5,7 @@ namespace Tests\Unit\Coolify;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyClient;
 use App\Services\Coolify\CoolifyCredentials;
+use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -75,6 +76,20 @@ class CoolifyClientTest extends TestCase
         $this->assertSame('crxguq6nodorlzy88wf9x305', $app->uuid);
         $this->assertSame('https://susa.demo.codron.co', $app->primaryDomain());
         $this->assertSame('dockercompose', $app->buildPack);
+    }
+
+    public function test_primary_domain_prefers_compose_operator_host_over_generated_fqdn(): void
+    {
+        $app = CoolifyApplication::fromArray([
+            'uuid' => '6cmmgh5ty9lzv6uiz5kfavue',
+            'name' => 'Deamon Test',
+            'fqdn' => 'https://6cmmgh5ty9lzv6uiz5kfavue.demo.codron.co',
+            'docker_compose_domains' => [
+                ['name' => 'app', 'domain' => 'https://test.deamon.codron.co'],
+            ],
+        ]);
+
+        $this->assertSame('https://test.deamon.codron.co', $app->primaryDomain());
     }
 
     public function test_list_servers_and_projects(): void
@@ -177,7 +192,7 @@ class CoolifyClientTest extends TestCase
                 && $body['docker_compose_domains'] === [
                     ['name' => 'app', 'domain' => 'https://www.example.com'],
                 ]
-                && ($body['fqdn'] ?? null) === 'https://www.example.com'
+                && ! array_key_exists('fqdn', $body)
                 && ! array_key_exists('docker_compose_raw', $body);
         });
 
@@ -330,7 +345,7 @@ class CoolifyClientTest extends TestCase
                 && $body['docker_compose_domains'] === [
                     ['name' => 'app', 'domain' => 'https://www.example.com'],
                 ]
-                && ($body['fqdn'] ?? null) === 'https://www.example.com'
+                && ! array_key_exists('fqdn', $body)
                 && ! is_string($body['docker_compose_domains']);
         });
     }

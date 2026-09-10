@@ -71,7 +71,7 @@ Coolify **422** `message` + `errors{field: []}` is appended on `CoolifyApiExcept
 
 Live GET `docker_compose_domains` is often a **JSON string** object (`{"app":{"domain":"https://…"}}`); `Application.fqdn` is often null on older compose apps. Coolify **generate-domain** (create without a domain) writes `{uuid}.demo.codron.co` or `{uuid}.random.codron.co` on **`fqdn`** and does **not** clear it when Plane PATCHes only compose domains.
 
-Create and `setDomains` send **only the operator host**: OpenAPI array `docker_compose_domains: [{ "name": "app", "domain": "https://…" }]` **and** `fqdn` set to that same first host (replaces leftover generate-domain). `force_domain_override` defaults false. Do not PATCH live generate-domains off existing apps without operator OK — they may still be on the proxy.
+Create and `setDomains` send **only** `docker_compose_domains: [{ "name": "app", "domain": "https://{operator-host}" }]`. **Do not send `fqdn`** — Coolify compose create/PATCH returns `Validation failed. fqdn: This field is not allowed.` `force_domain_override` defaults false. If Coolify still writes a generate-domain, Plane does **not** make it the `site_domains` primary. Do not PATCH live generate-domains off existing apps without operator OK — they may still be on the proxy.
 
 ## Coolify menu (not Settings)
 

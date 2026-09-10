@@ -174,11 +174,6 @@ class CoolifyClient
             'force_domain_override' => $forceDomainOverride,
         ];
 
-        $primary = CoolifyDomainParser::firstDomain($composeDomains);
-        if ($primary !== null) {
-            $body['fqdn'] = $primary;
-        }
-
         $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid), [], $body);
 
         return CoolifyApplication::fromArray($this->unwrapResource($json));

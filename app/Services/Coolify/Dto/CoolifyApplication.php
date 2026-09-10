@@ -49,7 +49,56 @@ final class CoolifyApplication
 
     public function primaryDomain(): ?string
     {
-        return $this->fqdn ?? CoolifyDomainParser::firstDomain($this->composeDomains);
+        $candidates = [];
+
+        foreach ($this->composeDomains as $row) {
+            if (($row['name'] ?? '') !== CoolifyDomainParser::COMPOSE_SERVICE) {
+                continue;
+            }
+
+            foreach (self::splitDomainUrls((string) ($row['domain'] ?? '')) as $url) {
+                $candidates[] = $url;
+            }
+        }
+
+        foreach (self::splitDomainUrls((string) ($this->fqdn ?? '')) as $url) {
+            $candidates[] = $url;
+        }
+
+        foreach ($candidates as $url) {
+            $host = self::hostFromUrl($url);
+            if ($host !== '' && ! CoolifyDomainParser::isGeneratedWildcardHost($host)) {
+                return $url;
+            }
+        }
+
+        return $candidates[0] ?? CoolifyDomainParser::firstDomain($this->composeDomains);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function splitDomainUrls(string $raw): array
+    {
+        $out = [];
+        foreach (preg_split('/\s*,\s*/', trim($raw)) ?: [] as $part) {
+            $part = trim($part);
+            if ($part !== '') {
+                $out[] = $part;
+            }
+        }
+
+        return $out;
+    }
+
+    private static function hostFromUrl(string $url): string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (is_string($host) && $host !== '') {
+            return strtolower($host);
+        }
+
+        return strtolower(preg_replace('#^https?://#i', '', strtok($url, '/')) ?: '');
     }
 
     private static function nullableString(mixed $value): ?string
