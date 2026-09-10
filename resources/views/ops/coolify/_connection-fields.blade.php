@@ -10,8 +10,7 @@
 </div>
 
 <div class="field">
-    <label class="field-label" for="coolify-base-url">{{ __('coolify.fields.base_url') }}</label>
-    <p class="field-hint">{{ __('coolify.fields.base_url_hint') }}</p>
+    <label class="field-label" for="coolify-base-url">{{ __('coolify.fields.base_url') }} @include('ops.coolify._hint', ['text' => __('coolify.fields.base_url_hint')])</label>
     <input id="coolify-base-url" class="field-input" type="url" name="base_url" value="{{ old('base_url', $connection->base_url) }}" required @disabled(! $canWrite) placeholder="{{ __('coolify.fields.base_url_placeholder') }}">
     @error('base_url') <p class="field-error" role="alert">{{ $message }}</p> @enderror
 </div>
@@ -30,8 +29,7 @@
 </div>
 
 <div class="field">
-    <label class="field-label" for="coolify-webhook-secret">{{ __('coolify.fields.webhook_secret') }}</label>
-    <p class="field-hint">{{ __('coolify.fields.webhook_secret_hint') }}</p>
+    <label class="field-label" for="coolify-webhook-secret">{{ __('coolify.fields.webhook_secret') }} @include('ops.coolify._hint', ['text' => __('coolify.fields.webhook_secret_hint')])</label>
     <input id="coolify-webhook-secret" class="field-input" type="password" name="webhook_secret" value="" autocomplete="new-password" @disabled(! $canWrite)>
 </div>
 

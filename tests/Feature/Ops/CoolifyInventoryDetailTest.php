@@ -128,6 +128,29 @@ class CoolifyInventoryDetailTest extends TestCase
             ->assertDontSee(__('coolify.detail.no_sites'), false);
     }
 
+    public function test_inventory_uuid_lives_in_technical_details_and_rows_open_show(): void
+    {
+        $connection = CoolifyConnection::factory()->create(['name' => 'Prod Coolify']);
+        $server = CoolifyServer::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'uuid' => 'edge-1',
+            'name' => 'edge',
+            'ip' => '1.2.3.4',
+            'is_active' => true,
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.coolify.servers.show', [$connection, $server]))
+            ->assertOk()
+            ->assertSee('role="tablist"', false)
+            ->assertSee('class="site-technical-card"', false)
+            ->assertSee('edge-1', false)
+            ->assertDontSee('data-href="'.route('ops.coolify.servers.toggle', [$connection, $server]).'"', false)
+            ->getContent();
+
+        $this->assertStringContainsString('site-technical-list', $html);
+    }
+
     public function test_inventory_from_another_connection_is_not_found(): void
     {
         $connection = CoolifyConnection::factory()->create();

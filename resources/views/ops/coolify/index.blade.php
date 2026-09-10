@@ -11,11 +11,19 @@
 @endsection
 
 @section('content')
-    <p class="page-lede">{{ __('coolify.lede') }}</p>
+    <div class="site-section-heading">
+        <div>
+            <span class="site-section-kicker">{{ __('coolify.title') }}</span>
+            <h2>{{ __('coolify.title') }} @include('ops.coolify._hint', ['text' => __('coolify.lede')])</h2>
+        </div>
+    </div>
 
     @if ($connections->isEmpty())
         <div class="empty-panel">
             <h2>{{ __('coolify.empty') }}</h2>
+            @if ($canWrite)
+                <a class="btn btn-primary btn-sm" href="{{ route('ops.coolify.create') }}">{{ __('coolify.empty_action') }}</a>
+            @endif
         </div>
     @else
         <div class="sites-table-wrap">

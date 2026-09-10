@@ -10,8 +10,7 @@
 @endphp
 
 <section class="ops-panel" aria-labelledby="allow-{{ $param }}-heading">
-    <h2 id="allow-{{ $param }}-heading">{{ $title }}</h2>
-    <p>{{ $hint }}</p>
+    <h2 id="allow-{{ $param }}-heading">{{ $title }} @include('ops.coolify._hint', ['text' => $hint])</h2>
 
     @if ($rows->isEmpty())
         <p class="muted">{{ __('coolify.allowlist.empty') }}</p>
@@ -39,10 +38,14 @@
                                 @else
                                     <span class="site-name">{{ $row->name ?: $row->uuid }}</span>
                                 @endif
-                                <div class="site-slug">{{ $row->uuid }}</div>
                             </td>
                             @if ($extra === 'kind')
                                 <td class="muted">{{ $row->kind?->label() ?? $row->kind }}</td>
+                            @elseif ($extra === 'ip')
+                                <td class="muted">{{ $row->ip }}</td>
+                            @elseif ($extra === 'project_uuid')
+                                @php($project = $connection->projects->firstWhere('uuid', $row->project_uuid))
+                                <td class="muted">{{ $project?->label() ?: __('ops.none') }}</td>
                             @elseif ($extra)
                                 <td class="muted">{{ $row->{$extra} }}</td>
                             @endif
