@@ -16,6 +16,8 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/provision` | `ops.sites.provision` | operator, super_admin; draft or error only |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
+| POST | `/sites/{site}/sync` | `ops.sites.sync` | operator, super_admin; GET Coolify app + last 25 deployments |
+| GET | `/sites/{site}/sync` | `ops.sites.sync.get` | **Does not sync.** 302 to show |
 | POST | `/sites/{site}/agent-secret` | `ops.sites.agent-secret` | operator, super_admin; Coolify env inject |
 | DELETE | `/sites/{site}` | `ops.sites.destroy` | operator, super_admin |
 
@@ -25,18 +27,18 @@ Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 
 ## Fields
 
-Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger only), optional attach of an existing `codron-co/deamon` app, `notes`.
+Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger credentials; order is matched per site domain — also changeable on the site detail Infrastructure tab), optional attach of an existing `codron-co/deamon` app, `notes`.
 
 Coolify UUIDs are **not** free-text on site create. Super Admin may open a collapsed, warned “Gelişmiş” paste. Compose file is never an operator field — always `/docker-compose.coolify.yml`.
 
 **Attach existing:** dropdown of customer apps on the selected connection (`CoolifyFleetClassifier`). Sets `coolify_app_uuid` + domain + channel from `git_branch` if it is `main|beta|alpha`; otherwise `channel_needs_review` (channel stays an allowlisted pick). Does **not** `POST` a second create.
 
-**Agent secret:** site edit **Generate & inject secret** (`POST /sites/{site}/agent-secret`) writes `CONTROL_PLANE_AGENT_SECRET` via Coolify `updateEnvs`. Encrypted on the site; never shown again. Provision also attempts inject after create. Runbook: [agent-secret-inject.md](../runbooks/agent-secret-inject.md).
+**Agent secret:** when the site has no secret, **Generate & inject secret** (`POST /sites/{site}/agent-secret`) writes `CONTROL_PLANE_AGENT_SECRET` via Coolify `updateEnvs`. When a secret already exists, the agent card shows a rotate icon (same route; new value). Encrypted on the site; never shown again. Provision also attempts inject after create (does not rotate). Runbook: [agent-secret-inject.md](../runbooks/agent-secret-inject.md).
 
 - Status is always **draft** on create. The form cannot change status.
 - `APP_KEY` / `agent_secret` are generated on **Provision**, stored encrypted, never shown in the form or audit payloads.
 - Channel and slug are locked on the CRUD form once status is not `draft`. Live switches use the Channel switch panel (`ChannelSwitcher`).
-- Destroy is a **soft delete** with the ops confirm modal (`data-confirm` / `PlaneConfirm.ask`). `window.confirm` is not used. Provision is not a confirm-gated destroy. Leaving **main** for beta/alpha uses the same confirm modal.
+- Destroy is a **soft delete** with the ops confirm modal (`data-confirm` / `PlaneConfirm.ask`). `window.confirm` is not used. Mutating site ops (provision, Coolify sync, auto-deploy, pin / follow HEAD, channel switch, theme assign/update/sync/activate/auto-update, agent inject/rotate) use the same modal. Bulk buttons may put `data-confirm` on the submitter; `ops-confirm.js` reads the submitter and `requestSubmit(submitter)` so `formaction` is kept.
 
 ## Provision
 
@@ -60,11 +62,11 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Site detail
 
-Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, next action, then Deployments / Themes / Infrastructure / Danger. **Edit** is a separate route. The identity mark loads the favicon from the site's primary domain origin (`https://{host}/favicon.ico`, then `/apple-touch-icon.png`) via `[data-favicon-host]`; the first letter of the site name is the no-JS / failure fallback. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
+Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, next action, then Deployments / Themes / Infrastructure / Danger. **Edit** is a separate route. Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark loads the favicon from the site's primary domain origin (`https://{host}/favicon.ico`, then `/apple-touch-icon.png`) via `[data-favicon-host]`; the first letter of the site name is the no-JS / failure fallback. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
 
 ## Deployments
 
-Site detail and site edit include a **Deployments** table (`ops/deployments/index`): last 25 rows, status chip, duration, commit, **Open in Coolify**. The Coolify URL is `/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}` — environment **uuid**, not the name or git branch. Click a row (or **Show**) for `GET /sites/{site}/deployments/{deployment}` — status, channel, trigger, commit, duration, times, full Coolify error (`message` + `errors` JSON), truncated redacted logs in `<pre>`, and a copyable pasteable report. Poll (`PollDeploymentJob`) and Coolify webhook failures write this text onto the `deployments` row (`error_message` + `log_excerpt`); status `failed` alone is not enough. See [coolify-webhooks.md](coolify-webhooks.md).
+Site detail includes a **Deployments** table (`ops/deployments/index`): last 25 rows, status chip, duration, commit, **Sync Coolify**, **Open in Coolify**. Sync (`POST /sites/{site}/sync`) GETs the Coolify application (same fill as connection inventory) and `GET /deployments/applications/{uuid}` and upserts those rows. Historical Coolify deploys that never hit a Plane webhook become visible. Sync does not change `status` or secrets. The Coolify URL is `/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}` — environment **uuid**, not the name or git branch. Click a row (or **Show**) for `GET /sites/{site}/deployments/{deployment}` — status, channel, trigger, commit, duration, times, full Coolify error (`message` + `errors` JSON), truncated redacted logs in `<pre>`, and a copyable pasteable report. Poll (`PollDeploymentJob`) and Coolify webhook failures write this text onto the `deployments` row (`error_message` + `log_excerpt`); status `failed` alone is not enough. See [coolify-webhooks.md](coolify-webhooks.md).
 
 ## Policy
 

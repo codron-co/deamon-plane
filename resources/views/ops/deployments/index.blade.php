@@ -7,9 +7,25 @@
         <div>
             <h2 id="deployments-heading">{{ __('sites.deployments.title') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.lede', ['count' => $deployments->count()])])</h2>
         </div>
-        @if ($coolifyAppUrl)
-            <a class="btn btn-ghost btn-sm" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.deployments.open_coolify') }}</a>
-        @endif
+        <div class="form-actions">
+            @if ($canSyncCoolify ?? false)
+                <form
+                    method="POST"
+                    action="{{ route('ops.sites.sync', $site) }}"
+                    data-ops-pending
+                    data-confirm="{{ __('sites.detail.sync_confirm', ['name' => $site->name]) }}"
+                    data-confirm-title="{{ __('sites.detail.sync_title') }}"
+                    data-confirm-label="{{ __('sites.detail.sync') }}"
+                    data-confirm-danger="false"
+                >
+                    @csrf
+                    <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.detail.sync') }}</button>
+                </form>
+            @endif
+            @if ($coolifyAppUrl)
+                <a class="btn btn-ghost btn-sm" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.deployments.open_coolify') }}</a>
+            @endif
+        </div>
     </div>
 
     @if ($deployments->isEmpty())

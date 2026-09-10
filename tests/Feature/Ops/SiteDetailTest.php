@@ -5,6 +5,7 @@ namespace Tests\Feature\Ops;
 use App\Enums\Channel;
 use App\Enums\OpsRole;
 use App\Models\Site;
+use App\Models\Theme;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -92,7 +93,53 @@ class SiteDetailTest extends TestCase
             ->assertSee('data-favicon-host="'.$unknown->primary_domain.'"', false)
             ->assertSee('data-href="'.route('ops.sites.show', $site).'"', false)
             ->assertSee(route('ops.sites.edit', $site), false)
-            ->assertDontSee('data-href="'.route('ops.sites.edit', $site).'"', false);
+            ->assertDontSee('data-href="'.route('ops.sites.edit', $site).'"', false)
+            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_on').'"', false);
+    }
+
+    public function test_theme_surfaces_use_agent_health_when_plane_has_no_installation(): void
+    {
+        Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'izyem',
+            'name' => 'Izyem',
+        ]);
+        $site = Site::factory()->create([
+            'name' => 'Health Theme Site',
+            'slug' => 'health-theme-site',
+            'primary_domain' => 'health-theme.example.test',
+            'last_health_payload' => ['active_theme_id' => 'izyem', 'deamon_version' => '1.9.0'],
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('izyem', false)
+            ->assertSee('Izyem', false)
+            ->assertSee(__('sites.themes.via_health'), false)
+            ->assertDontSee(__('sites.themes.empty'), false)
+            ->assertDontSee(__('sites.themes.empty_title'), false);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->assertSee('izyem', false);
+    }
+
+    public function test_mutating_site_actions_ask_for_confirm(): void
+    {
+        $site = Site::factory()->create([
+            'name' => 'Confirm Site',
+            'slug' => 'confirm-site',
+            'status' => \App\Enums\SiteStatus::Draft,
+        ]);
+
+        $html = $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-confirm="'.__('sites.provision.confirm', ['name' => $site->name]).'"', false)
+            ->getContent();
+
+        $this->assertStringNotContainsString('window.confirm', $html);
     }
 
     public function test_viewer_can_open_detail_but_does_not_get_edit_or_danger_tab(): void

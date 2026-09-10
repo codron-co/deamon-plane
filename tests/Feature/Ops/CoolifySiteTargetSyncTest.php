@@ -241,6 +241,7 @@ class CoolifySiteTargetSyncTest extends TestCase
             'https://coolify.example/api/v1/security/keys' => Http::response([
                 ['uuid' => 'pk-1', 'name' => 'deploy'],
             ], 200),
+            'https://coolify.example/api/v1/deployments/applications/*' => Http::response([], 200),
         ];
     }
 

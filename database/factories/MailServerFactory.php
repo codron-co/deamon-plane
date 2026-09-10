@@ -33,8 +33,6 @@ class MailServerFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'provider' => MailProvider::Hostinger,
             'api_token' => $token,
-            'hostinger_order_id' => 'OR1a2b3c4d5e6f7g',
-            'mail_domain' => 'example.com',
             'is_enabled' => true,
         ]);
     }

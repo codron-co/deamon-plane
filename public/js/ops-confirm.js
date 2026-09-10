@@ -106,30 +106,45 @@
 
     /**
      * @param {HTMLFormElement} form
+     * @param {HTMLElement|null} submitter
      */
-    const readConfirmOptions = (form) => {
-        const explicitMessage = form.dataset.confirm || '';
+    const confirmSource = (form, submitter) => {
+        if (submitter && (submitter.dataset.confirm || submitter.hasAttribute('data-confirm'))) {
+            return submitter;
+        }
+
+        return form;
+    };
+
+    /**
+     * @param {HTMLFormElement} form
+     * @param {HTMLElement} source
+     */
+    const readConfirmOptions = (form, source) => {
+        const explicitMessage = source.dataset.confirm || '';
         const isDelete = isDeleteForm(form);
 
         return {
-            title: form.dataset.confirmTitle || (isDelete ? 'Delete site' : 'Confirm'),
+            title: source.dataset.confirmTitle || (isDelete ? 'Delete site' : 'Confirm'),
             message: explicitMessage || (isDelete
                 ? 'Soft-delete this site? Coolify is not contacted.'
                 : 'Do you want to continue?'),
-            confirmLabel: form.dataset.confirmLabel || (isDelete ? 'Delete' : 'Confirm'),
-            danger: form.dataset.confirmDanger !== 'false',
+            confirmLabel: source.dataset.confirmLabel || (isDelete ? 'Delete' : 'Confirm'),
+            danger: source.dataset.confirmDanger !== 'false',
         };
     };
 
     /**
      * @param {HTMLFormElement} form
+     * @param {HTMLElement|null} submitter
      */
-    const needsConfirmation = (form) => {
+    const needsConfirmation = (form, submitter) => {
         if (form.dataset.confirmSkip === 'true') {
             return false;
         }
 
-        if (form.dataset.confirm || form.hasAttribute('data-confirm')) {
+        const source = confirmSource(form, submitter);
+        if (source.dataset.confirm || source.hasAttribute('data-confirm')) {
             return true;
         }
 
@@ -142,6 +157,8 @@
             return;
         }
 
+        const submitter = event.submitter instanceof HTMLElement ? event.submitter : null;
+
         if (form.dataset.confirmApproved === 'true') {
             form.querySelectorAll('input[name="confirmed"]').forEach((input) => {
                 if (input instanceof HTMLInputElement) {
@@ -153,19 +170,24 @@
             return;
         }
 
-        if (! needsConfirmation(form)) {
+        if (! needsConfirmation(form, submitter)) {
             return;
         }
 
         event.preventDefault();
         event.stopImmediatePropagation();
 
-        const confirmed = await ask(readConfirmOptions(form));
+        const confirmed = await ask(readConfirmOptions(form, confirmSource(form, submitter)));
         if (! confirmed) {
             return;
         }
 
         form.dataset.confirmApproved = 'true';
+        if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
+            form.requestSubmit(submitter);
+            return;
+        }
+
         form.requestSubmit();
     }, true);
 

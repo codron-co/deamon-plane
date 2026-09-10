@@ -192,6 +192,8 @@ class SiteMailProxyTest extends TestCase
             'channel' => Channel::Main,
             'agent_secret_encrypted' => self::SECRET,
             'mail_server_id' => $server->id,
+            'hostinger_order_id' => 'OR1a2b3c4d5e6f7g',
+            'mail_domain' => 'example.com',
         ]);
     }
 }

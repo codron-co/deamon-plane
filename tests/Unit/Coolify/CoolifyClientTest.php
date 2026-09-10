@@ -284,6 +284,56 @@ class CoolifyClientTest extends TestCase
         $this->assertSame('public-app', $viaPublic->uuid);
     }
 
+    public function test_upsert_env_patch_sends_only_coolify_allowed_fields(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/applications/app-1/envs' => Http::sequence()
+                ->push([
+                    ['uuid' => 'env-app-key', 'key' => 'APP_KEY', 'value' => 'base64:keep'],
+                ], 200)
+                ->push(['uuid' => 'env-app-key', 'key' => 'APP_KEY'], 200),
+        ]);
+
+        $this->client()->upsertEnvOnService('app-1', 'APP_KEY', 'base64:keep', 'app');
+
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'PATCH' || ! str_ends_with($request->url(), '/applications/app-1/envs')) {
+                return false;
+            }
+
+            $body = $request->data();
+
+            return $body === [
+                'key' => 'APP_KEY',
+                'value' => 'base64:keep',
+                'is_literal' => true,
+            ];
+        });
+    }
+
+    public function test_upsert_env_create_sends_only_coolify_allowed_fields(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/applications/app-1/envs' => Http::sequence()
+                ->push([], 200)
+                ->push(['key' => 'DEAMON_SITE_NAME'], 201),
+        ]);
+
+        $this->client()->upsertEnvOnService('app-1', 'DEAMON_SITE_NAME', 'Legacy');
+
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'POST' || ! str_ends_with($request->url(), '/applications/app-1/envs')) {
+                return false;
+            }
+
+            return $request->data() === [
+                'key' => 'DEAMON_SITE_NAME',
+                'value' => 'Legacy',
+                'is_literal' => true,
+            ];
+        });
+    }
+
     public function test_update_envs_sends_bulk_payload_and_list_envs_hides_values_in_debug(): void
     {
         Http::fake([
@@ -532,6 +582,7 @@ class CoolifyClientTest extends TestCase
             'docker_compose_location' => '/docker-compose.coolify.yml',
             'fqdn' => 'https://should-not-send.example',
             'delete_volumes' => true,
+            'is_auto_deploy' => true,
         ]);
 
         Http::assertSent(function (Request $request): bool {
@@ -540,6 +591,8 @@ class CoolifyClientTest extends TestCase
             return $request->method() === 'PATCH'
                 && $request->url() === 'https://coolify.test/api/v1/applications/app-1'
                 && ($body['build_pack'] ?? null) === 'dockercompose'
+                && ($body['is_auto_deploy_enabled'] ?? null) === true
+                && ! array_key_exists('is_auto_deploy', $body)
                 && ! array_key_exists('fqdn', $body)
                 && ! array_key_exists('delete_volumes', $body);
         });

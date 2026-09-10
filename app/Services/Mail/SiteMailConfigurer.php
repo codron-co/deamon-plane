@@ -28,7 +28,8 @@ class SiteMailConfigurer
         $mailServer = $site->mailServer;
         $enabled = $mailServer instanceof MailServer
             && $mailServer->provider === MailProvider::Hostinger
-            && $mailServer->isHostingerReady();
+            && $mailServer->isHostingerReady()
+            && $site->hasHostingerMailOrder();
 
         $payload = $enabled
             ? [
@@ -36,7 +37,7 @@ class SiteMailConfigurer
                 'provider' => MailProvider::Hostinger->value,
                 'site_id' => (string) $site->id,
                 'plane_base_url' => $this->planeBaseUrl(),
-                'mail_domain' => (string) $mailServer->mail_domain,
+                'mail_domain' => (string) $site->mail_domain,
                 'webmail_url' => (string) config('ops.hostinger.webmail_url', 'https://mail.hostinger.com'),
             ]
             : [

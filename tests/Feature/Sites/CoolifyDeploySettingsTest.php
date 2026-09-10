@@ -47,7 +47,8 @@ class CoolifyDeploySettingsTest extends TestCase
 
             return $request->method() === 'PATCH'
                 && str_ends_with($request->url(), '/applications/'.self::APP)
-                && ($body['is_auto_deploy'] ?? null) === true
+                && ($body['is_auto_deploy_enabled'] ?? null) === true
+                && ! array_key_exists('is_auto_deploy', $body)
                 && ! array_key_exists('fqdn', $body);
         });
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
@@ -78,7 +79,8 @@ class CoolifyDeploySettingsTest extends TestCase
 
             return $request->method() === 'PATCH'
                 && ($body['git_commit_sha'] ?? null) === 'abc1234'
-                && ($body['is_auto_deploy'] ?? null) === false
+                && ($body['is_auto_deploy_enabled'] ?? null) === false
+                && ! array_key_exists('is_auto_deploy', $body)
                 && ! array_key_exists('fqdn', $body);
         });
         Http::assertSent(function (Request $request): bool {
@@ -114,7 +116,8 @@ class CoolifyDeploySettingsTest extends TestCase
             return $request->method() === 'PATCH'
                 && array_key_exists('git_commit_sha', $body)
                 && $body['git_commit_sha'] === ''
-                && ($body['is_auto_deploy'] ?? null) === true;
+                && ($body['is_auto_deploy_enabled'] ?? null) === true
+                && ! array_key_exists('is_auto_deploy', $body);
         });
     }
 
@@ -131,11 +134,62 @@ class CoolifyDeploySettingsTest extends TestCase
             ->assertOk()
             ->assertSee('deadbeef', false)
             ->assertSee(__('site_ops.pin.follow_button'), false)
+            ->assertSee(__('site_ops.auto_deploy.status_off'), false)
+            ->assertSee('data-confirm="'.__('site_ops.auto_deploy.confirm_on', ['name' => $site->name]).'"', false)
+            ->assertSee('data-confirm="'.__('site_ops.pin.confirm', ['name' => $site->name]).'"', false)
+            ->assertSee('data-confirm="'.__('site_ops.pin.confirm_follow', ['name' => $site->name]).'"', false)
             ->getContent();
 
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/follow-head"/', $html);
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/auto-deploy"/', $html);
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/pin"/', $html);
+    }
+
+    public function test_show_reads_legacy_nested_auto_deploy_as_on(): void
+    {
+        $site = $this->site();
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response([
+                'uuid' => self::APP,
+                'build_pack' => 'dockercompose',
+                'settings' => ['is_auto_deploy' => true],
+                'git_commit_sha' => 'cafebabe',
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee(__('site_ops.auto_deploy.status_on'), false)
+            ->assertSee(__('site_ops.auto_deploy.off_button'), false)
+            ->assertDontSee(__('site_ops.auto_deploy.status_off'), false)
+            ->assertDontSee(route('ops.sites.follow-head', $site), false);
+    }
+
+    public function test_show_does_not_claim_auto_deploy_off_when_coolify_omits_the_flag(): void
+    {
+        $site = $this->site();
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response([
+                'uuid' => self::APP,
+                'build_pack' => 'dockercompose',
+                'git_commit_sha' => 'abc1234',
+            ], 200),
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee(__('site_ops.auto_deploy.status_unknown'), false)
+            ->assertSee(__('site_ops.auto_deploy.on_button'), false)
+            ->assertSee(__('site_ops.auto_deploy.off_button'), false)
+            ->getContent();
+
+        $this->assertStringNotContainsString(__('site_ops.auto_deploy.status_off'), $html);
+        $this->assertStringNotContainsString(route('ops.sites.follow-head', $site), $html);
+        $this->assertStringNotContainsString(route('ops.sites.pin', $site), $html);
     }
 
     /**
@@ -146,7 +200,8 @@ class CoolifyDeploySettingsTest extends TestCase
         return [
             'uuid' => self::APP,
             'build_pack' => 'dockercompose',
-            'is_auto_deploy' => $autoDeploy,
+            'is_auto_deploy_enabled' => $autoDeploy,
+            'settings' => ['is_auto_deploy_enabled' => $autoDeploy],
             'git_commit_sha' => $sha,
         ];
     }

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Internal;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\MailServer;
 use App\Models\Site;
 use App\Services\Hostinger\HostingerMailClient;
 use App\Services\Hostinger\HostingerMailException;
@@ -19,7 +18,7 @@ class SiteMailProxyController extends Controller
         $site = $this->site($request);
 
         try {
-            $mailboxes = HostingerMailClient::fromServer($this->readyServer($site))->listMailboxes();
+            $mailboxes = HostingerMailClient::forSite($this->readySite($site))->listMailboxes();
         } catch (HostingerMailException $exception) {
             return $this->providerError($exception);
         }
@@ -47,7 +46,7 @@ class SiteMailProxyController extends Controller
         }
 
         try {
-            $mailbox = HostingerMailClient::fromServer($this->readyServer($site))
+            $mailbox = HostingerMailClient::forSite($this->readySite($site))
                 ->createMailbox($validated['local_part'], $validated['password']);
         } catch (HostingerMailException $exception) {
             return $this->providerError($exception);
@@ -84,7 +83,7 @@ class SiteMailProxyController extends Controller
         }
 
         try {
-            HostingerMailClient::fromServer($this->readyServer($site))
+            HostingerMailClient::forSite($this->readySite($site))
                 ->changePassword($mailboxId, $validated['password']);
         } catch (HostingerMailException $exception) {
             return $this->providerError($exception);
@@ -105,7 +104,7 @@ class SiteMailProxyController extends Controller
         }
 
         try {
-            HostingerMailClient::fromServer($this->readyServer($site))->deleteMailbox($mailboxId);
+            HostingerMailClient::forSite($this->readySite($site))->deleteMailbox($mailboxId);
         } catch (HostingerMailException $exception) {
             return $this->providerError($exception);
         }
@@ -127,14 +126,14 @@ class SiteMailProxyController extends Controller
         return $site;
     }
 
-    private function readyServer(Site $site): MailServer
+    private function readySite(Site $site): Site
     {
         $server = $site->mailServer;
-        if ($server === null || ! $server->isHostingerReady()) {
+        if ($server === null || ! $server->isHostingerReady() || ! $site->hasHostingerMailOrder()) {
             throw new HostingerMailException('mail_not_configured', 422, 'Mail is not configured for this site.');
         }
 
-        return $server;
+        return $site;
     }
 
     private function providerError(HostingerMailException $exception): JsonResponse

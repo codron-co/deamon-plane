@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\PinSiteRequest;
 use App\Models\Site;
+use App\Services\Coolify\CoolifyApiException;
+use App\Services\Coolify\CoolifySiteSync;
 use App\Services\Sites\ComposePackException;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
@@ -93,6 +95,34 @@ class SiteCoolifyOpsController extends Controller
         }
 
         return back()->with('status', __('site_ops.pin.done', ['name' => $site->name]));
+    }
+
+    public function sync(Request $request, Site $site, CoolifySiteSync $sync): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        try {
+            $result = $sync->sync($site);
+        } catch (CoolifyApiException $exception) {
+            return redirect()
+                ->route('ops.sites.show', $site)
+                ->with('error', $exception->getMessage());
+        }
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('sites.flash.synced', [
+                'deployments' => $result['deployments'],
+            ]));
+    }
+
+    public function redirectGetSync(Site $site): RedirectResponse
+    {
+        $this->authorize('view', $site);
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('sites.flash.sync_get'));
     }
 
     public function followHead(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse

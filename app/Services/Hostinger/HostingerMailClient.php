@@ -3,6 +3,7 @@
 namespace App\Services\Hostinger;
 
 use App\Models\MailServer;
+use App\Models\Site;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -13,40 +14,92 @@ class HostingerMailClient
 {
     public const LOCAL_PART_PATTERN = '/^(?=[a-z0-9])(?=.*[a-z0-9]$)[a-z0-9_-]+(?:\.[a-z0-9_-]+)*$/';
 
-    public function __construct(private readonly MailServer $server) {}
+    public function __construct(
+        private readonly MailServer $server,
+        private readonly ?string $orderId = null,
+        private readonly ?string $mailDomain = null,
+        private readonly ?string $siteId = null,
+    ) {}
 
     public static function fromServer(MailServer $server): self
     {
         return new self($server);
     }
 
+    public static function forSite(Site $site): self
+    {
+        $server = $site->mailServer;
+        if (! $server instanceof MailServer) {
+            throw new HostingerMailException('mail_not_configured', 422, 'Mail is not configured for this site.');
+        }
+
+        return new self(
+            $server,
+            is_string($site->hostinger_order_id) ? $site->hostinger_order_id : null,
+            is_string($site->mail_domain) ? $site->mail_domain : null,
+            (string) $site->id,
+        );
+    }
+
     /**
      * @return list<array{id: string, domain: string|null, status: string|null, seats: int|null}>
      */
-    public function listOrders(): array
+    public function listOrders(?string $domain = null): array
     {
-        $response = $this->send('GET', '/api/mail/v1/orders');
-        $payload = $response->json();
-        $rows = is_array($payload) ? ($payload['data'] ?? []) : [];
-        if (! is_array($rows)) {
-            return [];
-        }
-
         $orders = [];
-        foreach ($rows as $row) {
-            if (! is_array($row) || ! is_scalar($row['id'] ?? null)) {
-                continue;
-            }
-            $domain = $row['domain']['name'] ?? $row['domain'] ?? null;
-            $orders[] = [
-                'id' => trim((string) $row['id']),
-                'domain' => is_string($domain) ? strtolower(trim($domain)) : null,
-                'status' => is_string($row['status'] ?? null) ? $row['status'] : null,
-                'seats' => is_numeric($row['seats'] ?? null) ? (int) $row['seats'] : null,
+        $page = 1;
+        $lastPage = 1;
+
+        do {
+            $query = [
+                'page' => $page,
+                'per_page' => 100,
             ];
-        }
+            if (is_string($domain) && $domain !== '') {
+                $query['domain'] = strtolower(trim($domain));
+            }
+
+            $response = $this->send('GET', '/api/mail/v1/orders', [], $query);
+            $payload = $response->json();
+            $rows = is_array($payload) ? ($payload['data'] ?? []) : [];
+            if (! is_array($rows)) {
+                break;
+            }
+
+            foreach ($rows as $row) {
+                $normalized = $this->normalizeOrder($row);
+                if ($normalized !== null) {
+                    $orders[] = $normalized;
+                }
+            }
+
+            $meta = is_array($payload) ? ($payload['meta'] ?? []) : [];
+            $lastPage = is_numeric($meta['last_page'] ?? null)
+                ? (int) $meta['last_page']
+                : $this->inferredLastPage($meta, $page);
+            $page++;
+        } while ($page <= $lastPage && $page <= 20);
 
         return $orders;
+    }
+
+    /**
+     * @return array{id: string, domain: string|null, status: string|null, seats: int|null}|null
+     */
+    public function findOrderByDomain(string $domain): ?array
+    {
+        $domain = strtolower(trim($domain));
+        if ($domain === '') {
+            return null;
+        }
+
+        foreach ($this->listOrders($domain) as $order) {
+            if (is_string($order['domain']) && strcasecmp($order['domain'], $domain) === 0) {
+                return $order;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -129,8 +182,9 @@ class HostingerMailClient
 
     /**
      * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $query
      */
-    private function send(string $method, string $path, array $payload = []): Response
+    private function send(string $method, string $path, array $payload = [], array $query = []): Response
     {
         $token = (string) $this->server->api_token;
         if ($token === '') {
@@ -148,7 +202,7 @@ class HostingerMailClient
                 ->withToken($token);
 
             $response = match ($method) {
-                'GET' => $pending->get($url),
+                'GET' => $pending->get($url, $query),
                 'POST' => $pending->post($url, $payload),
                 'PATCH' => $pending->patch($url, $payload),
                 'DELETE' => $pending->delete($url),
@@ -177,12 +231,50 @@ class HostingerMailClient
 
     private function orderId(): string
     {
-        $orderId = trim((string) $this->server->hostinger_order_id);
+        $orderId = trim((string) $this->orderId);
         if ($orderId === '') {
             throw new HostingerMailException('mail_not_configured', 422, 'Mail order is not selected.');
         }
 
         return $orderId;
+    }
+
+    /**
+     * @return array{id: string, domain: string|null, status: string|null, seats: int|null}|null
+     */
+    private function normalizeOrder(mixed $row): ?array
+    {
+        if (! is_array($row) || ! is_scalar($row['id'] ?? null)) {
+            return null;
+        }
+
+        $id = trim((string) $row['id']);
+        if ($id === '') {
+            return null;
+        }
+
+        $domain = $row['domain']['name'] ?? $row['domain'] ?? null;
+
+        return [
+            'id' => $id,
+            'domain' => is_string($domain) ? strtolower(trim($domain)) : null,
+            'status' => is_string($row['status'] ?? null) ? $row['status'] : null,
+            'seats' => is_numeric($row['seats'] ?? null) ? (int) $row['seats'] : null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    private function inferredLastPage(array $meta, int $page): int
+    {
+        $perPage = is_numeric($meta['per_page'] ?? null) ? (int) $meta['per_page'] : 0;
+        $total = is_numeric($meta['total'] ?? null) ? (int) $meta['total'] : 0;
+        if ($perPage > 0 && $total > 0) {
+            return (int) ceil($total / $perPage);
+        }
+
+        return $page;
     }
 
     /**
@@ -208,7 +300,7 @@ class HostingerMailClient
         $localPart = is_string($localPart) ? trim($localPart) : null;
 
         if ($email === '' && is_string($localPart) && $localPart !== '') {
-            $domain = trim((string) $this->server->mail_domain);
+            $domain = trim((string) $this->mailDomain);
             $email = $domain !== '' ? $localPart.'@'.$domain : $localPart;
         }
 
@@ -227,6 +319,7 @@ class HostingerMailClient
     {
         Log::warning('hostinger.mail_request_failed', [
             'mail_server_id' => $this->server->id,
+            'site_id' => $this->siteId,
             'method' => $method,
             'path' => $path,
             'status' => $status,

@@ -11,6 +11,20 @@
 @endsection
 
 @section('actions')
+    @if ($canSyncCoolify ?? false)
+        <form
+            method="POST"
+            action="{{ route('ops.sites.sync', $site) }}"
+            data-ops-pending
+            data-confirm="{{ __('sites.detail.sync_confirm', ['name' => $site->name]) }}"
+            data-confirm-title="{{ __('sites.detail.sync_title') }}"
+            data-confirm-label="{{ __('sites.detail.sync') }}"
+            data-confirm-danger="false"
+        >
+            @csrf
+            <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.detail.sync') }}</button>
+        </form>
+    @endif
     @if ($coolifyAppUrl)
         <a class="btn btn-ghost btn-sm" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.deployments.open_coolify') }}</a>
     @endif
@@ -23,7 +37,14 @@
             <button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.check') }}</button>
         </form>
     @elseif ($canProvision ?? false)
-        <form method="POST" action="{{ route('ops.sites.provision', $site) }}" data-ops-pending>
+        <form
+            method="POST"
+            action="{{ route('ops.sites.provision', $site) }}"
+            data-ops-pending
+            data-confirm="{{ __('sites.provision.confirm', ['name' => $site->name]) }}"
+            data-confirm-title="{{ __('sites.provision.confirm_title') }}"
+            data-confirm-label="{{ __('sites.provision.button') }}"
+        >
             @csrf
             <button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button>
         </form>
@@ -34,7 +55,7 @@
     @php
         $branch = $site->channel?->value ?? __('ops.none');
         $version = $site->reportedDeamonVersion();
-        $themeId = $site->activeThemeInstallation?->theme?->theme_id;
+        $themeId = $site->reportedActiveThemeId();
         $latest = $deployments->first();
         $failure = $site->lastFailureMessage();
         $primaryDomain = $site->primary_domain;
@@ -138,7 +159,18 @@
                             {{ __('ops.none') }}
                         @endif
                     </strong>
-                    <small>{{ $site->mailServer?->mail_domain ?: __('sites.detail.mail_none') }}</small>
+                    <small>
+                        @if ($site->hasHostingerMailOrder())
+                            {{ $site->mail_domain }}
+                        @elseif ($site->mailServer)
+                            {{ __('mail.sites.unmatched') }}
+                        @else
+                            {{ __('sites.detail.mail_none') }}
+                        @endif
+                    </small>
+                    @if ($canEdit ?? false)
+                        <a href="#infrastructure">{{ __('mail.orders.change') }}</a>
+                    @endif
                 </div>
             </article>
         </div>
@@ -176,7 +208,7 @@
                 @if ($site->status === \App\Enums\SiteStatus::Error)
                     <a class="btn btn-secondary btn-sm" href="#deployments">{{ __('sites.detail.inspect_deployments') }}</a>
                 @elseif ($canProvision ?? false)
-                    <form method="POST" action="{{ route('ops.sites.provision', $site) }}" data-ops-pending>@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button></form>
+                    <form method="POST" action="{{ route('ops.sites.provision', $site) }}" data-ops-pending data-confirm="{{ __('sites.provision.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.provision.confirm_title') }}" data-confirm-label="{{ __('sites.provision.button') }}">@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button></form>
                 @elseif ($healthDisplay !== 'ok' && ($canCheckHealth ?? false))
                     <form method="POST" action="{{ route('ops.sites.health', $site) }}" data-ops-pending>@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.check') }}</button></form>
                 @elseif ($canEdit)
@@ -195,14 +227,22 @@
         </div>
         <div class="site-operations-grid">
             <div class="site-operations-main">
+                @include('ops.sites._mail')
                 @include('ops.sites._channel-switch')
                 @include('ops.sites._coolify-ops')
                 @include('ops.sites._agent-health')
-                @if ($canInjectAgentSecret ?? false)
+                @if (($canInjectAgentSecret ?? false) && ! $site->hasAgentSecret())
                     <article class="site-card site-operation" aria-labelledby="agent-secret-heading">
                         <div class="site-card-head">
                             <h3 id="agent-secret-heading">{{ __('sites.agent.inject_title') }} <button class="site-hint" type="button" aria-label="{{ __('sites.agent.inject_lede', ['name' => 'CONTROL_PLANE_AGENT_SECRET']) }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('sites.agent.inject_lede', ['name' => 'CONTROL_PLANE_AGENT_SECRET']) }}</span></button></h3>
-                            <form method="POST" action="{{ route('ops.sites.agent-secret', $site) }}" data-ops-pending>@csrf<button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.inject') }}</button></form>
+                            <form
+                                method="POST"
+                                action="{{ route('ops.sites.agent-secret', $site) }}"
+                                data-ops-pending
+                                data-confirm="{{ __('sites.agent.inject_confirm', ['name' => $site->name]) }}"
+                                data-confirm-title="{{ __('sites.agent.inject_title') }}"
+                                data-confirm-label="{{ __('sites.agent.inject') }}"
+                            >@csrf<button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.inject') }}</button></form>
                         </div>
                     </article>
                 @endif

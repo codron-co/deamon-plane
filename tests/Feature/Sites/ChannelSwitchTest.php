@@ -389,6 +389,18 @@ class ChannelSwitchTest extends TestCase
         $this->assertStringNotContainsString('Force switch to main', $html);
     }
 
+    public function test_channel_switch_from_beta_still_uses_confirm_modal(): void
+    {
+        $site = $this->activeSite(['channel' => Channel::Beta]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-confirm=', false)
+            ->assertSee(__('sites.channel_switch.confirm_switch_title'), false)
+            ->assertDontSee('window.confirm', false);
+    }
+
     public function test_super_admin_sees_force_checkbox_when_leaving_beta(): void
     {
         $site = $this->activeSite(['channel' => Channel::Beta]);

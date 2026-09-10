@@ -16,6 +16,8 @@ Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateC
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
 Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');
 Route::post('/sites/{site}/follow-head', [SiteCoolifyOpsController::class, 'followHead'])->name('ops.sites.follow-head');
+Route::post('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'sync'])->name('ops.sites.sync');
+Route::get('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'redirectGetSync'])->name('ops.sites.sync.get');
 Route::get('/sites/{site}', SiteDetailController::class)->name('ops.sites.show');
 Route::get('/sites/{site}/deployments/{deployment}', DeploymentShowController::class)
     ->scopeBindings()
@@ -26,6 +28,8 @@ Route::post('/sites/{site}/provision', [SiteController::class, 'provision'])->na
 Route::post('/sites/{site}/channel', [SiteController::class, 'switchChannel'])->name('ops.sites.channel');
 Route::post('/sites/{site}/health', [SiteController::class, 'checkHealth'])->name('ops.sites.health');
 Route::post('/sites/{site}/agent-secret', [SiteController::class, 'injectAgentSecret'])->name('ops.sites.agent-secret');
+Route::post('/sites/{site}/mail', [SiteController::class, 'assignMail'])->name('ops.sites.mail');
+Route::post('/sites/{site}/mail-order', [SiteController::class, 'refreshMailOrder'])->name('ops.sites.mail-order');
 Route::post('/sites/{site}/themes', [SiteThemeController::class, 'assign'])->name('ops.sites.themes.assign');
 Route::post('/sites/{site}/themes/{installation}/update', [SiteThemeController::class, 'update'])->name('ops.sites.themes.update');
 Route::post('/sites/{site}/themes/{installation}/sync', [SiteThemeController::class, 'sync'])->name('ops.sites.themes.sync');

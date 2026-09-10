@@ -29,7 +29,16 @@ class CoolifySiteTargetSync
                 continue;
             }
 
-            if ($this->apply($site, $app, $connection)) {
+            $changed = $this->fillSite($site, $app, $connection);
+            try {
+                if ((new CoolifyDeploymentSync)->sync($site, $coolify) > 0) {
+                    $changed = true;
+                }
+            } catch (CoolifyApiException) {
+                // Inventory still fills app targets when the deployments list is missing.
+            }
+
+            if ($changed) {
                 $updated++;
             }
         }
@@ -55,7 +64,7 @@ class CoolifySiteTargetSync
             ->get();
     }
 
-    private function apply(Site $site, CoolifyApplication $app, CoolifyConnection $connection): bool
+    public function fillSite(Site $site, CoolifyApplication $app, CoolifyConnection $connection): bool
     {
         $busy = in_array($site->status, [SiteStatus::Provisioning, SiteStatus::Deploying], true);
 

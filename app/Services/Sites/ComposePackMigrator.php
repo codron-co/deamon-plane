@@ -59,7 +59,12 @@ class ComposePackMigrator
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
-        $this->restoreAppEnvs($coolify, $uuid, $snapshot);
+        try {
+            $this->restoreAppEnvs($coolify, $uuid, $snapshot);
+        } catch (CoolifyApiException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
+        }
+
         $this->clearMarker($site, $actor, $ip, alreadyCompose: false);
     }
 

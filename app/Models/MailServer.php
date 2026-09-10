@@ -22,8 +22,6 @@ class MailServer extends Model
         'name',
         'provider',
         'api_token',
-        'hostinger_order_id',
-        'mail_domain',
         'is_enabled',
         'last_probe_at',
         'last_probe_payload',
@@ -76,9 +74,7 @@ class MailServer extends Model
     {
         return $this->is_enabled
             && $this->provider === MailProvider::Hostinger
-            && $this->hasToken()
-            && filled($this->hostinger_order_id)
-            && filled($this->mail_domain);
+            && $this->hasToken();
     }
 
     /**

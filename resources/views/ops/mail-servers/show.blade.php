@@ -18,8 +18,6 @@
     <section class="ops-panel">
         <dl class="site-fact-list">
             <div><dt>{{ __('mail.fields.provider') }}</dt><dd>{{ $server->provider?->label() }}</dd></div>
-            <div><dt>{{ __('mail.fields.mail_domain') }}</dt><dd>{{ $server->mail_domain ?: __('ops.none') }}</dd></div>
-            <div><dt>{{ __('mail.fields.order') }}</dt><dd><code>{{ $server->hostinger_order_id ?: __('ops.none') }}</code></dd></div>
             <div><dt>{{ __('ops.enabled') }}</dt><dd>{{ $server->is_enabled ? __('ops.yes') : __('ops.no') }}</dd></div>
         </dl>
     </section>
@@ -54,7 +52,6 @@
                             <th>{{ __('mail.fields.order') }}</th>
                             <th>{{ __('mail.fields.mail_domain') }}</th>
                             <th>{{ __('mail.columns.status') }}</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -63,15 +60,6 @@
                                 <td><code>{{ $order['id'] }}</code></td>
                                 <td>{{ $order['domain'] ?: __('ops.none') }}</td>
                                 <td>{{ $order['status'] ?: __('ops.none') }}</td>
-                                <td class="ops-row-actions">
-                                    @if ($canWrite)
-                                        <form method="POST" action="{{ route('ops.mail-servers.order', $server) }}">
-                                            @csrf
-                                            <input type="hidden" name="hostinger_order_id" value="{{ $order['id'] }}">
-                                            <button type="submit" class="btn btn-ghost btn-sm">{{ __('mail.orders.use') }}</button>
-                                        </form>
-                                    @endif
-                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -85,11 +73,33 @@
         @if ($sites->isEmpty())
             <p class="muted">{{ __('mail.sites.empty') }}</p>
         @else
-            <ul>
-                @foreach ($sites as $site)
-                    <li><a href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a></li>
-                @endforeach
-            </ul>
+            <div class="sites-table-wrap">
+                <table class="ops-table">
+                    <thead>
+                        <tr>
+                            <th>{{ __('mail.sites.site') }}</th>
+                            <th>{{ __('mail.fields.mail_domain') }}</th>
+                            <th>{{ __('mail.fields.order') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($sites as $site)
+                            <tr>
+                                <td><a href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a></td>
+                                <td>{{ $site->primary_domain }}</td>
+                                <td>
+                                    @if ($site->hasHostingerMailOrder())
+                                        <code>{{ $site->hostinger_order_id }}</code>
+                                        <span class="muted">{{ $site->mail_domain }}</span>
+                                    @else
+                                        <span class="muted">{{ __('mail.sites.unmatched') }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         @endif
     </section>
 

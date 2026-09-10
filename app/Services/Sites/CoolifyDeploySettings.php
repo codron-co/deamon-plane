@@ -11,13 +11,13 @@ use App\Services\Coolify\Dto\CoolifyApplication;
 class CoolifyDeploySettings
 {
     /**
-     * @return array{build_pack: ?string, is_auto_deploy: bool, git_commit_sha: ?string, error: ?string}
+     * @return array{build_pack: ?string, is_auto_deploy: ?bool, git_commit_sha: ?string, error: ?string}
      */
     public function snapshot(Site $site): array
     {
         $empty = [
             'build_pack' => null,
-            'is_auto_deploy' => false,
+            'is_auto_deploy' => null,
             'git_commit_sha' => null,
             'error' => null,
         ];
@@ -36,7 +36,7 @@ class CoolifyDeploySettings
 
         return [
             'build_pack' => $app->buildPack,
-            'is_auto_deploy' => $app->isAutoDeploy(),
+            'is_auto_deploy' => $app->autoDeployState(),
             'git_commit_sha' => $app->gitCommitSha(),
             'error' => null,
         ];
@@ -48,7 +48,7 @@ class CoolifyDeploySettings
         $coolify = CoolifyApplicationService::forSite($site);
 
         try {
-            $app = $coolify->patchApplication($uuid, ['is_auto_deploy' => $enabled]);
+            $app = $coolify->patchApplication($uuid, ['is_auto_deploy_enabled' => $enabled]);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -68,7 +68,7 @@ class CoolifyDeploySettings
         try {
             $app = $coolify->patchApplication($uuid, [
                 'git_commit_sha' => $ref,
-                'is_auto_deploy' => false,
+                'is_auto_deploy_enabled' => false,
             ]);
             $coolify->deploy($uuid);
         } catch (CoolifyApiException $exception) {
@@ -91,7 +91,7 @@ class CoolifyDeploySettings
         try {
             $app = $coolify->patchApplication($uuid, [
                 'git_commit_sha' => '',
-                'is_auto_deploy' => true,
+                'is_auto_deploy_enabled' => true,
             ]);
             $coolify->deploy($uuid);
         } catch (CoolifyApiException $exception) {

@@ -395,6 +395,7 @@ class CoolifyConnectionsTest extends TestCase
             ->assertSee('type="password"', false)
             ->assertSee('class="site-hint"', false)
             ->assertSee('class="site-technical-card"', false)
+            ->assertSee('data-confirm="'.__('coolify.show.sync_confirm', ['name' => $connection->name]).'"', false)
             ->assertDontSee(self::TOKEN, false)
             ->getContent();
 

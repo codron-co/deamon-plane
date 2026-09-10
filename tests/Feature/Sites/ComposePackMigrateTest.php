@@ -92,7 +92,10 @@ class ComposePackMigrateTest extends TestCase
 
             return ($body['key'] ?? null) === 'APP_KEY'
                 && ($body['value'] ?? null) === $appKey
-                && ($body['available_in_services'] ?? null) === 'app';
+                && ($body['is_literal'] ?? null) === true
+                && ! array_key_exists('is_literally', $body)
+                && ! array_key_exists('available_in_services', $body)
+                && ! array_key_exists('uuid', $body);
         });
 
         Http::assertSent(function (Request $request): bool {
@@ -103,7 +106,8 @@ class ComposePackMigrateTest extends TestCase
             $body = $request->data();
 
             return ($body['key'] ?? null) === 'DEAMON_SITE_NAME'
-                && ($body['available_in_services'] ?? null) === 'app';
+                && ($body['is_literal'] ?? null) === true
+                && ! array_key_exists('available_in_services', $body);
         });
 
         Http::assertNotSent(function (Request $request): bool {
@@ -113,6 +117,51 @@ class ComposePackMigrateTest extends TestCase
         });
 
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
+    }
+
+    public function test_env_restore_validation_error_is_flash_not_500(): void
+    {
+        $site = $this->dockerfileSite();
+
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if ($method === 'GET' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response($this->appPayload('dockerfile'), 200);
+            }
+            if ($method === 'GET' && str_contains($url, '/envs')) {
+                return Http::response([
+                    ['uuid' => 'env-app-key', 'key' => 'APP_KEY', 'value' => 'base64:keep'],
+                ], 200);
+            }
+            if ($method === 'PATCH' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response($this->appPayload('dockercompose'), 200);
+            }
+            if ($method === 'PATCH' && str_contains($url, '/envs')) {
+                return Http::response([
+                    'message' => 'Validation failed.',
+                    'errors' => [
+                        'is_literally' => ['This field is not allowed.'],
+                        'available_in_services' => ['This field is not allowed.'],
+                        'uuid' => ['This field is not allowed.'],
+                    ],
+                ], 422);
+            }
+
+            return Http::response(['error' => 'unexpected '.$method.' '.$url], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.compose', $site))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $error = session('error');
+        $this->assertIsString($error);
+        $this->assertStringContainsString('is_literally', $error);
+        $this->assertTrue($site->fresh()->hasDockerfileBuildPackWarning());
     }
 
     public function test_recreate_required_aborts_without_delete(): void

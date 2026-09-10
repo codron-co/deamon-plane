@@ -296,10 +296,15 @@
             <option value="">{{ __('mail.none') }}</option>
             @foreach ($mailServers ?? [] as $mailServer)
                 <option value="{{ $mailServer->id }}" @selected((string) old('mail_server_id', $site->mail_server_id) === (string) $mailServer->id)>
-                    {{ $mailServer->name }}@if ($mailServer->mail_domain) — {{ $mailServer->mail_domain }}@endif
+                    {{ $mailServer->name }}
                 </option>
             @endforeach
         </select>
+        @if ($site->exists && $site->hasHostingerMailOrder())
+            <p class="field-hint">{{ __('mail.fields.site_order', ['order' => $site->hostinger_order_id, 'domain' => $site->mail_domain]) }}</p>
+        @elseif ($site->exists && filled($site->mail_server_id))
+            <p class="field-hint">{{ __('mail.sites.unmatched') }}</p>
+        @endif
         @error('mail_server_id') <p class="field-error">{{ $message }}</p> @enderror
     </div>
 </section>

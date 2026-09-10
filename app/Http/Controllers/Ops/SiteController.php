@@ -17,6 +17,9 @@ use App\Models\Site;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\SiteHealthChecker;
 use App\Services\Mail\SiteMailConfigurer;
+use App\Services\Mail\SiteMailConfigureResult;
+use App\Services\Mail\SiteMailOrderBinder;
+use App\Services\Mail\SiteMailOrderBindResult;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\SiteAgentSecretInjector;
@@ -28,6 +31,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class SiteController extends Controller
 {
@@ -111,7 +115,7 @@ class SiteController extends Controller
         ]);
     }
 
-    public function store(StoreSiteRequest $request, SiteAttacher $attacher, SiteMailConfigurer $configurer): RedirectResponse
+    public function store(StoreSiteRequest $request, SiteAttacher $attacher, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
     {
         $data = $request->validated();
         $targets = $this->coolifyTargetsFrom($data);
@@ -167,16 +171,15 @@ class SiteController extends Controller
             : __('sites.flash.created');
 
         if (filled($site->mail_server_id)) {
+            $bind = $binder->bind($site);
             $configure = $configurer->sync($site);
-            if ($configure->status === 'failed') {
+            if ($configure->status === 'failed' || $bind->isLookupFailed()) {
                 return redirect()
                     ->route('ops.sites.show', $site)
                     ->with('status', $message)
-                    ->with('error', $configure->flashMessage());
+                    ->with('error', $this->mailErrorMessage($bind, $configure));
             }
-            if ($configure->status === 'needs_secret') {
-                $message .= ' '.$configure->flashMessage();
-            }
+            $message = $this->appendMailFlash($message, $bind, $configure);
         }
 
         return redirect()
@@ -309,28 +312,89 @@ class SiteController extends Controller
             ->with('error', $result->safeMessage);
     }
 
-    public function injectAgentSecret(Request $request, Site $site, SiteAgentSecretInjector $injector): RedirectResponse
+    public function injectAgentSecret(Request $request, Site $site, SiteAgentSecretInjector $injector, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
     {
         $this->authorize('update', $site);
 
+        $rotate = $site->hasAgentSecret();
+
         try {
-            $injector->inject($site, $request->user(), $request->ip());
+            $injector->inject($site, $request->user(), $request->ip(), $rotate);
         } catch (SiteProvisionException $exception) {
             return redirect()
                 ->route('ops.sites.show', $site)
                 ->with('error', $exception->getMessage());
         }
 
+        $flash = $rotate ? __('sites.flash.secret_rotated') : __('sites.flash.secret_injected');
+
         return redirect()
             ->route('ops.sites.show', $site)
-            ->with('status', __('sites.flash.secret_injected'));
+            ->with('status', $flash.$this->mailFlashSuffix($binder->bind($site), $configurer->sync($site)));
     }
 
-    public function update(UpdateSiteRequest $request, Site $site, SiteMailConfigurer $configurer): RedirectResponse
+    public function refreshMailOrder(Request $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        $bind = $binder->bind($site);
+        $configure = $configurer->sync($site);
+        if ($configure->status === 'failed' || $bind->isLookupFailed()) {
+            return redirect()
+                ->route('ops.sites.show', $site)
+                ->with('error', $this->mailErrorMessage($bind, $configure));
+        }
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('mail.flash.order_refreshed').$this->mailFlashSuffix($bind, $configure));
+    }
+
+    public function assignMail(Request $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        $request->merge([
+            'mail_server_id' => filled($request->input('mail_server_id')) ? $request->input('mail_server_id') : null,
+        ]);
+
+        $validated = $request->validate([
+            'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
+        ]);
+
+        $before = $this->auditSnapshot($site);
+        $site->mail_server_id = $validated['mail_server_id'] ?? null;
+        $site->save();
+
+        $bind = $binder->bind($site);
+        $site->refresh();
+        $configure = $configurer->sync($site);
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $request->user()?->id,
+            'action' => 'site.mail_assigned',
+            'before' => $before,
+            'after' => $this->auditSnapshot($site),
+            'ip' => $request->ip(),
+        ]);
+
+        if ($configure->status === 'failed' || $bind->isLookupFailed()) {
+            return redirect()
+                ->route('ops.sites.show', $site)
+                ->with('error', $this->mailErrorMessage($bind, $configure));
+        }
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('mail.flash.assigned').$this->mailFlashSuffix($bind, $configure));
+    }
+
+    public function update(UpdateSiteRequest $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
     {
         $data = $request->validated();
         $site->load('primaryDomainRecord');
         $previousMailServerId = $site->mail_server_id;
+        $previousDomain = $site->primary_domain;
 
         DB::transaction(function () use ($request, $site, $data): void {
             $before = $this->auditSnapshot($site);
@@ -383,19 +447,20 @@ class SiteController extends Controller
         });
 
         $site->refresh();
-        if ($previousMailServerId !== $site->mail_server_id) {
+        if ($previousMailServerId !== $site->mail_server_id || $previousDomain !== $site->primary_domain) {
+            $bind = $binder->bind($site);
             $configure = $configurer->sync($site);
-            if ($configure->status === 'failed') {
+            $suffix = $this->mailFlashSuffix($bind, $configure);
+            if ($configure->status === 'failed' || $bind->isLookupFailed()) {
                 return redirect()
                     ->route('ops.sites.show', $site)
                     ->with('status', __('sites.flash.updated'))
-                    ->with('error', $configure->flashMessage());
+                    ->with('error', $this->mailErrorMessage($bind, $configure));
             }
-            if ($configure->status === 'needs_secret') {
-                return redirect()
-                    ->route('ops.sites.show', $site)
-                    ->with('status', __('sites.flash.updated').' '.$configure->flashMessage());
-            }
+
+            return redirect()
+                ->route('ops.sites.show', $site)
+                ->with('status', __('sites.flash.updated').$suffix);
         }
 
         return redirect()
@@ -461,6 +526,8 @@ class SiteController extends Controller
             'coolify_project_uuid' => $site->coolify_project_uuid,
             'notes' => $site->notes,
             'mail_server_id' => $site->mail_server_id,
+            'hostinger_order_id' => $site->hostinger_order_id,
+            'mail_domain' => $site->mail_domain,
         ];
     }
 
@@ -482,6 +549,38 @@ class SiteController extends Controller
     private function mailServerOptions()
     {
         return MailServer::query()->where('is_enabled', true)->orderBy('name')->get();
+    }
+
+    private function appendMailFlash(string $message, SiteMailOrderBindResult $bind, SiteMailConfigureResult $configure): string
+    {
+        return $message.$this->mailFlashSuffix($bind, $configure);
+    }
+
+    private function mailFlashSuffix(SiteMailOrderBindResult $bind, SiteMailConfigureResult $configure): string
+    {
+        $parts = [];
+        if ($bind->isMatched()) {
+            $parts[] = (string) __('mail.flash.order_matched', ['domain' => $bind->mailDomain]);
+        } elseif ($bind->isUnmatched()) {
+            $parts[] = (string) __('mail.flash.order_unmatched');
+        }
+
+        if ($configure->status === 'needs_secret') {
+            $parts[] = $configure->flashMessage();
+        } elseif ($configure->status === 'ok' && ($bind->isMatched() || $bind->status === 'cleared')) {
+            $parts[] = $configure->flashMessage();
+        }
+
+        return $parts === [] ? '' : ' '.implode(' ', $parts);
+    }
+
+    private function mailErrorMessage(SiteMailOrderBindResult $bind, SiteMailConfigureResult $configure): string
+    {
+        if ($bind->isLookupFailed()) {
+            return (string) __('mail.errors.order_lookup_failed');
+        }
+
+        return $configure->flashMessage();
     }
 
     /**

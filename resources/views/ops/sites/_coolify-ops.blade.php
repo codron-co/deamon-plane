@@ -3,7 +3,7 @@
     $canOps = auth()->user()?->can('update', $site) ?? false;
     $snapshot = [
         'build_pack' => null,
-        'is_auto_deploy' => false,
+        'is_auto_deploy' => null,
         'git_commit_sha' => null,
         'error' => null,
     ];
@@ -16,7 +16,8 @@
         }
     }
     $showPack = $showPack || ($snapshot['build_pack'] ?? null) === 'dockerfile';
-    $autoDeployOn = (bool) ($snapshot['is_auto_deploy'] ?? false);
+    $autoDeployOn = $snapshot['is_auto_deploy'] ?? null;
+    $autoDeployKnown = $autoDeployOn !== null;
     $currentSha = filled($snapshot['git_commit_sha'] ?? null) ? (string) $snapshot['git_commit_sha'] : null;
     $pinCommits = collect();
     foreach ($deployments ?? [] as $deployment) {
@@ -39,6 +40,11 @@
     }
     $selectedRef = old('ref', $currentSha ?? $pinCommits->keys()->first());
     $latestSha = $pinCommits->keys()->first();
+    $autoDeployLabel = match ($autoDeployOn) {
+        true => __('site_ops.auto_deploy.status_on'),
+        false => __('site_ops.auto_deploy.status_off'),
+        default => __('site_ops.auto_deploy.status_unknown'),
+    };
 @endphp
 
 @if ($showPack)
@@ -71,30 +77,46 @@
         <div class="site-card-head">
             <h3 id="coolify-ops-heading">{{ __('site_ops.auto_deploy.title') }} <button class="site-hint" type="button" aria-label="{{ __('site_ops.auto_deploy.lede') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('site_ops.auto_deploy.lede') }}</span></button></h3>
             <div class="branch-version">
-                <span class="status-chip">{{ $autoDeployOn ? __('site_ops.auto_deploy.status_on') : __('site_ops.auto_deploy.status_off') }}</span>
-                @if ($canOps)
-                    @if ($autoDeployOn)
-                        <form method="POST" action="{{ route('ops.sites.auto-deploy', $site) }}" data-ops-pending>
-                            @csrf
-                            <input type="hidden" name="enabled" value="0">
-                            <button type="submit" class="btn btn-ghost btn-sm" aria-pressed="true" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.auto_deploy.off_button') }}</button>
-                        </form>
-                    @else
-                        <form method="POST" action="{{ route('ops.sites.auto-deploy', $site) }}" data-ops-pending>
-                            @csrf
-                            <input type="hidden" name="enabled" value="1">
-                            <button type="submit" class="btn btn-ghost btn-sm" aria-pressed="false" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.auto_deploy.on_button') }}</button>
-                        </form>
-                    @endif
+                <span class="status-chip">{{ $autoDeployLabel }}</span>
+                @if ($canOps && $autoDeployOn !== false)
+                    <form
+                        method="POST"
+                        action="{{ route('ops.sites.auto-deploy', $site) }}"
+                        data-ops-pending
+                        data-confirm="{{ __('site_ops.auto_deploy.confirm_off', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('site_ops.auto_deploy.confirm_off_title') }}"
+                        data-confirm-label="{{ __('site_ops.auto_deploy.off_button') }}"
+                    >
+                        @csrf
+                        <input type="hidden" name="enabled" value="0">
+                        <button type="submit" class="btn btn-ghost btn-sm" aria-pressed="{{ $autoDeployOn === true ? 'true' : 'mixed' }}" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.auto_deploy.off_button') }}</button>
+                    </form>
+                @endif
+                @if ($canOps && $autoDeployOn !== true)
+                    <form
+                        method="POST"
+                        action="{{ route('ops.sites.auto-deploy', $site) }}"
+                        data-ops-pending
+                        data-confirm="{{ __('site_ops.auto_deploy.confirm_on', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('site_ops.auto_deploy.confirm_on_title') }}"
+                        data-confirm-label="{{ __('site_ops.auto_deploy.on_button') }}"
+                        data-confirm-danger="false"
+                    >
+                        @csrf
+                        <input type="hidden" name="enabled" value="1">
+                        <button type="submit" class="btn btn-ghost btn-sm" aria-pressed="{{ $autoDeployOn === false ? 'false' : 'mixed' }}" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.auto_deploy.on_button') }}</button>
+                    </form>
                 @endif
             </div>
         </div>
 
         @if ($snapshot['error'])
             <p class="ops-alert" role="alert">{{ $snapshot['error'] }}</p>
+        @elseif (! $autoDeployKnown)
+            <p class="field-hint" role="note">{{ __('site_ops.auto_deploy.unknown_hint') }}</p>
         @endif
 
-        @if (! $autoDeployOn)
+        @if ($autoDeployOn === false)
             <p class="field-hint" role="note">{{ __('site_ops.pin.volume_warning') }}</p>
             <p class="site-pin-status">
                 @if ($currentSha)
@@ -105,7 +127,15 @@
             </p>
 
             @if ($canOps)
-                <form method="POST" action="{{ route('ops.sites.pin', $site) }}" class="ops-form" data-ops-pending>
+                <form
+                    method="POST"
+                    action="{{ route('ops.sites.pin', $site) }}"
+                    class="ops-form"
+                    data-ops-pending
+                    data-confirm="{{ __('site_ops.pin.confirm', ['name' => $site->name]) }}"
+                    data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
+                    data-confirm-label="{{ __('site_ops.pin.pin_selected') }}"
+                >
                     @csrf
                     <div class="site-operation-line">
                         <div class="field">
@@ -138,13 +168,28 @@
                 </form>
                 <div class="form-actions">
                     @if ($latestSha)
-                        <form method="POST" action="{{ route('ops.sites.pin', $site) }}" data-ops-pending>
+                        <form
+                            method="POST"
+                            action="{{ route('ops.sites.pin', $site) }}"
+                            data-ops-pending
+                            data-confirm="{{ __('site_ops.pin.confirm', ['name' => $site->name]) }}"
+                            data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
+                            data-confirm-label="{{ __('site_ops.pin.update_latest') }}"
+                        >
                             @csrf
                             <input type="hidden" name="ref" value="{{ $latestSha }}">
                             <button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.pin.update_latest') }}</button>
                         </form>
                     @endif
-                    <form method="POST" action="{{ route('ops.sites.follow-head', $site) }}" data-ops-pending>
+                    <form
+                        method="POST"
+                        action="{{ route('ops.sites.follow-head', $site) }}"
+                        data-ops-pending
+                        data-confirm="{{ __('site_ops.pin.confirm_follow', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('site_ops.pin.confirm_follow_title') }}"
+                        data-confirm-label="{{ __('site_ops.pin.follow_button') }}"
+                        data-confirm-danger="false"
+                    >
                         @csrf
                         <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.pin.follow_button') }}</button>
                     </form>

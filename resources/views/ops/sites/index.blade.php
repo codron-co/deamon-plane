@@ -113,7 +113,7 @@
                                 </td>
                                 @php($failure = $site->lastFailureMessage())
                                 <td><span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span></td>
-                                <td class="muted">{{ $site->activeThemeInstallation?->theme?->theme_id ?: __('ops.none') }}</td>
+                                <td class="muted">{{ $site->reportedActiveThemeId() ?: __('ops.none') }}</td>
                                 <td class="ops-row-actions">
                                     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
                                     @can('update', $site)
@@ -152,6 +152,10 @@
                             formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
                             name="enabled"
                             value="1"
+                            data-confirm="{{ __('site_ops.bulk.confirm_auto_on') }}"
+                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
+                            data-confirm-label="{{ __('site_ops.auto_deploy.on_button') }}"
+                            data-confirm-danger="false"
                         >{{ __('site_ops.bulk.auto_on') }}</button>
                         <button
                             type="submit"

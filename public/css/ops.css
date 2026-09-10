@@ -913,6 +913,11 @@ code {
     color: var(--text);
 }
 
+.ops-icon-btn.is-lg {
+    width: 36px;
+    height: 36px;
+}
+
 .ops-confirm-message {
     margin: 0;
     color: var(--text-muted);

@@ -25,6 +25,8 @@ use App\Services\Coolify\CoolifyProvisionPreflight;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use App\Services\Mail\SiteMailConfigurer;
+use App\Services\Mail\SiteMailOrderBinder;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -80,6 +82,9 @@ class SiteProvisioner
                 'ip' => $ip,
             ]);
         });
+
+        $site->refresh();
+        $this->syncMail($site);
 
         ProvisionSiteJob::dispatch($siteId, $actor?->id, $ip);
     }
@@ -343,6 +348,23 @@ class SiteProvisioner
 
         if (blank($site->agent_secret_encrypted)) {
             $site->agent_secret_encrypted = Str::password(64, symbols: false);
+        }
+    }
+
+    private function syncMail(Site $site): void
+    {
+        if (blank($site->mail_server_id)) {
+            return;
+        }
+
+        try {
+            app(SiteMailOrderBinder::class)->bind($site);
+            app(SiteMailConfigurer::class)->sync($site);
+        } catch (Throwable) {
+            Log::warning('site.mail_bind_failed', [
+                'site_id' => $site->id,
+                'site_slug' => $site->slug,
+            ]);
         }
     }
 
