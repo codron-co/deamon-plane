@@ -8,22 +8,25 @@
     $themeId = is_string($payload['active_theme_id'] ?? null) ? $payload['active_theme_id'] : null;
     $queueOk = array_key_exists('queue_ok', $payload) ? $payload['queue_ok'] : null;
     $reason = is_string($payload['reason'] ?? null) ? $payload['reason'] : null;
+    $agentHint = __('sites.agent.lede', ['path' => '/internal/control/v1/health']);
+    $statusLabel = __('ops.health.'.$display).($reason ? ' · '.$reason : '');
 @endphp
 
-<section class="ops-panel" aria-labelledby="agent-health-heading">
-    <h2 id="agent-health-heading">{{ __('sites.agent.title') }}</h2>
-    <p>{{ __('sites.agent.lede', ['path' => '/internal/control/v1/health']) }}</p>
-
-    <dl class="spec-list">
-        <div>
-            <dt>{{ __('sites.agent.status') }}</dt>
-            <dd>
-                <span class="status-chip status-{{ $display }}">{{ __('ops.health.'.$display) }}</span>
-                @if ($reason)
-                    <span class="muted">{{ $reason }}</span>
-                @endif
-            </dd>
+<article class="site-card site-operation" aria-labelledby="agent-health-heading">
+    <div class="site-card-head">
+        <h3 id="agent-health-heading">{{ __('sites.agent.title') }} <button class="site-hint" type="button" aria-label="{{ $agentHint }}"><span aria-hidden="true">i</span><span role="tooltip">{{ $agentHint }}</span></button></h3>
+        <div class="branch-version">
+            <span class="status-chip status-{{ $display }}">{{ $statusLabel }}</span>
+            @if ($canCheckHealth)
+                <form method="POST" action="{{ route('ops.sites.health', $site) }}" data-ops-pending>
+                    @csrf
+                    <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.check') }}</button>
+                </form>
+            @endif
         </div>
+    </div>
+
+    <dl class="site-fact-list is-compact">
         <div>
             <dt>{{ __('sites.agent.last_check') }}</dt>
             <dd>{{ $site->last_health_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.never') }}</dd>
@@ -57,13 +60,4 @@
     @if (! $site->hasAgentSecret())
         <p class="field-hint">{{ __('sites.agent.missing_hint') }}</p>
     @endif
-
-    @if ($canCheckHealth)
-        <form method="POST" action="{{ route('ops.sites.health', $site) }}" class="ops-form" data-ops-pending>
-            @csrf
-            <div class="form-actions">
-                <button type="submit" class="btn btn-ghost" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.check') }}</button>
-            </div>
-        </form>
-    @endif
-</section>
+</article>

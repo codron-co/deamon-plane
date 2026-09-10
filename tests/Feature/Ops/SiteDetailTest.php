@@ -30,9 +30,7 @@ class SiteDetailTest extends TestCase
             'last_health_payload' => ['deamon_version' => '1.8.4'],
         ]);
 
-        $operator = $this->user(OpsRole::Operator);
-
-        $this->actingAs($operator)
+        $html = $this->actingAs($this->user(OpsRole::Operator))
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('Operations center', false)
@@ -41,12 +39,27 @@ class SiteDetailTest extends TestCase
             ->assertSee('Technical identifiers', false)
             ->assertSee('href="#deployments"', false)
             ->assertSee('href="#infrastructure"', false)
+            ->assertSee('href="#danger"', false)
+            ->assertSee('role="tablist"', false)
+            ->assertSee('role="tab"', false)
+            ->assertSee('role="tabpanel"', false)
+            ->assertSee('aria-controls="overview"', false)
+            ->assertSee('aria-selected="true"', false)
+            ->assertSee('aria-selected="false"', false)
+            ->assertSee('data-site-tabs', false)
+            ->assertSee('data-site-panel', false)
             ->assertSee('alpha', false)
             ->assertSee('1.8.4', false)
             ->assertSee('data-favicon-host="'.$site->primary_domain.'"', false)
-            ->assertSee(route('ops.sites.edit', $site), false);
+            ->assertSee(route('ops.sites.edit', $site), false)
+            ->assertSee('js/ops-site-tabs.js', false)
+            ->getContent();
 
         $this->assertNotSame(route('ops.sites.show', $site), route('ops.sites.edit', $site));
+        $this->assertDoesNotMatchRegularExpression('/data-site-panel[^>]*\bhidden\b/', $html);
+        $this->assertDoesNotMatchRegularExpression('/id="(overview|deployments|theme|infrastructure|danger)"[^>]*\bhidden\b/', $html);
+        $this->assertMatchesRegularExpression('/id="danger"/', $html);
+        $this->assertMatchesRegularExpression('/aria-controls="danger"/', $html);
     }
 
     public function test_sites_index_targets_detail_and_displays_branch_with_reported_version(): void
@@ -82,18 +95,24 @@ class SiteDetailTest extends TestCase
             ->assertDontSee('data-href="'.route('ops.sites.edit', $site).'"', false);
     }
 
-    public function test_viewer_can_open_detail_but_does_not_get_edit_action(): void
+    public function test_viewer_can_open_detail_but_does_not_get_edit_or_danger_tab(): void
     {
         $site = Site::factory()->create([
             'name' => 'Read Only Detail',
             'slug' => 'read-only-detail',
         ]);
 
-        $this->actingAs($this->user(OpsRole::Viewer))
+        $html = $this->actingAs($this->user(OpsRole::Viewer))
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('Read Only Detail', false)
-            ->assertDontSee('Edit site', false);
+            ->assertDontSee('Edit site', false)
+            ->assertDontSee('href="#danger"', false)
+            ->getContent();
+
+        $this->assertDoesNotMatchRegularExpression('/id="danger"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/aria-controls="danger"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/data-site-panel[^>]*\bhidden\b/', $html);
     }
 
     private function user(OpsRole $role): User
