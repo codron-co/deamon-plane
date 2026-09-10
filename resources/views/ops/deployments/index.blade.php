@@ -5,8 +5,7 @@
 <section class="deployments-panel" aria-labelledby="deployments-heading">
     <div class="deployments-panel-head">
         <div>
-            <h2 id="deployments-heading">{{ __('sites.deployments.title') }}</h2>
-            <p>{{ __('sites.deployments.lede', ['count' => $deployments->count()]) }}</p>
+            <h2 id="deployments-heading">{{ __('sites.deployments.title') }} <button class="site-hint" type="button" aria-label="{{ __('sites.deployments.lede', ['count' => $deployments->count()]) }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('sites.deployments.lede', ['count' => $deployments->count()]) }}</span></button></h2>
         </div>
         @if ($coolifyAppUrl)
             <a class="btn btn-ghost btn-sm" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.deployments.open_coolify') }}</a>
