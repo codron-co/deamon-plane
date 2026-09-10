@@ -17,7 +17,7 @@ final class CreateComposeAppRequest
         public readonly string $serverUuid,
         public readonly string $gitRepository,
         public readonly string $gitBranch,
-        public readonly ?string $environmentName = 'production',
+        public readonly ?string $environmentName = 'main',
         public readonly ?string $environmentUuid = null,
         public readonly ?string $githubAppUuid = null,
         public readonly ?string $privateKeyUuid = null,

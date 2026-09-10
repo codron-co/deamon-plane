@@ -189,6 +189,7 @@ class CoolifyClientTest extends TestCase
                 && $body['docker_compose_location'] === '/docker-compose.coolify.yml'
                 && $body['github_app_uuid'] === 'gh-app-1'
                 && $body['instant_deploy'] === true
+                && ($body['environment_name'] ?? null) === 'main'
                 && $body['docker_compose_domains'] === [
                     ['name' => 'app', 'domain' => 'https://www.example.com'],
                 ]

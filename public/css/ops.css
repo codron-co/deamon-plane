@@ -251,7 +251,8 @@ code {
 }
 
 .ops-content {
-    padding: 20px 24px 32px;
+    --ops-content-inline: 24px;
+    padding: 20px var(--ops-content-inline) 32px;
     max-width: none;
 }
 

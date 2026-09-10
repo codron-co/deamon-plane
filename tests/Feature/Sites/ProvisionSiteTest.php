@@ -100,6 +100,7 @@ class ProvisionSiteTest extends TestCase
                 && ($body['project_uuid'] ?? null) === 'proj_test'
                 && ($body['server_uuid'] ?? null) === 'srv_test'
                 && ($body['name'] ?? null) === 'deamon-izyem'
+                && ($body['environment_name'] ?? null) === 'main'
                 && ! array_key_exists('fqdn', $body)
                 && ($body['docker_compose_domains'] ?? null) === [
                     ['name' => 'app', 'domain' => 'https://shop.izyem.example.test'],
@@ -146,6 +147,34 @@ class ProvisionSiteTest extends TestCase
         });
 
         $this->assertSecretsStayPrivate($site);
+    }
+
+    public function test_provision_rewrites_legacy_production_environment_name_to_main(): void
+    {
+        $this->fakeCoolifyHappyPath();
+
+        CoolifyConnection::factory()->create([
+            'default_project_uuid' => 'proj_test',
+            'default_server_uuid' => 'srv_test',
+            'default_environment_uuid' => null,
+            'default_environment_name' => 'production',
+            'is_default' => true,
+        ]);
+
+        $site = $this->draftSite();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.provision', $site))
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        Http::assertSent(function (Request $request): bool {
+            $body = $request->data();
+
+            return $request->method() === 'POST'
+                && $request->url() === 'https://coolify.test/api/v1/applications/public'
+                && ($body['environment_name'] ?? null) === 'main'
+                && ! array_key_exists('environment_uuid', $body);
+        });
     }
 
     public function test_coolify_422_field_errors_appear_in_session_and_audit(): void

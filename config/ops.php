@@ -92,7 +92,7 @@ return [
     ],
 
     'provision' => [
-        'environment_name' => env('COOLIFY_ENVIRONMENT_NAME', 'production'),
+        'environment_name' => env('COOLIFY_ENVIRONMENT_NAME', 'main'),
         'poll_seconds' => (int) env('COOLIFY_DEPLOY_POLL_SECONDS', 15),
         'poll_max_attempts' => (int) env('COOLIFY_DEPLOY_POLL_MAX_ATTEMPTS', 40),
         'log_excerpt_bytes' => (int) env('COOLIFY_DEPLOY_LOG_EXCERPT_BYTES', 16000),

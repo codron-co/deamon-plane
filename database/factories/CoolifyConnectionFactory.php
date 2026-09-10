@@ -25,7 +25,7 @@ class CoolifyConnectionFactory extends Factory
             'default_project_uuid' => 'proj_test',
             'default_server_uuid' => 'srv_test',
             'default_environment_uuid' => null,
-            'default_environment_name' => 'production',
+            'default_environment_name' => 'main',
             'default_git_source_uuid' => null,
             'default_git_source_kind' => null,
         ];

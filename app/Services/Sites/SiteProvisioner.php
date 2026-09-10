@@ -445,8 +445,10 @@ class SiteProvisioner
             $environmentUuid = trim((string) $connection->default_environment_uuid);
         }
 
-        $environmentName = $connection?->default_environment_name
-            ?: (string) config('ops.provision.environment_name', 'production');
+        $environmentName = ChannelEnvironmentMap::canonicalizeEnvironmentName(
+            $connection?->default_environment_name
+                ?: (string) config('ops.provision.environment_name', 'main'),
+        );
 
         return new CreateComposeAppRequest(
             projectUuid: $project,

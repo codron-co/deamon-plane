@@ -18,6 +18,27 @@ class ChannelEnvironmentMap
     }
 
     /**
+     * Coolify project environment name — 1:1 with the git channel.
+     */
+    public static function coolifyName(Channel $channel): string
+    {
+        return $channel->value;
+    }
+
+    /**
+     * Map leftover Coolify names onto the 1:1 channel name.
+     */
+    public static function canonicalizeEnvironmentName(?string $name): string
+    {
+        $normalized = strtolower(trim((string) $name));
+
+        return match ($normalized) {
+            '', 'production', 'prod' => Channel::Main->value,
+            default => trim((string) $name),
+        };
+    }
+
+    /**
      * Coolify environment names to try, preferred first.
      *
      * @return list<string>
@@ -25,9 +46,9 @@ class ChannelEnvironmentMap
     public static function environmentNames(Channel $channel): array
     {
         return match ($channel) {
-            Channel::Main => ['main', 'production', 'prod'],
-            Channel::Beta => ['beta', 'staging', 'stage'],
-            Channel::Alpha => ['alpha'],
+            Channel::Main => [self::coolifyName(Channel::Main), 'production', 'prod'],
+            Channel::Beta => [self::coolifyName(Channel::Beta), 'staging', 'stage'],
+            Channel::Alpha => [self::coolifyName(Channel::Alpha)],
         };
     }
 

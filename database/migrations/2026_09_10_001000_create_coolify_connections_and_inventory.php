@@ -136,7 +136,7 @@ return new class extends Migration
             'is_default' => true,
             'default_project_uuid' => $settings->default_project_uuid,
             'default_server_uuid' => $settings->default_server_uuid,
-            'default_environment_name' => 'production',
+            'default_environment_name' => 'main',
             'default_git_source_uuid' => $settings->github_app_uuid ?: $settings->private_key_uuid,
             'default_git_source_kind' => filled($settings->github_app_uuid)
                 ? 'github_app'
