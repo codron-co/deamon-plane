@@ -16,6 +16,10 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/provision` | `ops.sites.provision` | operator, super_admin; draft or error only |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
+| POST | `/sites/bulk/sync` | `ops.sites.bulk.sync` | operator, super_admin; Coolify sync for selected ids or `all=1` |
+| GET | `/sites/bulk/sync` | `ops.sites.bulk.sync.get` | **Does not sync.** 302 to list |
+| POST | `/sites/bulk/live-sync` | `ops.sites.live-sync` | operator, super_admin; GET each public homepage |
+| GET | `/sites/bulk/live-sync` | `ops.sites.live-sync.get` | **Does not probe.** 302 to list |
 | POST | `/sites/{site}/sync` | `ops.sites.sync` | operator, super_admin; GET Coolify app + last 25 deployments |
 | GET | `/sites/{site}/sync` | `ops.sites.sync.get` | **Does not sync.** 302 to show |
 | POST | `/sites/{site}/agent-secret` | `ops.sites.agent-secret` | operator, super_admin; Coolify env inject |
@@ -62,7 +66,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Site detail
 
-Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, next action, then Deployments / Themes / Infrastructure / Danger. **Edit** is a separate route. Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark loads the favicon from the site's primary domain origin (`https://{host}/favicon.ico`, then `/apple-touch-icon.png`) via `[data-favicon-host]`; the first letter of the site name is the no-JS / failure fallback. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
+Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, next action, then Deployments / Themes / Infrastructure / Danger. **Edit** is a separate route. Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark uses `IdentityMark::letter()` (UTF-8 first character — not PHP `substr`) as the no-JS / failure fallback. JS prefers `data-favicon-src` from Live Sync, then `https://{host}/favicon.ico`, then `/apple-touch-icon.png`. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
 
 ## Deployments
 
@@ -78,7 +82,11 @@ Site detail includes a **Deployments** table (`ops/deployments/index`): last 25 
 
 ## List
 
-GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status`. Search input debounces a GET submit (300 ms). No Coolify client on the list page.
+GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status`. Search input debounces a GET submit (300 ms).
+
+**Sync Coolify** on the list (`POST /sites/bulk/sync`, `all=1` or selected ids) is the same `CoolifySiteSync` as site detail. Sites without `coolify_app_uuid` are skipped. GET `/sites/bulk/sync` is a 302.
+
+**Live Sync** (`POST /sites/bulk/live-sync`) GETs `https://{primary_domain}/` (timeout 8s / connect 4s, follow redirects, UA `Deamon-Plane-LiveSync/1`). Host must match `^[a-z0-9.-]+$`. Stores `last_live_http_status` (0 = connection failure), `last_live_checked_at`, and `last_live_favicon_url` from HTML `<link rel*="icon">` (absolute; skip `javascript:` / `data:` / `file:`). Does not write secrets or flip `sites.status`. The Live column shows 200 / 404 / 500 / Down / —. Viewer forbidden. GET does not probe. Tests use `Http::fake` only.
 
 Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. Recreate required → abort. List bulk: selected or all Dockerfile, with confirm. Auto-deploy and pin/follow-HEAD are the same Coolify PATCH surface. Channel switch remains `ChannelSwitcher`.
 

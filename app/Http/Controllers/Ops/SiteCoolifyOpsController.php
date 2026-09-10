@@ -11,6 +11,7 @@ use App\Services\Coolify\CoolifySiteSync;
 use App\Services\Sites\ComposePackException;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
+use App\Services\Sites\SiteLiveProbe;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -116,6 +117,77 @@ class SiteCoolifyOpsController extends Controller
             ]));
     }
 
+    public function bulkSync(BulkSiteIdsRequest $request, CoolifySiteSync $sync): RedirectResponse
+    {
+        $sites = $this->sitesFromBulk($request)
+            ->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
+
+        foreach ($sites as $site) {
+            $this->authorize('update', $site);
+        }
+
+        if ($sites->isEmpty()) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        $ok = 0;
+        $failed = 0;
+        $deployments = 0;
+        $errors = [];
+
+        foreach ($sites as $site) {
+            try {
+                $result = $sync->sync($site);
+                $ok++;
+                $deployments += (int) ($result['deployments'] ?? 0);
+            } catch (CoolifyApiException $exception) {
+                $failed++;
+                $errors[] = $site->name.': '.$exception->getMessage();
+            }
+        }
+
+        return back()->with('status', $this->bulkFlash([
+            'ok' => $ok,
+            'failed' => $failed,
+            'errors' => $errors,
+        ], __('sites.flash.bulk_synced', ['deployments' => $deployments])));
+    }
+
+    public function redirectGetBulkSync(): RedirectResponse
+    {
+        return redirect()
+            ->route('ops.sites')
+            ->with('status', __('sites.flash.sync_get'));
+    }
+
+    public function liveSync(BulkSiteIdsRequest $request, SiteLiveProbe $probe): RedirectResponse
+    {
+        $sites = $this->sitesFromBulk($request)
+            ->filter(fn (Site $site): bool => filled($site->primary_domain));
+
+        foreach ($sites as $site) {
+            $this->authorize('update', $site);
+        }
+
+        if ($sites->isEmpty()) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        $result = $probe->probeMany($sites);
+
+        return back()->with('status', __('sites.flash.live_synced', [
+            'ok' => $result['ok'],
+            'failed' => $result['failed'],
+        ]));
+    }
+
+    public function redirectGetLiveSync(): RedirectResponse
+    {
+        return redirect()
+            ->route('ops.sites')
+            ->with('status', __('sites.flash.live_sync_get'));
+    }
+
     public function redirectGetSync(Site $site): RedirectResponse
     {
         $this->authorize('view', $site);
@@ -149,6 +221,10 @@ class SiteCoolifyOpsController extends Controller
                 ->whereNotNull('coolify_app_uuid')
                 ->where('coolify_app_uuid', '!=', '')
                 ->get();
+        }
+
+        if ($request->boolean('all')) {
+            return Site::query()->orderBy('name')->get();
         }
 
         $ids = $request->validated('site_ids') ?? [];

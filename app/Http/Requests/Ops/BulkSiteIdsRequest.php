@@ -17,9 +17,10 @@ class BulkSiteIdsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'site_ids' => ['required_without:all_dockerfile', 'array'],
+            'site_ids' => ['required_without_all:all_dockerfile,all', 'array'],
             'site_ids.*' => ['required', 'ulid'],
             'all_dockerfile' => ['sometimes', 'boolean'],
+            'all' => ['sometimes', 'boolean'],
             'enabled' => ['sometimes', 'boolean'],
         ];
     }

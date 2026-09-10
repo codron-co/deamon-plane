@@ -5,6 +5,34 @@
 @section('content_class', 'ops-content-wide')
 
 @section('actions')
+    @if ($canWrite ?? false)
+        <form
+            method="POST"
+            action="{{ route('ops.sites.bulk.sync') }}"
+            data-ops-pending
+            data-confirm="{{ __('sites.detail.sync_confirm_all') }}"
+            data-confirm-title="{{ __('sites.detail.sync_title') }}"
+            data-confirm-label="{{ __('sites.detail.sync') }}"
+            data-confirm-danger="false"
+        >
+            @csrf
+            <input type="hidden" name="all" value="1">
+            <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.detail.sync') }}</button>
+        </form>
+        <form
+            method="POST"
+            action="{{ route('ops.sites.live-sync') }}"
+            data-ops-pending
+            data-confirm="{{ __('sites.live.confirm') }}"
+            data-confirm-title="{{ __('sites.live.confirm_title') }}"
+            data-confirm-label="{{ __('sites.live.sync') }}"
+            data-confirm-danger="false"
+        >
+            @csrf
+            <input type="hidden" name="all" value="1">
+            <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.live.sync') }}</button>
+        </form>
+    @endif
     @if ($canCreate)
         <a class="btn btn-primary btn-sm" href="{{ route('ops.sites.create') }}">{{ __('sites.new') }}</a>
     @endif
@@ -64,6 +92,7 @@
                             <th>{{ __('sites.columns.domain') }}</th>
                             <th>{{ __('sites.columns.repo_branch') }}</th>
                             <th>{{ __('sites.columns.status') }}</th>
+                            <th>{{ __('sites.columns.live') }}</th>
                             <th>{{ __('sites.columns.theme') }}</th>
                             <th></th>
                         </tr>
@@ -72,7 +101,7 @@
                         @foreach ($sites as $site)
                             @php
                                 $reportedVersion = $site->reportedDeamonVersion();
-                                $markLetter = strtoupper(substr((string) $site->name, 0, 1)) ?: '?';
+                                $markLetter = $site->identityMarkLetter();
                             @endphp
                             <tr data-href="{{ route('ops.sites.show', $site) }}" tabindex="0">
                                 @can('create', \App\Models\Site::class)
@@ -91,6 +120,9 @@
                                             @if (filled($site->primary_domain))
                                                 data-favicon-host="{{ $site->primary_domain }}"
                                                 data-favicon-fallback="{{ $markLetter }}"
+                                                @if (filled($site->last_live_favicon_url))
+                                                    data-favicon-src="{{ $site->last_live_favicon_url }}"
+                                                @endif
                                             @endif
                                         >{{ $markLetter }}</div>
                                         <div>
@@ -113,6 +145,9 @@
                                 </td>
                                 @php($failure = $site->lastFailureMessage())
                                 <td><span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span></td>
+                                <td>
+                                    <span class="status-chip status-{{ $site->liveHttpTone() }}" @if ($site->last_live_checked_at) title="{{ $site->last_live_checked_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}" @endif>{{ $site->liveHttpLabel() }}</span>
+                                </td>
                                 <td class="muted">{{ $site->reportedActiveThemeId() ?: __('ops.none') }}</td>
                                 <td class="ops-row-actions">
                                     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
@@ -167,6 +202,24 @@
                             data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
                             data-confirm-label="{{ __('site_ops.auto_deploy.off_button') }}"
                         >{{ __('site_ops.bulk.auto_off') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.bulk.sync') }}"
+                            data-confirm="{{ __('sites.detail.sync_confirm_selected') }}"
+                            data-confirm-title="{{ __('sites.detail.sync_title') }}"
+                            data-confirm-label="{{ __('sites.detail.sync') }}"
+                            data-confirm-danger="false"
+                        >{{ __('sites.detail.sync') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.live-sync') }}"
+                            data-confirm="{{ __('sites.live.confirm_selected') }}"
+                            data-confirm-title="{{ __('sites.live.confirm_title') }}"
+                            data-confirm-label="{{ __('sites.live.sync') }}"
+                            data-confirm-danger="false"
+                        >{{ __('sites.live.sync') }}</button>
                     </div>
                 @endcan
             </form>

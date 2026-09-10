@@ -193,6 +193,40 @@ class SiteTest extends TestCase
         $this->assertSame('Cloudflare zone create failed: 403', $site->fresh()->lastFailureMessage());
     }
 
+    public function test_identity_mark_letter_keeps_turkish_capital_i(): void
+    {
+        $site = Site::factory()->make([
+            'name' => 'İzyem',
+            'primary_domain' => 'izyem.example.test',
+        ]);
+
+        $this->assertSame('İ', $site->identityMarkLetter());
+        $this->assertNotSame("\u{FFFD}", $site->identityMarkLetter());
+    }
+
+    public function test_live_http_label_and_tone(): void
+    {
+        $site = Site::factory()->make([
+            'last_live_http_status' => null,
+            'last_live_checked_at' => null,
+        ]);
+        $this->assertSame(__('ops.none'), $site->liveHttpLabel());
+        $this->assertSame('unknown', $site->liveHttpTone());
+
+        $site->last_live_checked_at = now();
+        $site->last_live_http_status = 200;
+        $this->assertSame('200', $site->liveHttpLabel());
+        $this->assertSame('ok', $site->liveHttpTone());
+
+        $site->last_live_http_status = 404;
+        $this->assertSame('404', $site->liveHttpLabel());
+        $this->assertSame('needs_secret', $site->liveHttpTone());
+
+        $site->last_live_http_status = 0;
+        $this->assertSame(__('sites.live.down'), $site->liveHttpLabel());
+        $this->assertSame('unhealthy', $site->liveHttpTone());
+    }
+
     public function test_status_machine_rejects_illegal_transition(): void
     {
         $site = Site::factory()->create();

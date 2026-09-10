@@ -80,6 +80,7 @@ class SiteController extends Controller
             'statuses' => SiteStatus::values(),
             'filtersActive' => $search !== '' || $channel !== '' || $status !== '',
             'canCreate' => $request->user()?->can('create', Site::class) ?? false,
+            'canWrite' => $request->user()?->canWriteOps() ?? false,
         ]);
     }
 

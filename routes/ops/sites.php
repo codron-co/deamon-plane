@@ -12,6 +12,10 @@ Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
 Route::post('/sites/bulk/compose', [SiteCoolifyOpsController::class, 'bulkMigrateCompose'])->name('ops.sites.bulk.compose');
 Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAutoDeploy'])->name('ops.sites.bulk.auto-deploy');
+Route::post('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'bulkSync'])->name('ops.sites.bulk.sync');
+Route::get('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'redirectGetBulkSync'])->name('ops.sites.bulk.sync.get');
+Route::post('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'liveSync'])->name('ops.sites.live-sync');
+Route::get('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'redirectGetLiveSync'])->name('ops.sites.live-sync.get');
 Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateCompose'])->name('ops.sites.compose');
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
 Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');

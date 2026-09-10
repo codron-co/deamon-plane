@@ -73,6 +73,8 @@ If `GET /github-apps` is missing, UI shows a hybrid note: pick a deploy key from
 
 **Per-site Sync:** `POST /sites/{site}/sync` (`ops.sites.sync`) does the same fill + deployment pull for one site. GET `/sites/{site}/sync` is a 302 to show (does not sync). Operator / Super Admin. Viewer forbidden.
 
+**Sites list Sync:** `POST /sites/bulk/sync` (`ops.sites.bulk.sync`) runs that per-site fill for selected ids or `all=1` (sites without an app UUID are skipped). GET is a 302 to the list. Live homepage probe (HTTP status + favicon href) is a separate `POST /sites/bulk/live-sync` — not a Coolify call.
+
 ## Create path
 
 Git + `build_pack=dockercompose` + `docker_compose_location=/docker-compose.coolify.yml` (Coolify requires a leading slash). **Not an operator field.**

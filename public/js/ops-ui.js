@@ -632,6 +632,13 @@
         });
     }
 
+    function markLetter(value) {
+        const cleaned = String(value || "").replace(/\uFFFD/g, "").trim();
+        const first = Array.from(cleaned)[0] || "?";
+
+        return first.toUpperCase() || "?";
+    }
+
     function faviconHost(value) {
         const host = String(value || "").trim().replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
         if (!host || host.length > 253 || host.indexOf("..") !== -1 || !/^[a-z0-9.-]+$/i.test(host)) {
@@ -793,15 +800,20 @@
     function setupFaviconMarks() {
         document.querySelectorAll("[data-favicon-host]").forEach(function (mark) {
             const host = faviconHost(mark.getAttribute("data-favicon-host"));
-            const fallback = (mark.getAttribute("data-favicon-fallback") || mark.textContent || "?").trim().slice(0, 1).toUpperCase() || "?";
+            const fallback = markLetter(mark.getAttribute("data-favicon-fallback") || mark.textContent);
             if (!host) {
                 mark.textContent = fallback;
                 return;
             }
-            const urls = [
+            const cached = String(mark.getAttribute("data-favicon-src") || "").trim();
+            const urls = [];
+            if (cached && /^(https?:)?\/\//i.test(cached) && cached.indexOf("..") === -1) {
+                urls.push(cached);
+            }
+            urls.push(
                 "https://" + host + "/favicon.ico",
                 "https://" + host + "/apple-touch-icon.png"
-            ];
+            );
             const tryAt = function (index) {
                 if (index >= urls.length) {
                     mark.textContent = fallback;

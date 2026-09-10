@@ -4,6 +4,7 @@ namespace Tests\Feature\Ops;
 
 use App\Enums\Channel;
 use App\Enums\OpsRole;
+use App\Enums\SiteStatus;
 use App\Models\Site;
 use App\Models\Theme;
 use App\Models\User;
@@ -94,7 +95,10 @@ class SiteDetailTest extends TestCase
             ->assertSee('data-href="'.route('ops.sites.show', $site).'"', false)
             ->assertSee(route('ops.sites.edit', $site), false)
             ->assertDontSee('data-href="'.route('ops.sites.edit', $site).'"', false)
-            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_on').'"', false);
+            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_on').'"', false)
+            ->assertSee(__('sites.columns.live'), false)
+            ->assertSee(__('sites.live.sync'), false)
+            ->assertSee('data-confirm="'.__('sites.detail.sync_confirm_all').'"', false);
     }
 
     public function test_theme_surfaces_use_agent_health_when_plane_has_no_installation(): void
@@ -130,7 +134,7 @@ class SiteDetailTest extends TestCase
         $site = Site::factory()->create([
             'name' => 'Confirm Site',
             'slug' => 'confirm-site',
-            'status' => \App\Enums\SiteStatus::Draft,
+            'status' => SiteStatus::Draft,
         ]);
 
         $html = $this->actingAs($this->user(OpsRole::Operator))

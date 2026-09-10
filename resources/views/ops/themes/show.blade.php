@@ -36,7 +36,7 @@
 
     <header class="site-hero">
         <div class="site-hero-main">
-            <div class="site-identity-mark" aria-hidden="true">{{ strtoupper(substr($theme->displayName(), 0, 1)) }}</div>
+            <div class="site-identity-mark" aria-hidden="true">{{ \App\Support\IdentityMark::letter($theme->displayName()) }}</div>
             <div class="site-identity-copy">
                 <div class="site-title-row">
                     <h2>{{ $theme->displayName() }}</h2>

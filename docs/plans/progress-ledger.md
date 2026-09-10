@@ -133,6 +133,10 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 - Status: **code**. Site detail **Sync Coolify** (`POST /sites/{site}/sync`) GETs the Coolify app (project/env/server/git/channel) and last 25 `GET /deployments/applications/{uuid}` rows. Upsert by `coolify_deployment_uuid`; new rows `trigger=manual`. Does not write secrets or flip `sites.status` from historical failures. Connection inventory Sync does the same deployment pull per site. GET `/sites/{site}/sync` is a 302. Tests: CoolifySiteSyncTest, CoolifyDeploySettingsTest (`Http::fake`).
 
+## Sites list Sync + Live Sync (2026-09-10)
+
+- Status: **code**. Identity marks use UTF-8 `IdentityMark` (Turkish `İzyem` → `İ`, not a replacement character). List topbar **Sync Coolify** (`POST /sites/bulk/sync`) and **Live Sync** (`POST /sites/bulk/live-sync`). Live column stores homepage status + favicon href. GET variants 302, no outbound HTTP. Viewer forbidden. Tests: IdentityMarkTest, SiteLiveProbeTest, SiteLiveSyncTest (`Http::fake`).
+
 ## Slice 5 — sync fills site Coolify targets (2026-09-10)
 
 - Status: **ship**. `CoolifyInventorySync` still fills servers/projects/envs/git, then `CoolifySiteTargetSync` GETs each site’s Coolify app and writes project / env / server / git / allowlisted channel. Secrets and `status` unchanged. `develop` → `channel_needs_review` (channel kept). App 404 skips the site. Inventory `is_active` still not zeroed. Flash: `:sites` filled.

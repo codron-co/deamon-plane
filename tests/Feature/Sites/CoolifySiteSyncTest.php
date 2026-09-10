@@ -170,6 +170,48 @@ class CoolifySiteSyncTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/sync"/', $html);
     }
 
+    public function test_bulk_sync_pulls_coolify_for_sites_with_app_uuid(): void
+    {
+        $site = $this->site();
+        $skipped = Site::factory()->create([
+            'name' => 'No Coolify Uuid',
+            'coolify_app_uuid' => null,
+        ]);
+        $status = $site->status;
+        $appKey = $site->app_key_encrypted;
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response($this->applicationPayload(), 200),
+            'https://coolify.example/api/v1/deployments/applications/'.self::APP.'*' => Http::response([], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites'))
+            ->post(route('ops.sites.bulk.sync'), ['all' => '1'])
+            ->assertRedirect(route('ops.sites'))
+            ->assertSessionHas('status');
+
+        $this->assertSame($status, $site->fresh()->status);
+        $this->assertSame($appKey, $site->fresh()->app_key_encrypted);
+        $this->assertNull($skipped->fresh()->coolify_project_uuid);
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'GET'
+            && str_contains($request->url(), '/applications/'.self::APP));
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), (string) $skipped->primary_domain));
+    }
+
+    public function test_get_bulk_sync_does_not_call_coolify(): void
+    {
+        $this->site();
+        Http::fake();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.bulk.sync.get'))
+            ->assertRedirect(route('ops.sites'))
+            ->assertSessionHas('status', __('sites.flash.sync_get'));
+
+        Http::assertNothingSent();
+    }
+
     public function test_viewer_cannot_sync_site(): void
     {
         $site = $this->site();

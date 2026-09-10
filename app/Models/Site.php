@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Channel;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\SiteStatus;
+use App\Support\IdentityMark;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -48,6 +49,9 @@ class Site extends Model
         'notes',
         'last_health_at',
         'last_health_payload',
+        'last_live_http_status',
+        'last_live_checked_at',
+        'last_live_favicon_url',
         'cloudflare_zone_id',
         'cloudflare_nameservers',
         'dns_applied_at',
@@ -81,6 +85,8 @@ class Site extends Model
             'agent_secret_encrypted' => 'encrypted',
             'last_health_at' => 'datetime',
             'last_health_payload' => 'array',
+            'last_live_http_status' => 'integer',
+            'last_live_checked_at' => 'datetime',
             'cloudflare_nameservers' => 'array',
             'dns_applied_at' => 'datetime',
         ];
@@ -273,6 +279,48 @@ class Site extends Model
         }
 
         return 'https://'.rtrim($host, '/');
+    }
+
+    public function identityMarkLetter(): string
+    {
+        $source = trim((string) $this->name);
+        if ($source === '') {
+            $source = trim((string) $this->primary_domain);
+        }
+
+        return IdentityMark::letter($source);
+    }
+
+    public function liveHttpLabel(): string
+    {
+        if ($this->last_live_checked_at === null || $this->last_live_http_status === null) {
+            return __('ops.none');
+        }
+
+        $status = (int) $this->last_live_http_status;
+        if ($status === 0) {
+            return __('sites.live.down');
+        }
+
+        return (string) $status;
+    }
+
+    public function liveHttpTone(): string
+    {
+        $status = $this->last_live_http_status;
+        if ($this->last_live_checked_at === null || $status === null) {
+            return 'unknown';
+        }
+
+        $status = (int) $status;
+        if ($status >= 200 && $status < 400) {
+            return 'ok';
+        }
+        if ($status === 404) {
+            return 'needs_secret';
+        }
+
+        return 'unhealthy';
     }
 
     public function reportedDeamonVersion(): ?string

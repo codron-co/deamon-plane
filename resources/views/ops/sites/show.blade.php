@@ -72,9 +72,12 @@
                 aria-hidden="true"
                 @if (filled($primaryDomain))
                     data-favicon-host="{{ $primaryDomain }}"
-                    data-favicon-fallback="{{ strtoupper(substr($site->name, 0, 1)) }}"
+                    data-favicon-fallback="{{ $site->identityMarkLetter() }}"
+                    @if (filled($site->last_live_favicon_url))
+                        data-favicon-src="{{ $site->last_live_favicon_url }}"
+                    @endif
                 @endif
-            >{{ strtoupper(substr($site->name, 0, 1)) }}</div>
+            >{{ $site->identityMarkLetter() }}</div>
             <div class="site-identity-copy">
                 <div class="site-title-row">
                     <h2>{{ $site->name }}</h2>

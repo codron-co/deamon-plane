@@ -48,7 +48,7 @@
 
     <header class="site-hero">
         <div class="site-hero-main">
-            <div class="site-identity-mark" aria-hidden="true">{{ strtoupper(substr($connection->name, 0, 1)) }}</div>
+            <div class="site-identity-mark" aria-hidden="true">{{ \App\Support\IdentityMark::letter($connection->name) }}</div>
             <div class="site-identity-copy">
                 <div class="site-title-row">
                     <h2>{{ $connection->name }}</h2>
