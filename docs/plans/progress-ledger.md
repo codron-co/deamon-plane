@@ -113,6 +113,10 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 - CMS Task 11 is live at v1.2.5 — site still needs `CONTROL_PLANE_AGENT_SECRET` injected before theme assign 200s.
 - Plane app `d6ovbjzxgpao23faam3vrcve` domain **https://plane.codron.co**. Deploy that uuid only. Never touch Susa `crxguq6nodorlzy88wf9x305`.
 
+## Slice 5 — sync fills site Coolify targets (2026-09-10)
+
+- Status: **ship**. `CoolifyInventorySync` still fills servers/projects/envs/git, then `CoolifySiteTargetSync` GETs each site’s Coolify app and writes project / env / server / git / allowlisted channel. Secrets and `status` unchanged. `develop` → `channel_needs_review` (channel kept). App 404 skips the site. Inventory `is_active` still not zeroed. Flash: `:sites` filled.
+
 ## Slice 3 — deploy show + copyable Coolify error (2026-09-10)
 
 - Status: **ship**. Site Deployments rows open `GET /sites/{site}/deployments/{deployment}`. Poll + webhook failures store Coolify `message` + `errors` JSON and truncated redacted logs (`error_message` / `log_excerpt`). Copyable `<pre>` report. GET `/coolify/{id}/sync` stays a 302 to show (POST Sync button); not 405.

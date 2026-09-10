@@ -102,6 +102,20 @@ final class CoolifyApplication
         return null;
     }
 
+    public function gitSourceUuid(): ?string
+    {
+        $source = $this->gitSource();
+
+        return is_array($source) ? $source['uuid'] : null;
+    }
+
+    public function gitSourceKind(): ?CoolifyGitSourceKind
+    {
+        $source = $this->gitSource();
+
+        return is_array($source) ? $source['kind'] : null;
+    }
+
     public function primaryDomain(): ?string
     {
         $candidates = [];
@@ -159,17 +173,34 @@ final class CoolifyApplication
     private static function firstUuid(array $candidates): ?string
     {
         foreach ($candidates as $candidate) {
-            if (! is_string($candidate)) {
-                continue;
-            }
-
-            $value = trim($candidate);
-            if ($value !== '') {
+            $value = self::uuidish($candidate);
+            if ($value !== null) {
                 return $value;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Coolify resource uuids are nanoid-like strings. Integer FKs (and numeric strings) are skipped.
+     */
+    private static function uuidish(mixed $candidate): ?string
+    {
+        if (is_int($candidate) || is_float($candidate)) {
+            return null;
+        }
+
+        if (! is_string($candidate)) {
+            return null;
+        }
+
+        $value = trim($candidate);
+        if ($value === '' || ctype_digit($value)) {
+            return null;
+        }
+
+        return $value;
     }
 
     private static function nullableString(mixed $value): ?string

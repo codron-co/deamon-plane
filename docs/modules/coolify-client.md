@@ -10,7 +10,8 @@ Ops inventory (N connections, allowlists, site dropdowns): this page + [ops-site
 |-------|------|
 | `App\Services\Coolify\CoolifyClient` | Bearer HTTP to `{COOLIFY_BASE_URL}/api/v1` |
 | `App\Services\Coolify\CoolifyApplicationService` | Thin wrappers + channel allowlist on create/updateBranch. `forConnection()` builds a per-connection client. |
-| `App\Services\Coolify\CoolifyInventorySync` | `listServers` / `listProjects` / `listEnvironments` / `listGithubApps` / `listPrivateKeys` → allowlist tables |
+| `App\Services\Coolify\CoolifyInventorySync` | `listServers` / `listProjects` / `listEnvironments` / `listGithubApps` / `listPrivateKeys` → allowlist tables, then fills existing sites |
+| `App\Services\Coolify\CoolifySiteTargetSync` | After inventory: `GET /applications/{uuid}` per site with `coolify_app_uuid` on this connection (or null connection if this one is default) |
 | `App\Services\Coolify\CoolifyProvisionPreflight` | Before `POST` create: server must appear in live `listServers`; Git source in live GitHub App or deploy-key list |
 | `App\Services\Coolify\CoolifyApiException` | Status, `conflicts[]`, validation `errors` in the message, token redaction |
 | `App\Services\Coolify\CoolifyUnsupportedOperationException` | Hybrid gap + `ManualChecklist` DTO |
@@ -52,6 +53,8 @@ Existing `coolify_settings` row is copied into the first connection on migrate (
 | `listPrivateKeys()` | `GET /security/keys` | Deploy keys |
 
 If `GET /github-apps` is missing, UI shows a hybrid note: pick a deploy key from `/security/keys`, or Super Admin pastes a Coolify GitHub App UUID in the collapsed advanced field. Link: [Coolify GitHub Apps API](https://github.com/coollabsio/coolify/blob/v4.x/routes/api.php) (`GET /github-apps` exists on current v4.x; older 4.3 instances may 404).
+
+**Site fill (same POST Sync):** for each matching site, `GET /applications/{coolify_app_uuid}` and write project / environment / server / git source (GitHub App or deploy key) / `git_repository`. Allowlisted branch (`main` \| `beta` \| `alpha`) sets `channel` and clears `channel_needs_review`. Other branches (`develop`) set `channel_needs_review` and **do not** overwrite `channel`. Skip channel while status is `provisioning` or `deploying`. **Never** write `status`, `app_key_encrypted`, or `agent_secret_encrypted`. App 404 skips that site (inventory rows gone from Coolify may still be deleted; **sites are not auto-deleted**). Sync still does not write inventory `is_active` (does not zero it). Other connections’ sites are left alone. Flash includes the sites-filled count.
 
 ## Create path
 
