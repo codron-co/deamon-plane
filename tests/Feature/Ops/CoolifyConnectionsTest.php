@@ -321,7 +321,11 @@ class CoolifyConnectionsTest extends TestCase
         $viewer->assignRole(OpsRole::Viewer->value);
 
         $this->actingAs($viewer)->get(route('ops.coolify.index'))->assertOk();
-        $this->actingAs($viewer)->get(route('ops.coolify.show', $connection))->assertOk();
+        $this->actingAs($viewer)
+            ->get(route('ops.coolify.show', $connection))
+            ->assertOk()
+            ->assertDontSee(__('coolify.danger.button'), false)
+            ->assertDontSee('aria-controls="danger"', false);
         $this->actingAs($viewer)->post(route('ops.coolify.store'), [
             'name' => 'x',
             'base_url' => 'https://coolify.example',
@@ -352,6 +356,50 @@ class CoolifyConnectionsTest extends TestCase
 
         $this->assertDatabaseMissing('coolify_connections', ['id' => $connection->id]);
         Http::assertNothingSent();
+    }
+
+    public function test_index_rows_open_show_not_edit(): void
+    {
+        $connection = CoolifyConnection::factory()->create(['name' => 'Prod Coolify']);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.coolify.index'))
+            ->assertOk()
+            ->assertSee('data-href="'.route('ops.coolify.show', $connection).'"', false)
+            ->getContent();
+
+        $this->assertStringNotContainsString('/coolify/'.$connection->id.'/edit', $html);
+    }
+
+    public function test_show_uses_resource_tabs_and_keeps_coolify_select_names(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'api_token' => self::TOKEN,
+            'name' => 'Prod Coolify',
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.coolify.show', $connection))
+            ->assertOk()
+            ->assertSee('role="tablist"', false)
+            ->assertSee('aria-controls="overview"', false)
+            ->assertSee('aria-controls="inventory"', false)
+            ->assertSee('aria-controls="configuration"', false)
+            ->assertSee('name="default_server_uuid"', false)
+            ->assertSee('name="default_project_uuid"', false)
+            ->assertSee('name="default_environment_uuid"', false)
+            ->assertSee('name="default_git_source"', false)
+            ->assertSee('data-coolify-servers', false)
+            ->assertSee('data-coolify-projects', false)
+            ->assertSee('data-coolify-environments', false)
+            ->assertSee('type="password"', false)
+            ->assertSee('class="site-hint"', false)
+            ->assertSee('class="site-technical-card"', false)
+            ->assertDontSee(self::TOKEN, false)
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/name="api_token"[^>]*value=""/', $html);
+        $this->assertStringContainsString('ops-coolify-form.js', $html);
     }
 
     public function test_second_default_unsets_the_first(): void

@@ -10,8 +10,7 @@
 </div>
 
 <div class="field">
-    <label class="field-label" for="cf-account-id">{{ __('cloudflare.fields.account_id') }}</label>
-    <p class="field-hint">{{ __('cloudflare.fields.account_id_hint') }}</p>
+    <label class="field-label" for="cf-account-id">{{ __('cloudflare.fields.account_id') }} @include('ops.cloudflare._hint', ['text' => __('cloudflare.fields.account_id_hint')])</label>
     <input id="cf-account-id" class="field-input" type="text" name="account_id" value="{{ old('account_id', $account->account_id) }}" maxlength="32" autocomplete="off" spellcheck="false" @disabled(! $canWrite) @required($canWrite)>
     @error('account_id') <p class="field-error" role="alert">{{ $message }}</p> @enderror
 </div>
@@ -24,8 +23,7 @@
 </div>
 
 <div class="field">
-    <label class="field-label" for="cf-wildcard-domain">{{ __('cloudflare.fields.wildcard_domain') }}</label>
-    <p class="field-hint">{{ __('cloudflare.fields.wildcard_domain_hint') }}</p>
+    <label class="field-label" for="cf-wildcard-domain">{{ __('cloudflare.fields.wildcard_domain') }} @include('ops.cloudflare._hint', ['text' => __('cloudflare.fields.wildcard_domain_hint')])</label>
     <input
         id="cf-wildcard-domain"
         class="field-input"
@@ -53,7 +51,6 @@
     <label class="field-check">
         <input type="hidden" name="is_default" value="0">
         <input type="checkbox" name="is_default" value="1" @checked(old('is_default', $account->is_default ?? false)) @disabled(! $canWrite)>
-        <span>{{ __('cloudflare.fields.is_default') }}</span>
+        <span>{{ __('cloudflare.fields.is_default') }} @include('ops.cloudflare._hint', ['text' => __('cloudflare.fields.is_default_hint')])</span>
     </label>
-    <p class="field-hint">{{ __('cloudflare.fields.is_default_hint') }}</p>
 </div>
