@@ -103,7 +103,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 - Nav: **Coolify**. Default connection for new sites. Super Admin advanced UUID paste (collapsed, warned). Compose path fixed `/docker-compose.coolify.yml`.
 - GitHub Apps: `GET /github-apps` (v4.x). 404 → hybrid UI (deploy keys + advanced paste). Not the Plane theme-catalog GitHub App.
 - Defaults: option **name** only (uuid = value/title). Single active server/project/env auto-persisted. Env dropdown is **project-scoped** (`project_uuid`), not a global dump.
-- Commit: not requested
+- Servers: Sync stores Coolify `ip` (prefer `public_ip`/`public`). Connection server table has an IP column.
 
 ## Hybrid leftovers (operator on wake)
 
@@ -111,5 +111,8 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 - Agent secret inject is in the site UI (`Generate & inject secret`) when Coolify env API works; Coolify UI leftover if that PATCH fails.
 - GitHub App/PAT + org webhook secret must be pasted in Settings (not in git). Theme catalog ≠ Coolify Git source. Coolify API token lives under **Coolify** (`/coolify`), not Settings.
 - CMS Task 11 is live at v1.2.5 — site still needs `CONTROL_PLANE_AGENT_SECRET` injected before theme assign 200s.
-- Plane Coolify app has **no domain** yet; do not PATCH from a laptop unless the UI target is confirmed. Never touch Susa `crxguq6nodorlzy88wf9x305`.
-- Commit / push not done (overnight rule).
+- Plane app `d6ovbjzxgpao23faam3vrcve` domain **https://plane.codron.co**. Deploy that uuid only. Never touch Susa `crxguq6nodorlzy88wf9x305`.
+
+## Slice 1 — server IP (2026-09-10)
+
+- Status: **ship**. `coolify_servers.ip` from Coolify `public_ip`/`public` else `ip`. Connection show table has IP column. Sync does not write `is_active` (does not zero it).

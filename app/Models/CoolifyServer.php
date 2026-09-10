@@ -14,6 +14,7 @@ class CoolifyServer extends Model
         'coolify_connection_id',
         'uuid',
         'name',
+        'ip',
         'is_active',
     ];
 

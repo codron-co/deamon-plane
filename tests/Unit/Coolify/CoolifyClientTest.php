@@ -81,7 +81,7 @@ class CoolifyClientTest extends TestCase
     {
         Http::fake([
             'https://coolify.test/api/v1/servers' => Http::response([
-                ['uuid' => 'srv-1', 'name' => 'localhost'],
+                ['uuid' => 'srv-1', 'name' => 'localhost', 'ip' => '127.0.0.1', 'public_ip' => '203.0.113.10'],
             ], 200),
             'https://coolify.test/api/v1/projects' => Http::response([
                 ['uuid' => 'proj-1', 'name' => 'Deamon'],
@@ -92,6 +92,7 @@ class CoolifyClientTest extends TestCase
         $projects = $this->client()->listProjects();
 
         $this->assertSame('srv-1', $servers[0]->uuid);
+        $this->assertSame('203.0.113.10', $servers[0]->ip);
         $this->assertSame('Deamon', $projects[0]->name);
     }
 

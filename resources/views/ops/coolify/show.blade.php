@@ -141,6 +141,7 @@
         'rows' => $connection->servers,
         'toggleRoute' => 'ops.coolify.servers.toggle',
         'param' => 'server',
+        'extra' => 'ip',
         'canWrite' => $canWrite,
         'connection' => $connection,
     ])

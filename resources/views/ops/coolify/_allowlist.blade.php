@@ -15,7 +15,7 @@
                     <tr>
                         <th>Ad</th>
                         @if ($extra)
-                            <th>{{ $extra === 'kind' ? 'Tür' : 'Proje' }}</th>
+                            <th>{{ $extra === 'kind' ? 'Tür' : ($extra === 'ip' ? 'IP' : 'Proje') }}</th>
                         @endif
                         <th>Durum</th>
                         @if ($canWrite)

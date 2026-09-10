@@ -30,7 +30,7 @@ Left nav **Coolify**. Super Admin / operator write; viewer read.
 | Table | Role |
 |-------|------|
 | `coolify_connections` | name, base_url, encrypted token + webhook secret, `is_enabled`, `is_default`, selected defaults |
-| `coolify_servers` | uuid, name, `is_active` — inactive cannot be chosen on site create |
+| `coolify_servers` | uuid, name, **ip** (Coolify `public_ip`/`public` if set, else `ip`), `is_active` — inactive cannot be chosen on site create. Sync fills IP; connection server table shows it. |
 | `coolify_projects` | uuid, name, `is_active` |
 | `coolify_environments` | **project_uuid** + uuid/name, `is_active`. Sync writes `project_uuid`. Default + site-create env `<select>` lists **only** that project’s rows (never a flat dump). Changing the project rebuilds the env list (`ops-coolify-form.js`). Option text is the Coolify **name**; uuid is `value` + `title`. |
 | `coolify_git_sources` | `github_app` \| `deploy_key`, uuid, name, `is_active` |

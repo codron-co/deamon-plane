@@ -46,7 +46,10 @@ class CoolifyInventorySync
                         'coolify_connection_id' => $connection->id,
                         'uuid' => $server->uuid,
                     ],
-                    ['name' => $server->name !== '' ? $server->name : $server->uuid],
+                    [
+                        'name' => $server->name !== '' ? $server->name : $server->uuid,
+                        'ip' => $server->ip,
+                    ],
                 );
             }
 

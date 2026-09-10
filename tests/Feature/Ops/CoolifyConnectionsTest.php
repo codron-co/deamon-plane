@@ -95,8 +95,8 @@ class CoolifyConnectionsTest extends TestCase
     {
         Http::fake([
             'https://coolify.example/api/v1/servers' => Http::response([
-                ['uuid' => 'no48ksggg0k8sk4o4w08gks8', 'name' => 'localhost'],
-                ['uuid' => 'edge-1', 'name' => 'edge'],
+                ['uuid' => 'no48ksggg0k8sk4o4w08gks8', 'name' => 'localhost', 'ip' => 'host.docker.internal'],
+                ['uuid' => 'edge-1', 'name' => 'edge', 'ip' => '10.0.0.8', 'public_ip' => '198.51.100.12'],
             ], 200),
             'https://coolify.example/api/v1/projects' => Http::response([
                 ['uuid' => 'z8ocg8k04ww8osssccc088c0', 'name' => 'Deamon'],
@@ -136,7 +136,13 @@ class CoolifyConnectionsTest extends TestCase
         $this->assertDatabaseHas('coolify_servers', [
             'coolify_connection_id' => $connection->id,
             'uuid' => 'no48ksggg0k8sk4o4w08gks8',
+            'ip' => 'host.docker.internal',
             'is_active' => 1,
+        ]);
+        $this->assertDatabaseHas('coolify_servers', [
+            'coolify_connection_id' => $connection->id,
+            'uuid' => 'edge-1',
+            'ip' => '198.51.100.12',
         ]);
         $this->assertDatabaseHas('coolify_projects', [
             'uuid' => 'z8ocg8k04ww8osssccc088c0',
@@ -152,6 +158,14 @@ class CoolifyConnectionsTest extends TestCase
 
         $server = CoolifyServer::query()->where('uuid', 'edge-1')->first();
         $this->assertNotNull($server);
+        $this->assertSame('198.51.100.12', $server->ip);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.coolify.show', $connection))
+            ->assertOk()
+            ->assertSee('>IP<', false)
+            ->assertSee('host.docker.internal', false)
+            ->assertSee('198.51.100.12', false);
 
         $this->actingAs($this->operator())
             ->post(route('ops.coolify.servers.toggle', [$connection, $server]))
