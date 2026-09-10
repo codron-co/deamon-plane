@@ -67,12 +67,12 @@
         </div>
     </header>
 
-    <nav class="site-section-nav" aria-label="{{ __('sites.detail.sections') }}">
-        <a href="#overview">{{ __('sites.detail.overview') }}</a>
-        <a href="#deployments">{{ __('sites.deployments.title') }}</a>
-        <a href="#theme">{{ __('sites.themes.title') }}</a>
-        <a href="#infrastructure">{{ __('sites.detail.infrastructure') }}</a>
-        @if ($canDelete ?? false)<a href="#danger">{{ __('sites.detail.danger') }}</a>@endif
+    <nav class="site-section-nav" aria-label="{{ __('sites.detail.sections') }}" role="tablist" data-site-tabs>
+        <a class="is-active" href="#overview" role="tab" aria-selected="true" aria-controls="overview">{{ __('sites.detail.overview') }}</a>
+        <a href="#deployments" role="tab" aria-selected="false" aria-controls="deployments">{{ __('sites.deployments.title') }}</a>
+        <a href="#theme" role="tab" aria-selected="false" aria-controls="theme">{{ __('sites.themes.title') }}</a>
+        <a href="#infrastructure" role="tab" aria-selected="false" aria-controls="infrastructure">{{ __('sites.detail.infrastructure') }}</a>
+        @if ($canDelete ?? false)<a href="#danger" role="tab" aria-selected="false" aria-controls="danger">{{ __('sites.detail.danger') }}</a>@endif
     </nav>
 
     @if ($site->hasDockerfileBuildPackWarning())
@@ -87,13 +87,12 @@
         <p class="ops-flash site-banner" role="status">{{ __('sites.provision.in_progress') }}</p>
     @endif
 
-    <section id="overview" class="site-section" aria-labelledby="site-overview-heading">
+    <section id="overview" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-overview-heading">
         <div class="site-section-heading">
             <div>
                 <span class="site-section-kicker">{{ __('sites.detail.operation') }}</span>
-                <h2 id="site-overview-heading">{{ __('sites.detail.overview') }}</h2>
+                <h2 id="site-overview-heading">{{ __('sites.detail.overview') }} <button class="site-hint" type="button" aria-label="{{ __('sites.detail.overview_lede') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('sites.detail.overview_lede') }}</span></button></h2>
             </div>
-            <p>{{ __('sites.detail.overview_lede') }}</p>
         </div>
 
         <div class="site-metric-grid">
@@ -151,13 +150,12 @@
         </div>
     </section>
 
-    <section id="deployments" class="site-section site-section-surface" aria-label="{{ __('sites.deployments.title') }}">@include('ops.deployments.index')</section>
-    <section id="theme" class="site-section site-section-surface" aria-label="{{ __('sites.themes.title') }}">@include('ops.sites._themes')</section>
+    <section id="deployments" class="site-section site-section-surface" role="tabpanel" data-site-panel aria-label="{{ __('sites.deployments.title') }}">@include('ops.deployments.index')</section>
+    <section id="theme" class="site-section site-section-surface" role="tabpanel" data-site-panel aria-label="{{ __('sites.themes.title') }}">@include('ops.sites._themes')</section>
 
-    <section id="infrastructure" class="site-section" aria-labelledby="site-infrastructure-heading">
+    <section id="infrastructure" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-infrastructure-heading">
         <div class="site-section-heading">
-            <div><span class="site-section-kicker">{{ __('sites.detail.advanced') }}</span><h2 id="site-infrastructure-heading">{{ __('sites.detail.infrastructure') }}</h2></div>
-            <p>{{ __('sites.detail.infrastructure_lede') }}</p>
+            <div><span class="site-section-kicker">{{ __('sites.detail.advanced') }}</span><h2 id="site-infrastructure-heading">{{ __('sites.detail.infrastructure') }} <button class="site-hint" type="button" aria-label="{{ __('sites.detail.infrastructure_lede') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('sites.detail.infrastructure_lede') }}</span></button></h2></div>
         </div>
         <div class="site-operations-grid">
             <div class="site-operations-main">
@@ -198,11 +196,49 @@
     </section>
 
     @if ($canDelete ?? false)
-        <section id="danger" class="site-section">
+        <section id="danger" class="site-section" role="tabpanel" data-site-panel>
             <div class="danger-zone">
                 <div><h2>{{ __('sites.danger.title') }}</h2><p>{{ __('sites.danger.lede') }}</p></div>
                 <form method="POST" action="{{ route('ops.sites.destroy', $site) }}" data-confirm="{{ __('sites.danger.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.confirm_title') }}" data-confirm-label="{{ __('ops.actions.delete') }}">@csrf @method('DELETE')<button type="submit" class="btn btn-danger">{{ __('sites.danger.button') }}</button></form>
             </div>
         </section>
     @endif
+@endsection
+
+@section('scripts')
+    <script>
+        (() => {
+            const tabs = [...document.querySelectorAll('[data-site-tabs] [role="tab"]')];
+            const panels = [...document.querySelectorAll('[data-site-panel]')];
+            if (! tabs.length || ! panels.length) return;
+
+            const activate = (id, updateHash = true) => {
+                if (! panels.some((panel) => panel.id === id)) id = panels[0].id;
+                tabs.forEach((tab) => {
+                    const active = tab.getAttribute('aria-controls') === id;
+                    tab.classList.toggle('is-active', active);
+                    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                    tab.tabIndex = active ? 0 : -1;
+                });
+                panels.forEach((panel) => { panel.hidden = panel.id !== id; });
+                if (updateHash) history.replaceState(null, '', `#${id}`);
+            };
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    activate(tab.getAttribute('aria-controls'));
+                });
+                tab.addEventListener('keydown', (event) => {
+                    if (! ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                    event.preventDefault();
+                    const target = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                    tabs[target].focus();
+                    activate(tabs[target].getAttribute('aria-controls'));
+                });
+            });
+
+            activate(location.hash.slice(1), false);
+        })();
+    </script>
 @endsection

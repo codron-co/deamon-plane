@@ -5,8 +5,7 @@
 @endphp
 
 <section class="settings-panel" aria-labelledby="site-themes-heading">
-    <h2 id="site-themes-heading">{{ __('sites.themes.title') }}</h2>
-    <p class="field-hint">{{ __('sites.themes.lede') }}</p>
+    <h2 id="site-themes-heading">{{ __('sites.themes.title') }} <button class="site-hint" type="button" aria-label="{{ __('sites.themes.lede') }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('sites.themes.lede') }}</span></button></h2>
 
     @if ($themeInstallations->isEmpty())
         <p class="field-hint">{{ __('sites.themes.empty') }}</p>
