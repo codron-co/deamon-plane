@@ -80,6 +80,10 @@ class PreferencesAppearanceTest extends TestCase
             ->assertSee('data-pref="locale"', false)
             ->getContent();
 
+        $this->assertTrue(
+            str_contains($html, '"value":"light"') || str_contains($html, '&quot;value&quot;:&quot;light&quot;'),
+            'Cycle button must expose parseable appearance options',
+        );
         $this->assertStringNotContainsString('ops-theme-choice', $html);
         $this->assertStringNotContainsString('href="'.route('ops.account.preferences').'"', $html);
     }

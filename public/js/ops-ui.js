@@ -11,12 +11,23 @@
     }
 
     function parseOptions(button) {
+        const raw = button.getAttribute("data-options") || "[]";
         try {
-            const options = JSON.parse(button.getAttribute("data-options") || "[]");
-            return Array.isArray(options) ? options : [];
+            const options = JSON.parse(raw);
+            if (Array.isArray(options) && options.length) {
+                return options;
+            }
         } catch (error) {
-            return [];
+            /* Blade Js::from() is not JSON; fall through to data-current cycling. */
         }
+
+        if (button.getAttribute("data-pref") === "appearance") {
+            return THEMES.map(function (value) {
+                return { value: value, label: value };
+            });
+        }
+
+        return [];
     }
 
     function optionIndex(options, value) {
@@ -88,17 +99,16 @@
             return;
         }
 
-        const width = Math.min(320, window.innerWidth - 16);
-        let left = rect.right + 8;
-        if (left + width > window.innerWidth - 8) {
-            left = Math.max(8, rect.left);
-        }
+        const sidebar = menu.closest(".ops-sidebar");
+        const gutter = sidebar ? parseFloat(window.getComputedStyle(sidebar).paddingLeft) || 12 : 12;
+        const left = sidebar ? sidebar.getBoundingClientRect().left + gutter : rect.left;
+        const width = Math.max(rect.width, 200);
 
         popover.style.width = width + "px";
         popover.style.left = left + "px";
         popover.style.right = "auto";
         popover.style.top = "auto";
-        popover.style.bottom = Math.max(8, window.innerHeight - rect.bottom) + "px";
+        popover.style.bottom = Math.max(8, window.innerHeight - rect.top + 8) + "px";
     }
 
     function setupUserMenu() {
@@ -121,10 +131,21 @@
             positionUserPopover(menu);
         });
 
+        const popover = menu.querySelector(".ops-user-popover");
+        if (popover) {
+            popover.addEventListener("click", function (event) {
+                event.stopPropagation();
+            });
+        }
+
         document.addEventListener("click", function (event) {
-            if (menu.open && !menu.contains(event.target)) {
-                closeMenu();
+            if (!menu.open) {
+                return;
             }
+            if (event.target.closest("[data-user-menu]")) {
+                return;
+            }
+            closeMenu();
         });
 
         document.addEventListener("keydown", function (event) {
@@ -150,7 +171,8 @@
 
             form.addEventListener("submit", function (event) {
                 event.preventDefault();
-                if (button.disabled) {
+                event.stopPropagation();
+                if (form.dataset.opsBusy === "1") {
                     return;
                 }
 
@@ -160,10 +182,10 @@
                     return;
                 }
 
-                button.disabled = true;
+                form.dataset.opsBusy = "1";
                 if (field === "appearance") {
                     setTheme(value);
-                    syncCycleButton(button, null, value);
+                    syncCycleButton(button, nextInput, value);
                 }
 
                 fetch(form.action, {
@@ -185,15 +207,17 @@
                     if (field === "appearance") {
                         const applied = payload.appearance || value;
                         setTheme(applied);
-                        syncCycleButton(button, nextInput, applied);
+                        if (button.getAttribute("data-current") !== applied) {
+                            syncCycleButton(button, nextInput, applied);
+                        }
                         return;
                     }
 
                     window.location.reload();
                 }).catch(function () {
-                    form.submit();
+                    /* Keep the optimistic appearance; native submit would navigate away. */
                 }).finally(function () {
-                    button.disabled = false;
+                    form.dataset.opsBusy = "0";
                 });
             });
         });
