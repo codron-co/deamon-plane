@@ -30,7 +30,7 @@ Viewer can see the site; they cannot POST `/sites/{site}/channel`.
 3. If leaving **main**, the confirm modal must be accepted (`PlaneConfirm` — not `window.confirm`).
 4. Super Admin switching **to main** against a failing version gate may check **Force**.
 5. Plane sets `desired_channel`, status **deploying**, writes `site.channel_switch_started`.
-6. Job calls Coolify `PATCH /applications/{uuid}` with `{ git_branch, git_commit_sha: "" }` (unpin so Coolify follows the new branch HEAD; `environment_uuid` when a Coolify environment name matches the channel), writes `APP_ENV` + `DEAMON_CHANNEL` via `/envs/bulk`, then `POST /deploy`. A pinned SHA is cleared — otherwise Coolify keeps deploying the old commit. No `DELETE /applications/{uuid}`.
+6. Job calls Coolify `PATCH /applications/{uuid}` with `{ git_branch, git_commit_sha: "" }` only (unpin so Coolify follows the new branch HEAD). Do **not** send `environment_uuid` — live Coolify 4.x returns `environment_uuid: This field is not allowed` and skips the branch change. Writes `APP_ENV` + `DEAMON_CHANNEL` via `/envs/bulk`, then `POST /deploy`. No `DELETE /applications/{uuid}`.
 7. A `deployments` row (`trigger=channel_switch`) is stored. Plane polls until finished/failed (same poll job as provision).
 8. Success: `channel = desired_channel`, `desired_channel` cleared, status **active**, audit `site.channel_switched`. Live agent health is a separate poll; missing `deamon_version` does not block this switch.
 9. Failure: status **error**, `channel` unchanged, `desired_channel` kept so you can see the attempt, audit `site.channel_switch_failed`.

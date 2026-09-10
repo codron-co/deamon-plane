@@ -146,7 +146,7 @@ class ChannelSwitchTest extends TestCase
             ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
-        $this->assertSame('env-beta-uuid', $site->fresh()->coolify_environment_uuid);
+        $this->assertSame('env-prod-uuid', $site->fresh()->coolify_environment_uuid);
 
         Http::assertSent(function (Request $request): bool {
             $data = $request->data();
@@ -154,7 +154,9 @@ class ChannelSwitchTest extends TestCase
             return $request->method() === 'PATCH'
                 && $request->url() === 'https://coolify.test/api/v1/applications/coolify-app-1'
                 && ($data['git_branch'] ?? null) === 'beta'
-                && ($data['environment_uuid'] ?? null) === 'env-beta-uuid';
+                && array_key_exists('git_commit_sha', $data)
+                && $data['git_commit_sha'] === ''
+                && ! array_key_exists('environment_uuid', $data);
         });
         Http::assertSent(function (Request $request): bool {
             if ($request->method() !== 'PATCH' || ! str_contains($request->url(), '/envs')) {

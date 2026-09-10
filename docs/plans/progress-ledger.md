@@ -135,7 +135,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 ## Sites list bulk selection (2026-09-10)
 
-- Status: **code**. Header checkbox selects every site matching current filters (`all=1`), not the page. Bulk actions show only when a selection exists: Change branch, Switch to Compose (Dockerfile leftovers only), Auto-deploy on/off (all on → off; all off → on; mixed → off). Channel switch writes `APP_ENV` / `DEAMON_CHANNEL` and moves `environment_uuid` when a Coolify env name matches. Tests: SiteBulkActionsTest, ChannelSwitchTest.
+- Status: **code**. Header checkbox selects every site matching current filters (`all=1`), not the page. Bulk actions show only when a selection exists: Change branch, Switch to Compose (Dockerfile leftovers only), Auto-deploy on/off (all on → off; all off → on; mixed → off). Channel switch writes `APP_ENV` / `DEAMON_CHANNEL` and `git_branch` + empty `git_commit_sha` (HEAD). Coolify application PATCH must not send `environment_uuid` (API rejects it). Tests: SiteBulkActionsTest, ChannelSwitchTest.
 
 ## Background jobs widget + AJAX ops (2026-09-10)
 

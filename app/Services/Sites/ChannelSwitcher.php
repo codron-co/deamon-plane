@@ -134,21 +134,12 @@ class ChannelSwitcher
             'git_branch' => $target->value,
             'git_commit_sha' => '',
         ];
-        $environmentUuid = ChannelEnvironmentMap::environmentUuid($site, $target);
-        if ($environmentUuid !== null) {
-            $patch['environment_uuid'] = $environmentUuid;
-        }
 
         $coolify->patchApplication($appUuid, $patch);
         $coolify->updateEnvs($appUuid, [
             'APP_ENV' => ChannelEnvironmentMap::appEnv($target),
             'DEAMON_CHANNEL' => $target->value,
         ]);
-
-        if ($environmentUuid !== null && $site->coolify_environment_uuid !== $environmentUuid) {
-            $site->coolify_environment_uuid = $environmentUuid;
-            $site->save();
-        }
 
         $deployed = $coolify->deploy($appUuid);
         $deploymentUuid = $deployed->firstDeploymentUuid();
