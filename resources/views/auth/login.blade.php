@@ -21,14 +21,16 @@
 
         <form method="POST" action="{{ route('login') }}" class="ops-form">
             @csrf
-            <label class="field">
-                <span class="field-label">{{ __('auth.email') }}</span>
+            <div class="field">
+                <label class="field-label" for="email">{{ __('auth.email') }}</label>
                 <input id="email" class="field-input" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username">
-            </label>
-            <label class="field">
-                <span class="field-label">{{ __('auth.password') }}</span>
+                @error('email') <p class="field-error">{{ $message }}</p> @enderror
+            </div>
+            <div class="field">
+                <label class="field-label" for="password">{{ __('auth.password') }}</label>
                 <input id="password" class="field-input" type="password" name="password" required autocomplete="current-password">
-            </label>
+                @error('password') <p class="field-error">{{ $message }}</p> @enderror
+            </div>
             <label class="field-check">
                 <input type="checkbox" name="remember">
                 <span>{{ __('auth.remember') }}</span>
