@@ -49,6 +49,7 @@ class SiteProvisioner
             throw new SiteProvisionException('Only draft or failed sites can be provisioned.');
         }
 
+        $this->assertCloudflareReady();
         $this->assertCoolifyReady($site);
 
         $connection = $this->connectionFor($site);

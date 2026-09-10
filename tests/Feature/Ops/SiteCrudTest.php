@@ -130,7 +130,7 @@ class SiteCrudTest extends TestCase
                 'channel' => 'alpha',
                 'notes' => 'Moved hostname',
             ]))
-            ->assertRedirect(route('ops.sites.edit', $site));
+            ->assertRedirect(route('ops.sites.show', $site));
 
         $site->refresh();
 
