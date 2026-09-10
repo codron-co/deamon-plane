@@ -17,12 +17,12 @@
             @if ($canWriteGit)
                 <div class="form-actions">
                     @if ($hasGithubApp)
-                        <form method="POST" action="{{ route('ops.themes.git.connect-another') }}">
+                        <form method="POST" action="{{ route('ops.themes.git.connect-another') }}" data-ops-native>
                             @csrf
                             <button type="submit" class="btn btn-primary">{{ __('themes.git.connect_another') }}</button>
                         </form>
                     @elseif ($appUrlIsPublic)
-                        <form method="POST" action="{{ route('ops.themes.git.connect') }}">
+                        <form method="POST" action="{{ route('ops.themes.git.connect') }}" data-ops-native>
                             @csrf
                             <button type="submit" class="btn btn-primary">{{ __('themes.git.connect') }}</button>
                         </form>

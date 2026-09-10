@@ -11,6 +11,7 @@ use App\Models\Site;
 use App\Models\Theme;
 use App\Services\Agent\SiteHealthEvaluator;
 use App\Services\Cloudflare\CloudflareAccounts;
+use App\Services\Mail\SiteMailOrderBinder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -18,7 +19,7 @@ class SiteDetailController extends Controller
 {
     use LoadsSiteOpsContext;
 
-    public function __invoke(Request $request, Site $site, SiteHealthEvaluator $agentHealth): View
+    public function __invoke(Request $request, Site $site, SiteHealthEvaluator $agentHealth, SiteMailOrderBinder $mailBinder): View
     {
         $this->authorize('view', $site);
 
@@ -28,6 +29,8 @@ class SiteDetailController extends Controller
             'themeInstallations.theme',
             'coolifyConnection',
             'mailServer',
+            'mailBindings',
+            'mailboxRequests',
             'cloudflareAccount',
             'activeThemeInstallation.theme',
         ]);
@@ -68,6 +71,8 @@ class SiteDetailController extends Controller
             'assignableThemes' => $this->assignableThemes($site),
             'canAssignTheme' => $user?->can('assign', Theme::class) ?? false,
             'mailServers' => MailServer::query()->where('is_enabled', true)->orderBy('name')->get(),
+            'mailCatalog' => $mailBinder->optionsForSite($site),
+            'mailboxRequests' => $site->mailboxRequests,
             'cloudflareAccounts' => CloudflareAccounts::enabled(),
         ]);
     }

@@ -68,6 +68,7 @@ class ThemeGitConnectionTest extends TestCase
             ->assertSee(url('/webhooks/github'), false)
             ->getContent();
 
+        $this->assertStringContainsString('data-ops-native', $html);
         $this->assertMatchesRegularExpression('/name="state" value="[a-f0-9]+"/', $html);
         preg_match('/name="state" value="([a-f0-9]+)"/', $html, $matches);
         $state = $matches[1] ?? '';
@@ -103,6 +104,18 @@ class ThemeGitConnectionTest extends TestCase
         $this->assertNotSame('github-app-client-secret', DB::table('github_settings')->value('client_secret'));
         $this->assertArrayNotHasKey('client_secret', $settings->toArray());
         $this->assertArrayNotHasKey('private_key', $settings->toArray());
+    }
+
+    public function test_themes_index_marks_github_connect_form_as_native(): void
+    {
+        $this->usePublicPlaneUrl();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.themes'))
+            ->assertOk()
+            ->assertSee(__('themes.git.connect'), false)
+            ->assertSee('data-ops-native', false)
+            ->assertSee('action="'.route('ops.themes.git.connect').'"', false);
     }
 
     public function test_manifest_callback_rejects_missing_state(): void

@@ -71,6 +71,6 @@ CMS route registration (Task 11 lives in `codron-co/deamon`). Theme agent client
 
 ## Mail configure + reverse proxy
 
-Hostinger tokens stay in Plane (`mail_servers.api_token` encrypted). After a site is assigned a Hostinger mail server **and** Plane matches a mail order whose domain equals that site’s primary domain, Plane POSTs `{agent_base_url}/internal/control/v1/mail/configure` with the same HMAC as themes. Body has `enabled`, `provider`, `site_id`, `plane_base_url`, `mail_domain`, `webmail_url` — **never** the API token. `mail_domain` is the matched site order, not a server-wide default.
+Hostinger tokens stay in Plane (`mail_servers.api_token` encrypted). After a site is assigned a Hostinger mail server **and** at least one mailbox domain is bound (`site_mail_bindings`), Plane POSTs `{agent_base_url}/internal/control/v1/mail/configure` with the same HMAC as themes. Body has `enabled`, `provider`, `site_id`, `plane_base_url`, `mail_domain`, `mail_domains`, `webmail_url` — **never** the API token. Bindings are operator-selected on Infrastructure; primary-domain auto-match is only a first-time default.
 
 CMS mailbox UI calls back to Plane `POST/GET/PATCH/DELETE /internal/site/v1/mail/mailboxes…` with `X-Deamon-Site` + HMAC of that site’s agent secret. Plane talks to Hostinger. Details: [mail-servers.md](mail-servers.md).

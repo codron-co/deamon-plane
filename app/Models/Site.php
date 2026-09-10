@@ -135,6 +135,22 @@ class Site extends Model
         return $this->belongsTo(MailServer::class);
     }
 
+    /**
+     * @return HasMany<SiteMailBinding, $this>
+     */
+    public function mailBindings(): HasMany
+    {
+        return $this->hasMany(SiteMailBinding::class)->orderBy('mail_domain');
+    }
+
+    /**
+     * @return HasMany<SiteMailboxRequest, $this>
+     */
+    public function mailboxRequests(): HasMany
+    {
+        return $this->hasMany(SiteMailboxRequest::class)->latest();
+    }
+
     public function cloudflareAccount(): BelongsTo
     {
         return $this->belongsTo(CloudflareSetting::class, 'cloudflare_setting_id');
@@ -372,7 +388,31 @@ class Site extends Model
 
     public function hasHostingerMailOrder(): bool
     {
+        if ($this->relationLoaded('mailBindings') && $this->mailBindings->isNotEmpty()) {
+            return true;
+        }
+
         return filled($this->hostinger_order_id) && filled($this->mail_domain);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function mailDomains(): array
+    {
+        if ($this->relationLoaded('mailBindings') && $this->mailBindings->isNotEmpty()) {
+            return $this->mailBindings
+                ->pluck('mail_domain')
+                ->filter()
+                ->map(static fn (mixed $domain): string => strtolower(trim((string) $domain)))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $domain = strtolower(trim((string) ($this->mail_domain ?? '')));
+
+        return $domain === '' ? [] : [$domain];
     }
 
     public function resolvedAgentBaseUrl(): ?string

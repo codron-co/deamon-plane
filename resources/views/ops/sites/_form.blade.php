@@ -363,8 +363,8 @@
                 </option>
             @endforeach
         </select>
-        @if ($site->exists && $site->hasHostingerMailOrder())
-            <p class="field-hint">{{ __('mail.fields.site_order', ['order' => $site->hostinger_order_id, 'domain' => $site->mail_domain]) }}</p>
+        @if ($site->exists && $site->mailDomains() !== [])
+            <p class="field-hint">{{ __('mail.fields.site_order', ['order' => $site->hostinger_order_id, 'domain' => implode(', ', $site->mailDomains())]) }}</p>
         @elseif ($site->exists && filled($site->mail_server_id))
             <p class="field-hint">{{ __('mail.sites.unmatched') }}</p>
         @endif

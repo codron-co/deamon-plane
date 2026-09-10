@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Ops;
 use App\Enums\MailProvider;
 use App\Http\Controllers\Controller;
 use App\Models\MailServer;
-use App\Services\Hostinger\HostingerMailClient;
 use App\Services\Hostinger\HostingerMailException;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailOrderBinder;
@@ -62,7 +61,7 @@ class MailServerOpsController extends Controller
             'server' => $mailServer,
             'canWrite' => request()->user()?->can('ops.write') ?? false,
             'hasToken' => $mailServer->hasToken(),
-            'sites' => $mailServer->sites()->orderBy('name')->get(),
+            'sites' => $mailServer->sites()->with('mailBindings')->orderBy('name')->get(),
         ]);
     }
 
@@ -89,6 +88,7 @@ class MailServerOpsController extends Controller
         $before = $this->auditSnapshot($mailServer);
 
         foreach ($sites as $site) {
+            $site->mailBindings()->delete();
             $site->mail_server_id = null;
             $site->hostinger_order_id = null;
             $site->mail_domain = null;
@@ -113,19 +113,10 @@ class MailServerOpsController extends Controller
         }
 
         try {
-            $client = HostingerMailClient::fromServer($mailServer);
-            $orders = $client->listOrders();
+            $orders = $binder->refreshCatalog($mailServer);
         } catch (HostingerMailException) {
             return back()->with('error', __('mail.errors.test_failed'));
         }
-
-        $mailServer->last_probe_at = now();
-        $mailServer->last_probe_payload = [
-            'ok' => true,
-            'order_count' => count($orders),
-            'orders' => $orders,
-        ];
-        $mailServer->save();
 
         $binder->bindAssignedSites($mailServer, $orders);
         $configurer->syncAssignedSites($mailServer);

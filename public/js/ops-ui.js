@@ -989,4 +989,46 @@
     setupListToolbars();
     setupFaviconMarks();
     setupBulkSelection();
+    setupMailBindings();
+
+    function setupMailBindings() {
+        document.querySelectorAll("[data-mail-bindings]").forEach(function (root) {
+            const list = root.querySelector("[data-mail-binding-list]");
+            const template = root.querySelector("[data-mail-binding-template]");
+            const add = root.querySelector("[data-mail-binding-add]");
+            if (!list || !template || !add) {
+                return;
+            }
+
+            add.addEventListener("click", function () {
+                const wrap = document.createElement("div");
+                wrap.innerHTML = template.innerHTML.trim();
+                const row = wrap.firstElementChild;
+                if (row) {
+                    list.appendChild(row);
+                }
+            });
+
+            list.addEventListener("click", function (event) {
+                const button = event.target.closest("[data-mail-binding-remove]");
+                if (!button) {
+                    return;
+                }
+                const row = button.closest("[data-mail-binding-row]");
+                const rows = list.querySelectorAll("[data-mail-binding-row]");
+                if (!row) {
+                    return;
+                }
+                if (rows.length > 1) {
+                    row.remove();
+                    return;
+                }
+                const select = row.querySelector("select");
+                if (select) {
+                    select.value = "";
+                    select.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            });
+        });
+    }
 })();

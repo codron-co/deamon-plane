@@ -139,6 +139,26 @@ class SiteMailProxyTest extends TestCase
             ->assertDontSee(self::SECRET, false);
     }
 
+    public function test_mailbox_request_is_created_and_listed(): void
+    {
+        $site = $this->readySite();
+
+        $this->signed('POST', '/internal/site/v1/mail/mailbox-requests', $site, [
+            'local_part' => 'info',
+            'domain' => 'other.example.com',
+            'note' => 'Hostinger’da açılacak',
+            'requester_kind' => 'admin',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('request.email', 'info@other.example.com')
+            ->assertJsonPath('request.status', 'pending')
+            ->assertDontSee(self::TOKEN, false);
+
+        $this->signed('GET', '/internal/site/v1/mail/mailbox-requests', $site)
+            ->assertOk()
+            ->assertJsonPath('requests.0.email', 'info@other.example.com');
+    }
+
     public function test_audit_omits_password_and_token(): void
     {
         $site = $this->readySite();

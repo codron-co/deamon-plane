@@ -190,6 +190,64 @@ class SiteMailAssignTest extends TestCase
         $this->assertSame('OR9siteorder', $site->hostinger_order_id);
     }
 
+    public function test_site_detail_binds_selected_and_foreign_domains(): void
+    {
+        $server = MailServer::factory()->hostingerReady(self::TOKEN)->create([
+            'last_probe_payload' => [
+                'ok' => true,
+                'order_count' => 2,
+                'orders' => [
+                    ['id' => 'ORshop', 'domain' => 'shop.example.test', 'status' => 'active', 'seats' => 2],
+                    ['id' => 'ORmail', 'domain' => 'mail.other.test', 'status' => 'active', 'seats' => 1],
+                ],
+            ],
+        ]);
+        $site = Site::factory()->withSecrets()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Main,
+            'primary_domain' => 'shop.example.test',
+            'agent_base_url' => 'https://shop.example.test',
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/mail/configure' => Http::response(['ok' => true], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.mail', $site), [
+                'mail_server_id' => $server->id,
+                'mail_bindings_explicit' => '1',
+                'hostinger_order_ids' => ['ORshop', 'ORmail'],
+            ])
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $site->refresh();
+        $this->assertSame($server->id, $site->mail_server_id);
+        $this->assertEqualsCanonicalizing(
+            ['shop.example.test', 'mail.other.test'],
+            $site->mailBindings()->pluck('mail_domain')->all(),
+        );
+
+        Http::assertSent(function (Request $request): bool {
+            $body = $request->body();
+
+            return $request->method() === 'POST'
+                && str_ends_with($request->url(), '/internal/control/v1/mail/configure')
+                && str_contains($body, 'mail.other.test')
+                && str_contains($body, 'shop.example.test')
+                && ! str_contains($body, self::TOKEN);
+        });
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('selected', $html);
+        $this->assertStringContainsString('mail.other.test', $html);
+        $this->assertStringContainsString('shop.example.test', $html);
+    }
+
     public function test_viewer_cannot_assign_mail_from_detail(): void
     {
         $server = MailServer::factory()->hostingerReady(self::TOKEN)->create();

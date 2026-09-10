@@ -122,8 +122,8 @@
                         @endif
                     </strong>
                     <small>
-                        @if ($site->hasHostingerMailOrder())
-                            {{ $site->mail_domain }}
+                        @if ($site->mailDomains() !== [])
+                            {{ implode(', ', $site->mailDomains()) }}
                         @elseif ($site->mailServer)
                             {{ __('mail.sites.unmatched') }}
                         @else

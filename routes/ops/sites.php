@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\Ops\DeploymentShowController;
-use App\Http\Controllers\Ops\SiteCloudflareController;
 use App\Http\Controllers\Ops\SiteAppHealthController;
+use App\Http\Controllers\Ops\SiteCloudflareController;
 use App\Http\Controllers\Ops\SiteController;
 use App\Http\Controllers\Ops\SiteCoolifyOpsController;
 use App\Http\Controllers\Ops\SiteDetailController;
@@ -53,6 +53,8 @@ Route::post('/sites/{site}/app-health/fix', [SiteAppHealthController::class, 'fi
 Route::post('/sites/{site}/agent-secret', [SiteController::class, 'injectAgentSecret'])->name('ops.sites.agent-secret');
 Route::post('/sites/{site}/mail', [SiteController::class, 'assignMail'])->name('ops.sites.mail');
 Route::post('/sites/{site}/mail-order', [SiteController::class, 'refreshMailOrder'])->name('ops.sites.mail-order');
+Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/fulfill', [SiteController::class, 'fulfillMailboxRequest'])->name('ops.sites.mailbox-requests.fulfill');
+Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/reject', [SiteController::class, 'rejectMailboxRequest'])->name('ops.sites.mailbox-requests.reject');
 Route::post('/sites/{site}/themes', [SiteThemeController::class, 'assign'])->name('ops.sites.themes.assign');
 Route::post('/sites/{site}/themes/{installation}/update', [SiteThemeController::class, 'update'])->name('ops.sites.themes.update');
 Route::post('/sites/{site}/themes/{installation}/sync', [SiteThemeController::class, 'sync'])->name('ops.sites.themes.sync');

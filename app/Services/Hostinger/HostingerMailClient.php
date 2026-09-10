@@ -26,19 +26,77 @@ class HostingerMailClient
         return new self($server);
     }
 
-    public static function forSite(Site $site): self
+    public static function forSite(Site $site, ?string $domain = null): self
     {
         $server = $site->mailServer;
         if (! $server instanceof MailServer) {
             throw new HostingerMailException('mail_not_configured', 422, 'Mail is not configured for this site.');
         }
 
-        return new self(
-            $server,
-            is_string($site->hostinger_order_id) ? $site->hostinger_order_id : null,
-            is_string($site->mail_domain) ? $site->mail_domain : null,
-            (string) $site->id,
-        );
+        $site->loadMissing('mailBindings');
+        $orderId = is_string($site->hostinger_order_id) ? $site->hostinger_order_id : null;
+        $mailDomain = is_string($site->mail_domain) ? $site->mail_domain : null;
+
+        if (is_string($domain) && $domain !== '') {
+            $wanted = strtolower(trim($domain));
+            $binding = $site->mailBindings->first(
+                static fn ($row): bool => strcasecmp((string) $row->mail_domain, $wanted) === 0,
+            );
+            if ($binding !== null) {
+                $orderId = $binding->hostinger_order_id;
+                $mailDomain = $binding->mail_domain;
+            } elseif (
+                filled($site->hostinger_order_id)
+                && is_string($site->mail_domain)
+                && strcasecmp($site->mail_domain, $wanted) === 0
+            ) {
+                $orderId = $site->hostinger_order_id;
+                $mailDomain = $site->mail_domain;
+            } else {
+                throw new HostingerMailException('mail_not_configured', 422, 'Mail domain is not bound to this site.');
+            }
+        } elseif ($site->mailBindings->isNotEmpty()) {
+            $first = $site->mailBindings->first();
+            $orderId = $first->hostinger_order_id;
+            $mailDomain = $first->mail_domain;
+        }
+
+        return new self($server, $orderId, $mailDomain, (string) $site->id);
+    }
+
+    /**
+     * @return list<array{id: string, email: string, local_part: string|null, domain: string|null}>
+     */
+    public static function listAllMailboxes(Site $site): array
+    {
+        $site->loadMissing('mailBindings');
+        $bindings = $site->mailBindings;
+        if ($bindings->isEmpty()) {
+            if (! $site->hasHostingerMailOrder()) {
+                return [];
+            }
+
+            return array_map(static function (array $box) use ($site): array {
+                $box['domain'] = is_string($site->mail_domain) ? $site->mail_domain : null;
+
+                return $box;
+            }, self::forSite($site)->listMailboxes());
+        }
+
+        $out = [];
+        $seen = [];
+        foreach ($bindings as $binding) {
+            foreach (self::forSite($site, $binding->mail_domain)->listMailboxes() as $box) {
+                if (isset($seen[$box['id']])) {
+                    continue;
+                }
+                $seen[$box['id']] = true;
+                $box['domain'] = $binding->mail_domain;
+                $out[] = $box;
+            }
+        }
+
+        return $out;
     }
 
     /**

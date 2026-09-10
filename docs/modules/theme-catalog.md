@@ -21,7 +21,7 @@ Visibility: `public_catalog` (any managed site) · `allowlist` (access row requi
 
 ## Connect (Themes, not Settings)
 
-Themes → **Connect GitHub** (GitHub App Manifest, Coolify-style) creates the Plane App once, then installs it on a user or org. **Connect another** installs the **same** App on another account. Advanced **PAT** is allowed when Plane has no public callback URL. After install, operator clicks **Sync repos** on the connection (the install callback does not auto-refresh the picker).
+Themes → **Connect GitHub** (GitHub App Manifest, Coolify-style) creates the Plane App once, then installs it on a user or org. **Connect another** installs the **same** App on another account. Those forms use `data-ops-native` so `ops-async.js` does not intercept the POST (the connect action returns an HTML manifest page that posts to GitHub; connect-another redirects away to GitHub). Advanced **PAT** is allowed when Plane has no public callback URL. After install, operator clicks **Sync repos** on the connection (the install callback does not auto-refresh the picker).
 
 Per connection the operator includes **all** accessible repos or a **selected** subset. Optional repo-name prefix. A connection migrated from the old Settings paste keeps prefix `deamon-theme-` so existing orgs do not suddenly ingest every repo. New connections default prefix to empty.
 

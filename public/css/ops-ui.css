@@ -1120,6 +1120,19 @@ html[data-theme="semidark"] .fleet-attention-list li {
 .ops-operation-line .field { flex: 1; min-width: 180px; margin: 0; }
 .site-operation-line .btn,
 .ops-operation-line .btn { flex: 0 0 auto; }
+.site-mail-bindings { margin-top: 12px; }
+.site-mail-binding-list { display: grid; gap: 8px; }
+.site-mail-binding-row {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+}
+.site-mail-binding-row .field-input,
+.site-mail-binding-row .ops-select { flex: 1; min-width: 0; }
+.site-mail-binding-actions { margin-top: 8px; }
+.site-mail-requests { margin-top: 16px; }
+.site-mail-requests h4 { margin: 0 0 8px; font-size: 13px; }
+.site-mail-request-actions { display: inline-flex; margin-right: 6px; }
 .ops-ns-block { margin-top: 14px; }
 .ops-ns-head {
     display: flex;

@@ -25,11 +25,13 @@ class SiteMailConfigurer
             return SiteMailConfigureResult::failure('Site has no agent base URL or primary domain.');
         }
 
+        $site->loadMissing(['mailServer', 'mailBindings']);
         $mailServer = $site->mailServer;
+        $domains = $site->mailDomains();
         $enabled = $mailServer instanceof MailServer
             && $mailServer->provider === MailProvider::Hostinger
             && $mailServer->isHostingerReady()
-            && $site->hasHostingerMailOrder();
+            && $domains !== [];
 
         $payload = $enabled
             ? [
@@ -37,7 +39,8 @@ class SiteMailConfigurer
                 'provider' => MailProvider::Hostinger->value,
                 'site_id' => (string) $site->id,
                 'plane_base_url' => $this->planeBaseUrl(),
-                'mail_domain' => (string) $site->mail_domain,
+                'mail_domain' => $domains[0],
+                'mail_domains' => $domains,
                 'webmail_url' => (string) config('ops.hostinger.webmail_url', 'https://mail.hostinger.com'),
             ]
             : [

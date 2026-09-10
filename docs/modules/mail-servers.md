@@ -8,24 +8,28 @@ Vendor endpoint map (CMS repo): `codron-co/deamon` `docs/modules/hostinger-mail-
 
 `mail_servers`: name, `provider` (`hostinger` only for now), encrypted `api_token`, `is_enabled`, allowlisted `last_probe_payload` (order id/domain/seats — no token). A mail server is **account credentials**, not a shared mail order.
 
-`sites.mail_server_id` nullable FK (`nullOnDelete`). Each site also stores its own `hostinger_order_id` and `mail_domain` when Plane finds an exact domain match.
+`sites.mail_server_id` nullable FK (`nullOnDelete`). Each site stores one or more mailbox domains in `site_mail_bindings` (`hostinger_order_id` + `mail_domain`). `sites.hostinger_order_id` / `mail_domain` stay the first binding for older callers.
 
-## Per-site order matching
+CMS mailbox **requests** land in `site_mailbox_requests` (pending / fulfilled / rejected). Ops marks them after creating the Hostinger mailbox.
 
-Mailbox APIs are scoped to `{orderId}`. Plane never picks one order for every site on a server.
+## Per-site mailbox binding
 
-On site create/update (mail server or domain change), provision (after secrets exist), inject agent secret, Test connection, or **Match mail order**:
+Mailbox APIs are scoped to `{orderId}`. Plane never picks one Hostinger product for every site on a server.
+
+On site create/update (mail server change with no existing bindings), provision (after secrets exist), inject agent secret, or Test connection (only sites that still have no bindings):
 
 1. `GET /api/mail/v1/orders?domain={sites.primary_domain}` (paginated).
-2. Bind the order only when `domain.name` equals the site primary domain (case-insensitive, no `www` stripping).
-3. No match → `sites.hostinger_order_id` / `mail_domain` stay empty; CMS plugin is not enabled.
-4. Hostinger Mail has **no create-order endpoint**. Billing `POST /api/billing/v1/orders` purchases catalog items and does not attach a domain — Plane does not auto-purchase. Buy Free Email for that domain in hPanel, then match again.
+2. Auto-bind only when `domain.name` equals the site primary domain (case-insensitive, no `www` stripping) **and** the site has no bindings yet.
+3. No match → bindings stay empty; CMS plugin is not enabled.
+4. Hostinger Mail has **no create-order endpoint**. Buy Free Email for that domain in hPanel, then refresh the catalog and select it.
+
+Site detail **Infrastructure** is the operator picker: mail server select + one or more mailbox-domain selects. Existing bindings are selected when the page opens. The operator may bind a domain that is not the site host, and may bind several. **Refresh catalog** lists Hostinger mailbox domains into `last_probe_payload` and does not overwrite chosen bindings.
 
 ## Ops UI
 
 `/mail-servers` — table rows open **show**, not edit. Token field matches Cloudflare: password input, never rendered after save, blank on update keeps the existing value. Test connection = list orders and re-match assigned sites. The orders table is a catalog, not a global picker.
 
-Site create/edit **and site detail (Infrastructure)** : mail server select (credentials). Assigning a ready Hostinger server matches the site domain, then POSTs CMS configure when an order exists.
+Site create/edit: mail server select (credentials). Site detail **Infrastructure**: mail server + mailbox-domain selects (pre-filled) + mailbox request queue. Saving POSTs CMS configure when at least one domain is bound.
 
 Viewer is read-only (`ops.write`). Destroy uses `PlaneConfirm`.
 
@@ -44,6 +48,7 @@ Enable (only when the site has a matched order):
   "site_id": "<sites.id ULID>",
   "plane_base_url": "<APP_URL>",
   "mail_domain": "shop.example.test",
+  "mail_domains": ["shop.example.test", "mail.other.test"],
   "webmail_url": "https://mail.hostinger.com"
 }
 ```
@@ -54,16 +59,18 @@ Disable: `enabled: false`, `provider: null`. No agent secret → skip push, flas
 
 Unauthenticated session routes (not ops CSRF):
 
-`/internal/site/v1/mail/mailboxes`
+`/internal/site/v1/mail/mailboxes` and `/mailbox-requests`
 
-Header `X-Deamon-Site: {site ULID}` + same HMAC against **that** site’s `agent_secret`. Replay nonce cache per site. Throttle 60/min. Mailboxes use **that site’s** `hostinger_order_id`.
+Header `X-Deamon-Site: {site ULID}` + same HMAC against **that** site’s `agent_secret`. Replay nonce cache per site. Throttle 60/min. Mailboxes are listed across **all** bound domains. Create accepts optional `domain` when more than one is bound.
 
-| Method | Path | Hostinger |
+| Method | Path | Hostinger / Plane |
 |--------|------|-----------|
-| GET | `/mailboxes` | `GET /api/mail/v1/orders/{orderId}/mailboxes` |
-| POST | `/mailboxes` | `POST …/mailboxes` `{local_part, password}` |
+| GET | `/mailboxes` | `GET /api/mail/v1/orders/{orderId}/mailboxes` per binding |
+| POST | `/mailboxes` | `POST …/mailboxes` `{local_part, password, domain?}` |
 | PATCH | `/mailboxes/{id}/password` | `PATCH /api/mail/v1/mailboxes/{id}/password` |
 | DELETE | `/mailboxes/{id}` | `DELETE /api/mail/v1/mailboxes/{id}` |
+| GET | `/mailbox-requests` | Plane queue |
+| POST | `/mailbox-requests` | `{local_part, domain, note}` — Hostinger create is manual |
 
 Missing/unready mail server or unmatched order → 422 `mail_not_configured`. Passwords are never stored or audited.
 

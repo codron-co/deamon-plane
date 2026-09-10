@@ -79,7 +79,7 @@
                         <tr>
                             <th>{{ __('mail.sites.site') }}</th>
                             <th>{{ __('mail.fields.mail_domain') }}</th>
-                            <th>{{ __('mail.fields.order') }}</th>
+                            <th>{{ __('mail.boxes.title') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,9 +88,8 @@
                                 <td><a href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a></td>
                                 <td>{{ $site->primary_domain }}</td>
                                 <td>
-                                    @if ($site->hasHostingerMailOrder())
-                                        <code>{{ $site->hostinger_order_id }}</code>
-                                        <span class="muted">{{ $site->mail_domain }}</span>
+                                    @if ($site->mailDomains() !== [])
+                                        <span>{{ implode(', ', $site->mailDomains()) }}</span>
                                     @else
                                         <span class="muted">{{ __('mail.sites.unmatched') }}</span>
                                     @endif

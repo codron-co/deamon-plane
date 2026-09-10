@@ -15,10 +15,12 @@ use App\Models\CoolifyConnection;
 use App\Models\Deployment;
 use App\Models\MailServer;
 use App\Models\Site;
+use App\Models\SiteMailboxRequest;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\SiteHealthChecker;
 use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Coolify\CoolifyApiException;
+use App\Services\Hostinger\HostingerMailException;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailConfigureResult;
 use App\Services\Mail\SiteMailOrderBinder;
@@ -194,7 +196,7 @@ class SiteController extends Controller
     {
         $this->authorize('view', $site);
 
-        $site->load(['primaryDomainRecord', 'domains', 'coolifyConnection']);
+        $site->load(['primaryDomainRecord', 'domains', 'coolifyConnection', 'mailBindings']);
         $connection = $site->coolifyConnection ?: CoolifyConnection::default();
 
         return view('ops.sites.edit', [
@@ -341,7 +343,28 @@ class SiteController extends Controller
     {
         $this->authorize('update', $site);
 
-        $bind = $binder->bind($site);
+        $site->loadMissing('mailServer');
+        if ($site->mailServer === null) {
+            return redirect()
+                ->route('ops.sites.show', $site)
+                ->with('error', __('mail.errors.order_lookup_failed'));
+        }
+
+        try {
+            $binder->refreshCatalog($site->mailServer);
+        } catch (HostingerMailException) {
+            return redirect()
+                ->route('ops.sites.show', $site)
+                ->with('error', __('mail.errors.order_lookup_failed'));
+        }
+
+        $site->load('mailBindings');
+        $bind = $site->mailBindings->isEmpty()
+            ? $binder->bind($site)
+            : SiteMailOrderBindResult::matched(
+                (string) $site->mailBindings->first()->hostinger_order_id,
+                (string) $site->mailBindings->first()->mail_domain,
+            );
         $configure = $configurer->sync($site);
         if ($configure->status === 'failed' || $bind->isLookupFailed()) {
             return redirect()
@@ -351,7 +374,7 @@ class SiteController extends Controller
 
         return redirect()
             ->route('ops.sites.show', $site)
-            ->with('status', __('mail.flash.order_refreshed').$this->mailFlashSuffix($bind, $configure));
+            ->with('status', __('mail.flash.catalog_refreshed').$this->mailFlashSuffix($bind, $configure));
     }
 
     public function assignMail(Request $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
@@ -364,13 +387,26 @@ class SiteController extends Controller
 
         $validated = $request->validate([
             'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
+            'mail_bindings_explicit' => ['sometimes', 'boolean'],
+            'hostinger_order_ids' => ['sometimes', 'array'],
+            'hostinger_order_ids.*' => ['nullable', 'string', 'max:128'],
         ]);
 
         $before = $this->auditSnapshot($site);
+        $previousServerId = $site->mail_server_id;
         $site->mail_server_id = $validated['mail_server_id'] ?? null;
         $site->save();
 
-        $bind = $binder->bind($site);
+        if ($previousServerId !== $site->mail_server_id) {
+            $site->mailBindings()->delete();
+            $site->unsetRelation('mailBindings');
+        }
+
+        $bind = $site->mail_server_id === null
+            ? $binder->clear($site)
+            : ($request->boolean('mail_bindings_explicit')
+                ? $binder->bindSelected($site, $validated['hostinger_order_ids'] ?? [])
+                : $binder->bind($site));
         $site->refresh();
         $configure = $configurer->sync($site);
 
@@ -391,6 +427,46 @@ class SiteController extends Controller
         return redirect()
             ->route('ops.sites.show', $site)
             ->with('status', __('mail.flash.assigned').$this->mailFlashSuffix($bind, $configure));
+    }
+
+    public function fulfillMailboxRequest(Request $request, Site $site, SiteMailboxRequest $mailboxRequest): RedirectResponse
+    {
+        $this->authorize('update', $site);
+        $this->assertMailboxRequestForSite($site, $mailboxRequest);
+
+        $mailboxRequest->status = SiteMailboxRequest::STATUS_FULFILLED;
+        $mailboxRequest->save();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $request->user()?->id,
+            'action' => 'mail.mailbox_request_fulfilled',
+            'after' => $mailboxRequest->toPublicArray(),
+            'ip' => $request->ip(),
+        ]);
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('mail.flash.request_fulfilled', ['email' => $mailboxRequest->email()]));
+    }
+
+    public function rejectMailboxRequest(Request $request, Site $site, SiteMailboxRequest $mailboxRequest): RedirectResponse
+    {
+        $this->authorize('update', $site);
+        $this->assertMailboxRequestForSite($site, $mailboxRequest);
+
+        $mailboxRequest->status = SiteMailboxRequest::STATUS_REJECTED;
+        $mailboxRequest->save();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $request->user()?->id,
+            'action' => 'mail.mailbox_request_rejected',
+            'after' => $mailboxRequest->toPublicArray(),
+            'ip' => $request->ip(),
+        ]);
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('mail.flash.request_rejected', ['email' => $mailboxRequest->email()]));
     }
 
     public function update(UpdateSiteRequest $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer, SiteDomainSync $domains): RedirectResponse
@@ -452,6 +528,10 @@ class SiteController extends Controller
         });
 
         $site->refresh();
+        if ($previousMailServerId !== $site->mail_server_id) {
+            $site->mailBindings()->delete();
+            $site->unsetRelation('mailBindings');
+        }
         if ($previousMailServerId !== $site->mail_server_id || $previousDomain !== $site->primary_domain) {
             $bind = $binder->bind($site);
             $configure = $configurer->sync($site);
@@ -541,6 +621,8 @@ class SiteController extends Controller
      */
     private function auditSnapshot(Site $site): array
     {
+        $site->loadMissing('mailBindings');
+
         return [
             'slug' => $site->slug,
             'name' => $site->name,
@@ -554,6 +636,7 @@ class SiteController extends Controller
             'mail_server_id' => $site->mail_server_id,
             'hostinger_order_id' => $site->hostinger_order_id,
             'mail_domain' => $site->mail_domain,
+            'mail_domains' => $site->mailDomains(),
             'cloudflare_setting_id' => $site->cloudflare_setting_id,
         ];
     }
@@ -599,6 +682,13 @@ class SiteController extends Controller
         }
 
         return $parts === [] ? '' : ' '.implode(' ', $parts);
+    }
+
+    private function assertMailboxRequestForSite(Site $site, SiteMailboxRequest $mailboxRequest): void
+    {
+        if ($mailboxRequest->site_id !== $site->id) {
+            abort(404);
+        }
     }
 
     private function mailErrorMessage(SiteMailOrderBindResult $bind, SiteMailConfigureResult $configure): string

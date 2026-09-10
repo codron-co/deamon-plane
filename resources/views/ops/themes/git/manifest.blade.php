@@ -14,7 +14,7 @@
     <section class="settings-panel" aria-labelledby="theme-git-manifest-heading">
         <h2 id="theme-git-manifest-heading">{{ __('themes.git.manifest.title') }}</h2>
         <p class="field-hint">{{ __('themes.git.manifest.hint') }}</p>
-        <form method="POST" action="{{ $action }}" class="ops-form" data-theme-git-manifest>
+        <form method="POST" action="{{ $action }}" class="ops-form" data-theme-git-manifest data-ops-native>
             <input type="hidden" name="manifest" value="{{ $manifest }}">
             <input type="hidden" name="state" value="{{ $state }}">
             <div class="form-actions">

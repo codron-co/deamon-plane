@@ -2,13 +2,17 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Site mailbox bindings + CMS requests (2026-09-10)
+
+- Status: **code**. Infrastructure mail card is mailbox-domain selects (existing values pre-selected), not “mail order” auto-match only. `site_mail_bindings` holds many domains; `site_mailbox_requests` is the CMS queue. Configure sends `mail_domains` (CMS `MailConfigureController` validates the array). Proxy lists all bindings; create accepts `domain`. Tests: Plane `SiteMailAssignTest` / `SiteMailProxyTest` / `MailServerOpsTest`; CMS `ControlPlaneMailConfigureTest` / `HostingerMailAdminTest` / `HostingerMailCustomerTest`.
+
 ## Sites App health + Coolify job widget (2026-09-10)
 
 - Status: **code**. Sites list **App** column (Healthy / N issues, hover + copy). Detail card with AJAX fixes (env sync, compose migrate, agent secret, redeploy, agent check). Jobs widget polls fleet Coolify `deployments` plus recent ops jobs. Manual redeploy/pin/HEAD now insert a local deployment row. Tests: `SiteAppHealthTest`.
 
 ## Theme Git connections — Settings paste → Themes Manifest (2026-09-10)
 
-- Status: **code**. Themes hosts Connect GitHub (Manifest), Connect another (same App), PAT fallback, all vs selected, Sync repos, Disconnect (App stays). Settings GitHub paste removed (one-line pointer; leftover POSTs 302 to Themes). Catalog walks every `theme_git_connections` row. CMS **1.2.7** theme-git `repo` allowlist **landed** (any github.com owner); do not re-edit `deamon` for that contract. Plane `ControlPlaneAgentContract::CMS_VERSION` is **1.2.7**.
+- Status: **code**. Themes hosts Connect GitHub (Manifest), Connect another (same App), PAT fallback, all vs selected, Sync repos, Disconnect (App stays). Settings GitHub paste removed (one-line pointer; leftover POSTs 302 to Themes). Catalog walks every `theme_git_connections` row. CMS **1.2.7** theme-git `repo` allowlist **landed** (any github.com owner); do not re-edit `deamon` for that contract. Plane `ControlPlaneAgentContract::CMS_VERSION` is **1.2.7**. Connect / connect-another / manifest forms are `data-ops-native` so `ops-async.js` does not swallow the GitHub redirect.
 - Product: Coolify-style GitHub App Manifest (one Plane App, many user/org installations). Connections + all/selected picker under **Themes**. Settings GitHub paste removed (one-line pointer). Advanced PAT for local/no public URL. Coolify `/github-apps` UUID never reused. ZIP still out. First sync `private`. `clone_token` = installation token only.
 - Spec: [../superpowers/specs/2026-09-10-theme-git-connections-design.md](../superpowers/specs/2026-09-10-theme-git-connections-design.md)
 - Plan: [2026-09-10-theme-git-connections.md](2026-09-10-theme-git-connections.md)
