@@ -23,10 +23,6 @@ use Throwable;
 
 class ChannelSwitcher
 {
-    public function __construct(
-        private readonly CoolifyApplicationService $coolify,
-    ) {}
-
     public function canStart(Site $site): bool
     {
         return $site->canSwitchChannel();
@@ -133,8 +129,25 @@ class ChannelSwitcher
             ? $site->desired_channel
             : Channel::from((string) $site->desired_channel);
 
-        $this->coolify->updateBranch($appUuid, $target->value);
-        $deployed = $this->coolify->deploy($appUuid);
+        $coolify = CoolifyApplicationService::forSite($site);
+        $patch = ['git_branch' => $target->value];
+        $environmentUuid = ChannelEnvironmentMap::environmentUuid($site, $target);
+        if ($environmentUuid !== null) {
+            $patch['environment_uuid'] = $environmentUuid;
+        }
+
+        $coolify->patchApplication($appUuid, $patch);
+        $coolify->updateEnvs($appUuid, [
+            'APP_ENV' => ChannelEnvironmentMap::appEnv($target),
+            'DEAMON_CHANNEL' => $target->value,
+        ]);
+
+        if ($environmentUuid !== null && $site->coolify_environment_uuid !== $environmentUuid) {
+            $site->coolify_environment_uuid = $environmentUuid;
+            $site->save();
+        }
+
+        $deployed = $coolify->deploy($appUuid);
         $deploymentUuid = $deployed->firstDeploymentUuid();
 
         $deployment = $site->deployments()->create([

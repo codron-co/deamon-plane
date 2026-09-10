@@ -12,6 +12,8 @@ Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
 Route::post('/sites/bulk/compose', [SiteCoolifyOpsController::class, 'bulkMigrateCompose'])->name('ops.sites.bulk.compose');
 Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAutoDeploy'])->name('ops.sites.bulk.auto-deploy');
+Route::post('/sites/bulk/channel', [SiteCoolifyOpsController::class, 'bulkChannel'])->name('ops.sites.bulk.channel');
+Route::get('/sites/bulk/channel', [SiteCoolifyOpsController::class, 'redirectGetBulkChannel'])->name('ops.sites.bulk.channel.get');
 Route::post('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'bulkSync'])->name('ops.sites.bulk.sync');
 Route::get('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'redirectGetBulkSync'])->name('ops.sites.bulk.sync.get');
 Route::post('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'liveSync'])->name('ops.sites.live-sync');

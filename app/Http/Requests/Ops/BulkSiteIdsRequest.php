@@ -22,6 +22,12 @@ class BulkSiteIdsRequest extends FormRequest
             'all_dockerfile' => ['sometimes', 'boolean'],
             'all' => ['sometimes', 'boolean'],
             'enabled' => ['sometimes', 'boolean'],
+            'channel' => ['sometimes', 'string', 'in:'.implode(',', config('ops.channels', []))],
+            'confirmed' => ['sometimes', 'boolean'],
+            'force' => ['sometimes', 'boolean'],
+            'filter_q' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'filter_channel' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_status' => ['sometimes', 'nullable', 'string', 'max:32'],
         ];
     }
 }

@@ -77,15 +77,22 @@
                 <a class="btn btn-ghost" href="{{ route('ops.sites') }}">{{ __('ops.actions.clear_filters') }}</a>
             </div>
         @else
-            <form method="POST" class="sites-bulk" id="sites-bulk-form">
+            <form method="POST" class="sites-bulk" id="sites-bulk-form" data-ops-bulk>
                 @csrf
+                <input type="hidden" name="confirmed" value="0">
+                <input type="hidden" name="filter_q" value="{{ $search }}">
+                <input type="hidden" name="filter_channel" value="{{ $channel }}">
+                <input type="hidden" name="filter_status" value="{{ $status }}">
             <div class="sites-table-wrap">
                 <table class="ops-table">
                     <thead>
                         <tr>
                             @can('create', \App\Models\Site::class)
                                 <th class="ops-check-col">
-                                    <span class="visually-hidden">{{ __('site_ops.bulk.selected') }}</span>
+                                    <label class="ops-check-all">
+                                        <input type="checkbox" name="all" value="1" data-ops-bulk-all>
+                                        <span class="visually-hidden">{{ __('site_ops.bulk.select_all') }}</span>
+                                    </label>
                                 </th>
                             @endcan
                             <th>{{ __('sites.columns.site') }}</th>
@@ -161,65 +168,44 @@
                 </table>
             </div>
                 @can('create', \App\Models\Site::class)
-                    <div class="form-actions" role="group" aria-label="{{ __('sites.bulk') }}">
-                        <span class="field-label">{{ __('sites.bulk') }}</span>
+                    <div class="form-actions sites-bulk-actions" data-ops-bulk-actions role="group" aria-label="{{ __('sites.bulk') }}">
+                        <label class="ops-bulk-channel">
+                            <span class="visually-hidden">{{ __('sites.channel_switch.target') }}</span>
+                            <select name="channel" class="field-input ops-filter" data-ops-bulk-channel>
+                                @foreach ($channels as $channelOption)
+                                    <option value="{{ $channelOption }}">{{ $channelOption }}</option>
+                                @endforeach
+                            </select>
+                        </label>
                         <button
                             type="submit"
                             class="btn btn-secondary btn-sm"
-                            formaction="{{ route('ops.sites.bulk.compose') }}"
-                            data-confirm="{{ __('site_ops.bulk.confirm_compose') }}"
-                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
-                            data-confirm-label="{{ __('site_ops.pack.confirm_label') }}"
-                        >{{ __('site_ops.bulk.compose') }}</button>
-                        <button
-                            type="submit"
-                            class="btn btn-ghost btn-sm"
-                            formaction="{{ route('ops.sites.bulk.compose') }}"
-                            name="all_dockerfile"
-                            value="1"
-                            data-confirm="{{ __('site_ops.bulk.confirm_compose_all') }}"
-                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
-                            data-confirm-label="{{ __('site_ops.pack.confirm_label') }}"
-                        >{{ __('site_ops.bulk.compose_all') }}</button>
+                            formaction="{{ route('ops.sites.bulk.channel') }}"
+                            data-confirm="{{ __('site_ops.bulk.confirm_branch', ['target' => 'main']) }}"
+                            data-confirm-title="{{ __('site_ops.bulk.confirm_branch_title') }}"
+                            data-confirm-label="{{ __('site_ops.bulk.change_branch') }}"
+                            data-confirm-template="{{ __('site_ops.bulk.confirm_branch', ['target' => '__TARGET__']) }}"
+                            data-confirm-danger="false"
+                        >{{ __('site_ops.bulk.change_branch') }}</button>
+                        @if ($hasDockerfileSites ?? false)
+                            <button
+                                type="submit"
+                                class="btn btn-ghost btn-sm"
+                                formaction="{{ route('ops.sites.bulk.compose') }}"
+                                data-confirm="{{ __('site_ops.bulk.confirm_compose') }}"
+                                data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
+                                data-confirm-label="{{ __('site_ops.bulk.compose') }}"
+                            >{{ __('site_ops.bulk.compose') }}</button>
+                        @endif
                         <button
                             type="submit"
                             class="btn btn-ghost btn-sm"
                             formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
-                            name="enabled"
-                            value="1"
-                            data-confirm="{{ __('site_ops.bulk.confirm_auto_on') }}"
-                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
-                            data-confirm-label="{{ __('site_ops.auto_deploy.on_button') }}"
+                            data-confirm="{{ __('site_ops.bulk.confirm_auto_toggle') }}"
+                            data-confirm-title="{{ __('site_ops.bulk.confirm_auto_toggle_title') }}"
+                            data-confirm-label="{{ __('site_ops.bulk.auto_toggle') }}"
                             data-confirm-danger="false"
-                        >{{ __('site_ops.bulk.auto_on') }}</button>
-                        <button
-                            type="submit"
-                            class="btn btn-ghost btn-sm"
-                            formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
-                            name="enabled"
-                            value="0"
-                            data-confirm="{{ __('site_ops.bulk.confirm_auto_off') }}"
-                            data-confirm-title="{{ __('site_ops.bulk.confirm_title') }}"
-                            data-confirm-label="{{ __('site_ops.auto_deploy.off_button') }}"
-                        >{{ __('site_ops.bulk.auto_off') }}</button>
-                        <button
-                            type="submit"
-                            class="btn btn-ghost btn-sm"
-                            formaction="{{ route('ops.sites.bulk.sync') }}"
-                            data-confirm="{{ __('sites.detail.sync_confirm_selected') }}"
-                            data-confirm-title="{{ __('sites.detail.sync_title') }}"
-                            data-confirm-label="{{ __('sites.detail.sync') }}"
-                            data-confirm-danger="false"
-                        >{{ __('sites.detail.sync') }}</button>
-                        <button
-                            type="submit"
-                            class="btn btn-ghost btn-sm"
-                            formaction="{{ route('ops.sites.live-sync') }}"
-                            data-confirm="{{ __('sites.live.confirm_selected') }}"
-                            data-confirm-title="{{ __('sites.live.confirm_title') }}"
-                            data-confirm-label="{{ __('sites.live.sync') }}"
-                            data-confirm-danger="false"
-                        >{{ __('sites.live.sync') }}</button>
+                        >{{ __('site_ops.bulk.auto_toggle') }}</button>
                     </div>
                 @endcan
             </form>

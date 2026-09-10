@@ -668,6 +668,22 @@ code {
     background: var(--surface-raised);
 }
 
+.ops-check-col {
+    width: 2.25rem;
+}
+
+.ops-check-all,
+.ops-bulk-channel {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+}
+
+.sites-bulk-actions {
+    margin-top: 12px;
+    align-items: center;
+}
+
 .ops-table {
     width: 100%;
     border-collapse: collapse;

@@ -107,6 +107,41 @@ class CoolifyDeploySettings
     }
 
     /**
+     * All on → off. All off → on. Mixed or unknown → off.
+     *
+     * @param  iterable<int, Site>  $sites
+     */
+    public function toggleEnabledFor(iterable $sites): bool
+    {
+        $known = [];
+
+        foreach ($sites as $site) {
+            if (! $site instanceof Site || blank($site->coolify_app_uuid)) {
+                continue;
+            }
+
+            $state = $this->snapshot($site)['is_auto_deploy'];
+            if (is_bool($state)) {
+                $known[] = $state;
+            }
+        }
+
+        if ($known === []) {
+            return false;
+        }
+
+        if (! in_array(false, $known, true)) {
+            return false;
+        }
+
+        if (! in_array(true, $known, true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * @param  iterable<int, Site>  $sites
      * @return array{ok: int, failed: int, errors: list<string>}
      */

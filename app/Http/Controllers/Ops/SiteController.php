@@ -51,25 +51,10 @@ class SiteController extends Controller
 
         $query = Site::query()
             ->with(['activeThemeInstallation.theme', 'latestDeployment'])
+            ->matchingListFilters($search, $channel, $status)
             ->orderBy('name');
 
-        if ($search !== '') {
-            $term = addcslashes($search, '%_\\');
-
-            $query->where(function ($builder) use ($term): void {
-                $builder->where('name', 'like', "%{$term}%")
-                    ->orWhere('slug', 'like', "%{$term}%")
-                    ->orWhere('primary_domain', 'like', "%{$term}%");
-            });
-        }
-
-        if ($channel !== '') {
-            $query->where('channel', $channel);
-        }
-
-        if ($status !== '') {
-            $query->where('status', $status);
-        }
+        $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
 
         return view('ops.sites.index', [
             'sites' => $query->paginate(25)->withQueryString(),
@@ -79,6 +64,7 @@ class SiteController extends Controller
             'channels' => $allowedChannels,
             'statuses' => SiteStatus::values(),
             'filtersActive' => $search !== '' || $channel !== '' || $status !== '',
+            'hasDockerfileSites' => $hasDockerfileSites,
             'canCreate' => $request->user()?->can('create', Site::class) ?? false,
             'canWrite' => $request->user()?->canWriteOps() ?? false,
         ]);

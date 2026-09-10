@@ -396,6 +396,36 @@ class Site extends Model
         return $query->where('notes', 'like', '%'.self::DOCKERFILE_BUILD_PACK_MARKER.'%');
     }
 
+    /**
+     * @param  Builder<Site>  $query
+     * @return Builder<Site>
+     */
+    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = ''): Builder
+    {
+        $allowedChannels = config('ops.channels', []);
+        $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
+        $status = in_array($status, SiteStatus::values(), true) ? $status : '';
+
+        if ($search !== '') {
+            $term = addcslashes($search, '%_\\');
+            $query->where(function (Builder $builder) use ($term): void {
+                $builder->where('name', 'like', "%{$term}%")
+                    ->orWhere('slug', 'like', "%{$term}%")
+                    ->orWhere('primary_domain', 'like', "%{$term}%");
+            });
+        }
+
+        if ($channel !== '') {
+            $query->where('channel', $channel);
+        }
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        return $query;
+    }
+
     public function clearDockerfileBuildPackWarning(): void
     {
         $notes = (string) $this->notes;

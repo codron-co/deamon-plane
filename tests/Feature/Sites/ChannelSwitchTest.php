@@ -9,6 +9,8 @@ use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Jobs\SwitchSiteChannelJob;
 use App\Models\AuditLog;
+use App\Models\CoolifyConnection;
+use App\Models\CoolifyEnvironment;
 use App\Models\CoolifySetting;
 use App\Models\Site;
 use App\Models\User;
@@ -99,6 +101,73 @@ class ChannelSwitchTest extends TestCase
         });
 
         $this->assertSecretsStayPrivate($site);
+    }
+
+    public function test_channel_switch_moves_coolify_environment_and_writes_app_env(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.test',
+            'api_token' => 'test-coolify-token',
+            'default_project_uuid' => 'proj_test',
+        ]);
+        CoolifyEnvironment::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'project_uuid' => 'proj_test',
+            'uuid' => 'env-prod-uuid',
+            'name' => 'production',
+            'is_active' => true,
+        ]);
+        CoolifyEnvironment::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'project_uuid' => 'proj_test',
+            'uuid' => 'env-beta-uuid',
+            'name' => 'beta',
+            'is_active' => true,
+        ]);
+
+        $site = $this->activeSite([
+            'coolify_connection_id' => $connection->id,
+            'coolify_project_uuid' => 'proj_test',
+            'coolify_environment_uuid' => 'env-prod-uuid',
+        ]);
+
+        $this->fakeCoolifyChannelSwitch('beta');
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.channel', $site), [
+                'channel' => 'beta',
+                'confirmed' => '1',
+            ])
+            ->assertRedirect(route('ops.sites.show', $site))
+            ->assertSessionHas('status');
+
+        $this->assertSame('env-beta-uuid', $site->fresh()->coolify_environment_uuid);
+
+        Http::assertSent(function (Request $request): bool {
+            $data = $request->data();
+
+            return $request->method() === 'PATCH'
+                && $request->url() === 'https://coolify.test/api/v1/applications/coolify-app-1'
+                && ($data['git_branch'] ?? null) === 'beta'
+                && ($data['environment_uuid'] ?? null) === 'env-beta-uuid';
+        });
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'PATCH' || ! str_contains($request->url(), '/envs')) {
+                return false;
+            }
+
+            $payload = $request->data();
+            $rows = $payload['data'] ?? [];
+            $map = [];
+            foreach ($rows as $row) {
+                if (is_array($row) && isset($row['key'])) {
+                    $map[$row['key']] = $row['value'] ?? null;
+                }
+            }
+
+            return ($map['APP_ENV'] ?? null) === 'staging'
+                && ($map['DEAMON_CHANNEL'] ?? null) === 'beta';
+        });
     }
 
     public function test_desired_channel_is_set_while_switch_job_is_queued(): void
@@ -439,12 +508,17 @@ class ChannelSwitchTest extends TestCase
                 return Http::response(['error' => 'DELETE is forbidden for channel switch'], 500);
             }
 
+            if ($method === 'PATCH' && str_contains($url, '/envs')) {
+                return Http::response([], 200);
+            }
+
             if ($method === 'PATCH' && preg_match('#/applications/[^/]+$#', $url) === 1) {
-                $this->assertSame(['git_branch' => $branch], $request->data());
+                $this->assertSame($branch, $request->data()['git_branch'] ?? null);
 
                 return Http::response([
                     'uuid' => 'coolify-app-1',
                     'git_branch' => $branch,
+                    'environment_uuid' => $request->data()['environment_uuid'] ?? null,
                 ], 200);
             }
 

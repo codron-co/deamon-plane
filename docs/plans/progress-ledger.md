@@ -133,6 +133,10 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 - Status: **code**. Site detail **Sync Coolify** (`POST /sites/{site}/sync`) GETs the Coolify app (project/env/server/git/channel) and last 25 `GET /deployments/applications/{uuid}` rows. Upsert by `coolify_deployment_uuid`; new rows `trigger=manual`. Does not write secrets or flip `sites.status` from historical failures. Connection inventory Sync does the same deployment pull per site. GET `/sites/{site}/sync` is a 302. Tests: CoolifySiteSyncTest, CoolifyDeploySettingsTest (`Http::fake`).
 
+## Sites list bulk selection (2026-09-10)
+
+- Status: **code**. Header checkbox selects every site matching current filters (`all=1`), not the page. Bulk actions show only when a selection exists: Change branch, Switch to Compose (Dockerfile leftovers only), Auto-deploy on/off (all on → off; all off → on; mixed → off). Channel switch writes `APP_ENV` / `DEAMON_CHANNEL` and moves `environment_uuid` when a Coolify env name matches. Tests: SiteBulkActionsTest, ChannelSwitchTest.
+
 ## Sites list Sync + Live Sync (2026-09-10)
 
 - Status: **code**. Identity marks use UTF-8 `IdentityMark` (Turkish `İzyem` → `İ`, not a replacement character). List topbar **Sync Coolify** (`POST /sites/bulk/sync`) and **Live Sync** (`POST /sites/bulk/live-sync`). Live column stores homepage status + favicon href. GET variants 302, no outbound HTTP. Viewer forbidden. Tests: IdentityMarkTest, SiteLiveProbeTest, SiteLiveSyncTest (`Http::fake`).

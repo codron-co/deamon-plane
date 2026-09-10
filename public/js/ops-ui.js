@@ -840,6 +840,65 @@
         });
     }
 
+    function setupBulkSelection() {
+        document.querySelectorAll("[data-ops-bulk]").forEach(function (form) {
+            if (!(form instanceof HTMLFormElement) || form.dataset.bulkEnhanced === "true") {
+                return;
+            }
+            form.dataset.bulkEnhanced = "true";
+
+            const actions = form.querySelector("[data-ops-bulk-actions]");
+            const all = form.querySelector("[data-ops-bulk-all]");
+            const rows = Array.prototype.slice.call(form.querySelectorAll('input[name="site_ids[]"]'));
+            if (!actions) {
+                return;
+            }
+
+            const sync = function () {
+                const anyRow = rows.some(function (box) {
+                    return box instanceof HTMLInputElement && box.checked;
+                });
+                const hasAll = all instanceof HTMLInputElement && all.checked;
+                actions.hidden = !hasAll && !anyRow;
+            };
+
+            if (all instanceof HTMLInputElement) {
+                all.addEventListener("change", function () {
+                    rows.forEach(function (box) {
+                        if (box instanceof HTMLInputElement) {
+                            box.checked = all.checked;
+                        }
+                    });
+                    sync();
+                });
+            }
+
+            rows.forEach(function (box) {
+                box.addEventListener("change", function () {
+                    if (all instanceof HTMLInputElement && !box.checked) {
+                        all.checked = false;
+                    }
+                    sync();
+                });
+            });
+
+            const channel = form.querySelector("[data-ops-bulk-channel]");
+            const branchBtn = form.querySelector("[data-confirm-template]");
+            const syncConfirm = function () {
+                if (!(channel instanceof HTMLSelectElement) || !(branchBtn instanceof HTMLElement) || !branchBtn.dataset.confirmTemplate) {
+                    return;
+                }
+                branchBtn.dataset.confirm = branchBtn.dataset.confirmTemplate.replace(/__TARGET__/g, channel.value);
+            };
+            if (channel) {
+                channel.addEventListener("change", syncConfirm);
+                syncConfirm();
+            }
+
+            sync();
+        });
+    }
+
     setupThemeControls();
     setupUserMenu();
     setupPrefForms();
@@ -850,4 +909,5 @@
     setupOpsTabs();
     setupListToolbars();
     setupFaviconMarks();
+    setupBulkSelection();
 })();

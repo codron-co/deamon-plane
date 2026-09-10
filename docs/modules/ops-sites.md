@@ -16,6 +16,8 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/provision` | `ops.sites.provision` | operator, super_admin; draft or error only |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
+| POST | `/sites/bulk/channel` | `ops.sites.bulk.channel` | operator, super_admin; branch + APP_ENV for selected or `all=1` |
+| GET | `/sites/bulk/channel` | `ops.sites.bulk.channel.get` | **Does not switch.** 302 to list |
 | POST | `/sites/bulk/sync` | `ops.sites.bulk.sync` | operator, super_admin; Coolify sync for selected ids or `all=1` |
 | GET | `/sites/bulk/sync` | `ops.sites.bulk.sync.get` | **Does not sync.** 302 to list |
 | POST | `/sites/bulk/live-sync` | `ops.sites.live-sync` | operator, super_admin; GET each public homepage |
@@ -59,7 +61,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 `ChannelSwitcher` + `SwitchSiteChannelJob` + shared `PollDeploymentJob` (trigger `channel_switch`). Runbook: [channel-switch.md](../runbooks/channel-switch.md).
 
 - Eligible: `active` or `error` with `coolify_app_uuid`. Status `deploying` / `provisioning` is rejected.
-- Coolify: `updateBranch` (`PATCH git_branch`) + `deploy`. Never `DELETE` the application. Volumes persist (ADR-7).
+- Coolify: `PATCH git_branch` (+ matching Coolify `environment_uuid` when the project has an env named for that channel), `APP_ENV` / `DEAMON_CHANNEL` via `/envs/bulk`, then `deploy`. Never `DELETE` the application. Volumes persist (ADR-7). Same path for site detail and list **Branch Değiştir**.
 - During the switch: `desired_channel` is set and status is `deploying`. Success copies it to `channel` and clears `desired_channel`.
 - Policy config `config/ops.php` → `channel_switch`: `main` → `beta`/`alpha` requires confirm; `alpha`/`beta` → `main` is a version gate. When last health has `deamon_version`, the minimum is enforced. Missing health does **not** block. Force is Super Admin only.
 - Audit: `site.channel_switch_started`, `site.channel_switched`, `site.channel_switch_failed`.
@@ -88,7 +90,9 @@ GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `stat
 
 **Live Sync** (`POST /sites/bulk/live-sync`) GETs `https://{primary_domain}/` (timeout 8s / connect 4s, follow redirects, UA `Deamon-Plane-LiveSync/1`). Host must match `^[a-z0-9.-]+$`. Stores `last_live_http_status` (0 = connection failure), `last_live_checked_at`, and `last_live_favicon_url` from HTML `<link rel*="icon">` (absolute; skip `javascript:` / `data:` / `file:`). Does not write secrets or flip `sites.status`. The Live column shows 200 / 404 / 500 / Down / —. Viewer forbidden. GET does not probe. Tests use `Http::fake` only.
 
-Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. Recreate required → abort. List bulk: selected or all Dockerfile, with confirm. Auto-deploy and pin/follow-HEAD are the same Coolify PATCH surface. Channel switch remains `ChannelSwitcher`.
+Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. Recreate required → abort.
+
+List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off). Confirm on each. Viewer forbidden.
 
 ## Import existing Coolify apps
 

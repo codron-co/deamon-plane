@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Ops;
 
+use App\Enums\Channel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\PinSiteRequest;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifySiteSync;
+use App\Services\Sites\ChannelSwitcher;
+use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\ComposePackException;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
@@ -34,6 +37,9 @@ class SiteCoolifyOpsController extends Controller
     public function bulkMigrateCompose(BulkSiteIdsRequest $request, ComposePackMigrator $migrator): RedirectResponse
     {
         $sites = $this->sitesFromBulk($request);
+        if ($request->boolean('all') || $request->boolean('all_dockerfile')) {
+            $sites = $sites->filter(fn (Site $site): bool => $site->hasDockerfileBuildPackWarning());
+        }
 
         foreach ($sites as $site) {
             $this->authorize('update', $site);
@@ -76,7 +82,9 @@ class SiteCoolifyOpsController extends Controller
             return back()->with('error', __('site_ops.bulk.empty'));
         }
 
-        $enabled = $request->boolean('enabled');
+        $enabled = $request->exists('enabled')
+            ? $request->boolean('enabled')
+            : $settings->toggleEnabledFor($sites);
         $result = $settings->setAutoDeployMany($sites, $enabled, $request->user(), $request->ip());
 
         return back()->with('status', $this->bulkFlash(
@@ -197,6 +205,66 @@ class SiteCoolifyOpsController extends Controller
             ->with('status', __('sites.flash.sync_get'));
     }
 
+    public function bulkChannel(BulkSiteIdsRequest $request, ChannelSwitcher $switcher): RedirectResponse
+    {
+        $targetValue = (string) $request->validated('channel', '');
+        if ($targetValue === '' || Channel::tryFrom($targetValue) === null) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        $target = Channel::from($targetValue);
+        $sites = $this->sitesFromBulk($request);
+
+        foreach ($sites as $site) {
+            $this->authorize('update', $site);
+        }
+
+        if ($sites->isEmpty()) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        $ok = 0;
+        $failed = 0;
+        $skipped = 0;
+        $errors = [];
+        $confirmed = $request->boolean('confirmed');
+        $force = $request->boolean('force');
+
+        foreach ($sites as $site) {
+            $current = $site->channel instanceof Channel ? $site->channel : Channel::tryFrom((string) $site->channel);
+            if ($current === $target) {
+                $skipped++;
+
+                continue;
+            }
+
+            try {
+                $switcher->start($site, $target, $request->user(), $request->ip(), $confirmed, $force);
+                $ok++;
+            } catch (ChannelSwitchException $exception) {
+                $failed++;
+                $errors[] = $site->name.': '.$exception->getMessage();
+            }
+        }
+
+        if ($ok === 0 && $failed === 0) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        return back()->with('status', $this->bulkFlash([
+            'ok' => $ok,
+            'failed' => $failed,
+            'errors' => $errors,
+        ], __('sites.flash.bulk_channel', ['channel' => $target->value, 'skipped' => $skipped])));
+    }
+
+    public function redirectGetBulkChannel(): RedirectResponse
+    {
+        return redirect()
+            ->route('ops.sites')
+            ->with('status', __('sites.flash.channel_get'));
+    }
+
     public function followHead(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
     {
         $this->authorize('update', $site);
@@ -224,7 +292,14 @@ class SiteCoolifyOpsController extends Controller
         }
 
         if ($request->boolean('all')) {
-            return Site::query()->orderBy('name')->get();
+            return Site::query()
+                ->matchingListFilters(
+                    trim((string) $request->input('filter_q', '')),
+                    (string) $request->input('filter_channel', ''),
+                    (string) $request->input('filter_status', ''),
+                )
+                ->orderBy('name')
+                ->get();
         }
 
         $ids = $request->validated('site_ids') ?? [];

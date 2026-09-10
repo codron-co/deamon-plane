@@ -19,7 +19,7 @@ use InvalidArgumentException;
 
 /**
  * Thin wrappers over CoolifyClient for list / create / env / domain / branch / deploy.
- * Channel switch uses updateBranch + deploy only — never DELETE the application.
+ * Channel switch PATCHes git_branch + APP_ENV / DEAMON_CHANNEL, then deploys. Never DELETE the application.
  */
 class CoolifyApplicationService
 {

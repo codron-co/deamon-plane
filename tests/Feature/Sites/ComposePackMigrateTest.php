@@ -279,7 +279,7 @@ class ComposePackMigrateTest extends TestCase
             ->get(route('ops.sites'))
             ->assertOk()
             ->assertSee(__('site_ops.bulk.compose'), false)
-            ->assertSee(__('site_ops.bulk.compose_all'), false)
+            ->assertDontSee(__('site_ops.bulk.compose_all'), false)
             ->getContent();
 
         $this->assertStringContainsString('data-confirm=', $html);

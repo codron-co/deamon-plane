@@ -95,7 +95,7 @@ class SiteDetailTest extends TestCase
             ->assertSee('data-href="'.route('ops.sites.show', $site).'"', false)
             ->assertSee(route('ops.sites.edit', $site), false)
             ->assertDontSee('data-href="'.route('ops.sites.edit', $site).'"', false)
-            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_on').'"', false)
+            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_toggle').'"', false)
             ->assertSee(__('sites.columns.live'), false)
             ->assertSee(__('sites.live.sync'), false)
             ->assertSee('data-confirm="'.__('sites.detail.sync_confirm_all').'"', false);
