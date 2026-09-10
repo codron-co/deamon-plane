@@ -12,9 +12,11 @@ use App\Http\Requests\Ops\StoreSiteRequest;
 use App\Http\Requests\Ops\SwitchSiteChannelRequest;
 use App\Http\Requests\Ops\UpdateSiteRequest;
 use App\Models\CoolifyConnection;
+use App\Models\MailServer;
 use App\Models\Site;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\SiteHealthChecker;
+use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\SiteAgentSecretInjector;
@@ -24,6 +26,7 @@ use App\Services\Sites\SiteProvisionException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SiteController extends Controller
@@ -103,11 +106,12 @@ class SiteController extends Controller
             'site' => $site,
             'channels' => config('ops.channels', []),
             'readonly' => false,
+            'mailServers' => $this->mailServerOptions(),
             ...$this->coolifyFormData($connection, $request, $site),
         ]);
     }
 
-    public function store(StoreSiteRequest $request, SiteAttacher $attacher): RedirectResponse
+    public function store(StoreSiteRequest $request, SiteAttacher $attacher, SiteMailConfigurer $configurer): RedirectResponse
     {
         $data = $request->validated();
         $targets = $this->coolifyTargetsFrom($data);
@@ -127,6 +131,7 @@ class SiteController extends Controller
                     'coolify_git_source_uuid' => $targets['git_uuid'],
                     'coolify_git_source_kind' => $targets['git_kind'],
                     'notes' => $data['notes'] ?? null,
+                    'mail_server_id' => $data['mail_server_id'] ?? null,
                 ]);
 
                 $this->syncPrimaryDomain($site, $data['domain']);
@@ -161,6 +166,19 @@ class SiteController extends Controller
             ? __('sites.flash.attached')
             : __('sites.flash.created');
 
+        if (filled($site->mail_server_id)) {
+            $configure = $configurer->sync($site);
+            if ($configure->status === 'failed') {
+                return redirect()
+                    ->route('ops.sites.show', $site)
+                    ->with('status', $message)
+                    ->with('error', $configure->flashMessage());
+            }
+            if ($configure->status === 'needs_secret') {
+                $message .= ' '.$configure->flashMessage();
+            }
+        }
+
         return redirect()
             ->route('ops.sites.show', $site)
             ->with('status', $message);
@@ -178,6 +196,7 @@ class SiteController extends Controller
             'channels' => config('ops.channels', []),
             'readonly' => ! ($request->user()?->can('update', $site) ?? false),
             'channelLocked' => $site->status !== SiteStatus::Draft,
+            'mailServers' => $this->mailServerOptions(),
             ...$this->coolifyFormData($connection, $request, $site),
         ]);
     }
@@ -307,10 +326,11 @@ class SiteController extends Controller
             ->with('status', __('sites.flash.secret_injected'));
     }
 
-    public function update(UpdateSiteRequest $request, Site $site): RedirectResponse
+    public function update(UpdateSiteRequest $request, Site $site, SiteMailConfigurer $configurer): RedirectResponse
     {
         $data = $request->validated();
         $site->load('primaryDomainRecord');
+        $previousMailServerId = $site->mail_server_id;
 
         DB::transaction(function () use ($request, $site, $data): void {
             $before = $this->auditSnapshot($site);
@@ -328,6 +348,7 @@ class SiteController extends Controller
                 'coolify_git_source_uuid' => $targets['git_uuid'],
                 'coolify_git_source_kind' => $targets['git_kind'],
                 'notes' => $data['notes'] ?? null,
+                'mail_server_id' => $data['mail_server_id'] ?? null,
             ];
 
             if ($site->status === SiteStatus::Draft) {
@@ -360,6 +381,22 @@ class SiteController extends Controller
                 ]);
             }
         });
+
+        $site->refresh();
+        if ($previousMailServerId !== $site->mail_server_id) {
+            $configure = $configurer->sync($site);
+            if ($configure->status === 'failed') {
+                return redirect()
+                    ->route('ops.sites.show', $site)
+                    ->with('status', __('sites.flash.updated'))
+                    ->with('error', $configure->flashMessage());
+            }
+            if ($configure->status === 'needs_secret') {
+                return redirect()
+                    ->route('ops.sites.show', $site)
+                    ->with('status', __('sites.flash.updated').' '.$configure->flashMessage());
+            }
+        }
 
         return redirect()
             ->route('ops.sites.show', $site)
@@ -423,6 +460,7 @@ class SiteController extends Controller
             'coolify_connection_id' => $site->coolify_connection_id,
             'coolify_project_uuid' => $site->coolify_project_uuid,
             'notes' => $site->notes,
+            'mail_server_id' => $site->mail_server_id,
         ];
     }
 
@@ -436,6 +474,14 @@ class SiteController extends Controller
         $uuid = trim((string) config('ops.coolify.default_server_uuid'));
 
         return $uuid === '' ? null : $uuid;
+    }
+
+    /**
+     * @return Collection<int, MailServer>
+     */
+    private function mailServerOptions()
+    {
+        return MailServer::query()->where('is_enabled', true)->orderBy('name')->get();
     }
 
     /**

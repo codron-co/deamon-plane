@@ -65,6 +65,14 @@ return [
         'theme_update_path' => '/internal/control/v1/themes/update',
         'theme_activate_path' => '/internal/control/v1/themes/activate',
         'theme_sync_path' => '/internal/control/v1/themes/sync',
+        'mail_configure_path' => '/internal/control/v1/mail/configure',
+        'nonce_ttl_seconds' => (int) env('CONTROL_PLANE_AGENT_NONCE_TTL', 120),
+    ],
+
+    'hostinger' => [
+        'api_base' => env('HOSTINGER_API_BASE', 'https://developers.hostinger.com'),
+        'timeout' => (int) env('HOSTINGER_HTTP_TIMEOUT', 15),
+        'webmail_url' => env('HOSTINGER_WEBMAIL_URL', 'https://mail.hostinger.com'),
     ],
 
     'cloudflare' => [

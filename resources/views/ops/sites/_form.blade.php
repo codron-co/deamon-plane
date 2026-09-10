@@ -287,6 +287,23 @@
     </details>
 @endif
 
+<section class="ops-form-section" aria-labelledby="site-mail-heading">
+    <h2 id="site-mail-heading">{{ __('sites.form.mail') }}</h2>
+    <div class="field">
+        <label class="field-label" for="site_mail_server">{{ __('sites.form.mail_server') }}</label>
+        <p class="field-hint">{{ __('mail.select_hint') }}</p>
+        <select id="site_mail_server" name="mail_server_id" @disabled($readonly)>
+            <option value="">{{ __('mail.none') }}</option>
+            @foreach ($mailServers ?? [] as $mailServer)
+                <option value="{{ $mailServer->id }}" @selected((string) old('mail_server_id', $site->mail_server_id) === (string) $mailServer->id)>
+                    {{ $mailServer->name }}@if ($mailServer->mail_domain) — {{ $mailServer->mail_domain }}@endif
+                </option>
+            @endforeach
+        </select>
+        @error('mail_server_id') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
+</section>
+
 <section class="ops-form-section" aria-labelledby="site-notes-heading">
     <h2 id="site-notes-heading">{{ __('sites.form.notes') }}</h2>
     <div class="field">

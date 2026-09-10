@@ -127,6 +127,20 @@
                     <small>{{ filled($site->coolify_app_uuid) ? __('sites.detail.connected') : __('sites.detail.not_connected') }}</small>
                 </div>
             </article>
+            <article class="site-metric">
+                <div class="site-metric-icon is-theme" aria-hidden="true"><span></span></div>
+                <div>
+                    <span>{{ __('sites.detail.mail') }}</span>
+                    <strong>
+                        @if ($site->mailServer)
+                            <a href="{{ route('ops.mail-servers.show', $site->mailServer) }}">{{ $site->mailServer->name }}</a>
+                        @else
+                            {{ __('ops.none') }}
+                        @endif
+                    </strong>
+                    <small>{{ $site->mailServer?->mail_domain ?: __('sites.detail.mail_none') }}</small>
+                </div>
+            </article>
         </div>
 
         <div class="site-overview-grid">

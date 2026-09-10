@@ -12,6 +12,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/ops/sites.php';
     require __DIR__.'/ops/coolify.php';
     require __DIR__.'/ops/cloudflare.php';
+    require __DIR__.'/ops/mail-servers.php';
     require __DIR__.'/ops/themes.php';
 
     Route::get('/account', [AccountController::class, 'show'])->name('ops.account.show');

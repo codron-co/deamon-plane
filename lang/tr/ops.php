@@ -9,6 +9,7 @@ return [
         'sites' => 'Siteler',
         'coolify' => 'Coolify',
         'cloudflare' => 'Cloudflare',
+        'mail' => 'Posta',
         'themes' => 'Temalar',
         'settings' => 'Sistem',
     ],

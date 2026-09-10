@@ -117,6 +117,10 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 - Status: **ship**. Deep link is `{base}/project/{project_uuid}/environment/{environment_uuid}/application/{app_uuid}`. Site uuids first, then connection defaults. Environment **name** or git channel (`alpha`) is never a path segment.
 
+## Slice 7 — Hostinger mail servers (2026-09-10)
+
+- Status: **code**. `mail_servers` + `sites.mail_server_id`. Token encrypted, never shown. Mailcow coming soon (cannot save). Assign site → signed CMS `POST /internal/control/v1/mail/configure` (no token). CMS mailbox HMAC proxy `/internal/site/v1/mail`. Tests: MailServerOpsTest, SiteMailAssignTest, SiteMailProxyTest (`Http::fake`). Docs: [modules/mail-servers.md](../modules/mail-servers.md).
+
 ## Slice 6 — dockerfile → compose + auto-deploy + pin (2026-09-10)
 
 - Status: **code**. PATCH existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml`. No DELETE. `listEnvs` snapshot restores `APP_KEY`/`APP_URL`/`DEAMON_*` onto service `app` only; `DB_*` not copied. Recreate → abort. Auto-deploy `is_auto_deploy`. Pin SHA/tag + auto-deploy off; Follow HEAD unpins + auto-deploy on + branch deploy. ChannelSwitcher unchanged. Bulk selected + all Dockerfile, confirm on dangerous actions.

@@ -24,6 +24,7 @@ class SiteDetailController extends Controller
             'primaryDomainRecord',
             'themeInstallations.theme',
             'coolifyConnection',
+            'mailServer',
             'activeThemeInstallation.theme',
         ]);
 

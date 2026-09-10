@@ -16,6 +16,7 @@ Müşteri CMS admin’i plane’e erişmez.
 | Coolify deploy webhook | **done** | HMAC raw body **or** query `token`/`secret` (`hash_equals`); empty secret rejected; `X-Coolify-Signature` |
 | GitHub theme webhook | **done** | Distinct secret; `X-Hub-Signature-256`; empty rejected; throttle 60/min |
 | Site agent | **done** | Per-site HMAC; `{timestamp}.{nonce}.{rawBody}`; headers `X-Deamon-*`; clone_token never logged |
+| Hostinger mail | **done** | Token encrypted on `mail_servers`; never sent to CMS/Blade; reverse HMAC `/internal/site/v1/mail`; audit omits passwords |
 | Tema | **done** | Org repos only; auto-update default **off**; no ZIP in Plane UI |
 | Channel downgrade | **done** | Confirm + version gate; backup reminder copy on the form |
 | Plane erişimi | **done (docs + optional IP)** | `OPS_IP_ALLOWLIST` middleware; Coolify/VPN/SSO in [deploy-plane.md](runbooks/deploy-plane.md). SSO not mandatory in v1. |
@@ -29,7 +30,7 @@ Müşteri CMS admin’i plane’e erişmez.
 
 - Plane ele geçirilirse → tüm Coolify fleet riski → token least-privilege + host izolasyonu kritik.
 - Plane kendi Coolify Compose stack’inde (ayrı MySQL/Redis); müşteri siteleriyle paylaşmaz. `APP_DEBUG=false`.
-- Tek Mailcow (ayrı sunucu) ele geçirilirse → mail domain’leri; plane ile aynı host’ta tutma. Mailcow is **out of scope** for Plane v1.
+- Tek Mailcow (ayrı sunucu) ele geçirilirse → mail domain’leri; plane ile aynı host’ta tutma. Mailcow API is **not implemented** (Coming soon in UI). Hostinger mail tokens live only in Plane; a compromised CMS site cannot mint Hostinger calls without the site HMAC secret, and even then only for that site’s assigned order.
 
 ## Residual / hybrid
 

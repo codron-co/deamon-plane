@@ -9,6 +9,7 @@ return [
         'sites' => 'Sites',
         'coolify' => 'Coolify',
         'cloudflare' => 'Cloudflare',
+        'mail' => 'Mail',
         'themes' => 'Themes',
         'settings' => 'Settings',
     ],

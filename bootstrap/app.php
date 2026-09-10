@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::prefix('webhooks')
                 ->name('webhooks.')
                 ->group(base_path('routes/webhooks.php'));
+
+            Route::prefix('internal/site/v1/mail')
+                ->group(base_path('routes/internal-site.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

@@ -6,12 +6,14 @@ Plane ile birlikte konuşulan ama **bu repoda uygulanmayan** komşu sistemler.
 
 **Karar (ADR-8):** Tek ortak Mailcow (veya HA çifti). Her müşteriye ayrı Mailcow kurulmaz.
 
+Plane UI: provider select shows Mailcow as **Coming soon** and rejects `provider=mailcow`. No Mailcow API client.
+
+**Hostinger (in scope):** [modules/mail-servers.md](modules/mail-servers.md). Token in Plane; CMS plugin via HMAC configure + reverse mailbox proxy.
+
 | | |
 |--|--|
-| Model | Hostinger tarzı: `mail.seninmarkan.com` webmail UI; müşteri başına ayrı **domain + mailbox** |
-| Opsiyonel | `mail.musteridomain.com` CNAME → aynı Mailcow |
-| Deamon SMTP | Site, Mailcow SMTP user ile bağlanabilir **veya** müşteri kendi SMTP’sini CMS admin’den girer |
-| Plane entegrasyonu | v1 yok (ADR-9). İleride “domain için mailbox aç” API eklenebilir |
+| Model | Hostinger (now) / Mailcow (later): müşteri başına domain + mailbox |
+| Plane entegrasyonu | Hostinger v1 done. Mailcow API yok. |
 
 ### Neden ortak?
 
