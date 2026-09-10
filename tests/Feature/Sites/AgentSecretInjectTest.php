@@ -47,7 +47,7 @@ class AgentSecretInjectTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.agent-secret', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
         $site->refresh();
@@ -67,7 +67,7 @@ class AgentSecretInjectTest extends TestCase
         });
 
         $html = $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('Generate & inject secret')
             ->getContent();

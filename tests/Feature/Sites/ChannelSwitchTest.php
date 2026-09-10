@@ -50,7 +50,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'beta',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
         $site->refresh();
@@ -112,7 +112,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'alpha',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site));
+            ->assertRedirect(route('ops.sites.show', $site));
 
         $site->refresh();
 
@@ -135,7 +135,7 @@ class ChannelSwitchTest extends TestCase
             ->post(route('ops.sites.channel', $site), [
                 'channel' => 'beta',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -160,7 +160,7 @@ class ChannelSwitchTest extends TestCase
             ->post(route('ops.sites.channel', $site), [
                 'channel' => 'main',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
         $site->refresh();
@@ -183,7 +183,7 @@ class ChannelSwitchTest extends TestCase
             ->post(route('ops.sites.channel', $site), [
                 'channel' => 'main',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -207,7 +207,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'main',
                 'force' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -230,7 +230,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'main',
                 'force' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
         $site->refresh();
@@ -257,7 +257,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'alpha',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -279,7 +279,7 @@ class ChannelSwitchTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($this->user(OpsRole::Viewer))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertDontSee('action="'.route('ops.sites.channel', $site).'"', false);
 
@@ -294,12 +294,12 @@ class ChannelSwitchTest extends TestCase
         $site = $this->activeSite();
 
         $this->actingAs($this->user(OpsRole::Operator))
-            ->from(route('ops.sites.edit', $site))
+            ->from(route('ops.sites.show', $site))
             ->post(route('ops.sites.channel', $site), [
                 'channel' => 'nightly',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHasErrors('channel');
 
         $site->refresh();
@@ -324,7 +324,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'beta',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -355,7 +355,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'beta',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $draft))
+            ->assertRedirect(route('ops.sites.show', $draft))
             ->assertSessionHas('error');
 
         $activeWithoutApp = $this->activeSite(['coolify_app_uuid' => null]);
@@ -365,7 +365,7 @@ class ChannelSwitchTest extends TestCase
                 'channel' => 'beta',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $activeWithoutApp))
+            ->assertRedirect(route('ops.sites.show', $activeWithoutApp))
             ->assertSessionHas('error');
 
         Http::assertNothingSent();
@@ -376,7 +376,7 @@ class ChannelSwitchTest extends TestCase
         $site = $this->activeSite();
 
         $html = $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('action="'.route('ops.sites.channel', $site).'"', false)
             ->assertSee('data-confirm=', false)
@@ -394,7 +394,7 @@ class ChannelSwitchTest extends TestCase
         $site = $this->activeSite(['channel' => Channel::Beta]);
 
         $this->actingAs($this->user(OpsRole::SuperAdmin))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('Force switch to main', false)
             ->assertDontSee('Leave main?', false);
@@ -476,7 +476,7 @@ class ChannelSwitchTest extends TestCase
             $this->assertStringNotContainsString($agentSecret, $encoded);
         }
 
-        $html = $this->get(route('ops.sites.edit', $site))->assertOk()->getContent();
+        $html = $this->get(route('ops.sites.show', $site))->assertOk()->getContent();
         $this->assertStringNotContainsString($appKey, $html);
         $this->assertStringNotContainsString($agentSecret, $html);
         $this->assertStringNotContainsString('test-coolify-token', $html);

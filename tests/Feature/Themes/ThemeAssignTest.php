@@ -71,7 +71,7 @@ class ThemeAssignTest extends TestCase
         ]);
 
         $this->actingAs($this->operator())
-            ->from(route('ops.sites.edit', $site))
+            ->from(route('ops.sites.show', $site))
             ->post(route('ops.sites.themes.assign', $site), [
                 'theme_id' => $theme->theme_id,
                 'ref' => 'main',
@@ -79,7 +79,7 @@ class ThemeAssignTest extends TestCase
                 'sync' => '1',
                 'confirmed' => '1',
             ])
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
         $installation = SiteThemeInstallation::query()->where('site_id', $site->id)->first();
@@ -255,7 +255,7 @@ class ThemeAssignTest extends TestCase
         Theme::factory()->publicCatalog()->create();
 
         $html = $this->actingAs($this->operator())
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('Themes', false)
             ->assertSee('Assign theme', false)

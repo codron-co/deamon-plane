@@ -4,6 +4,14 @@
 
 @section('content_class', 'ops-content-wide')
 
+@section('breadcrumbs')
+    <a href="{{ route('ops.sites') }}">{{ __('sites.title') }}</a>
+    <span aria-hidden="true">/</span>
+    <a href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
+    <span aria-hidden="true">/</span>
+    <span>{{ __('sites.deployments.title') }}</span>
+@endsection
+
 @section('actions')
     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">{{ __('sites.back_to_site') }}</a>
     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.edit', $site) }}">{{ __('sites.deployments.site_edit') }}</a>

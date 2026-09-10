@@ -74,15 +74,15 @@ class DeploymentShowTest extends TestCase
         $operator = $this->user(OpsRole::Operator);
 
         $this->actingAs($operator)
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee($href, false)
             ->assertSee(route('ops.sites.deployments.show', [$site, $deployment]), false);
 
         $this->actingAs($operator)
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.edit', $site))
             ->assertOk()
-            ->assertSee($href, false);
+            ->assertDontSee($href, false);
     }
 
     public function test_deployment_from_another_site_is_not_found(): void

@@ -305,7 +305,7 @@ class ProvisionSiteTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($this->user(OpsRole::Viewer))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertDontSee('action="'.route('ops.sites.provision', $site).'"', false);
 

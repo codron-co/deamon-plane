@@ -30,7 +30,7 @@
                 </thead>
                 <tbody>
                     @foreach ($deployments as $deployment)
-                        <tr>
+                        <tr data-href="{{ route('ops.sites.deployments.show', [$site, $deployment]) }}" tabindex="0">
                             <td>
                                 <span class="status-chip status-{{ $deployment->status->value }}">{{ $deployment->status->label() }}</span>
                                 @if (filled($deployment->error_message))

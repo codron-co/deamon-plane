@@ -53,7 +53,7 @@ class SiteAgentHealthTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.health', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
         $site->refresh();
@@ -105,7 +105,7 @@ class SiteAgentHealthTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.health', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -172,7 +172,7 @@ class SiteAgentHealthTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.health', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -193,7 +193,7 @@ class SiteAgentHealthTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($this->user(OpsRole::Viewer))
-            ->get(route('ops.sites.edit', $site))
+            ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee('Agent health', false)
             ->assertDontSee('action="'.route('ops.sites.health', $site).'"', false);
@@ -254,7 +254,7 @@ class SiteAgentHealthTest extends TestCase
         $this->assertArrayNotHasKey('app_key_encrypted', $site->toArray());
         $this->assertStringNotContainsString($secret, (string) json_encode($site->last_health_payload));
 
-        $html = $this->get(route('ops.sites.edit', $site))->assertOk()->getContent();
+        $html = $this->get(route('ops.sites.show', $site))->assertOk()->getContent();
         $this->assertStringNotContainsString($secret, $html);
         $this->assertStringNotContainsString((string) $site->app_key_encrypted, $html);
     }

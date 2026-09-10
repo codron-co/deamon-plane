@@ -319,7 +319,7 @@ class CoolifyWebhookTest extends TestCase
         $operator->assignRole(OpsRole::Operator->value);
 
         $this->actingAs($operator)
-            ->get(route('ops.sites.edit', $deployment->site))
+            ->get(route('ops.sites.show', $deployment->site))
             ->assertOk()
             ->assertSee('Deployments', false)
             ->assertSee('in progress', false)
