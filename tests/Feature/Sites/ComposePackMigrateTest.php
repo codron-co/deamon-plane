@@ -271,9 +271,25 @@ class ComposePackMigrateTest extends TestCase
     {
         $site = $this->dockerfileSite();
 
-        Http::fake([
-            'https://coolify.example/api/v1/applications/'.self::APP => Http::response($this->appPayload('dockercompose'), 200),
-        ]);
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if ($method === 'GET' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response($this->appPayload('dockercompose'), 200);
+            }
+            if ($method === 'GET' && str_contains($url, '/envs')) {
+                return Http::response([], 200);
+            }
+            if ($method === 'PATCH' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response($this->appPayload('dockercompose'), 200);
+            }
+            if (in_array($method, ['POST', 'PATCH'], true) && str_contains($url, '/envs')) {
+                return Http::response(['key' => 'DB_HOST'], 200);
+            }
+
+            return Http::response(['error' => 'unexpected '.$method.' '.$url], 404);
+        });
 
         $this->actingAs($this->operator())
             ->post(route('ops.sites.compose', $site))

@@ -175,6 +175,12 @@ class CoolifyDeploySettingsTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('status');
 
+        $this->assertDatabaseHas('deployments', [
+            'site_id' => $site->id,
+            'coolify_deployment_uuid' => 'dep-3',
+            'status' => 'in_progress',
+        ]);
+
         Http::assertSent(function (Request $request): bool {
             return $request->method() === 'POST'
                 && str_contains($request->url(), '/deploy')

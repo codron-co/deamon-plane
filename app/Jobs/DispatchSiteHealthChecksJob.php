@@ -18,9 +18,12 @@ class DispatchSiteHealthChecksJob implements ShouldQueue
     {
         Site::query()
             ->orderBy('id')
-            ->pluck('id')
-            ->each(static function (string $siteId): void {
-                CheckSiteHealthJob::dispatch($siteId);
+            ->get(['id', 'coolify_app_uuid'])
+            ->each(static function (Site $site): void {
+                CheckSiteHealthJob::dispatch($site->id);
+                if (filled($site->coolify_app_uuid)) {
+                    InspectSiteAppHealthJob::dispatch($site->id);
+                }
             });
     }
 }

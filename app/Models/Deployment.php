@@ -65,6 +65,34 @@ class Deployment extends Model
         return substr((string) $this->commit_sha, 0, 7);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function toWidget(): array
+    {
+        $site = $this->site;
+        $active = in_array($this->status, [DeploymentStatus::Queued, DeploymentStatus::InProgress], true);
+        $widgetStatus = match ($this->status) {
+            DeploymentStatus::Failed, DeploymentStatus::Cancelled => 'failed',
+            DeploymentStatus::Finished => 'completed',
+            default => 'running',
+        };
+
+        $message = filled($this->error_message)
+            ? trim((string) $this->error_message)
+            : ($this->trigger?->label() ?? '').' · '.($this->status?->label() ?? '');
+
+        return [
+            'id' => 'dep-'.$this->id,
+            'type' => 'coolify.deployment',
+            'title' => $site?->name ?? __('sites.title'),
+            'status' => $widgetStatus,
+            'progress' => $active ? 55 : 100,
+            'message' => $message,
+            'url' => $site !== null ? route('ops.sites.deployments.show', [$site, $this]) : null,
+        ];
+    }
+
     public function durationLabel(): string
     {
         if ($this->started_at === null) {

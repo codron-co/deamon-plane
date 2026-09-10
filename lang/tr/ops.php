@@ -160,6 +160,7 @@ return [
         'bulk_deploy' => 'Tekrar deploy',
         'bulk_follow_head' => 'HEAD’de deploy',
         'bulk_pin' => 'Commit pin',
+        'deployment' => 'Coolify deploy',
         'status' => [
             'queued' => 'Kuyrukta',
             'running' => 'Çalışıyor',

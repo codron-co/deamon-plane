@@ -15,6 +15,8 @@
     data-copy-failed="{{ __('ops.jobs.status.failed') }}"
     data-copy-request-failed="{{ __('ops.jobs.request_failed') }}"
     data-copy-session="{{ __('ops.jobs.session_expired') }}"
+    data-copy-copied="{{ __('sites.app_health.copied') }}"
+    data-copy-deploy="{{ __('ops.jobs.deployment') }}"
 >
     <div class="ops-jobs-panel">
         <div class="ops-jobs-header">

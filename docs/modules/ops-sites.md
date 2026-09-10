@@ -103,6 +103,10 @@ Site detail includes a **Deployments** table (`ops/deployments/index`): last 25 
 
 `SiteAgentClient` + `CheckSiteHealthJob` (schedule 5–15 min) + on-demand **Check health**. Persists `last_health_at` / `last_health_payload` summary. Sites without `agent_secret` are `needs_secret` (import does not invent secrets). Contract and header names: [agent-client.md](agent-client.md). Secret inject: [agent-secret-inject.md](../runbooks/agent-secret-inject.md).
 
+## App health
+
+`SiteAppHealthInspector` scores Coolify pack / compose env / last deploy / agent. List **App** column: **Healthy** or **N issues**. Hover is the issue list; click copies it. Site detail shows the same issues with in-page POST fixes (`sync_env`, `migrate_compose`, `inject_secret`, `redeploy`, `check_health`) — `ops-async.js` keeps the page. Live Coolify inspect is cached on `last_app_health_*` and refreshed by `InspectSiteAppHealthJob` (same schedule as agent health) or **Check Coolify**. Secrets are never stored or shown. Manual / pin / HEAD deploys write a local `deployments` row so the jobs widget can follow Coolify success/failure.
+
 ## List
 
 GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status`. Search input debounces a GET submit (300 ms).
@@ -111,7 +115,7 @@ GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `stat
 
 **Live Sync** (`POST /sites/bulk/live-sync`) GETs `https://{primary_domain}/` (timeout 8s / connect 4s, follow redirects, UA `Deamon-Plane-LiveSync/1`). Host must match `^[a-z0-9.-]+$`. Stores `last_live_http_status` (0 = connection failure), `last_live_checked_at`, and `last_live_favicon_url` from HTML `<link rel*="icon">` (absolute; skip `javascript:` / `data:` / `file:`). Does not write secrets or flip `sites.status`. The Live column shows 200 / 404 / 500 / Down / —. Viewer forbidden. GET does not probe. Tests use `Http::fake` only.
 
-Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. After the pack PATCH, env sync applies the **compose** catalog: `DB_HOST=mysql`, empty `MYSQL_ROOT_PASSWORD` / `DB_PASSWORD` generated, existing `DB_PASSWORD` not copied-over-if-filled. Recreate required → abort.
+Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip and an App-health issue. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. After the pack PATCH (and on an already-compose retry), env sync applies the **compose** catalog: `DB_HOST=mysql`, empty `MYSQL_ROOT_PASSWORD` / `DB_PASSWORD` generated, existing `DB_PASSWORD` not copied-over-if-filled. Recreate required → abort. Pack migrate does **not** by itself `POST /deploy` — operator Redeploy / App fix **Redeploy** starts the stack.
 
 List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off), **Redeploy**, **Deploy HEAD**, **Deploy commit** (SHA from the page’s latest deployments or a typed ref; all selected sites share `codron-co/deamon`), **Hard Delete**. Confirm on each. Viewer forbidden.
 

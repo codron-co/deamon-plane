@@ -6,6 +6,7 @@ use App\Enums\Channel;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\SiteStatus;
 use App\Services\Cloudflare\CloudflareHostname;
+use App\Services\Sites\SiteAppHealthReport;
 use App\Support\IdentityMark;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,6 +55,8 @@ class Site extends Model
         'last_live_http_status',
         'last_live_checked_at',
         'last_live_favicon_url',
+        'last_app_health_at',
+        'last_app_health_payload',
         'cloudflare_zone_id',
         'cloudflare_nameservers',
         'cloudflare_zone_status',
@@ -91,6 +94,8 @@ class Site extends Model
             'last_health_payload' => 'array',
             'last_live_http_status' => 'integer',
             'last_live_checked_at' => 'datetime',
+            'last_app_health_at' => 'datetime',
+            'last_app_health_payload' => 'array',
             'cloudflare_nameservers' => 'array',
             'dns_applied_at' => 'datetime',
         ];
@@ -254,6 +259,11 @@ class Site extends Model
     /**
      * Last Coolify/Cloudflare failure, redacted. Empty when the latest deployment has no error.
      */
+    public function appHealth(): SiteAppHealthReport
+    {
+        return SiteAppHealthReport::forDisplay($this);
+    }
+
     public function lastFailureMessage(): ?string
     {
         $deployment = $this->relationLoaded('latestDeployment')

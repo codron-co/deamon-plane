@@ -826,6 +826,47 @@ div.ops-row-actions {
     cursor: help;
 }
 
+button.status-chip {
+    font: inherit;
+    cursor: pointer;
+    white-space: pre-line;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ops-app-health-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.ops-app-health-issues {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ops-app-health-issues li {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-overlay);
+}
+
+.ops-app-health-issues li span {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
 .status-dockerfile {
     color: var(--warning-text);
     border-color: var(--warning-border);

@@ -1325,10 +1325,16 @@ html[data-theme="semidark"] .fleet-attention-list li {
     min-width: 0;
 }
 
-.ops-jobs-item strong {
+.ops-jobs-item strong,
+.ops-jobs-link {
     color: var(--text);
     font-size: 13px;
     font-weight: 600;
+    text-decoration: none;
+}
+
+.ops-jobs-link:hover {
+    color: var(--accent);
 }
 
 .ops-jobs-meta {

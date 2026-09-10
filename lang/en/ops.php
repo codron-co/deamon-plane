@@ -160,6 +160,7 @@ return [
         'bulk_deploy' => 'Redeploy',
         'bulk_follow_head' => 'Deploy HEAD',
         'bulk_pin' => 'Pin commit',
+        'deployment' => 'Coolify deploy',
         'status' => [
             'queued' => 'Queued',
             'running' => 'Running',

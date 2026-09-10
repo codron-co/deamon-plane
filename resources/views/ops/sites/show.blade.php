@@ -137,6 +137,8 @@
             </article>
         </div>
 
+        @include('ops.sites._app-health')
+
         @if ($site->status === \App\Enums\SiteStatus::Error || ($canProvision ?? false) || $site->isWaitingOnDns() || ($healthDisplay !== 'ok' && ($canCheckHealth ?? false)))
             <aside class="site-card site-next-action">
                 <div>

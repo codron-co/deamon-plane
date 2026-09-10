@@ -137,6 +137,10 @@
         return jobs.concat(messages);
     };
 
+    const itemUrl = function (item) {
+        return item && typeof item.url === "string" && item.url !== "" ? item.url : "";
+    };
+
     const render = function () {
         const items = visibleItems();
         const active = items.filter(function (item) {
@@ -178,7 +182,15 @@
             const li = document.createElement("li");
             li.className = "ops-jobs-item is-" + (item.status || "completed");
 
-            const title = document.createElement("strong");
+            const href = itemUrl(item);
+            let title;
+            if (href) {
+                title = document.createElement("a");
+                title.href = href;
+                title.className = "ops-jobs-link";
+            } else {
+                title = document.createElement("strong");
+            }
             title.textContent = item.title || copy("title", "Background tasks");
 
             const meta = document.createElement("span");
@@ -213,8 +225,15 @@
 
         const previous = jobsById.get(job.id);
         jobsById.set(job.id, job);
-        trackedIds.add(job.id);
-        writeStorage();
+        if (job.type !== "coolify.deployment") {
+            trackedIds.add(job.id);
+            writeStorage();
+        }
+
+        if (job.type === "coolify.deployment") {
+            render();
+            return;
+        }
 
         if (job.status === "completed" && (!previous || previous.status !== "completed")) {
             applyLiveResults(job);
@@ -241,13 +260,7 @@
     };
 
     const stopIfIdle = function () {
-        const busy = Array.from(jobsById.values()).some(function (job) {
-            return isActive(job.status);
-        });
-        if (!busy && pollTimer) {
-            window.clearInterval(pollTimer);
-            pollTimer = null;
-        }
+        /* Keep polling so Coolify deployments stay visible after bulk jobs finish. */
     };
 
     const poll = async function () {
@@ -260,11 +273,14 @@
             if (payload && Array.isArray(payload.jobs)) {
                 payload.jobs.forEach(upsertJob);
             }
+            if (payload && Array.isArray(payload.deployments)) {
+                payload.deployments.forEach(upsertJob);
+            }
 
             const ids = Array.from(trackedIds);
             for (let i = 0; i < ids.length; i += 1) {
                 const current = jobsById.get(ids[i]);
-                if (current && !isActive(current.status)) {
+                if (current && (current.type === "coolify.deployment" || !isActive(current.status))) {
                     continue;
                 }
                 const shown = await fetchJson(showBase + "/" + encodeURIComponent(ids[i]));
@@ -359,7 +375,7 @@
     readStorage().forEach(function (id) {
         trackedIds.add(id);
     });
-    if (trackedIds.size > 0) {
+    if (canWrite) {
         startPoll();
     }
 

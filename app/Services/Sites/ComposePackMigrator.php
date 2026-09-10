@@ -38,6 +38,12 @@ class ComposePackMigrator
         }
 
         if ($app->isComposePack()) {
+            $this->ensureComposeLocation($coolify, $uuid, $app);
+            try {
+                app(CoolifyAppEnvSync::class)->sync($site, $coolify, CoolifyEnvPack::DockerCompose);
+            } catch (CoolifyApiException $exception) {
+                throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
+            }
             $this->clearMarker($site, $actor, $ip, alreadyCompose: true);
 
             return;
@@ -158,6 +164,23 @@ class ComposePackMigrator
     {
         foreach ($snapshot as $key => $value) {
             $coolify->upsertEnvOnService($uuid, $key, $value, CoolifyDomainParser::COMPOSE_SERVICE);
+        }
+    }
+
+    private function ensureComposeLocation(CoolifyApplicationService $coolify, string $uuid, CoolifyApplication $app): void
+    {
+        $expected = CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION;
+        $actual = trim((string) $app->dockerComposeLocation);
+        if ($actual === $expected || $actual === ltrim($expected, '/')) {
+            return;
+        }
+
+        try {
+            $coolify->patchApplication($uuid, [
+                'docker_compose_location' => $expected,
+            ]);
+        } catch (CoolifyApiException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
     }
 

@@ -99,6 +99,7 @@
                             <th>{{ __('sites.columns.domain') }}</th>
                             <th>{{ __('sites.columns.repo_branch') }}</th>
                             <th>{{ __('sites.columns.status') }}</th>
+                            <th>{{ __('sites.columns.app') }}</th>
                             <th>{{ __('sites.columns.live') }}</th>
                             <th>{{ __('sites.columns.theme') }}</th>
                             <th class="ops-actions-col"></th>
@@ -163,7 +164,20 @@
                                     </div>
                                 </td>
                                 @php($failure = $site->lastFailureMessage())
+                                @php($appHealth = $site->appHealth())
+                                @php($appHealthView = $appHealth->toView($site))
                                 <td><span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span></td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="status-chip status-{{ $appHealthView['tone'] === 'ok' ? 'ok' : ($appHealthView['tone'] === 'error' ? 'error' : 'unknown') }}"
+                                        data-app-health-copy
+                                        data-row-action
+                                        data-copy-text="{{ $appHealthView['copy_text'] }}"
+                                        title="{{ $appHealthView['copy_text'] }}"
+                                        aria-label="{{ __('sites.app_health.copy_named', ['name' => $site->name]) }}"
+                                    >{{ $appHealthView['label'] }}</button>
+                                </td>
                                 <td>
                                     <span class="status-chip status-{{ $site->liveHttpTone() }}" data-live-chip @if ($site->last_live_checked_at) title="{{ $site->last_live_checked_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}" @endif>{{ $site->liveHttpLabel() }}</span>
                                 </td>

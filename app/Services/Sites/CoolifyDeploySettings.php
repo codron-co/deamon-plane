@@ -2,11 +2,16 @@
 
 namespace App\Services\Sites;
 
+use App\Enums\Channel;
+use App\Enums\DeploymentStatus;
+use App\Enums\DeploymentTrigger;
+use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\Dto\CoolifyApplication;
+use App\Services\Coolify\Dto\CoolifyDeployResult;
 
 class CoolifyDeploySettings
 {
@@ -70,7 +75,7 @@ class CoolifyDeploySettings
                 'git_commit_sha' => $ref,
                 'is_auto_deploy_enabled' => false,
             ]);
-            $coolify->deploy($uuid);
+            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -93,7 +98,7 @@ class CoolifyDeploySettings
                 'git_commit_sha' => CoolifyApplication::HEAD_REF,
                 'is_auto_deploy_enabled' => true,
             ]);
-            $coolify->deploy($uuid);
+            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -111,11 +116,12 @@ class CoolifyDeploySettings
         $uuid = $this->requireApp($site);
 
         try {
-            CoolifyApplicationService::forSite($site)->deploy($uuid, true);
+            $result = CoolifyApplicationService::forSite($site)->deploy($uuid, true);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
+        $this->recordDeployment($site, $result, DeploymentTrigger::Manual, $actor);
         $this->audit($site, $actor, $ip, 'site.redeployed', [
             'force' => true,
         ]);
@@ -228,6 +234,22 @@ class CoolifyDeploySettings
         }
 
         return ['ok' => $ok, 'failed' => $failed, 'errors' => $errors];
+    }
+
+    private function recordDeployment(Site $site, CoolifyDeployResult $result, DeploymentTrigger $trigger, ?User $actor): Deployment
+    {
+        $channel = $site->channel instanceof Channel ? $site->channel : Channel::from((string) $site->channel);
+        $uuid = $result->firstDeploymentUuid();
+
+        return $site->deployments()->create([
+            'channel' => $channel,
+            'trigger' => $trigger,
+            'coolify_deployment_uuid' => $uuid,
+            'status' => $uuid === null ? DeploymentStatus::Failed : DeploymentStatus::InProgress,
+            'started_at' => now(),
+            'requested_by' => $actor?->id,
+            'error_message' => $uuid === null ? 'Coolify did not return a deployment uuid.' : null,
+        ]);
     }
 
     private function requireApp(Site $site): string

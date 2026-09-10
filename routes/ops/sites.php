@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Ops\DeploymentShowController;
 use App\Http\Controllers\Ops\SiteCloudflareController;
+use App\Http\Controllers\Ops\SiteAppHealthController;
 use App\Http\Controllers\Ops\SiteController;
 use App\Http\Controllers\Ops\SiteCoolifyOpsController;
 use App\Http\Controllers\Ops\SiteDetailController;
@@ -47,6 +48,8 @@ Route::post('/sites/{site}/cloudflare/dns', [SiteCloudflareController::class, 'c
 Route::post('/sites/{site}/domains', [SiteDomainController::class, 'store'])->name('ops.sites.domains.store');
 Route::post('/sites/{site}/channel', [SiteController::class, 'switchChannel'])->name('ops.sites.channel');
 Route::post('/sites/{site}/health', [SiteController::class, 'checkHealth'])->name('ops.sites.health');
+Route::post('/sites/{site}/app-health', [SiteAppHealthController::class, 'refresh'])->name('ops.sites.app-health');
+Route::post('/sites/{site}/app-health/fix', [SiteAppHealthController::class, 'fix'])->name('ops.sites.app-health.fix');
 Route::post('/sites/{site}/agent-secret', [SiteController::class, 'injectAgentSecret'])->name('ops.sites.agent-secret');
 Route::post('/sites/{site}/mail', [SiteController::class, 'assignMail'])->name('ops.sites.mail');
 Route::post('/sites/{site}/mail-order', [SiteController::class, 'refreshMailOrder'])->name('ops.sites.mail-order');

@@ -2,6 +2,10 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Sites App health + Coolify job widget (2026-09-10)
+
+- Status: **code**. Sites list **App** column (Healthy / N issues, hover + copy). Detail card with AJAX fixes (env sync, compose migrate, agent secret, redeploy, agent check). Jobs widget polls fleet Coolify `deployments` plus recent ops jobs. Manual redeploy/pin/HEAD now insert a local deployment row. Tests: `SiteAppHealthTest`.
+
 ## Theme Git connections — Settings paste → Themes Manifest (2026-09-10)
 
 - Status: **code**. Themes hosts Connect GitHub (Manifest), Connect another (same App), PAT fallback, all vs selected, Sync repos, Disconnect (App stays). Settings GitHub paste removed (one-line pointer; leftover POSTs 302 to Themes). Catalog walks every `theme_git_connections` row. CMS **1.2.7** theme-git `repo` allowlist **landed** (any github.com owner); do not re-edit `deamon` for that contract. Plane `ControlPlaneAgentContract::CMS_VERSION` is **1.2.7**.
