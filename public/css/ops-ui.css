@@ -1084,6 +1084,7 @@ html[data-theme="semidark"] .fleet-attention-list li {
 .site-next-action {
     background: color-mix(in srgb, var(--accent) 5%, var(--surface-raised));
 }
+.site-section > .site-next-action { margin-top: 10px; }
 .ops-next-action:has(> div:first-child),
 .site-next-action:has(> div:first-child) {
     display: flex;
@@ -1119,10 +1120,45 @@ html[data-theme="semidark"] .fleet-attention-list li {
 .ops-operation-line .field { flex: 1; min-width: 180px; margin: 0; }
 .site-operation-line .btn,
 .ops-operation-line .btn { flex: 0 0 auto; }
+.ops-ns-block { margin-top: 14px; }
+.ops-ns-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.ops-ns-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+.ops-ns-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+}
+.ops-ns-row code { font-size: 12px; overflow-wrap: anywhere; }
+.ops-ns-all { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 .site-pin-status,
 .ops-pin-status { margin: 10px 0 0; color: var(--text-muted); font-size: 12px; }
 .site-pin-status b,
 .ops-pin-status b { color: var(--text); font-weight: 600; }
+.site-operation-pin,
+.ops-operation-pin {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.site-operation-pin .form-actions,
+.ops-operation-pin .form-actions { margin-top: 10px; }
 .site-card-head .branch-version { margin-left: auto; flex: 0 0 auto; gap: 8px; }
 .site-operations-main > .site-card { margin: 0; }
 .kpi-card.is-alert .kpi-value { color: var(--danger-text); }

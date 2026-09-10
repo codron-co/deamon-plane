@@ -53,7 +53,7 @@ class SiteProvisioner
             throw new SiteProvisionException('Only draft or failed sites can be provisioned.');
         }
 
-        $this->assertCloudflareReady();
+        $this->assertCloudflareReady($this->cloudflareSettingsFor($site));
         $this->assertCoolifyReady($site);
 
         $connection = $this->connectionFor($site);
@@ -98,7 +98,7 @@ class SiteProvisioner
 
     public function provisionOnCloudflare(Site $site, ?int $actorUserId = null, ?string $ip = null): void
     {
-        $settings = CloudflareAccounts::default();
+        $settings = $this->cloudflareSettingsFor($site);
         $this->assertCloudflareReady($settings);
         if (! $settings instanceof CloudflareSetting) {
             throw new SiteProvisionException(__('cloudflare.errors.not_configured'));
@@ -400,10 +400,23 @@ class SiteProvisioner
         return $pairs;
     }
 
+    private function cloudflareSettingsFor(Site $site): ?CloudflareSetting
+    {
+        if (filled($site->cloudflare_setting_id)) {
+            $site->loadMissing('cloudflareAccount');
+            $account = $site->cloudflareAccount;
+            if (! $account instanceof CloudflareSetting || ! $account->is_enabled || ! $account->hasCredentials()) {
+                throw new SiteProvisionException(__('cloudflare.errors.account_unavailable'));
+            }
+
+            return $account;
+        }
+
+        return CloudflareAccounts::default();
+    }
+
     private function assertCloudflareReady(?CloudflareSetting $settings = null): void
     {
-        $settings ??= CloudflareAccounts::default();
-
         if ($settings === null || ! $settings->hasCredentials()) {
             throw new SiteProvisionException(__('cloudflare.errors.not_configured'));
         }

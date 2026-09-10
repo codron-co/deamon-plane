@@ -2,6 +2,10 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Site Cloudflare account + Free zone NS (2026-09-10)
+
+- Status: **code**. `sites.cloudflare_setting_id` persists the selected account. Create/edit has an account select. Site detail Infrastructure card: account + **Add to Cloudflare (Free)** via AJAX (`POST /sites/{site}/cloudflare/zone`) returns copyable NS without reload. Unbound customer hostnames create a Free full zone on the apex instead of `{adjective}-{noun}.codron.co`. Provision uses the site account when set. Tests: `SiteCloudflareZoneTest`, `ProvisionSiteCloudflareTest`.
+
 ## Site detail action menus + Coolify start/stop/hard delete (2026-09-10)
 
 - Status: **code**. Site show topbar is three menus: Sync (Coolify / Live Site / health), Site (homepage / admin), Settings (edit / activate-or-deactivate / soft delete / hard delete). Activate = Coolify `POST .../start` + status `stopped`→`active`. Deactivate = `POST .../stop` + `active`→`stopped`. Soft delete unchanged. Hard delete is the only Coolify `DELETE ?delete_volumes=true`, then `forceDelete`; also on `/sites` bulk. Tests: SiteLifecycleTest, CoolifyClientTest (`Http::fake`).
@@ -169,7 +173,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 
 ## Site detail copy in i-hints (2026-09-10)
 
-- Status: **code**. Site show keeps operational facts and actions; explanatory ledes (`volume_note`, mail/agent/theme/pack/danger/next-action prose) live in `ops.dashboard._hint`. Idle “everything looks good” card and duplicate hero Open links are gone. Tests: SiteDetailTest, ChannelSwitchTest.
+- Status: **code**. Site show keeps operational facts and actions; explanatory ledes live in `ops.dashboard._hint`. Decorative kickers, the duplicate Live release card, and “installed by agent” chips are gone. Idle “everything looks good” card and duplicate hero Open links are gone. Tests: SiteDetailTest, ChannelSwitchTest.
 
 ## Coolify environment name = main (2026-09-10)
 

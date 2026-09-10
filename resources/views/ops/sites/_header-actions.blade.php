@@ -3,12 +3,55 @@
     $canActivate = $canActivate ?? false;
     $canDeactivate = $canDeactivate ?? false;
     $canForceDelete = $canForceDelete ?? false;
+    $canDeploy = ($canEdit ?? false) && filled($site->coolify_app_uuid);
+    $coolifyAppUrl = $coolifyAppUrl ?? $site->coolifyUiUrl();
+    $showDeployMenu = $canDeploy || filled($coolifyAppUrl);
     $showSyncMenu = ($canSyncCoolify ?? false) || $canLiveSync || ($canCheckHealth ?? false);
     $showSiteMenu = filled($site->primary_domain);
     $showSettingsMenu = ($canEdit ?? false) || ($canDelete ?? false) || $canForceDelete;
     $siteUrl = filled($site->primary_domain) ? 'https://'.$site->primary_domain : null;
     $adminUrl = $siteUrl ? $siteUrl.'/admin' : null;
 @endphp
+
+@if ($showDeployMenu)
+    <details class="ops-action-menu" data-ops-action-menu>
+        <summary class="btn btn-secondary btn-sm">{{ __('sites.menu.deploy') }}</summary>
+        <div class="ops-action-popover" role="menu">
+            @if ($canDeploy)
+                <form
+                    method="POST"
+                    action="{{ route('ops.sites.deploy', $site) }}"
+                    data-ops-pending
+                    data-confirm="{{ __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
+                    data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
+                    data-confirm-label="{{ __('sites.menu.redeploy') }}"
+                    data-confirm-danger="false"
+                >
+                    @csrf
+                    <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('site_ops.redeploy.working') }}">{{ __('sites.menu.redeploy') }}</button>
+                </form>
+                <form
+                    method="POST"
+                    action="{{ route('ops.sites.follow-head', $site) }}"
+                    data-ops-pending
+                    data-confirm="{{ __('site_ops.pin.confirm_follow', ['name' => $site->name]) }}"
+                    data-confirm-title="{{ __('site_ops.pin.confirm_follow_title') }}"
+                    data-confirm-label="{{ __('sites.menu.follow_head') }}"
+                    data-confirm-danger="false"
+                >
+                    @csrf
+                    <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.follow_head') }}</button>
+                </form>
+            @endif
+            @if (filled($coolifyAppUrl))
+                @if ($canDeploy)
+                    <div class="ops-action-sep" role="separator"></div>
+                @endif
+                <a class="ops-menu-link" role="menuitem" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.menu.open_coolify') }}</a>
+            @endif
+        </div>
+    </details>
+@endif
 
 @if ($showSyncMenu)
     <details class="ops-action-menu" data-ops-action-menu>

@@ -140,6 +140,9 @@ return [
         'bulk_channel' => 'Dal değiştir',
         'bulk_compose' => 'Compose’a geç',
         'bulk_auto_deploy' => 'Oto deploy',
+        'bulk_deploy' => 'Tekrar deploy',
+        'bulk_follow_head' => 'HEAD’de deploy',
+        'bulk_pin' => 'Commit pin',
         'status' => [
             'queued' => 'Kuyrukta',
             'running' => 'Çalışıyor',

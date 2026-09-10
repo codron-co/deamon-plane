@@ -21,10 +21,7 @@
 
 <section class="site-theme-section" aria-labelledby="site-themes-heading">
     <div class="site-section-heading">
-        <div>
-            <span class="site-section-kicker">{{ __('sites.themes.kicker') }}</span>
-            <h2 id="site-themes-heading">{{ __('sites.themes.title') }} @include('ops.dashboard._hint', ['text' => __('sites.themes.lede')])</h2>
-        </div>
+        <h2 id="site-themes-heading">{{ __('sites.themes.title') }} @include('ops.dashboard._hint', ['text' => __('sites.themes.lede')])</h2>
     </div>
 
     <div class="site-overview-grid">
@@ -32,20 +29,17 @@
             @if ($activeTheme)
                 <div class="site-card-head">
                     <div>
-                        <span class="site-section-kicker">{{ __('sites.themes.active_label') }}</span>
-                        <h3>{{ $activeTheme->displayName() }}</h3>
+                        <h3>{{ $activeTheme->displayName() }} @include('ops.dashboard._hint', ['text' => __('sites.themes.via_agent')])</h3>
                     </div>
                     <span class="status-chip">{{ $activeInstallation->status?->label() ?? $activeInstallation->status?->value }}</span>
                 </div>
                 <p class="site-note">{{ $activeTheme->theme_id }} · {{ $activeInstallation->ref }}</p>
-                <span class="status-chip">{{ __('sites.themes.via_agent') }}</span>
                 @if ($healthDiffers)
                     <p class="ops-alert ops-alert-warning" role="status">{{ __('sites.themes.health_differs', ['theme' => $healthThemeId]) }}</p>
                 @endif
             @elseif ($healthOnly)
                 <div class="site-card-head">
                     <div>
-                        <span class="site-section-kicker">{{ __('sites.themes.active_label') }}</span>
                         <h3>{{ $displayThemeName }} @include('ops.dashboard._hint', ['text' => __('sites.themes.health_only_hint')])</h3>
                     </div>
                     <span class="status-chip">{{ __('sites.themes.via_health') }}</span>
@@ -54,7 +48,6 @@
             @else
                 <div>
                     <h3>{{ __('sites.themes.empty_title') }} @include('ops.dashboard._hint', ['text' => __('sites.themes.empty_hint')])</h3>
-                    <span class="status-chip">{{ __('sites.themes.via_agent') }}</span>
                 </div>
             @endif
         </article>

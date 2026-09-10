@@ -12,10 +12,12 @@ use App\Http\Requests\Ops\StoreSiteRequest;
 use App\Http\Requests\Ops\SwitchSiteChannelRequest;
 use App\Http\Requests\Ops\UpdateSiteRequest;
 use App\Models\CoolifyConnection;
+use App\Models\Deployment;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\SiteHealthChecker;
+use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailConfigureResult;
@@ -58,9 +60,15 @@ class SiteController extends Controller
             ->orderBy('name');
 
         $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
+        $sites = $query->paginate(25)->withQueryString();
+        $bulkPinCommits = $sites->getCollection()
+            ->map(fn (Site $site) => $site->latestDeployment)
+            ->filter(fn ($deployment): bool => $deployment instanceof Deployment && filled($deployment->commit_sha))
+            ->unique(fn (Deployment $deployment): string => (string) $deployment->commit_sha)
+            ->values();
 
         return view('ops.sites.index', [
-            'sites' => $query->paginate(25)->withQueryString(),
+            'sites' => $sites,
             'search' => $search,
             'channel' => $channel,
             'status' => $status,
@@ -68,6 +76,7 @@ class SiteController extends Controller
             'statuses' => SiteStatus::values(),
             'filtersActive' => $search !== '' || $channel !== '' || $status !== '',
             'hasDockerfileSites' => $hasDockerfileSites,
+            'bulkPinCommits' => $bulkPinCommits,
             'canCreate' => $request->user()?->can('create', Site::class) ?? false,
             'canWrite' => $request->user()?->canWriteOps() ?? false,
         ]);
@@ -94,6 +103,7 @@ class SiteController extends Controller
             'coolify_environment_uuid' => $connection?->default_environment_uuid,
             'coolify_git_source_uuid' => $connection?->default_git_source_uuid,
             'coolify_git_source_kind' => $connection?->default_git_source_kind,
+            'cloudflare_setting_id' => CloudflareAccounts::default()?->id,
         ]);
 
         return view('ops.sites.create', [
@@ -101,6 +111,7 @@ class SiteController extends Controller
             'channels' => config('ops.channels', []),
             'readonly' => false,
             'mailServers' => $this->mailServerOptions(),
+            'cloudflareAccounts' => CloudflareAccounts::enabled(),
             ...$this->coolifyFormData($connection, $request, $site),
         ]);
     }
@@ -126,6 +137,7 @@ class SiteController extends Controller
                     'coolify_git_source_kind' => $targets['git_kind'],
                     'notes' => $data['notes'] ?? null,
                     'mail_server_id' => $data['mail_server_id'] ?? null,
+                    'cloudflare_setting_id' => $data['cloudflare_setting_id'] ?? null,
                 ]);
 
                 $this->syncPrimaryDomain($site, $data['domain']);
@@ -190,6 +202,7 @@ class SiteController extends Controller
             'readonly' => ! ($request->user()?->can('update', $site) ?? false),
             'channelLocked' => $site->status !== SiteStatus::Draft,
             'mailServers' => $this->mailServerOptions(),
+            'cloudflareAccounts' => CloudflareAccounts::enabled(),
             ...$this->coolifyFormData($connection, $request, $site),
         ]);
     }
@@ -403,6 +416,7 @@ class SiteController extends Controller
                 'coolify_git_source_kind' => $targets['git_kind'],
                 'notes' => $data['notes'] ?? null,
                 'mail_server_id' => $data['mail_server_id'] ?? null,
+                'cloudflare_setting_id' => $data['cloudflare_setting_id'] ?? null,
             ];
 
             if ($site->status === SiteStatus::Draft) {
@@ -559,6 +573,7 @@ class SiteController extends Controller
             'mail_server_id' => $site->mail_server_id,
             'hostinger_order_id' => $site->hostinger_order_id,
             'mail_domain' => $site->mail_domain,
+            'cloudflare_setting_id' => $site->cloudflare_setting_id,
         ];
     }
 

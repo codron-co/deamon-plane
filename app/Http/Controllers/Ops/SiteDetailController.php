@@ -10,6 +10,7 @@ use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\Theme;
 use App\Services\Agent\SiteHealthEvaluator;
+use App\Services\Cloudflare\CloudflareAccounts;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -26,6 +27,7 @@ class SiteDetailController extends Controller
             'themeInstallations.theme',
             'coolifyConnection',
             'mailServer',
+            'cloudflareAccount',
             'activeThemeInstallation.theme',
         ]);
 
@@ -65,6 +67,7 @@ class SiteDetailController extends Controller
             'assignableThemes' => $this->assignableThemes($site),
             'canAssignTheme' => $user?->can('assign', Theme::class) ?? false,
             'mailServers' => MailServer::query()->where('is_enabled', true)->orderBy('name')->get(),
+            'cloudflareAccounts' => CloudflareAccounts::enabled(),
         ]);
     }
 }

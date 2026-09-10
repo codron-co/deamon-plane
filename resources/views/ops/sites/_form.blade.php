@@ -101,6 +101,35 @@
     </div>
 </section>
 
+@php
+    $cloudflareAccounts = $cloudflareAccounts ?? collect();
+    $selectedCloudflare = old('cloudflare_setting_id', $site->cloudflare_setting_id);
+@endphp
+<section class="ops-form-section" aria-labelledby="site-cloudflare-heading">
+    <h2 id="site-cloudflare-heading">{{ __('sites.form.cloudflare') }}</h2>
+    <div class="field">
+        <label class="field-label" for="site_cloudflare_account">{{ __('sites.form.cloudflare_account') }}</label>
+        <p class="field-hint">{{ __('sites.form.cloudflare_account_hint') }}</p>
+        <select
+            id="site_cloudflare_account"
+            class="field-input"
+            name="cloudflare_setting_id"
+            @disabled($readonly)
+        >
+            <option value="">{{ __('ops.none') }}</option>
+            @foreach ($cloudflareAccounts as $account)
+                <option value="{{ $account->id }}" @selected((string) $selectedCloudflare === (string) $account->id)>
+                    {{ $account->name }}{{ $account->is_default ? ' ('.__('ops.default').')' : '' }}
+                </option>
+            @endforeach
+        </select>
+        @if ($cloudflareAccounts->isEmpty())
+            <p class="field-hint">{!! __('sites.form.cloudflare_empty', ['link' => '<a href="'.route('ops.cloudflare.index').'">'.e(__('sites.form.cloudflare_link')).'</a>']) !!}</p>
+        @endif
+        @error('cloudflare_setting_id') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
+</section>
+
 <section class="ops-form-section" aria-labelledby="site-placement-heading">
     <h2 id="site-placement-heading">{{ __('sites.form.placement') }}</h2>
 

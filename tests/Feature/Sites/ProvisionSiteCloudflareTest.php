@@ -252,7 +252,7 @@ class ProvisionSiteCloudflareTest extends TestCase
         $this->assertNoZoneCreate();
     }
 
-    public function test_unbound_custom_domain_falls_back_to_wildcard_preview_then_creates_coolify_app(): void
+    public function test_unbound_custom_domain_creates_free_apex_zone_then_creates_coolify_app(): void
     {
         $this->seedCloudflare();
 
@@ -274,33 +274,32 @@ class ProvisionSiteCloudflareTest extends TestCase
 
         $site->refresh();
         $this->assertSame(SiteStatus::Active, $site->status);
-        $this->assertNotSame('shop.customer.example', $site->primary_domain);
-        $this->assertMatchesRegularExpression('/^[a-z]+-[a-z]+\.codron\.co$/', (string) $site->primary_domain);
-        $this->assertSame('zone-codron', $site->cloudflare_zone_id);
+        $this->assertSame('shop.customer.example', $site->primary_domain);
+        $this->assertSame('zone-new', $site->cloudflare_zone_id);
+        $this->assertSame(['ada.ns.cloudflare.com', 'bob.ns.cloudflare.com'], $site->cloudflare_nameservers);
 
-        $this->assertDatabaseHas('site_domains', [
-            'site_id' => $site->id,
-            'domain' => 'shop.customer.example',
-            'is_primary' => false,
-        ]);
-        $this->assertDatabaseHas('site_domains', [
-            'site_id' => $site->id,
-            'domain' => $site->primary_domain,
-            'is_primary' => true,
-        ]);
+        Http::assertSent(function (Request $request): bool {
+            $body = $request->data();
 
-        $relative = explode('.', (string) $site->primary_domain)[0];
-        $this->assertSame(['*', $relative], $this->postedANames());
-        $this->assertNoZoneCreate();
+            return $request->method() === 'POST'
+                && $request->url() === 'https://api.cloudflare.com/client/v4/zones'
+                && ($body['name'] ?? null) === 'customer.example'
+                && ($body['type'] ?? null) === 'full'
+                && ! array_key_exists('plan', $body);
+        });
+
+        $posted = $this->postedANames();
+        $this->assertContains('*', $posted);
+        $this->assertContains('shop', $posted);
     }
 
-    public function test_unbound_custom_domain_without_wildcard_zone_does_not_create_coolify_app(): void
+    public function test_unbound_custom_domain_zone_create_403_does_not_create_coolify_app(): void
     {
         $this->seedCloudflare();
 
         Http::fake(function (Request $request) {
             if (str_contains($request->url(), 'api.cloudflare.com')) {
-                return $this->cloudflareResponse($request);
+                return $this->cloudflareResponse($request, zoneCreateStatus: 403);
             }
 
             return Http::response(['error' => 'coolify must not be called'], 500);
@@ -315,13 +314,50 @@ class ProvisionSiteCloudflareTest extends TestCase
 
         $error = session('error');
         $this->assertIsString($error);
-        $this->assertStringContainsString('codron.co', $error);
+        $this->assertStringContainsString('Zone → Edit', $error);
 
         $this->assertNull($site->fresh()->coolify_app_uuid);
         Http::assertNotSent(function (Request $request): bool {
             return str_contains($request->url(), 'coolify.test')
                 && $request->method() === 'POST'
                 && str_contains($request->url(), '/applications/');
+        });
+    }
+
+    public function test_provision_uses_the_sites_cloudflare_account(): void
+    {
+        $this->seedCloudflare();
+        $selected = CloudflareSetting::factory()->create([
+            'name' => 'Free CF',
+            'account_id' => 'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6',
+            'api_token' => 'cf-selected-secret-token',
+            'origin_ipv4' => '72.62.117.147',
+            'is_enabled' => true,
+            'is_default' => false,
+        ]);
+
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'api.cloudflare.com')) {
+                return $this->cloudflareResponse($request);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'cloudflare_setting_id' => $selected->id,
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.provision', $site))
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && $request->url() === 'https://api.cloudflare.com/client/v4/zones'
+                && data_get($request->data(), 'account.id') === 'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6'
+                && $request->hasHeader('Authorization', 'Bearer cf-selected-secret-token');
         });
     }
 

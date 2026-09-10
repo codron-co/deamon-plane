@@ -689,6 +689,8 @@ code {
 .sites-bulk-actions {
     margin-top: 12px;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .ops-table {
@@ -711,6 +713,29 @@ code {
     font-weight: 500;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.ops-th-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.ops-table th .site-hint,
+.ops-table th .ops-hint,
+.ops-th-label .site-hint,
+.ops-th-label .ops-hint {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-left: 0;
+    vertical-align: middle;
+}
+
+.deployments-panel .ops-table {
+    width: max-content;
+    min-width: 100%;
 }
 
 .ops-table tr:last-child td {

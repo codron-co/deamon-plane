@@ -35,10 +35,9 @@ class SiteDetailTest extends TestCase
         $html = $this->actingAs($this->user(OpsRole::Operator))
             ->get(route('ops.sites.show', $site))
             ->assertOk()
-            ->assertSee('Operations center', false)
             ->assertSee('Overview', false)
-            ->assertSee('Live release', false)
             ->assertSee('Technical identifiers', false)
+            ->assertSee(__('sites.detail.git'), false)
             ->assertSee('href="#deployments"', false)
             ->assertSee('href="#infrastructure"', false)
             ->assertSee('href="#danger"', false)
@@ -71,7 +70,17 @@ class SiteDetailTest extends TestCase
         $this->assertMatchesRegularExpression('/id="danger"/', $html);
         $this->assertMatchesRegularExpression('/aria-controls="danger"/', $html);
         $this->assertStringContainsString('class="site-hint"', $html);
+        $this->assertStringContainsString('role="tooltip">'.__('sites.detail.overview_lede'), $html);
+        $this->assertStringContainsString('role="tooltip">'.__('sites.detail.infrastructure_lede'), $html);
+        $this->assertStringContainsString('role="tooltip">'.__('sites.themes.lede'), $html);
+        $this->assertDoesNotMatchRegularExpression('/<p[^>]*>'.preg_quote(__('sites.detail.overview_lede'), '/').'/', $html);
         $this->assertStringNotContainsString('class="field-hint"', $html);
+        $this->assertStringNotContainsString('class="site-section-kicker"', $html);
+        $this->assertStringNotContainsString(__('sites.detail.operation'), $html);
+        $this->assertStringNotContainsString(__('sites.detail.current_release'), $html);
+        $this->assertStringNotContainsString(__('sites.detail.advanced'), $html);
+        $this->assertStringNotContainsString(__('sites.themes.kicker'), $html);
+        $this->assertStringNotContainsString(__('sites.themes.via_agent'), $html);
         $this->assertStringNotContainsString(__('sites.detail.no_action'), $html);
         $this->assertStringNotContainsString(__('sites.detail.no_action_hint'), $html);
         $this->assertStringNotContainsString('class="site-open-links"', $html);

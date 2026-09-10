@@ -74,6 +74,14 @@ class CoolifyApplicationDtoTest extends TestCase
         $this->assertNull($app->gitSourceKind());
     }
 
+    public function test_head_ref_is_case_insensitive(): void
+    {
+        $this->assertTrue(CoolifyApplication::isHeadRef('HEAD'));
+        $this->assertTrue(CoolifyApplication::isHeadRef('head'));
+        $this->assertFalse(CoolifyApplication::isHeadRef('abc1234'));
+        $this->assertFalse(CoolifyApplication::isHeadRef(null));
+    }
+
     public function test_auto_deploy_reads_nested_settings_field(): void
     {
         $nested = CoolifyApplication::fromArray([

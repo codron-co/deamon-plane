@@ -140,6 +140,9 @@ return [
         'bulk_channel' => 'Change branch',
         'bulk_compose' => 'Switch to Compose',
         'bulk_auto_deploy' => 'Auto-deploy',
+        'bulk_deploy' => 'Redeploy',
+        'bulk_follow_head' => 'Deploy HEAD',
+        'bulk_pin' => 'Pin commit',
         'status' => [
             'queued' => 'Queued',
             'running' => 'Running',

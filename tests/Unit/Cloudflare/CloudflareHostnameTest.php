@@ -53,4 +53,13 @@ class CloudflareHostnameTest extends TestCase
         $this->assertFalse(CloudflareHostname::isApex('deamon.codron.co'));
         $this->assertFalse(CloudflareHostname::isApex('test.deamon.codron.co'));
     }
+
+    public function test_apex_is_the_registrable_two_label_suffix(): void
+    {
+        $this->assertSame('izyem.test', CloudflareHostname::apex('izyem.test'));
+        $this->assertSame('example.com', CloudflareHostname::apex('www.example.com'));
+        $this->assertSame('customer.example', CloudflareHostname::apex('shop.customer.example'));
+        $this->assertSame('codron.co', CloudflareHostname::apex('a.b.c.deamon.codron.co'));
+        $this->assertSame('', CloudflareHostname::apex('localhost'));
+    }
 }

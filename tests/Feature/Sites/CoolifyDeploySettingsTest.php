@@ -143,6 +143,53 @@ class CoolifyDeploySettingsTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/follow-head"/', $html);
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/auto-deploy"/', $html);
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/pin"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/sites\/[^"\/]+\/deploy"/', $html);
+        $this->assertStringContainsString(route('ops.sites.deploy', $site), $html);
+        $this->assertStringContainsString(__('sites.menu.deploy'), $html);
+        $this->assertStringContainsString(__('site_ops.redeploy.button'), $html);
+    }
+
+    public function test_redeploy_posts_force_deploy_without_patch(): void
+    {
+        $site = $this->site();
+
+        Http::fake(function (Request $request) {
+            if ($request->method() === 'POST' && str_contains($request->url(), '/deploy')) {
+                return Http::response(['deployments' => [['deployment_uuid' => 'dep-3']]], 200);
+            }
+
+            return Http::response(['error' => 'unexpected'], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.deploy', $site))
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && str_contains($request->url(), '/deploy')
+                && str_contains($request->url(), 'uuid='.self::APP)
+                && str_contains($request->url(), 'force=true');
+        });
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH');
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
+    }
+
+    public function test_viewer_cannot_redeploy_or_follow_head(): void
+    {
+        $site = $this->site();
+        Http::fake();
+
+        $this->actingAs($this->viewer())
+            ->post(route('ops.sites.deploy', $site))
+            ->assertForbidden();
+
+        $this->actingAs($this->viewer())
+            ->post(route('ops.sites.follow-head', $site))
+            ->assertForbidden();
+
+        Http::assertNothingSent();
     }
 
     public function test_show_reads_legacy_nested_auto_deploy_as_on(): void
@@ -164,7 +211,10 @@ class CoolifyDeploySettingsTest extends TestCase
             ->assertSee(__('site_ops.auto_deploy.status_on'), false)
             ->assertSee(__('site_ops.auto_deploy.off_button'), false)
             ->assertDontSee(__('site_ops.auto_deploy.status_off'), false)
-            ->assertDontSee(route('ops.sites.follow-head', $site), false);
+            ->assertSee(route('ops.sites.follow-head', $site), false)
+            ->assertSee(route('ops.sites.pin', $site), false)
+            ->assertSee(route('ops.sites.deploy', $site), false)
+            ->assertSee(__('site_ops.pin.status_following'), false);
     }
 
     public function test_show_does_not_claim_auto_deploy_off_when_coolify_omits_the_flag(): void
@@ -188,8 +238,9 @@ class CoolifyDeploySettingsTest extends TestCase
             ->getContent();
 
         $this->assertStringNotContainsString(__('site_ops.auto_deploy.status_off'), $html);
-        $this->assertStringNotContainsString(route('ops.sites.follow-head', $site), $html);
-        $this->assertStringNotContainsString(route('ops.sites.pin', $site), $html);
+        $this->assertStringContainsString(route('ops.sites.follow-head', $site), $html);
+        $this->assertStringContainsString(route('ops.sites.pin', $site), $html);
+        $this->assertStringContainsString(route('ops.sites.deploy', $site), $html);
     }
 
     /**
@@ -226,5 +277,13 @@ class CoolifyDeploySettingsTest extends TestCase
         $operator->assignRole(OpsRole::Operator->value);
 
         return $operator;
+    }
+
+    private function viewer(): User
+    {
+        $viewer = User::factory()->create();
+        $viewer->assignRole(OpsRole::Viewer->value);
+
+        return $viewer;
     }
 }

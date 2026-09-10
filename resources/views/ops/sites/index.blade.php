@@ -220,6 +220,45 @@
                         >{{ __('site_ops.bulk.auto_toggle') }}</button>
                         <button
                             type="submit"
+                            class="btn btn-secondary btn-sm"
+                            formaction="{{ route('ops.sites.bulk.deploy') }}"
+                            data-confirm="{{ __('site_ops.bulk.confirm_redeploy') }}"
+                            data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
+                            data-confirm-label="{{ __('site_ops.bulk.redeploy') }}"
+                            data-confirm-danger="false"
+                        >{{ __('site_ops.bulk.redeploy') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.bulk.follow-head') }}"
+                            data-confirm="{{ __('site_ops.bulk.confirm_follow') }}"
+                            data-confirm-title="{{ __('site_ops.pin.confirm_follow_title') }}"
+                            data-confirm-label="{{ __('site_ops.bulk.follow_head') }}"
+                            data-confirm-danger="false"
+                        >{{ __('site_ops.bulk.follow_head') }}</button>
+                        <label class="ops-bulk-channel">
+                            <span class="visually-hidden">{{ __('site_ops.bulk.ref') }}</span>
+                            @if (($bulkPinCommits ?? collect())->isNotEmpty())
+                                <select name="ref" class="field-input ops-filter" aria-label="{{ __('site_ops.bulk.ref') }}">
+                                    <option value="">{{ __('site_ops.bulk.ref') }}</option>
+                                    @foreach ($bulkPinCommits as $commit)
+                                        <option value="{{ $commit->commit_sha }}">{{ $commit->shortSha() }}</option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <input type="text" name="ref" class="field-input ops-filter" maxlength="64" autocomplete="off" spellcheck="false" placeholder="{{ __('site_ops.bulk.ref') }}" aria-label="{{ __('site_ops.bulk.ref') }}">
+                            @endif
+                        </label>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.bulk.pin') }}"
+                            data-confirm="{{ __('site_ops.bulk.confirm_pin') }}"
+                            data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
+                            data-confirm-label="{{ __('site_ops.bulk.pin') }}"
+                        >{{ __('site_ops.bulk.pin') }}</button>
+                        <button
+                            type="submit"
                             class="btn btn-danger btn-sm"
                             formaction="{{ route('ops.sites.bulk.purge') }}"
                             data-confirm="{{ __('sites.danger.hard_confirm_bulk') }}"

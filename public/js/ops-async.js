@@ -128,6 +128,12 @@
                 window.PlaneJobs && window.PlaneJobs.showMessage(requestFailed(), "error");
             }
 
+            if (response.ok && payload.ok !== false) {
+                document.dispatchEvent(new CustomEvent("ops:ajax-success", {
+                    detail: { form: form, payload: payload, response: response },
+                }));
+            }
+
             if (payload.redirect) {
                 const next = new URL(payload.redirect, window.location.origin);
                 if (next.pathname !== window.location.pathname) {

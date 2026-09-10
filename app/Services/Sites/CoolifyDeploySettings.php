@@ -106,6 +106,21 @@ class CoolifyDeploySettings
         return $app;
     }
 
+    public function redeploy(Site $site, ?User $actor = null, ?string $ip = null): void
+    {
+        $uuid = $this->requireApp($site);
+
+        try {
+            CoolifyApplicationService::forSite($site)->deploy($uuid, true);
+        } catch (CoolifyApiException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
+        }
+
+        $this->audit($site, $actor, $ip, 'site.redeployed', [
+            'force' => true,
+        ]);
+    }
+
     /**
      * All on → off. All off → on. Mixed or unknown → off.
      *
@@ -154,6 +169,57 @@ class CoolifyDeploySettings
         foreach ($sites as $site) {
             try {
                 $this->setAutoDeploy($site, $enabled, $actor, $ip);
+                $ok++;
+            } catch (ComposePackException $exception) {
+                $failed++;
+                $errors[] = $site->name.': '.$exception->getMessage();
+            }
+        }
+
+        return ['ok' => $ok, 'failed' => $failed, 'errors' => $errors];
+    }
+
+    /**
+     * @param  iterable<int, Site>  $sites
+     * @return array{ok: int, failed: int, errors: list<string>}
+     */
+    public function redeployMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
+    {
+        return $this->applyMany($sites, fn (Site $site) => $this->redeploy($site, $actor, $ip));
+    }
+
+    /**
+     * @param  iterable<int, Site>  $sites
+     * @return array{ok: int, failed: int, errors: list<string>}
+     */
+    public function followHeadMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
+    {
+        return $this->applyMany($sites, fn (Site $site) => $this->followHead($site, $actor, $ip));
+    }
+
+    /**
+     * @param  iterable<int, Site>  $sites
+     * @return array{ok: int, failed: int, errors: list<string>}
+     */
+    public function pinMany(iterable $sites, string $ref, ?User $actor = null, ?string $ip = null): array
+    {
+        return $this->applyMany($sites, fn (Site $site) => $this->pin($site, $ref, $actor, $ip));
+    }
+
+    /**
+     * @param  iterable<int, Site>  $sites
+     * @param  callable(Site): void  $action
+     * @return array{ok: int, failed: int, errors: list<string>}
+     */
+    private function applyMany(iterable $sites, callable $action): array
+    {
+        $ok = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($sites as $site) {
+            try {
+                $action($site);
                 $ok++;
             } catch (ComposePackException $exception) {
                 $failed++;

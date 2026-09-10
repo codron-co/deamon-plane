@@ -30,6 +30,7 @@ class StoreSiteRequest extends FormRequest
             'attach_app_uuid' => $this->normalizedOptional('attach_app_uuid'),
             'notes' => $this->normalizedOptional('notes'),
             'mail_server_id' => $this->normalizedOptional('mail_server_id'),
+            'cloudflare_setting_id' => $this->normalizedOptional('cloudflare_setting_id'),
         ]);
         $this->applyAdvancedOverrides();
     }
@@ -46,6 +47,7 @@ class StoreSiteRequest extends FormRequest
             'channel' => ['required', 'string', Rule::in(config('ops.channels', []))],
             'notes' => ['nullable', 'string', 'max:5000'],
             'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
+            'cloudflare_setting_id' => ['nullable', 'integer', Rule::exists('cloudflare_settings', 'id')->where('is_enabled', true)],
         ], $this->coolifyTargetRules());
     }
 

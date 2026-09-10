@@ -2,7 +2,7 @@
 
 return [
     'title' => 'Cloudflare',
-    'lede' => 'Connect one or more Cloudflare accounts. Provision uses the default enabled account. Tokens are encrypted and never shown after save.',
+    'lede' => 'Connect one or more Cloudflare accounts. A site uses its selected account, or the default when none is set. Tokens are encrypted and never shown after save.',
     'add' => 'Add account',
     'empty' => 'No Cloudflare accounts',
     'empty_hint' => 'Add an account with Account ID and API token, then mark one as default for provision.',
@@ -40,10 +40,10 @@ return [
         'token_hint' => 'Authorization: Bearer. Encrypted. Never logged.',
         'token_placeholder' => 'Cloudflare API token',
         'wildcard_domain' => 'Preview wildcard zone',
-        'wildcard_domain_hint' => '*.codron.co already points at this server. Plane never asks you to change registrar NS or bind a new IP for that zone. On provision it only writes DNS: create * if missing, plus an explicit A when Cloudflare * cannot cover extra labels (test.deamon.codron.co). Unbound customer domains get adjective-noun.codron.co until their own zone exists.',
+        'wildcard_domain_hint' => '*.codron.co already points at this server. Nested hosts under that zone only write DNS (create * if missing, plus an explicit A when Cloudflare * cannot cover extra labels). Unbound customer domains create a Free full zone on the selected account; set the returned NS at the registrar.',
         'is_enabled' => 'Enabled',
         'is_default' => 'Default for provision',
-        'is_default_hint' => 'Site provision uses this account when several are connected.',
+        'is_default_hint' => 'Used when a site has no Cloudflare account selected.',
     ],
     'probe' => [
         'title' => 'Last permission probe',
@@ -78,6 +78,7 @@ return [
     ],
     'errors' => [
         'not_configured' => 'Cloudflare is not configured. Add Account ID and API token in the Cloudflare menu.',
+        'account_unavailable' => 'The selected Cloudflare account is missing, disabled, or has no token. Pick another account.',
         'domain_required' => 'A primary domain is required to provision.',
         'duplicate_zone' => 'Cloudflare has more than one zone matching :domain. The wrong zone was not selected.',
         'zone_edit_missing' => 'Cloudflare Zone → Edit is missing. New domains need DNS & Zones → Zone → Edit. The DNS Write template does not grant it.',

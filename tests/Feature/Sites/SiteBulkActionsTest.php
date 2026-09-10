@@ -51,6 +51,9 @@ class SiteBulkActionsTest extends TestCase
             ->assertSee(__('site_ops.bulk.change_branch'), false)
             ->assertSee(__('site_ops.bulk.compose'), false)
             ->assertSee(__('site_ops.bulk.auto_toggle'), false)
+            ->assertSee(__('site_ops.bulk.redeploy'), false)
+            ->assertSee(__('site_ops.bulk.follow_head'), false)
+            ->assertSee(__('site_ops.bulk.pin'), false)
             ->assertSee(__('sites.menu.hard_delete'), false)
             ->assertDontSee(__('site_ops.bulk.compose_all'), false)
             ->assertDontSee(__('site_ops.bulk.auto_on'), false)
@@ -60,6 +63,9 @@ class SiteBulkActionsTest extends TestCase
         $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.channel').'"', $html);
         $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.compose').'"', $html);
         $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.auto-deploy').'"', $html);
+        $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.deploy').'"', $html);
+        $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.follow-head').'"', $html);
+        $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.pin').'"', $html);
         $this->assertStringContainsString('formaction="'.route('ops.sites.bulk.purge').'"', $html);
         $this->assertStringNotContainsString('formaction="'.route('ops.sites.bulk.sync').'"', $html);
         $this->assertStringNotContainsString('formaction="'.route('ops.sites.live-sync').'"', $html);
@@ -212,7 +218,103 @@ class SiteBulkActionsTest extends TestCase
             ->post(route('ops.sites.bulk.auto-deploy'), ['all' => '1'])
             ->assertForbidden();
 
+        $this->actingAs($this->viewer())
+            ->post(route('ops.sites.bulk.deploy'), ['all' => '1'])
+            ->assertForbidden();
+
+        $this->actingAs($this->viewer())
+            ->post(route('ops.sites.bulk.follow-head'), ['all' => '1'])
+            ->assertForbidden();
+
+        $this->actingAs($this->viewer())
+            ->post(route('ops.sites.bulk.pin'), ['all' => '1', 'ref' => 'abc1234'])
+            ->assertForbidden();
+
         Http::assertNothingSent();
+    }
+
+    public function test_bulk_redeploy_force_deploys_without_patch(): void
+    {
+        $connection = $this->connection();
+        $site = $this->site([
+            'coolify_connection_id' => $connection->id,
+            'coolify_app_uuid' => 'app-redeploy',
+        ]);
+
+        Http::fake(function (Request $request) {
+            if ($request->method() === 'POST' && str_contains($request->url(), '/deploy')) {
+                return Http::response(['deployments' => [['deployment_uuid' => 'dep-rd']]], 200);
+            }
+
+            return Http::response(['error' => 'unexpected '.$request->url()], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites'))
+            ->post(route('ops.sites.bulk.deploy'), ['site_ids' => [$site->id]])
+            ->assertRedirect(route('ops.sites'))
+            ->assertSessionHas('status');
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && str_contains($request->url(), '/deploy')
+                && str_contains($request->url(), 'uuid=app-redeploy')
+                && str_contains($request->url(), 'force=true');
+        });
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH' || $request->method() === 'DELETE');
+    }
+
+    public function test_bulk_follow_head_and_pin_use_patch_then_deploy(): void
+    {
+        $connection = $this->connection();
+        $follow = $this->site([
+            'coolify_connection_id' => $connection->id,
+            'coolify_app_uuid' => 'app-follow',
+        ]);
+        $pin = $this->site([
+            'coolify_connection_id' => $connection->id,
+            'coolify_app_uuid' => 'app-pin',
+        ]);
+
+        Http::fake(function (Request $request) {
+            if ($request->method() === 'PATCH' && str_contains($request->url(), '/applications/')) {
+                return Http::response(['uuid' => 'patched'], 200);
+            }
+            if ($request->method() === 'POST' && str_contains($request->url(), '/deploy')) {
+                return Http::response(['deployments' => [['deployment_uuid' => 'dep-pin']]], 200);
+            }
+
+            return Http::response(['error' => 'unexpected '.$request->url()], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.bulk.follow-head'), ['site_ids' => [$follow->id]])
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Http::assertSent(function (Request $request): bool {
+            $body = $request->data();
+
+            return $request->method() === 'PATCH'
+                && str_contains($request->url(), '/applications/app-follow')
+                && ($body['git_commit_sha'] ?? null) === 'HEAD'
+                && ($body['is_auto_deploy_enabled'] ?? null) === true;
+        });
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.bulk.pin'), ['site_ids' => [$pin->id], 'ref' => 'abc1234'])
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Http::assertSent(function (Request $request): bool {
+            $body = $request->data();
+
+            return $request->method() === 'PATCH'
+                && str_contains($request->url(), '/applications/app-pin')
+                && ($body['git_commit_sha'] ?? null) === 'abc1234'
+                && ($body['is_auto_deploy_enabled'] ?? null) === false;
+        });
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
     }
 
     /**

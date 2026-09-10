@@ -54,6 +54,7 @@ class Site extends Model
         'last_live_favicon_url',
         'cloudflare_zone_id',
         'cloudflare_nameservers',
+        'cloudflare_setting_id',
         'dns_applied_at',
         'mail_server_id',
         'hostinger_order_id',
@@ -124,6 +125,11 @@ class Site extends Model
     public function mailServer(): BelongsTo
     {
         return $this->belongsTo(MailServer::class);
+    }
+
+    public function cloudflareAccount(): BelongsTo
+    {
+        return $this->belongsTo(CloudflareSetting::class, 'cloudflare_setting_id');
     }
 
     /**

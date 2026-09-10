@@ -18,11 +18,13 @@
     $showPack = $showPack || ($snapshot['build_pack'] ?? null) === 'dockerfile';
     $autoDeployOn = $snapshot['is_auto_deploy'] ?? null;
     $autoDeployKnown = $autoDeployOn !== null;
-    $currentSha = filled($snapshot['git_commit_sha'] ?? null) ? (string) $snapshot['git_commit_sha'] : null;
+    $rawSha = filled($snapshot['git_commit_sha'] ?? null) ? (string) $snapshot['git_commit_sha'] : null;
+    $followingHead = \App\Services\Coolify\Dto\CoolifyApplication::isHeadRef($rawSha);
+    $currentSha = ($rawSha !== null && ! $followingHead) ? $rawSha : null;
     $pinCommits = collect();
     foreach ($deployments ?? [] as $deployment) {
         $sha = trim((string) $deployment->commit_sha);
-        if ($sha === '' || $pinCommits->has($sha)) {
+        if ($sha === '' || $pinCommits->has($sha) || \App\Services\Coolify\Dto\CoolifyApplication::isHeadRef($sha)) {
             continue;
         }
         $pinCommits[$sha] = [
@@ -40,6 +42,17 @@
     }
     $selectedRef = old('ref', $currentSha ?? $pinCommits->keys()->first());
     $latestSha = $pinCommits->keys()->first();
+    $latestShort = $latestSha ? substr((string) $latestSha, 0, 7) : null;
+    $currentShort = $currentSha ? substr($currentSha, 0, 7) : null;
+    $ahead = 0;
+    if ($currentSha !== null && $latestSha) {
+        foreach ($pinCommits->keys() as $index => $sha) {
+            if ($sha === $currentSha || str_starts_with((string) $sha, $currentSha) || str_starts_with($currentSha, (string) $sha)) {
+                $ahead = $index;
+                break;
+            }
+        }
+    }
     $autoDeployLabel = match ($autoDeployOn) {
         true => __('site_ops.auto_deploy.status_on'),
         false => __('site_ops.auto_deploy.status_off'),
@@ -49,8 +62,21 @@
     if (! $autoDeployKnown) {
         $autoDeployHint .= ' '.__('site_ops.auto_deploy.unknown_hint');
     }
-    if ($autoDeployOn === false) {
-        $autoDeployHint .= ' '.__('site_ops.pin.lede').' '.__('site_ops.pin.volume_warning');
+    $autoDeployHint .= ' '.__('site_ops.pin.lede').' '.__('site_ops.pin.volume_warning');
+    if ($followingHead || $autoDeployOn === true) {
+        $pinStatus = __('site_ops.pin.status_following');
+    } elseif ($currentSha && $latestShort && $ahead > 0) {
+        $pinStatus = __('site_ops.pin.status_pinned_ahead', [
+            'sha' => $currentShort,
+            'head' => $latestShort,
+            'count' => $ahead,
+        ]);
+    } elseif ($currentSha && $latestSha && $ahead === 0) {
+        $pinStatus = __('site_ops.pin.status_pinned_at_head', ['sha' => $currentShort]);
+    } elseif ($currentSha) {
+        $pinStatus = __('site_ops.pin.status_pinned', ['sha' => $currentShort]);
+    } else {
+        $pinStatus = __('site_ops.pin.status_unpinned');
     }
 @endphp
 
@@ -120,16 +146,10 @@
             <p class="ops-alert" role="alert">{{ $snapshot['error'] }}</p>
         @endif
 
-        @if ($autoDeployOn === false)
-            <p class="site-pin-status">
-                @if ($currentSha)
-                    {{ __('site_ops.pin.current') }} <code>{{ $currentSha }}</code>
-                @else
-                    {{ __('site_ops.pin.none') }}
-                @endif
-            </p>
+        <p class="site-pin-status">{{ $pinStatus }}</p>
 
-            @if ($canOps)
+        @if ($canOps)
+            <div class="site-operation-pin">
                 <form
                     method="POST"
                     action="{{ route('ops.sites.pin', $site) }}"
@@ -162,7 +182,7 @@
                                     @endforeach
                                 </select>
                             @else
-                                <input id="site-pin-ref" class="field-input" type="text" name="ref" value="{{ old('ref') }}" maxlength="64" autocomplete="off" spellcheck="false">
+                                <input id="site-pin-ref" class="field-input" type="text" name="ref" value="{{ old('ref') }}" maxlength="64" autocomplete="off" spellcheck="false" required>
                             @endif
                             @error('ref') <p class="field-error">{{ $message }}</p> @enderror
                         </div>
@@ -186,6 +206,18 @@
                     @endif
                     <form
                         method="POST"
+                        action="{{ route('ops.sites.deploy', $site) }}"
+                        data-ops-pending
+                        data-confirm="{{ __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
+                        data-confirm-label="{{ __('site_ops.redeploy.button') }}"
+                        data-confirm-danger="false"
+                    >
+                        @csrf
+                        <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('site_ops.redeploy.working') }}">{{ __('site_ops.redeploy.button') }}</button>
+                    </form>
+                    <form
+                        method="POST"
                         action="{{ route('ops.sites.follow-head', $site) }}"
                         data-ops-pending
                         data-confirm="{{ __('site_ops.pin.confirm_follow', ['name' => $site->name]) }}"
@@ -197,7 +229,7 @@
                         <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.pin.follow_button') }}</button>
                     </form>
                 </div>
-            @endif
+            </div>
         @endif
     </article>
 @endif

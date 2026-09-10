@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ops;
 use App\Enums\Channel;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
+use App\Http\Requests\Ops\BulkPinSiteRequest;
 use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\PinSiteRequest;
 use App\Models\Site;
@@ -378,6 +379,89 @@ class SiteCoolifyOpsController extends Controller
         }
 
         return back()->with('status', __('site_ops.pin.follow_done', ['name' => $site->name]));
+    }
+
+    public function deploy(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        try {
+            $settings->redeploy($site, $request->user(), $request->ip());
+        } catch (ComposePackException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('site_ops.redeploy.done', ['name' => $site->name]));
+    }
+
+    public function bulkDeploy(BulkSiteIdsRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
+    {
+        return $this->runBulkDeploy(
+            $request,
+            'sites.bulk_deploy',
+            __('ops.jobs.bulk_deploy'),
+            fn (Collection $sites) => $settings->redeployMany($sites, $request->user(), $request->ip()),
+            __('site_ops.redeploy.bulk'),
+        );
+    }
+
+    public function bulkFollowHead(BulkSiteIdsRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
+    {
+        return $this->runBulkDeploy(
+            $request,
+            'sites.bulk_follow_head',
+            __('ops.jobs.bulk_follow_head'),
+            fn (Collection $sites) => $settings->followHeadMany($sites, $request->user(), $request->ip()),
+            __('site_ops.pin.bulk_follow'),
+        );
+    }
+
+    public function bulkPin(BulkPinSiteRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
+    {
+        $ref = (string) $request->validated('ref');
+
+        return $this->runBulkDeploy(
+            $request,
+            'sites.bulk_pin',
+            __('ops.jobs.bulk_pin'),
+            fn (Collection $sites) => $settings->pinMany($sites, $ref, $request->user(), $request->ip()),
+            __('site_ops.pin.bulk'),
+            ['ref' => $ref],
+        );
+    }
+
+    /**
+     * @param  callable(Collection<int, Site>): array{ok: int, failed: int, errors: list<string>}  $run
+     * @param  array<string, mixed>  $extraPayload
+     */
+    private function runBulkDeploy(
+        BulkSiteIdsRequest $request,
+        string $jobType,
+        string $jobTitle,
+        callable $run,
+        string $flashPrefix,
+        array $extraPayload = [],
+    ): RedirectResponse|JsonResponse {
+        $sites = $this->sitesFromBulk($request)
+            ->filter(fn (Site $site): bool => filled($site->coolify_app_uuid))
+            ->values();
+
+        foreach ($sites as $site) {
+            $this->authorize('update', $site);
+        }
+
+        if ($sites->isEmpty()) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, $jobType, $jobTitle, array_merge([
+                'site_ids' => $sites->pluck('id')->all(),
+                'ip' => $request->ip(),
+            ], $extraPayload));
+        }
+
+        return back()->with('status', $this->bulkFlash($run($sites), $flashPrefix));
     }
 
     /**

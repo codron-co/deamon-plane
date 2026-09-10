@@ -9,11 +9,13 @@ use App\Services\Sites\SiteProvisionException;
 
 class CloudflareZoneService
 {
-    public function __construct(
-        private readonly PreviewHostname $previewHostnames,
-    ) {}
-
-    public function ensureZoneAndDns(Site $site, CloudflareSetting $settings): void
+    /**
+     * Attach the site hostname to a covering zone, or create a Free full zone
+     * on the registrable apex and return Cloudflare nameservers.
+     *
+     * @return array{zone: array<string, mixed>, created: bool}
+     */
+    public function ensureZoneAndDns(Site $site, CloudflareSetting $settings): array
     {
         $requested = CloudflareHostname::normalize((string) $site->primary_domain);
         if ($requested === '') {
@@ -25,35 +27,36 @@ class CloudflareZoneService
 
         try {
             $zone = $this->findCoveringZone($client, $accountId, $requested);
-            $host = $requested;
+            $created = false;
 
             if ($zone === null) {
-                $wildcard = $settings->resolvedWildcardDomain();
-                if ($wildcard === '') {
-                    throw new CloudflareApiException(__('cloudflare.errors.wildcard_unavailable', [
-                        'domain' => '—',
-                    ]), 422);
+                $apex = CloudflareHostname::apex($requested);
+                if ($apex === '') {
+                    throw new CloudflareApiException(__('cloudflare.errors.domain_required'), 422);
                 }
 
-                $preview = $this->previewHostnames->allocate($wildcard);
-                $zone = $this->findCoveringZone($client, $accountId, $preview);
-                if ($zone === null) {
-                    throw new CloudflareApiException(__('cloudflare.errors.wildcard_unavailable', [
-                        'domain' => $wildcard,
-                    ]), 422);
+                $existing = $this->findExactZone($client, $accountId, $apex);
+                if ($existing === null) {
+                    $zone = $this->createApexZone($client, $accountId, $apex);
+                    $created = true;
+                    $this->upsertTemplate($client, (string) $zone['id'], $apex);
+                } else {
+                    $zone = $existing;
                 }
-
-                $this->promotePreviewDomain($site, $requested, $preview);
-                $host = $preview;
             }
 
             $zoneName = (string) ($zone['name'] ?? '');
-            $this->applyDnsForHost($client, (string) $zone['id'], $zoneName, $host, $settings);
+            $this->applyDnsForHost($client, (string) $zone['id'], $zoneName, $requested, $settings);
 
             $site->cloudflare_zone_id = (string) $zone['id'];
             $site->cloudflare_nameservers = $this->nameservers($zone);
             $site->dns_applied_at = now();
             $site->save();
+
+            return [
+                'zone' => $zone,
+                'created' => $created,
+            ];
         } catch (CloudflareApiException $exception) {
             throw $this->mapApiException($exception);
         }
@@ -150,7 +153,7 @@ class CloudflareZoneService
 
     /**
      * Longest existing Cloudflare zone that is a suffix of the hostname.
-     * Provision never creates zones — NS for the wildcard (*.codron.co) is infra, not Plane.
+     * Nested hosts under *.codron.co attach here. Unbound customer apexes are created separately.
      *
      * @return array<string, mixed>|null
      */
@@ -382,27 +385,6 @@ class CloudflareZoneService
         }
 
         return array_values(array_filter($ns, is_string(...)));
-    }
-
-    private function promotePreviewDomain(Site $site, string $requested, string $preview): void
-    {
-        if ($requested === $preview) {
-            return;
-        }
-
-        $site->domains()->where('is_primary', true)->update(['is_primary' => false]);
-
-        $site->domains()->updateOrCreate(
-            ['domain' => $requested],
-            ['is_primary' => false],
-        );
-
-        $site->domains()->updateOrCreate(
-            ['domain' => $preview],
-            ['is_primary' => true],
-        );
-
-        $site->primary_domain = $preview;
     }
 
     private function mapApiException(CloudflareApiException $exception): SiteProvisionException

@@ -14,12 +14,19 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | GET | `/sites/{site}/edit` | `ops.sites.edit` | All ops roles (viewer read-only) |
 | PUT | `/sites/{site}` | `ops.sites.update` | operator, super_admin |
 | POST | `/sites/{site}/provision` | `ops.sites.provision` | operator, super_admin; draft or error only |
+| POST | `/sites/{site}/cloudflare/zone` | `ops.sites.cloudflare.zone` | operator, super_admin; create/refresh Free zone + return NS |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
+| POST | `/sites/{site}/deploy` | `ops.sites.deploy` | operator, super_admin; Coolify `POST /deploy?force=true` (current pin or HEAD) |
+| POST | `/sites/{site}/pin` | `ops.sites.pin` | operator, super_admin; pin SHA + auto-deploy off + deploy |
+| POST | `/sites/{site}/follow-head` | `ops.sites.follow-head` | operator, super_admin; `git_commit_sha: HEAD` + auto-deploy on + deploy |
 | POST | `/sites/bulk/channel` | `ops.sites.bulk.channel` | operator, super_admin; branch + APP_ENV for selected or `all=1` |
 | GET | `/sites/bulk/channel` | `ops.sites.bulk.channel.get` | **Does not switch.** 302 to list |
 | POST | `/sites/bulk/sync` | `ops.sites.bulk.sync` | operator, super_admin; Coolify sync for selected ids or `all=1` |
 | GET | `/sites/bulk/sync` | `ops.sites.bulk.sync.get` | **Does not sync.** 302 to list |
+| POST | `/sites/bulk/deploy` | `ops.sites.bulk.deploy` | operator, super_admin; force redeploy selected or `all=1` |
+| POST | `/sites/bulk/follow-head` | `ops.sites.bulk.follow-head` | operator, super_admin; follow HEAD on selected or `all=1` |
+| POST | `/sites/bulk/pin` | `ops.sites.bulk.pin` | operator, super_admin; pin `ref` on selected or `all=1` |
 | POST | `/sites/bulk/live-sync` | `ops.sites.live-sync` | operator, super_admin; GET each public homepage |
 | GET | `/sites/bulk/live-sync` | `ops.sites.live-sync.get` | **Does not probe.** 302 to list |
 | POST | `/sites/{site}/sync` | `ops.sites.sync` | operator, super_admin; GET Coolify app + last 25 deployments |
@@ -39,13 +46,13 @@ Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 
 ## Background jobs + no full-page POST
 
-Authenticated mutating forms in the ops shell submit over `fetch` (`Accept: application/json`). HTML POST still **redirects** (existing tests). JSON callers get `{ ok, message, type, redirect }` instead of following the 302 — `ConvertOpsAjaxRedirect` rewrites flash redirects and leaves existing `JsonResponse` (appearance/locale) alone. Navigate only when `redirect` pathname differs (create/destroy).
+Authenticated mutating forms in the ops shell submit over `fetch` (`Accept: application/json`). HTML POST still **redirects** (existing tests). JSON callers get `{ ok, message, type, redirect }` instead of following the 302 — `ConvertOpsAjaxRedirect` rewrites flash redirects and leaves existing `JsonResponse` (appearance/locale, site Cloudflare zone) alone. Navigate only when `redirect` pathname differs (create/destroy). Site Cloudflare zone create returns `{ ok, nameservers, zone_id, zone_status }` with no `redirect` so the detail page can show copyable NS without a reload.
 
-Slow syncs and list bulk work queue `ops_background_jobs` and return `{ ok, job }` immediately. `ProcessOpsBackgroundJob` runs `afterResponse()` (`dispatchSync` after the HTTP response) so Plane does not need a queue worker. Job types: `sites.live_sync`, `sites.coolify_sync`, `coolify.inventory_sync`, `themes.catalog_sync`, `sites.bulk_channel`, `sites.bulk_compose`, `sites.bulk_auto_deploy`. Status is `GET /jobs` + `GET /jobs/{job}` (`ops.jobs`, `ops.jobs.show`) — writer only, own jobs. The bottom-right widget (`data-ops-jobs`, `ops-jobs.js`) polls ~1.5s and applies Live column/favicon from `result.sites` without reload. Logout and `data-ops-native` / `data-pref-form` stay native.
+Slow syncs and list bulk work queue `ops_background_jobs` and return `{ ok, job }` immediately. `ProcessOpsBackgroundJob` runs `afterResponse()` (`dispatchSync` after the HTTP response) so Plane does not need a queue worker. Job types: `sites.live_sync`, `sites.coolify_sync`, `coolify.inventory_sync`, `themes.catalog_sync`, `sites.bulk_channel`, `sites.bulk_compose`, `sites.bulk_auto_deploy`, `sites.bulk_deploy`, `sites.bulk_follow_head`, `sites.bulk_pin`. Status is `GET /jobs` + `GET /jobs/{job}` (`ops.jobs`, `ops.jobs.show`) — writer only, own jobs. The bottom-right widget (`data-ops-jobs`, `ops-jobs.js`) polls ~1.5s and applies Live column/favicon from `result.sites` without reload. Logout and `data-ops-native` / `data-pref-form` stay native.
 
 ## Fields
 
-Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger credentials; order is matched per site domain — also changeable on the site detail Infrastructure tab), optional attach of an existing `codron-co/deamon` app, `notes`.
+Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), optional **Cloudflare account** (`sites.cloudflare_setting_id`; also changeable on the site detail Infrastructure tab before **Add to Cloudflare (Free)**), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger credentials; order is matched per site domain — also changeable on the site detail Infrastructure tab), optional attach of an existing `codron-co/deamon` app, `notes`.
 
 Coolify UUIDs are **not** free-text on site create. Super Admin may open a collapsed, warned “Gelişmiş” paste. Compose file is never an operator field — always `/docker-compose.coolify.yml`.
 
@@ -80,7 +87,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Site detail
 
-Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, live release, then Deployments / Themes / Infrastructure / Danger. The topbar uses **Sync** (Coolify / Live Site / Health check), **Site** (homepage / admin panel), and **Settings** (Edit / Activate or Deactivate / Soft Delete / Hard Delete) dropdowns. Provision stays a primary button on draft/error. **Edit** is a separate route. Explanatory copy lives in `i` hints (`ops.dashboard._hint`), not page paragraphs. The next-action card appears only when there is work (error, provision, health). Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark uses `IdentityMark::letter()` (UTF-8 first character — not PHP `substr`) as the no-JS / failure fallback. JS prefers `data-favicon-src` from Live Sync, then `https://{host}/favicon.ico`, then `/apple-touch-icon.png`. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
+Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, then Deployments / Themes / Infrastructure / Danger. The topbar uses **Sync** (Coolify / Live Site / Health check), **Site** (homepage / admin panel), and **Settings** (Edit / Activate or Deactivate / Soft Delete / Hard Delete) dropdowns. Provision stays a primary button on draft/error. **Edit** is a separate route. Explanatory copy lives in `i` hints (`ops.dashboard._hint`), not page paragraphs, kickers, or chips. Git repository sits under Technical identifiers. The next-action card appears only when there is work (error, provision, health). Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark uses `IdentityMark::letter()` (UTF-8 first character — not PHP `substr`) as the no-JS / failure fallback. JS prefers `data-favicon-src` from Live Sync, then `https://{host}/favicon.ico`, then `/apple-touch-icon.png`. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
 
 ## Deployments
 

@@ -48,6 +48,16 @@ final class CloudflareHostname
     }
 
     /**
+     * Registrable 2-label suffix used when Plane must create a customer zone.
+     */
+    public static function apex(string $host): string
+    {
+        $candidates = self::zoneCandidates($host);
+
+        return $candidates === [] ? '' : (string) $candidates[array_key_last($candidates)];
+    }
+
+    /**
      * Cloudflare * covers exactly one label (foo.zone), not a.b.zone.
      */
     public static function starCovers(string $relative): bool

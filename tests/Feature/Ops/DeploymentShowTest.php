@@ -153,6 +153,28 @@ class DeploymentShowTest extends TestCase
             ->assertSee('Coolify deployment failed.', false);
     }
 
+    public function test_site_deployments_table_keeps_headers_on_one_line(): void
+    {
+        $site = Site::factory()->create([
+            'name' => 'Header Site',
+            'status' => SiteStatus::Active,
+        ]);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Finished,
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('class="ops-th-label"', false)
+            ->assertSee(__('sites.deployments.columns.branch'), false)
+            ->assertSee(__('sites.deployments.columns.trigger'), false)
+            ->assertSee(__('sites.deployments.columns.commit'), false)
+            ->assertSee(__('sites.deployments.columns.duration'), false)
+            ->assertSee(__('sites.deployments.columns.started'), false);
+    }
+
     private function user(OpsRole $role): User
     {
         $user = User::factory()->create();

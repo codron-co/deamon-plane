@@ -159,6 +159,11 @@ final class CoolifyApplication
         return self::nullableString($this->raw['git_commit_sha'] ?? null);
     }
 
+    public static function isHeadRef(?string $sha): bool
+    {
+        return is_string($sha) && strcasecmp(trim($sha), self::HEAD_REF) === 0;
+    }
+
     public function isDockerfilePack(): bool
     {
         return strtolower((string) $this->buildPack) === 'dockerfile';

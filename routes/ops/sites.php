@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Ops\DeploymentShowController;
+use App\Http\Controllers\Ops\SiteCloudflareController;
 use App\Http\Controllers\Ops\SiteController;
 use App\Http\Controllers\Ops\SiteCoolifyOpsController;
 use App\Http\Controllers\Ops\SiteDetailController;
@@ -12,6 +13,9 @@ Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
 Route::post('/sites/bulk/compose', [SiteCoolifyOpsController::class, 'bulkMigrateCompose'])->name('ops.sites.bulk.compose');
 Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAutoDeploy'])->name('ops.sites.bulk.auto-deploy');
+Route::post('/sites/bulk/deploy', [SiteCoolifyOpsController::class, 'bulkDeploy'])->name('ops.sites.bulk.deploy');
+Route::post('/sites/bulk/follow-head', [SiteCoolifyOpsController::class, 'bulkFollowHead'])->name('ops.sites.bulk.follow-head');
+Route::post('/sites/bulk/pin', [SiteCoolifyOpsController::class, 'bulkPin'])->name('ops.sites.bulk.pin');
 Route::post('/sites/bulk/channel', [SiteCoolifyOpsController::class, 'bulkChannel'])->name('ops.sites.bulk.channel');
 Route::get('/sites/bulk/channel', [SiteCoolifyOpsController::class, 'redirectGetBulkChannel'])->name('ops.sites.bulk.channel.get');
 Route::post('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'bulkSync'])->name('ops.sites.bulk.sync');
@@ -23,6 +27,7 @@ Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateC
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
 Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');
 Route::post('/sites/{site}/follow-head', [SiteCoolifyOpsController::class, 'followHead'])->name('ops.sites.follow-head');
+Route::post('/sites/{site}/deploy', [SiteCoolifyOpsController::class, 'deploy'])->name('ops.sites.deploy');
 Route::post('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'sync'])->name('ops.sites.sync');
 Route::get('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'redirectGetSync'])->name('ops.sites.sync.get');
 Route::post('/sites/{site}/live-sync', [SiteCoolifyOpsController::class, 'liveSyncOne'])->name('ops.sites.live-sync.one');
@@ -36,6 +41,7 @@ Route::get('/sites/{site}/deployments/{deployment}', DeploymentShowController::c
 Route::get('/sites/{site}/edit', [SiteController::class, 'edit'])->name('ops.sites.edit');
 Route::put('/sites/{site}', [SiteController::class, 'update'])->name('ops.sites.update');
 Route::post('/sites/{site}/provision', [SiteController::class, 'provision'])->name('ops.sites.provision');
+Route::post('/sites/{site}/cloudflare/zone', [SiteCloudflareController::class, 'store'])->name('ops.sites.cloudflare.zone');
 Route::post('/sites/{site}/channel', [SiteController::class, 'switchChannel'])->name('ops.sites.channel');
 Route::post('/sites/{site}/health', [SiteController::class, 'checkHealth'])->name('ops.sites.health');
 Route::post('/sites/{site}/agent-secret', [SiteController::class, 'injectAgentSecret'])->name('ops.sites.agent-secret');

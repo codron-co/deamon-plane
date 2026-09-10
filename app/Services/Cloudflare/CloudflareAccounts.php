@@ -3,6 +3,7 @@
 namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareSetting;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class CloudflareAccounts
@@ -14,6 +15,18 @@ class CloudflareAccounts
             ->where('is_default', true)
             ->first()
             ?? CloudflareSetting::query()->where('is_enabled', true)->orderBy('id')->first();
+    }
+
+    /**
+     * @return Collection<int, CloudflareSetting>
+     */
+    public static function enabled(): Collection
+    {
+        return CloudflareSetting::query()
+            ->where('is_enabled', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
     }
 
     public static function markAsDefault(CloudflareSetting $account): void

@@ -2,7 +2,7 @@
 
 return [
     'title' => 'Cloudflare',
-    'lede' => 'Bir veya daha fazla Cloudflare hesabı bağlayın. Provision varsayılan açık hesabı kullanır. Token şifrelenir; kayıttan sonra gösterilmez.',
+    'lede' => 'Bir veya daha fazla Cloudflare hesabı bağlayın. Site seçili hesabı kullanır; seçim yoksa varsayılan. Token şifrelenir; kayıttan sonra gösterilmez.',
     'add' => 'Hesap ekle',
     'empty' => 'Cloudflare hesabı yok',
     'empty_hint' => 'Account ID ve API token ile bir hesap ekleyin; provision için birini varsayılan yapın.',
@@ -40,10 +40,10 @@ return [
         'token_hint' => 'Authorization: Bearer. Şifreli. Log’a yazılmaz.',
         'token_placeholder' => 'Cloudflare API token',
         'wildcard_domain' => 'Önizleme joker zone',
-        'wildcard_domain_hint' => '*.codron.co zaten bu sunucuya bakıyor. Plane registrar NS veya yeni IP bağlatmaz. Provision yalnızca DNS yazar: * yoksa oluşturur; Cloudflare *’ın kapsamadığı iç içe isimler için açık A ekler (test.deamon.codron.co). Bağlanamayan müşteri domain’i adjective-noun.codron.co alır.',
+        'wildcard_domain_hint' => '*.codron.co zaten bu sunucuya bakıyor. O zone altındaki iç içe hostlar yalnızca DNS yazar (* yoksa oluşturur; Cloudflare * kapsamadığında açık A). Bağlanamayan müşteri domain’i seçili hesapta Free full zone oluşturur; dönen NS’yi registrar’da ayarlayın.',
         'is_enabled' => 'Açık',
         'is_default' => 'Provision için varsayılan',
-        'is_default_hint' => 'Birden fazla hesap varken site provision bu hesabı kullanır.',
+        'is_default_hint' => 'Sitede Cloudflare hesabı seçili değilse bu hesap kullanılır.',
     ],
     'probe' => [
         'title' => 'Son izin yoklaması',
@@ -78,6 +78,7 @@ return [
     ],
     'errors' => [
         'not_configured' => 'Cloudflare bağlı değil. Cloudflare menüsünden Account ID ve API token ekleyin.',
+        'account_unavailable' => 'Seçili Cloudflare hesabı yok, kapalı veya token’sız. Başka bir hesap seçin.',
         'domain_required' => 'Provision için birincil domain gerekli.',
         'duplicate_zone' => 'Cloudflare’da :domain birden fazla zone ile eşleşiyor. Yanlış zone seçilmedi.',
         'zone_edit_missing' => 'Cloudflare Zone → Edit izni yok. Yeni domain kaydı için DNS & Zones → Zone → Edit gerekli. “DNS Write” şablonu bunu vermez.',

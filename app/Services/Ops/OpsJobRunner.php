@@ -33,6 +33,9 @@ class OpsJobRunner
             'sites.bulk_channel' => $this->bulkChannel($job),
             'sites.bulk_compose' => $this->bulkCompose($job),
             'sites.bulk_auto_deploy' => $this->bulkAutoDeploy($job),
+            'sites.bulk_deploy' => $this->bulkDeploy($job),
+            'sites.bulk_follow_head' => $this->bulkFollowHead($job),
+            'sites.bulk_pin' => $this->bulkPin($job),
             default => throw new RuntimeException('Unknown ops job type.'),
         };
     }
@@ -191,6 +194,46 @@ class OpsJobRunner
         $job->updateProgress(100);
 
         return ($enabled ? __('site_ops.auto_deploy.bulk_on') : __('site_ops.auto_deploy.bulk_off')).' '.$result['ok'].' ok';
+    }
+
+    private function bulkDeploy(OpsBackgroundJob $job): string
+    {
+        $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
+        $result = app(CoolifyDeploySettings::class)->redeployMany(
+            $sites,
+            $this->actor($job),
+            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
+        );
+        $job->updateProgress(100);
+
+        return __('site_ops.redeploy.bulk').' '.$result['ok'].' ok';
+    }
+
+    private function bulkFollowHead(OpsBackgroundJob $job): string
+    {
+        $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
+        $result = app(CoolifyDeploySettings::class)->followHeadMany(
+            $sites,
+            $this->actor($job),
+            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
+        );
+        $job->updateProgress(100);
+
+        return __('site_ops.pin.bulk_follow').' '.$result['ok'].' ok';
+    }
+
+    private function bulkPin(OpsBackgroundJob $job): string
+    {
+        $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
+        $result = app(CoolifyDeploySettings::class)->pinMany(
+            $sites,
+            (string) ($job->payload['ref'] ?? ''),
+            $this->actor($job),
+            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
+        );
+        $job->updateProgress(100);
+
+        return __('site_ops.pin.bulk').' '.$result['ok'].' ok';
     }
 
     /**

@@ -35,12 +35,12 @@
             <table class="ops-table">
                 <thead>
                     <tr>
-                        <th>{{ __('sites.deployments.columns.status') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.status')])</th>
-                        <th>{{ __('sites.deployments.columns.branch') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.branch')])</th>
-                        <th>{{ __('sites.deployments.columns.trigger') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.trigger')])</th>
-                        <th>{{ __('sites.deployments.columns.commit') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.commit')])</th>
-                        <th>{{ __('sites.deployments.columns.duration') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.duration')])</th>
-                        <th>{{ __('sites.deployments.columns.started') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.started')])</th>
+                        <th><span class="ops-th-label">{{ __('sites.deployments.columns.status') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.status')])</span></th>
+                        <th><span class="ops-th-label">{{ __('sites.deployments.columns.branch') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.branch')])</span></th>
+                        <th><span class="ops-th-label">{{ __('sites.deployments.columns.trigger') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.trigger')])</span></th>
+                        <th><span class="ops-th-label">{{ __('sites.deployments.columns.commit') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.commit')])</span></th>
+                        <th><span class="ops-th-label">{{ __('sites.deployments.columns.duration') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.duration')])</span></th>
+                        <th><span class="ops-th-label">{{ __('sites.deployments.columns.started') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.started')])</span></th>
                     </tr>
                 </thead>
                 <tbody>
