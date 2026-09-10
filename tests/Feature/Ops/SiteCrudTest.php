@@ -305,6 +305,98 @@ class SiteCrudTest extends TestCase
             ->assertDontSee(__('sites.edit.dockerfile'), false);
     }
 
+    public function test_create_form_renders_grouped_configuration_sections(): void
+    {
+        $operatorHtml = $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.create'))
+            ->assertOk()
+            ->assertSee('id="site-identity-heading"', false)
+            ->assertSee('id="site-domain-heading"', false)
+            ->assertSee('id="site-placement-heading"', false)
+            ->assertSee('id="site-git-heading"', false)
+            ->assertSee('id="site-notes-heading"', false)
+            ->assertSee(__('sites.form.placement'), false)
+            ->assertSee(__('sites.form.repo_branch'), false)
+            ->assertSee('name="slug"', false)
+            ->assertSee('name="domain"', false)
+            ->assertSee('name="channel"', false)
+            ->assertSee('name="coolify_connection_id"', false)
+            ->assertDontSee('name="advanced_server_uuid"', false)
+            ->getContent();
+
+        $sectionOrder = [
+            strpos($operatorHtml, 'id="site-identity-heading"'),
+            strpos($operatorHtml, 'id="site-domain-heading"'),
+            strpos($operatorHtml, 'id="site-placement-heading"'),
+            strpos($operatorHtml, 'id="site-git-heading"'),
+            strpos($operatorHtml, 'id="site-notes-heading"'),
+        ];
+
+        foreach ($sectionOrder as $position) {
+            $this->assertNotFalse($position);
+        }
+
+        $sorted = $sectionOrder;
+        sort($sorted);
+        $this->assertSame($sorted, $sectionOrder);
+
+        $adminHtml = $this->actingAs($this->user(OpsRole::SuperAdmin))
+            ->get(route('ops.sites.create'))
+            ->assertOk()
+            ->assertSee(__('sites.form.advanced_summary'), false)
+            ->assertSee(__('sites.form.advanced_warning'), false)
+            ->assertSee('name="advanced_server_uuid"', false)
+            ->getContent();
+
+        $this->assertStringContainsString('<details class="coolify-advanced ops-form-section"', $adminHtml);
+        $this->assertStringNotContainsString('<details class="coolify-advanced ops-form-section" open', $adminHtml);
+    }
+
+    public function test_edit_form_is_configuration_only(): void
+    {
+        $site = Site::factory()->create([
+            'name' => 'Config Only',
+            'slug' => 'config-only',
+            'coolify_app_uuid' => 'w553nh3qtdtf9520oazu9ckv',
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.edit', $site))
+            ->assertOk()
+            ->assertSee('id="site-identity-heading"', false)
+            ->assertSee('id="site-domain-heading"', false)
+            ->assertSee('id="site-placement-heading"', false)
+            ->assertSee('id="site-git-heading"', false)
+            ->assertSee(__('sites.form.placement'), false)
+            ->assertSee(__('ops.actions.save_changes'), false)
+            ->assertSee('name="slug"', false)
+            ->assertSee('name="channel"', false)
+            ->assertDontSee('id="coolify-ops-heading"', false)
+            ->assertDontSee(__('site_ops.auto_deploy.on_button'), false)
+            ->assertDontSee(__('site_ops.pin.pin_button'), false)
+            ->assertDontSee(__('site_ops.pack.button'), false)
+            ->assertDontSee(route('ops.sites.auto-deploy', $site), false)
+            ->assertDontSee(route('ops.sites.pin', $site), false)
+            ->assertDontSee(route('ops.sites.compose', $site), false);
+    }
+
+    public function test_create_validation_errors_render_near_fields_and_at_form_level(): void
+    {
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->from(route('ops.sites.create'))
+            ->followingRedirects()
+            ->post(route('ops.sites.store'), [
+                'slug' => '',
+                'name' => '',
+                'domain' => '',
+                'channel' => 'beta',
+            ])
+            ->assertOk()
+            ->assertSee(__('sites.form.errors'), false)
+            ->assertSee('class="field-error"', false)
+            ->assertSee(__('sites.form.identity'), false);
+    }
+
     public function test_index_and_edit_render_confirm_modal_for_destroy(): void
     {
         $site = Site::factory()->create(['name' => 'Modal Site']);

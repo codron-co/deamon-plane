@@ -29,8 +29,6 @@
         @endif
     </p>
 
-    @include('ops.sites._coolify-ops')
-
     <form method="POST" action="{{ route('ops.sites.update', $site) }}" class="ops-form ops-form-stack">
         @csrf
         @method('PUT')
@@ -38,6 +36,7 @@
         @if (! $readonly)
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">{{ __('ops.actions.save_changes') }}</button>
+                <a class="btn btn-ghost" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.cancel') }}</a>
             </div>
         @endif
     </form>
