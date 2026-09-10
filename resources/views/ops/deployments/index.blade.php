@@ -5,7 +5,7 @@
 <section class="deployments-panel" aria-labelledby="deployments-heading">
     <div class="deployments-panel-head">
         <div>
-            <h2 id="deployments-heading">{{ __('sites.deployments.title') }} <button class="site-hint" type="button" aria-label="{{ __('sites.deployments.lede', ['count' => $deployments->count()]) }}"><span aria-hidden="true">i</span><span role="tooltip">{{ __('sites.deployments.lede', ['count' => $deployments->count()]) }}</span></button></h2>
+            <h2 id="deployments-heading">{{ __('sites.deployments.title') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.lede', ['count' => $deployments->count()])])</h2>
         </div>
         @if ($coolifyAppUrl)
             <a class="btn btn-ghost btn-sm" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.deployments.open_coolify') }}</a>
@@ -19,12 +19,12 @@
             <table class="ops-table">
                 <thead>
                     <tr>
-                        <th>{{ __('sites.deployments.columns.status') }}</th>
-                        <th>{{ __('sites.deployments.columns.branch') }}</th>
-                        <th>{{ __('sites.deployments.columns.trigger') }}</th>
-                        <th>{{ __('sites.deployments.columns.commit') }}</th>
-                        <th>{{ __('sites.deployments.columns.duration') }}</th>
-                        <th>{{ __('sites.deployments.columns.started') }}</th>
+                        <th>{{ __('sites.deployments.columns.status') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.status')])</th>
+                        <th>{{ __('sites.deployments.columns.branch') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.branch')])</th>
+                        <th>{{ __('sites.deployments.columns.trigger') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.trigger')])</th>
+                        <th>{{ __('sites.deployments.columns.commit') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.commit')])</th>
+                        <th>{{ __('sites.deployments.columns.duration') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.duration')])</th>
+                        <th>{{ __('sites.deployments.columns.started') }} @include('ops.dashboard._hint', ['text' => __('sites.deployments.column_hints.started')])</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,7 +36,7 @@
                                     <div class="site-slug">{{ $deployment->error_message }}</div>
                                 @endif
                             </td>
-                            <td><span class="channel-chip">{{ $deployment->channel->value }}</span></td>
+                            <td><span class="branch-chip">{{ $deployment->channel->value }}</span></td>
                             <td>{{ $deployment->trigger->label() }}</td>
                             <td>
                                 @if ($deployment->shortSha() !== '')

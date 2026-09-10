@@ -56,9 +56,15 @@ class DeploymentShowTest extends TestCase
             ->assertSee('This field is not allowed.', false)
             ->assertSee('fqdn', false)
             ->assertSee('Build failed on service app', false)
+            ->assertSee('id="deployment-error"', false)
+            ->assertSee('id="deployment-log"', false)
+            ->assertSee('class="ops-pre"', false)
+            ->assertSee('class="site-metric-grid"', false)
             ->assertSee('data-copy-target="#deployment-paste"', false)
+            ->assertSee(__('sites.deployments.next_inspect'), false)
             ->assertSee('f2a368dabc', false)
             ->assertSee('create', false)
+            ->assertDontSee('data-site-tabs', false)
             ->assertDontSee((string) $site->app_key_encrypted, false);
     }
 
@@ -114,7 +120,9 @@ class DeploymentShowTest extends TestCase
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee($href, false)
-            ->assertSee(route('ops.sites.deployments.show', [$site, $deployment]), false);
+            ->assertSee(route('ops.sites.deployments.show', [$site, $deployment]), false)
+            ->assertSee('Coolify deployment failed.', false)
+            ->assertSee('Coolify deploy status. Failures show the stored error in the row.', false);
 
         $this->actingAs($operator)
             ->get(route('ops.sites.edit', $site))

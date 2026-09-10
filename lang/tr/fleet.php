@@ -3,6 +3,9 @@
 return [
     'title' => 'Filo',
     'lede' => 'Coolify’deki Deamon siteleri. Dağıtım durumu Coolify webhook’larından (HMAC veya query token) gelir; poll yedektir.',
+    'kicker' => 'Operasyon',
+    'heading' => 'Dikkat gerekenler',
+    'snapshot_kicker' => 'Özet',
     'kpis' => [
         'aria' => 'Filo özeti',
         'sites' => 'Siteler',

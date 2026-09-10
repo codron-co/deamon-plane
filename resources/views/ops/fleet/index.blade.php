@@ -2,9 +2,9 @@
 
 @section('title', __('fleet.title'))
 
-@section('content')
-    <p class="page-lede">{{ __('fleet.lede') }}</p>
+@section('content_class', 'ops-content-wide')
 
-    @include('ops.dashboard.kpis')
+@section('content')
     @include('ops.dashboard.attention')
+    @include('ops.dashboard.kpis')
 @endsection
