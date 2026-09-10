@@ -49,7 +49,7 @@ class CloudflareSettingsTest extends TestCase
         $this->actingAs($this->operator())
             ->get(route('ops.cloudflare.show', $account))
             ->assertOk()
-            ->assertSee('DNS & Zones', false)
+            ->assertSee('DNS & Zones')
             ->assertSee(__('cloudflare.fields.token_saved'), false)
             ->assertDontSee(self::TOKEN, false);
     }
@@ -248,7 +248,39 @@ class CloudflareSettingsTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('ops.cloudflare.show', $account))
             ->assertOk()
+            ->assertDontSee(self::TOKEN, false)
+            ->assertDontSee(__('cloudflare.danger.button'), false)
+            ->assertDontSee('aria-controls="danger"', false);
+    }
+
+    public function test_index_rows_open_show_and_token_stays_blank_password(): void
+    {
+        $account = $this->account();
+        $this->fakeZoneList();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.cloudflare.index'))
+            ->assertOk()
+            ->assertSee('data-href="'.route('ops.cloudflare.show', $account).'"', false)
             ->assertDontSee(self::TOKEN, false);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.cloudflare.show', $account))
+            ->assertOk()
+            ->assertSee('role="tablist"', false)
+            ->assertSee('aria-controls="overview"', false)
+            ->assertSee('aria-controls="zones"', false)
+            ->assertSee('aria-controls="configuration"', false)
+            ->assertSee(__('cloudflare.fields.token_saved'), false)
+            ->assertSee('class="site-hint"', false)
+            ->assertSee('class="site-technical-card"', false)
+            ->assertDontSee(self::TOKEN, false)
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/<input[^>]*name="api_token"[^>]*>/', $html);
+        preg_match('/<input[^>]*name="api_token"[^>]*>/', $html, $tokenInput);
+        $this->assertStringContainsString('type="password"', $tokenInput[0]);
+        $this->assertStringContainsString('value=""', $tokenInput[0]);
     }
 
     /**

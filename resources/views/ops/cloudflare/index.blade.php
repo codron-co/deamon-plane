@@ -2,6 +2,8 @@
 
 @section('title', __('cloudflare.title'))
 
+@section('content_class', 'ops-content-wide')
+
 @section('actions')
     <a class="btn btn-ghost btn-sm" href="{{ route('ops.cloudflare.defaults') }}">{{ __('cloudflare.defaults.nav') }}</a>
     @if ($canWrite)
@@ -10,12 +12,20 @@
 @endsection
 
 @section('content')
-    <p class="page-lede">{{ __('cloudflare.lede') }}</p>
+    <div class="site-section-heading">
+        <div>
+            <span class="site-section-kicker">{{ __('cloudflare.title') }}</span>
+            <h2>{{ __('cloudflare.title') }} @include('ops.cloudflare._hint', ['text' => __('cloudflare.lede')])</h2>
+        </div>
+    </div>
 
     @if ($accounts->isEmpty())
         <div class="empty-panel">
             <h2>{{ __('cloudflare.empty') }}</h2>
             <p>{{ __('cloudflare.empty_hint') }}</p>
+            @if ($canWrite)
+                <a class="btn btn-primary btn-sm" href="{{ route('ops.cloudflare.create') }}">{{ __('cloudflare.empty_action') }}</a>
+            @endif
         </div>
     @else
         <div class="sites-table-wrap">

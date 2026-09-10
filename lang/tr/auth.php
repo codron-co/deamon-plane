@@ -2,8 +2,8 @@
 
 return [
     'title' => 'Giriş',
-    'heading' => 'Ops’a giriş',
-    'lede' => 'İç CodRon kontrol düzlemi. Müşteri CMS yöneticileri bu uygulamayı kullanmaz.',
+    'heading' => 'Giriş',
+    'lede' => 'Deamon Plane iç kontrol düzlemidir. CMS yöneticileri site üzerinden giriş yapar.',
     'email' => 'E-posta',
     'password' => 'Parola',
     'remember' => 'Bu tarayıcıyı hatırla',

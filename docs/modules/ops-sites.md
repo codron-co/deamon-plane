@@ -25,7 +25,7 @@ Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 
 ## Fields
 
-Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional attach of an existing `codron-co/deamon` app, `notes`.
+Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + **one** primary `site_domains` row — Coolify generate-domains are not listed), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger only), optional attach of an existing `codron-co/deamon` app, `notes`.
 
 Coolify UUIDs are **not** free-text on site create. Super Admin may open a collapsed, warned “Gelişmiş” paste. Compose file is never an operator field — always `/docker-compose.coolify.yml`.
 

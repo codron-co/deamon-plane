@@ -51,6 +51,7 @@ class Site extends Model
         'cloudflare_zone_id',
         'cloudflare_nameservers',
         'dns_applied_at',
+        'mail_server_id',
     ];
 
     /**
@@ -110,6 +111,11 @@ class Site extends Model
     public function coolifyConnection(): BelongsTo
     {
         return $this->belongsTo(CoolifyConnection::class);
+    }
+
+    public function mailServer(): BelongsTo
+    {
+        return $this->belongsTo(MailServer::class);
     }
 
     /**

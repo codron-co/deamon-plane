@@ -2,8 +2,8 @@
 
 return [
     'title' => 'Sign in',
-    'heading' => 'Sign in to ops',
-    'lede' => 'Internal CodRon control plane. Customer CMS admins do not use this app.',
+    'heading' => 'Sign in',
+    'lede' => 'Deamon Plane is the internal control plane. CMS admins sign in on the site, not here.',
     'email' => 'Email',
     'password' => 'Password',
     'remember' => 'Remember this browser',

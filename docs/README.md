@@ -16,8 +16,9 @@
 - [Architecture](architecture.md)
 - [Decisions (ADR)](decisions/README.md)
 - [Security](security.md)
-- [Related infra (Mailcow vb.)](related-infra.md) — Mailcow plane v1 **out of scope**
+- [Related infra (Mailcow vb.)](related-infra.md) — Mailcow **coming soon**; Hostinger mail **in scope**
 - [Ops Sites CRUD](modules/ops-sites.md) — draft desired state + provision POST + channel switch
+- [Mail servers](modules/mail-servers.md) — Hostinger token in Plane; CMS HMAC proxy
 - [Deployment (Coolify Compose)](modules/deployment.md)
 - [Coolify HTTP adapter](modules/coolify-client.md) — N connections, allowlists, site dropdowns
 - [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC or query token + deployments UI + fleet KPI
@@ -33,6 +34,6 @@
 
 | Bu repo | Deamon CMS (`codron-co/deamon`) |
 |---------|----------------------------------|
-| Ops panel, Coolify orkestrasyon, tema katalog state | Tek-site CMS, site agent endpoint’leri |
+| Ops panel, Coolify orkestrasyon, tema katalog state, Hostinger mail proxy | Tek-site CMS, site agent endpoint’leri |
 | Multi-tenant SaaS değil | Multi-tenant SaaS değil |
 | Subagent build: `.cursor/prompts/` | Agent Task 8/11 ayrı track |

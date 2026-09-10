@@ -67,4 +67,10 @@ Still **5** cards. **Unhealthy** is the union of:
 
 ## Out of scope
 
-CMS route registration (Task 11 lives in `codron-co/deamon`). Theme agent client is [theme-agent-client.md](theme-agent-client.md). ZIP, Mailcow, SSH, live Coolify env mutate of customer apps are out of scope.
+CMS route registration (Task 11 lives in `codron-co/deamon`). Theme agent client is [theme-agent-client.md](theme-agent-client.md). ZIP, Mailcow API, SSH, live Coolify env mutate of customer apps are out of scope.
+
+## Mail configure + reverse proxy
+
+Hostinger tokens stay in Plane (`mail_servers.api_token` encrypted). After a site is assigned a ready Hostinger mail server, Plane POSTs `{agent_base_url}/internal/control/v1/mail/configure` with the same HMAC as themes. Body has `enabled`, `provider`, `site_id`, `plane_base_url`, `mail_domain`, `webmail_url` — **never** the API token.
+
+CMS mailbox UI calls back to Plane `POST/GET/PATCH/DELETE /internal/site/v1/mail/mailboxes…` with `X-Deamon-Site` + HMAC of that site’s agent secret. Plane talks to Hostinger. Details: [mail-servers.md](mail-servers.md).

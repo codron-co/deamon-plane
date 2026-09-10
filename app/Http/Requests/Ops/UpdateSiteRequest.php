@@ -31,6 +31,7 @@ class UpdateSiteRequest extends FormRequest
             'coolify_environment_uuid' => $this->normalizedOptional('coolify_environment_uuid'),
             'coolify_git_source' => $this->normalizedOptional('coolify_git_source'),
             'notes' => $this->normalizedOptional('notes'),
+            'mail_server_id' => $this->normalizedOptional('mail_server_id'),
         ]);
         $this->applyAdvancedOverrides();
     }
@@ -57,6 +58,7 @@ class UpdateSiteRequest extends FormRequest
             ],
             'channel' => ['required', 'string', Rule::in(config('ops.channels', []))],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
         ], $this->coolifyTargetRules());
     }
 

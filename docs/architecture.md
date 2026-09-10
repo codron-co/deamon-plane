@@ -7,7 +7,7 @@ Living özet. Detay ve task’lar: [plans/2026-08-13-deamon-plane.md](plans/2026
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Deamon Plane (bu repo — Laravel)                           │
-│  Sites / Domains / Channels / Deploys / Themes / Audit      │
+│  Sites / Domains / Channels / Deploys / Themes / Mail / Audit     │
 └───────────────┬─────────────────────────────┬───────────────┘
                 │ Coolify API                 │ GitHub App
                 ▼                             ▼
@@ -35,5 +35,5 @@ Living özet. Detay ve task’lar: [plans/2026-08-13-deamon-plane.md](plans/2026
 6. Coolify HTTP adapter (Task 2): [modules/coolify-client.md](modules/coolify-client.md). Method lock: [plans/2026-08-13-coolify-spike-notes.md](plans/2026-08-13-coolify-spike-notes.md) (**Go**). Token: `coolify_connections.api_token` encrypted (legacy `coolify_settings` fallback); Coolify menu Test connection = `listServers` via `Http::fake` in tests. Settings is GitHub catalog only.
 7. Kurulum: [modules/deployment.md](modules/deployment.md). Provision: [runbooks/provision-site.md](runbooks/provision-site.md). Channel switch: [runbooks/channel-switch.md](runbooks/channel-switch.md). Fleet import (Task 7): [runbooks/import-coolify-apps.md](runbooks/import-coolify-apps.md) — `ops:import-coolify-apps` dry-run required; `--apply` upserts Deamon customer apps only (`Http::fake` in tests). Agent secret inject (Task 9): [runbooks/agent-secret-inject.md](runbooks/agent-secret-inject.md).
 8. Deploy visibility (Task 6): `POST /webhooks/coolify` (HMAC or query `token`) updates `deployments.status` (same rows as `PollDeploymentJob`). Fleet home KPIs: total sites, by channel, unhealthy (`status=error` or agent fail/stale), failed deploys, deploying. Auth scheme: [modules/coolify-webhooks.md](modules/coolify-webhooks.md). GitHub theme webhooks: [modules/github-webhooks.md](modules/github-webhooks.md).
-9. Site agent (Task 9): [modules/agent-client.md](modules/agent-client.md). Plane signs `GET /internal/control/v1/health` (HMAC `{timestamp}.{nonce}.{rawBody}`) with locked CMS headers `X-Deamon-Timestamp` / `X-Deamon-Nonce` / `X-Deamon-Signature` (Task 8, Deamon v1.1.43). Theme assign (Task 12): [modules/theme-agent-client.md](modules/theme-agent-client.md) — same headers; catalog [modules/theme-catalog.md](modules/theme-catalog.md).
+9. Site agent (Task 9): [modules/agent-client.md](modules/agent-client.md). Plane signs `GET /internal/control/v1/health` (HMAC `{timestamp}.{nonce}.{rawBody}`) with locked CMS headers `X-Deamon-Timestamp` / `X-Deamon-Nonce` / `X-Deamon-Signature` (Task 8, Deamon v1.1.43). Theme assign (Task 12): [modules/theme-agent-client.md](modules/theme-agent-client.md) — same headers; catalog [modules/theme-catalog.md](modules/theme-catalog.md). Hostinger mail: configure POST + reverse `/internal/site/v1/mail` ([modules/mail-servers.md](modules/mail-servers.md)).
 10. Harden (Task 14): [security.md](security.md). Plane production deploy checklist: [runbooks/deploy-plane.md](runbooks/deploy-plane.md) (live Coolify mutate of the Plane app is optional/high-risk).

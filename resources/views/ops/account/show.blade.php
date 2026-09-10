@@ -11,19 +11,24 @@
 @endsection
 
 @section('content')
+    <p class="page-lede">{{ __('account.lede') }}</p>
+
     <div class="ops-form-stack">
         <section class="ops-form-section" aria-labelledby="account-profile-heading">
             <h2 id="account-profile-heading">{{ __('account.profile') }}</h2>
+            <p class="field-hint">{{ __('account.profile_hint') }}</p>
             <form method="POST" action="{{ route('ops.account.update') }}" class="ops-form">
                 @csrf
                 @method('PUT')
                 <div class="field">
                     <label class="field-label" for="account_name">{{ __('account.name') }}</label>
+                    <p class="field-hint">{{ __('account.name_hint') }}</p>
                     <input id="account_name" class="field-input" type="text" name="name" value="{{ old('name', $user->name) }}" required maxlength="255" autocomplete="name">
                     @error('name') <p class="field-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="field">
                     <label class="field-label" for="account_email">{{ __('account.email') }}</label>
+                    <p class="field-hint">{{ __('account.email_hint') }}</p>
                     <input id="account_email" class="field-input" type="email" name="email" value="{{ old('email', $user->email) }}" required maxlength="255" autocomplete="email">
                     @error('email') <p class="field-error">{{ $message }}</p> @enderror
                 </div>
@@ -42,11 +47,11 @@
                     <span class="ops-user-avatar ops-avatar-preview-fallback" aria-hidden="true">{{ $user->initials() }}</span>
                 @endif
                 <div>
-                    <p class="field-hint">{{ __('account.photo_hint') }}</p>
                     <form method="POST" action="{{ route('ops.account.avatar') }}" enctype="multipart/form-data" class="ops-form">
                         @csrf
                         <div class="field">
                             <label class="field-label" for="account_avatar">{{ __('account.upload_photo') }}</label>
+                            <p class="field-hint">{{ __('account.photo_hint') }}</p>
                             <input id="account_avatar" class="field-input" type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required>
                             @error('avatar') <p class="field-error">{{ $message }}</p> @enderror
                         </div>
@@ -67,6 +72,7 @@
 
         <section class="ops-form-section" aria-labelledby="account-password-heading">
             <h2 id="account-password-heading">{{ __('account.password') }}</h2>
+            <p class="field-hint">{{ __('account.password_hint') }}</p>
             <form method="POST" action="{{ route('ops.account.password') }}" class="ops-form">
                 @csrf
                 @method('PUT')
@@ -83,6 +89,7 @@
                 <div class="field">
                     <label class="field-label" for="password_confirmation">{{ __('account.password_confirmation') }}</label>
                     <input id="password_confirmation" class="field-input" type="password" name="password_confirmation" required autocomplete="new-password">
+                    @error('password_confirmation') <p class="field-error">{{ $message }}</p> @enderror
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">{{ __('account.change_password') }}</button>

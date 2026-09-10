@@ -29,6 +29,10 @@ final class ControlPlaneAgentContract
 
     public const THEME_SYNC_PATH = '/internal/control/v1/themes/sync';
 
+    public const MAIL_CONFIGURE_PATH = '/internal/control/v1/mail/configure';
+
+    public const HEADER_SITE = 'X-Deamon-Site';
+
     public const HEADER_TIMESTAMP = 'X-Deamon-Timestamp';
 
     public const HEADER_NONCE = 'X-Deamon-Nonce';
@@ -96,6 +100,11 @@ final class ControlPlaneAgentContract
     public static function themeSyncPath(): string
     {
         return self::configuredPath('ops.agent.theme_sync_path', self::THEME_SYNC_PATH);
+    }
+
+    public static function mailConfigurePath(): string
+    {
+        return self::configuredPath('ops.agent.mail_configure_path', self::MAIL_CONFIGURE_PATH);
     }
 
     /**

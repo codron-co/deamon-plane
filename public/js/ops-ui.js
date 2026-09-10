@@ -640,6 +640,156 @@
         return host;
     }
 
+    function setupOpsTabs() {
+        const roots = Array.prototype.slice.call(document.querySelectorAll("[data-ops-tabs], [data-site-tabs]"));
+        if (!roots.length) {
+            return;
+        }
+
+        const groups = [];
+
+        roots.forEach(function (root) {
+            if (root.dataset.enhanced === "true") {
+                return;
+            }
+
+            const tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+            const panelAttr = root.hasAttribute("data-ops-tabs") ? "data-ops-panel" : "data-site-panel";
+            const panels = Array.prototype.slice.call(document.querySelectorAll("[" + panelAttr + "]"));
+            if (!tabs.length || !panels.length) {
+                return;
+            }
+
+            root.dataset.enhanced = "true";
+            groups.push({
+                root: root,
+                tabs: tabs,
+                panels: panels,
+                initial: (root.getAttribute("data-initial-tab") || "").trim(),
+            });
+        });
+
+        if (!groups.length) {
+            return;
+        }
+
+        function panelExists(group, id) {
+            return id !== "" && group.panels.some(function (panel) {
+                return panel.id === id;
+            });
+        }
+
+        function activate(group, id, options) {
+            const settings = options || {};
+            const updateHash = settings.updateHash !== false;
+            const nextId = panelExists(group, id) ? id : group.panels[0].id;
+
+            group.tabs.forEach(function (tab) {
+                const active = tab.getAttribute("aria-controls") === nextId;
+                tab.classList.toggle("is-active", active);
+                tab.setAttribute("aria-selected", active ? "true" : "false");
+                tab.tabIndex = active ? 0 : -1;
+            });
+
+            group.panels.forEach(function (panel) {
+                panel.hidden = panel.id !== nextId;
+            });
+
+            if (updateHash) {
+                history.replaceState(null, "", "#" + nextId);
+            }
+        }
+
+        function groupForPanel(id) {
+            return groups.find(function (group) {
+                return panelExists(group, id);
+            }) || null;
+        }
+
+        groups.forEach(function (group) {
+            group.tabs.forEach(function (tab, index) {
+                tab.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    activate(group, tab.getAttribute("aria-controls"), { updateHash: true });
+                });
+
+                tab.addEventListener("keydown", function (event) {
+                    if (["ArrowLeft", "ArrowRight", "Home", "End"].indexOf(event.key) === -1) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const last = group.tabs.length - 1;
+                    const targetIndex = event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                            ? last
+                            : (index + (event.key === "ArrowRight" ? 1 : -1) + group.tabs.length) % group.tabs.length;
+                    group.tabs[targetIndex].focus();
+                    activate(group, group.tabs[targetIndex].getAttribute("aria-controls"), { updateHash: true });
+                });
+            });
+
+            const hash = location.hash.replace(/^#/, "");
+            const start = panelExists(group, group.initial)
+                ? group.initial
+                : (panelExists(group, hash) ? hash : group.panels[0].id);
+            activate(group, start, { updateHash: false });
+        });
+
+        document.addEventListener("click", function (event) {
+            const link = event.target.closest('a[href^="#"]');
+            if (!link || link.getAttribute("role") === "tab") {
+                return;
+            }
+
+            const id = (link.getAttribute("href") || "").replace(/^#/, "");
+            const group = groupForPanel(id);
+            if (!group) {
+                return;
+            }
+
+            event.preventDefault();
+            activate(group, id, { updateHash: true });
+        });
+
+        window.addEventListener("hashchange", function () {
+            const id = location.hash.replace(/^#/, "");
+            const group = groupForPanel(id);
+            if (!group) {
+                return;
+            }
+            activate(group, id, { updateHash: false });
+        });
+    }
+
+    function setupListToolbars() {
+        document.querySelectorAll("[data-ops-list-toolbar]").forEach(function (form) {
+            if (!(form instanceof HTMLFormElement) || form.dataset.enhanced === "true") {
+                return;
+            }
+
+            form.dataset.enhanced = "true";
+            const search = form.querySelector('input[name="q"]');
+            let timer = 0;
+
+            if (search) {
+                search.addEventListener("input", function () {
+                    window.clearTimeout(timer);
+                    timer = window.setTimeout(function () {
+                        form.requestSubmit();
+                    }, 300);
+                });
+            }
+
+            form.querySelectorAll("select[data-ops-list-filter]").forEach(function (select) {
+                select.addEventListener("change", function () {
+                    form.requestSubmit();
+                });
+            });
+        });
+    }
+
     function setupFaviconMarks() {
         document.querySelectorAll("[data-favicon-host]").forEach(function (mark) {
             const host = faviconHost(mark.getAttribute("data-favicon-host"));
@@ -685,5 +835,7 @@
     setupSelects();
     setupCopyButtons();
     setupPendingForms();
+    setupOpsTabs();
+    setupListToolbars();
     setupFaviconMarks();
 })();

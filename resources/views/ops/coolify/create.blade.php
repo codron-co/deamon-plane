@@ -13,7 +13,12 @@
 @endsection
 
 @section('content')
-    <p class="page-lede">{{ __('coolify.create.lede') }}</p>
+    <div class="site-section-heading">
+        <div>
+            <span class="site-section-kicker">{{ __('coolify.title') }}</span>
+            <h2>{{ __('coolify.create.title') }} @include('ops.coolify._hint', ['text' => __('coolify.create.lede')])</h2>
+        </div>
+    </div>
 
     <form method="POST" action="{{ route('ops.coolify.store') }}" class="ops-form ops-form-stack">
         @csrf

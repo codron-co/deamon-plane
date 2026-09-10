@@ -286,6 +286,63 @@ class CloudflareDnsOpsTest extends TestCase
         });
     }
 
+    public function test_zone_show_uses_tabs_and_keeps_nameservers_visible(): void
+    {
+        $account = $this->account();
+
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if ($method === 'GET' && str_contains($url, '/zones/'.self::ZONE_ID) && ! str_contains($url, 'dns_records')) {
+                return $this->zoneEnvelope();
+            }
+
+            if ($method === 'GET' && str_contains($url, '/dns_records')) {
+                return Http::response([
+                    'success' => true,
+                    'result' => [],
+                    'result_info' => ['total_pages' => 1],
+                ], 200);
+            }
+
+            return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.cloudflare.zones.show', ['account' => $account, 'zone' => self::ZONE_ID]))
+            ->assertOk()
+            ->assertSee('example.com', false)
+            ->assertSee('ada.ns.cloudflare.com', false)
+            ->assertSee('role="tablist"', false)
+            ->assertSee('aria-controls="overview"', false)
+            ->assertSee('aria-controls="dns"', false)
+            ->assertSee(__('cloudflare.zone.danger_button'), false)
+            ->assertSee('data-confirm=', false)
+            ->assertSee('class="site-technical-card"', false)
+            ->assertDontSee(self::TOKEN, false);
+    }
+
+    public function test_defaults_page_uses_hint_and_omits_add_tab_for_viewer(): void
+    {
+        $this->actingAs($this->operator())
+            ->get(route('ops.cloudflare.defaults'))
+            ->assertOk()
+            ->assertSee('class="site-hint"', false)
+            ->assertSee('aria-controls="records"', false)
+            ->assertSee('aria-controls="add"', false)
+            ->assertSee('72.62.117.147', false);
+
+        $viewer = User::factory()->create();
+        $viewer->assignRole(OpsRole::Viewer->value);
+
+        $this->actingAs($viewer)
+            ->get(route('ops.cloudflare.defaults'))
+            ->assertOk()
+            ->assertDontSee('aria-controls="add"', false)
+            ->assertDontSee(__('cloudflare.defaults.reset'), false);
+    }
+
     public function test_viewer_cannot_mutate_dns_defaults(): void
     {
         $viewer = User::factory()->create();

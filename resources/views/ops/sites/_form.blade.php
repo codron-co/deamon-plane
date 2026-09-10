@@ -22,6 +22,14 @@
         ? $site->coolify_git_source_kind->value.':'.$site->coolify_git_source_uuid
         : null);
     $placement = old('placement', filled($site->coolify_app_uuid) ? 'attach' : 'provision');
+    $advancedErrorKeys = [
+        'advanced_server_uuid',
+        'advanced_project_uuid',
+        'advanced_environment_uuid',
+        'advanced_git_source',
+    ];
+    $advancedOpen = $errors->hasAny($advancedErrorKeys)
+        || collect($advancedErrorKeys)->contains(fn (string $key): bool => filled(old($key)));
 @endphp
 
 @if ($errors->any())
@@ -69,6 +77,10 @@
         >
         @error('name') <p class="field-error">{{ $message }}</p> @enderror
     </div>
+</section>
+
+<section class="ops-form-section" aria-labelledby="site-domain-heading">
+    <h2 id="site-domain-heading">{{ __('sites.form.domain_heading') }}</h2>
 
     <div class="field">
         <label class="field-label" for="site_domain">{{ __('sites.form.domain') }}</label>
@@ -86,30 +98,6 @@
             @readonly($readonly)
         >
         @error('domain') <p class="field-error">{{ $message }}</p> @enderror
-    </div>
-</section>
-
-<section class="ops-form-section" aria-labelledby="site-git-heading">
-    <h2 id="site-git-heading">{{ __('sites.form.git') }}</h2>
-
-    <div class="field">
-        <label class="field-label" for="site_channel">{{ __('sites.form.repo_branch') }}</label>
-        <p class="field-hint">{{ __('sites.form.repo_branch_hint') }}</p>
-        <select
-            id="site_channel"
-            class="field-input"
-            name="channel"
-            @required(! $readonly && ! $channelLocked)
-            @disabled($readonly || $channelLocked)
-        >
-            @foreach ($channels as $channel)
-                <option value="{{ $channel }}" @selected($currentChannel === $channel)>{{ $channel }}</option>
-            @endforeach
-        </select>
-        @if ($channelLocked)
-            <input type="hidden" name="channel" value="{{ $site->channel?->value }}">
-        @endif
-        @error('channel') <p class="field-error">{{ $message }}</p> @enderror
     </div>
 </section>
 
@@ -244,28 +232,77 @@
     </div>
 </section>
 
+<section class="ops-form-section" aria-labelledby="site-git-heading">
+    <h2 id="site-git-heading">{{ __('sites.form.git') }}</h2>
+
+    <div class="field">
+        <label class="field-label" for="site_channel">{{ __('sites.form.repo_branch') }}</label>
+        <p class="field-hint">{{ __('sites.form.repo_branch_hint') }}</p>
+        <select
+            id="site_channel"
+            class="field-input"
+            name="channel"
+            @required(! $readonly && ! $channelLocked)
+            @disabled($readonly || $channelLocked)
+        >
+            @foreach ($channels as $channel)
+                <option value="{{ $channel }}" @selected($currentChannel === $channel)>{{ $channel }}</option>
+            @endforeach
+        </select>
+        @if ($channelLocked)
+            <input type="hidden" name="channel" value="{{ $site->channel?->value }}">
+        @endif
+        @error('channel') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
+</section>
+
 @if ($isSuperAdmin && ! $readonly)
-    <details class="coolify-advanced ops-form-section">
+    <details class="coolify-advanced ops-form-section" @if ($advancedOpen) open @endif>
         <summary>{{ __('sites.form.advanced_summary') }}</summary>
         <p class="ops-alert ops-alert-warning">{{ __('sites.form.advanced_warning') }}</p>
         <div class="field">
             <label class="field-label" for="advanced_server">{{ __('sites.form.advanced_server') }}</label>
+            <p class="field-hint">{{ __('sites.form.advanced_hint') }}</p>
             <input id="advanced_server" class="field-input" type="text" name="advanced_server_uuid" value="{{ old('advanced_server_uuid') }}" maxlength="64" autocomplete="off" spellcheck="false">
+            @error('advanced_server_uuid') <p class="field-error">{{ $message }}</p> @enderror
         </div>
         <div class="field">
             <label class="field-label" for="advanced_project">{{ __('sites.form.advanced_project') }}</label>
+            <p class="field-hint">{{ __('sites.form.advanced_hint') }}</p>
             <input id="advanced_project" class="field-input" type="text" name="advanced_project_uuid" value="{{ old('advanced_project_uuid') }}" maxlength="64" autocomplete="off" spellcheck="false">
+            @error('advanced_project_uuid') <p class="field-error">{{ $message }}</p> @enderror
         </div>
         <div class="field">
             <label class="field-label" for="advanced_environment">{{ __('sites.form.advanced_environment') }}</label>
+            <p class="field-hint">{{ __('sites.form.advanced_hint') }}</p>
             <input id="advanced_environment" class="field-input" type="text" name="advanced_environment_uuid" value="{{ old('advanced_environment_uuid') }}" maxlength="64" autocomplete="off" spellcheck="false">
+            @error('advanced_environment_uuid') <p class="field-error">{{ $message }}</p> @enderror
         </div>
         <div class="field">
             <label class="field-label" for="advanced_git">{{ __('sites.form.advanced_git') }}</label>
+            <p class="field-hint">{{ __('sites.form.advanced_hint') }}</p>
             <input id="advanced_git" class="field-input" type="text" name="advanced_git_source" value="{{ old('advanced_git_source') }}" placeholder="github_app:… / deploy_key:…" maxlength="96" autocomplete="off" spellcheck="false">
+            @error('advanced_git_source') <p class="field-error">{{ $message }}</p> @enderror
         </div>
     </details>
 @endif
+
+<section class="ops-form-section" aria-labelledby="site-mail-heading">
+    <h2 id="site-mail-heading">{{ __('sites.form.mail') }}</h2>
+    <div class="field">
+        <label class="field-label" for="site_mail_server">{{ __('sites.form.mail_server') }}</label>
+        <p class="field-hint">{{ __('mail.select_hint') }}</p>
+        <select id="site_mail_server" name="mail_server_id" @disabled($readonly)>
+            <option value="">{{ __('mail.none') }}</option>
+            @foreach ($mailServers ?? [] as $mailServer)
+                <option value="{{ $mailServer->id }}" @selected((string) old('mail_server_id', $site->mail_server_id) === (string) $mailServer->id)>
+                    {{ $mailServer->name }}@if ($mailServer->mail_domain) — {{ $mailServer->mail_domain }}@endif
+                </option>
+            @endforeach
+        </select>
+        @error('mail_server_id') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
+</section>
 
 <section class="ops-form-section" aria-labelledby="site-notes-heading">
     <h2 id="site-notes-heading">{{ __('sites.form.notes') }}</h2>

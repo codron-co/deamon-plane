@@ -70,7 +70,10 @@
                     </thead>
                     <tbody>
                         @foreach ($sites as $site)
-                            @php($reportedVersion = $site->reportedDeamonVersion())
+                            @php
+                                $reportedVersion = $site->reportedDeamonVersion();
+                                $markLetter = strtoupper(substr((string) $site->name, 0, 1)) ?: '?';
+                            @endphp
                             <tr data-href="{{ route('ops.sites.show', $site) }}" tabindex="0">
                                 @can('create', \App\Models\Site::class)
                                     <td>
@@ -82,16 +85,28 @@
                                 @endcan
                                 <td>
                                     <div class="site-name-row">
-                                        <a class="site-name" href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
-                                        @if ($site->hasDockerfileBuildPackWarning())
-                                            <span class="status-chip status-dockerfile">{{ __('ops.dockerfile_chip') }}</span>
-                                        @endif
+                                        <div
+                                            class="site-identity-mark is-compact"
+                                            aria-hidden="true"
+                                            @if (filled($site->primary_domain))
+                                                data-favicon-host="{{ $site->primary_domain }}"
+                                                data-favicon-fallback="{{ $markLetter }}"
+                                            @endif
+                                        >{{ $markLetter }}</div>
+                                        <div>
+                                            <div class="site-name-row">
+                                                <a class="site-name" href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
+                                                @if ($site->hasDockerfileBuildPackWarning())
+                                                    <span class="status-chip status-dockerfile">{{ __('ops.dockerfile_chip') }}</span>
+                                                @endif
+                                            </div>
+                                            <div class="site-slug">{{ $site->slug }}</div>
+                                        </div>
                                     </div>
-                                    <div class="site-slug">{{ $site->slug }}</div>
                                 </td>
                                 <td><code>{{ $site->primary_domain }}</code></td>
                                 <td>
-                                    <div class="branch-version">
+                                    <div class="branch-version" aria-label="{{ __('sites.columns.repo_branch') }}">
                                         <span class="branch-chip">{{ $site->channel->value }}</span>
                                         <span class="version-chip">{{ $reportedVersion ?: __('sites.version_unknown') }}</span>
                                     </div>
@@ -111,7 +126,8 @@
                 </table>
             </div>
                 @can('create', \App\Models\Site::class)
-                    <div class="form-actions">
+                    <div class="form-actions" role="group" aria-label="{{ __('sites.bulk') }}">
+                        <span class="field-label">{{ __('sites.bulk') }}</span>
                         <button
                             type="submit"
                             class="btn btn-secondary btn-sm"
@@ -170,6 +186,3 @@
     </div>
 @endsection
 
-@section('scripts')
-    <script src="{{ asset('js/ops-sites-list.js') }}" defer></script>
-@endsection

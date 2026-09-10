@@ -29,6 +29,7 @@ class StoreSiteRequest extends FormRequest
             'coolify_git_source' => $this->normalizedOptional('coolify_git_source'),
             'attach_app_uuid' => $this->normalizedOptional('attach_app_uuid'),
             'notes' => $this->normalizedOptional('notes'),
+            'mail_server_id' => $this->normalizedOptional('mail_server_id'),
         ]);
         $this->applyAdvancedOverrides();
     }
@@ -44,6 +45,7 @@ class StoreSiteRequest extends FormRequest
             'domain' => ['required', 'string', 'max:255', 'regex:/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/', Rule::unique('sites', 'primary_domain')->whereNull('deleted_at'), Rule::unique('site_domains', 'domain')],
             'channel' => ['required', 'string', Rule::in(config('ops.channels', []))],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
         ], $this->coolifyTargetRules());
     }
 
