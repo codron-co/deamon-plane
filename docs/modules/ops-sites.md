@@ -63,7 +63,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 - Status is always **draft** on create. The form cannot change status.
 - `APP_KEY` / `agent_secret` are generated on **Provision**, stored encrypted, never shown in the form or audit payloads.
 - Channel and slug are locked on the CRUD form once status is not `draft`. Live switches use the Channel switch panel (`ChannelSwitcher`).
-- Destroy is a **soft delete** with the ops confirm modal (`data-confirm` / `PlaneConfirm.ask`). Coolify is not contacted. **Hard delete** (`DELETE /sites/{site}/purge` and list bulk Hard Delete) calls Coolify `DELETE /applications/{uuid}?delete_volumes=true` then `forceDelete()`s the Plane row. Channel switch still never DELETE. `window.confirm` is not used. Mutating site ops (provision, Coolify sync, live sync, activate/deactivate, auto-deploy, pin / follow HEAD, channel switch, theme assign/update/sync/activate/auto-update, agent inject/rotate) use the same modal. Bulk buttons may put `data-confirm` on the submitter; `ops-confirm.js` reads the submitter and `requestSubmit(submitter)` so `formaction` is kept.
+- Destroy is a **soft delete** with the ops confirm modal (`data-confirm` / `PlaneConfirm.ask`). Coolify is not contacted. **Hard delete** (`DELETE /sites/{site}/purge` and list bulk Hard Delete) calls Coolify `DELETE /applications/{uuid}?delete_volumes=true` then `forceDelete()`s the Plane row. Channel switch still never DELETE. `window.confirm` is not used. Mutating site ops (provision, Coolify sync, live sync, activate/deactivate, auto-deploy, pin / follow HEAD / redeploy, channel switch, theme assign/update/sync/activate/auto-update, agent inject/rotate) use the same modal. Bulk buttons may put `data-confirm` on the submitter; `ops-confirm.js` reads the submitter and `requestSubmit(submitter)` so `formaction` is kept.
 
 ## Provision
 
@@ -111,7 +111,7 @@ GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `stat
 
 Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. Recreate required → abort.
 
-List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off), **Hard Delete**. Confirm on each. Viewer forbidden.
+List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off), **Redeploy**, **Deploy HEAD**, **Deploy commit** (SHA from the page’s latest deployments or a typed ref; all selected sites share `codron-co/deamon`), **Hard Delete**. Confirm on each. Viewer forbidden.
 
 ## Import existing Coolify apps
 
