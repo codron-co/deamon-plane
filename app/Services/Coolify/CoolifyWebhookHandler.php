@@ -32,6 +32,11 @@ class CoolifyWebhookHandler
             return ['ok' => true, 'updated' => false];
         }
 
+        $mapped = $this->provisioner->mapRemoteStatus($remote->status);
+        if (in_array($mapped, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
+            $remote = $this->enrichFromCoolify($deployment->site, $remote);
+        }
+
         $this->provisioner->applyRemoteDeployment($deployment, $remote);
 
         return ['ok' => true, 'updated' => true];
@@ -59,6 +64,9 @@ class CoolifyWebhookHandler
             'status' => $status,
             'commit' => $commit,
             'application_uuid' => $applicationUuid,
+            'message' => $merged['message'] ?? $merged['error'] ?? $merged['error_message'] ?? null,
+            'errors' => $merged['errors'] ?? null,
+            'logs' => $merged['logs'] ?? $merged['output'] ?? null,
         ]);
     }
 
@@ -78,6 +86,24 @@ class CoolifyWebhookHandler
                 default => DeploymentStatus::InProgress->value,
             },
         };
+    }
+
+    private function enrichFromCoolify(Site $site, CoolifyDeployment $remote): CoolifyDeployment
+    {
+        if ($remote->uuid === '' || filled($remote->logsExcerpt)) {
+            return $remote;
+        }
+
+        $site->loadMissing('coolifyConnection');
+        if ($site->coolifyConnection === null || ! $site->coolifyConnection->hasToken()) {
+            return $remote;
+        }
+
+        try {
+            return $remote->mergedWith(CoolifyApplicationService::forSite($site)->getDeployment($remote->uuid));
+        } catch (CoolifyApiException) {
+            return $remote;
+        }
     }
 
     private function findOrCreateDeployment(CoolifyDeployment $remote): ?Deployment

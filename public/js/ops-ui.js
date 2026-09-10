@@ -409,8 +409,47 @@
         });
     }
 
+    function setupCopyButtons() {
+        document.addEventListener("click", function (event) {
+            const button = event.target.closest("[data-copy-target]");
+            if (!button) {
+                return;
+            }
+
+            const selector = button.getAttribute("data-copy-target");
+            const target = selector ? document.querySelector(selector) : null;
+            if (!target) {
+                return;
+            }
+
+            const text = (target.innerText || target.textContent || "").trim();
+            if (!text) {
+                return;
+            }
+
+            const original = button.textContent;
+            const copied = button.getAttribute("data-copied-label") || "Copied";
+            function markCopied() {
+                button.textContent = copied;
+                window.setTimeout(function () {
+                    button.textContent = original;
+                }, 1600);
+            }
+
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+                navigator.clipboard.writeText(text).then(markCopied).catch(function () {
+                    window.prompt("Copy", text);
+                });
+                return;
+            }
+
+            window.prompt("Copy", text);
+        });
+    }
+
     setupThemeControls();
     setupUserMenu();
     setupClickableRows();
     setupSelects();
+    setupCopyButtons();
 })();

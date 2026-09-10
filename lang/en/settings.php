@@ -1,0 +1,30 @@
+<?php
+
+return [
+    'title' => 'Settings',
+    'lede' => 'GitHub App for the theme catalog lives here. Tokens are never shown.',
+    'defaults' => 'Customer site defaults',
+    'defaults_hint' => 'From environment. Provision jobs create git + Docker Compose apps — never Nixpacks, never raw POST /applications/dockercompose.',
+    'repository' => 'Customer git repository',
+    'compose' => 'Compose file',
+    'github' => [
+        'title' => 'GitHub theme catalog',
+        'lede' => 'Org lock :org, repo prefix :prefix. PAT or GitHub App credentials are encrypted. They never appear after save. Distinct from Coolify’s GitHub App UUID (used to create customer compose apps).',
+        'org' => 'Organization',
+        'token' => 'Fine-grained PAT',
+        'token_configured' => 'Token configured. Leave blank to keep the current value.',
+        'token_hint' => 'Optional if a GitHub App is configured. Contents + metadata on deamon-theme-*.',
+        'app_id' => 'GitHub App id',
+        'installation' => 'Installation id',
+        'private_key' => 'App private key (PEM)',
+        'key_configured' => 'Private key configured. Leave blank to keep the current value.',
+        'key_hint' => 'Encrypted. Used only to mint short-lived installation tokens. Never logged.',
+        'webhook_url' => 'Theme webhook URL',
+        'webhook_url_hint' => 'GitHub org/repo webhook → this URL. Not the Coolify deploy webhook.',
+        'webhook_secret' => 'GitHub webhook secret',
+        'webhook_secret_hint' => 'Encrypted. Header X-Hub-Signature-256. Empty secret is rejected.',
+        'secret_configured' => 'Secret configured. Leave blank to keep the current value.',
+        'save' => 'Save GitHub',
+        'test' => 'Test GitHub',
+    ],
+];

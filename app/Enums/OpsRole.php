@@ -18,11 +18,7 @@ enum OpsRole: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::SuperAdmin => 'Super Admin',
-            self::Operator => 'Operator',
-            self::Viewer => 'Viewer',
-        };
+        return __('ops.roles.'.$this->value);
     }
 
     public function canWrite(): bool

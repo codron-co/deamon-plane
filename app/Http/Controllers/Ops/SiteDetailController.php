@@ -2,25 +2,61 @@
 
 namespace App\Http\Controllers\Ops;
 
+use App\Enums\OpsRole;
+use App\Enums\SiteStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
+use App\Models\CoolifyConnection;
 use App\Models\Site;
+use App\Models\Theme;
+use App\Services\Agent\SiteHealthEvaluator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 class SiteDetailController extends Controller
 {
-    public function __invoke(Request $request, Site $site): View
+    use LoadsSiteOpsContext;
+
+    public function __invoke(Request $request, Site $site, SiteHealthEvaluator $agentHealth): View
     {
         $this->authorize('view', $site);
 
         $site->load([
-            'activeThemeInstallation.theme',
+            'primaryDomainRecord',
+            'themeInstallations.theme',
             'coolifyConnection',
+            'activeThemeInstallation.theme',
         ]);
+
+        $connection = $site->coolifyConnection ?: CoolifyConnection::default();
+        $user = $request->user();
 
         return view('ops.sites.show', [
             'site' => $site,
-            'canEdit' => $request->user()?->can('update', $site) ?? false,
+            'canEdit' => $user?->can('update', $site) ?? false,
+            'canDelete' => $user?->can('delete', $site) ?? false,
+            'canProvision' => ($user?->can('provision', $site) ?? false)
+                && $site->canBeProvisioned(),
+            'canSwitchChannel' => ($user?->can('switchChannel', $site) ?? false)
+                && $site->canSwitchChannel(),
+            'canForceChannel' => $user?->hasRole(OpsRole::SuperAdmin->value) ?? false,
+            'canCheckHealth' => $user?->can('checkHealth', $site) ?? false,
+            'canInjectAgentSecret' => ($user?->can('update', $site) ?? false)
+                && filled($site->coolify_app_uuid),
+            'agentHealth' => $agentHealth,
+            'channelSwitchTargets' => $this->channelSwitchTargets($site),
+            'channelSwitchInProgress' => $site->status === SiteStatus::Deploying,
+            'deployments' => $site->deployments()
+                ->with('requestedBy')
+                ->latest('id')
+                ->limit(25)
+                ->get(),
+            'coolifyAppUrl' => $connection instanceof CoolifyConnection
+                ? $connection->applicationUiUrl($site->coolify_app_uuid)
+                : null,
+            'themeInstallations' => $site->themeInstallations,
+            'assignableThemes' => $this->assignableThemes($site),
+            'canAssignTheme' => $user?->can('assign', Theme::class) ?? false,
         ]);
     }
 }

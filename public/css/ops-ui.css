@@ -423,6 +423,34 @@ html[data-theme="light"] {
     outline-offset: -2px;
 }
 
+.ops-copy-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.ops-copy-row h2 {
+    margin: 0;
+}
+
+.ops-pre {
+    margin: 0;
+    max-height: min(70vh, 640px);
+    overflow: auto;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-overlay);
+    color: var(--text);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 .version-chip,
 .branch-chip {
     display: inline-flex;

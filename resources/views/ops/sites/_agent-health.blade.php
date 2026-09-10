@@ -11,60 +11,58 @@
 @endphp
 
 <section class="ops-panel" aria-labelledby="agent-health-heading">
-    <h2 id="agent-health-heading">Agent health</h2>
-    <p>Signed poll of <code>/internal/control/v1/health</code>. Secrets stay encrypted and are never shown.</p>
+    <h2 id="agent-health-heading">{{ __('sites.agent.title') }}</h2>
+    <p>{{ __('sites.agent.lede', ['path' => '/internal/control/v1/health']) }}</p>
 
     <dl class="spec-list">
         <div>
-            <dt>Status</dt>
+            <dt>{{ __('sites.agent.status') }}</dt>
             <dd>
-                <span class="status-chip status-{{ $display }}">{{ $display }}</span>
+                <span class="status-chip status-{{ $display }}">{{ __('ops.health.'.$display) }}</span>
                 @if ($reason)
                     <span class="muted">{{ $reason }}</span>
                 @endif
             </dd>
         </div>
         <div>
-            <dt>Last check</dt>
-            <dd>{{ $site->last_health_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? 'Never' }}</dd>
+            <dt>{{ __('sites.agent.last_check') }}</dt>
+            <dd>{{ $site->last_health_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.never') }}</dd>
         </div>
         <div>
-            <dt>Deamon version</dt>
-            <dd>{{ $version ?? '—' }}</dd>
+            <dt>{{ __('sites.agent.version') }}</dt>
+            <dd>{{ $version ?? __('ops.none') }}</dd>
         </div>
         <div>
-            <dt>Active theme</dt>
-            <dd>{{ $themeId ?? '—' }}</dd>
+            <dt>{{ __('sites.agent.theme') }}</dt>
+            <dd>{{ $themeId ?? __('ops.none') }}</dd>
         </div>
         <div>
-            <dt>Queue</dt>
+            <dt>{{ __('sites.agent.queue') }}</dt>
             <dd>
                 @if ($queueOk === true)
-                    ok
+                    {{ __('ops.health.ok') }}
                 @elseif ($queueOk === false)
-                    failing
+                    {{ __('ops.health.failing') }}
                 @else
-                    —
+                    {{ __('ops.none') }}
                 @endif
             </dd>
         </div>
         <div>
-            <dt>Agent secret</dt>
-            <dd>{{ $site->hasAgentSecret() ? 'configured' : 'missing' }}</dd>
+            <dt>{{ __('sites.agent.secret') }}</dt>
+            <dd>{{ $site->hasAgentSecret() ? __('ops.health.configured') : __('ops.health.missing') }}</dd>
         </div>
     </dl>
 
     @if (! $site->hasAgentSecret())
-        <p class="field-hint">
-            Import secret üretmez. Aşağıdaki <strong>Generate &amp; inject</strong> Coolify env’e yazar — tinker yok.
-        </p>
+        <p class="field-hint">{{ __('sites.agent.missing_hint') }}</p>
     @endif
 
     @if ($canCheckHealth)
-        <form method="POST" action="{{ route('ops.sites.health', $site) }}" class="ops-form">
+        <form method="POST" action="{{ route('ops.sites.health', $site) }}" class="ops-form" data-ops-pending>
             @csrf
             <div class="form-actions">
-                <button type="submit" class="btn btn-ghost">Check health</button>
+                <button type="submit" class="btn btn-ghost" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.check') }}</button>
             </div>
         </form>
     @endif

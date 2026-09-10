@@ -9,8 +9,10 @@ use App\Models\User;
 use App\Policies\CoolifyConnectionPolicy;
 use App\Policies\SitePolicy;
 use App\Policies\ThemePolicy;
+use App\Support\OpsAppearance;
 use App\Support\ProductionDebugGuard;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -28,5 +30,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CoolifyConnection::class, CoolifyConnectionPolicy::class);
 
         ProductionDebugGuard::assert();
+
+        View::composer(['layouts.ops', 'layouts.guest'], function ($view): void {
+            $view->with('opsAppearance', OpsAppearance::fromRequest(request()));
+        });
     }
 }

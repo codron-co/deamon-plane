@@ -18,10 +18,6 @@ enum ThemeVisibility: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::PublicCatalog => 'Public catalog',
-            self::Allowlist => 'Allowlist',
-            self::Private => 'Private',
-        };
+        return __('ops.theme_visibility.'.$this->value);
     }
 }

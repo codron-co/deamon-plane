@@ -19,6 +19,11 @@ enum SiteStatus: string
         return array_map(static fn (self $status) => $status->value, self::cases());
     }
 
+    public function label(): string
+    {
+        return __('ops.site_status.'.$this->value);
+    }
+
     /**
      * Plan §4.2 — draft → provisioning → active ⇄ deploying → active;
      * draft → active when attaching an existing Coolify app (no second create);

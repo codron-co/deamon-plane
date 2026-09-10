@@ -1,30 +1,29 @@
 @extends('layouts.ops')
 
-@section('title', 'Coolify')
+@section('title', __('coolify.title'))
 
 @section('actions')
     @if ($canWrite)
-        <a class="btn btn-primary btn-sm" href="{{ route('ops.coolify.create') }}">Bağlantı ekle</a>
+        <a class="btn btn-primary btn-sm" href="{{ route('ops.coolify.create') }}">{{ __('coolify.add') }}</a>
     @endif
 @endsection
 
 @section('content')
-    <p class="page-lede">
-        Birden fazla Coolify instance. Bağladıktan sonra sunucuları API’den çekin, aktif/pasif seçin.
-        Site kurma bu listelerden dolar — UUID elle yazılmaz.
-    </p>
+    <p class="page-lede">{{ __('coolify.lede') }}</p>
 
     @if ($connections->isEmpty())
-        <p class="muted">Henüz Coolify bağlantısı yok. Token Settings’te değil, burada saklanır (şifreli).</p>
+        <div class="empty-panel">
+            <h2>{{ __('coolify.empty') }}</h2>
+        </div>
     @else
         <div class="sites-table-wrap">
             <table class="ops-table">
                 <thead>
                     <tr>
-                        <th>Ad</th>
-                        <th>URL</th>
-                        <th>Durum</th>
-                        <th>Sunucu</th>
+                        <th>{{ __('coolify.columns.name') }}</th>
+                        <th>{{ __('coolify.columns.url') }}</th>
+                        <th>{{ __('coolify.columns.status') }}</th>
+                        <th>{{ __('coolify.columns.servers') }}</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -34,18 +33,18 @@
                             <td>
                                 <a class="site-name" href="{{ route('ops.coolify.show', $connection) }}">{{ $connection->name }}</a>
                                 @if ($connection->is_default)
-                                    <span class="ops-chip">varsayılan</span>
+                                    <span class="ops-chip">{{ __('ops.default') }}</span>
                                 @endif
                             </td>
-                            <td class="muted">{{ $connection->base_url ?: '—' }}</td>
+                            <td class="muted">{{ $connection->base_url ?: __('ops.none') }}</td>
                             <td>
                                 <span class="status-chip status-{{ $connection->is_enabled ? 'active' : 'error' }}">
-                                    {{ $connection->is_enabled ? 'açık' : 'kapalı' }}
+                                    {{ $connection->is_enabled ? __('coolify.enabled') : __('coolify.disabled') }}
                                 </span>
                             </td>
-                            <td class="muted">{{ $connection->active_servers_count }}/{{ $connection->servers_count }} aktif</td>
+                            <td class="muted">{{ __('coolify.servers_active', ['active' => $connection->active_servers_count, 'total' => $connection->servers_count]) }}</td>
                             <td class="ops-row-actions">
-                                <a class="btn btn-ghost btn-sm" href="{{ route('ops.coolify.show', $connection) }}">Aç</a>
+                                <a class="btn btn-ghost btn-sm" href="{{ route('ops.coolify.show', $connection) }}">{{ __('ops.actions.open') }}</a>
                             </td>
                         </tr>
                     @endforeach

@@ -7,6 +7,7 @@ use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
+use App\Models\CoolifyConnection;
 use App\Models\CoolifySetting;
 use App\Models\Deployment;
 use App\Models\Site;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Support\CoolifyWebhookSignature;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -197,11 +199,50 @@ class CoolifyWebhookTest extends TestCase
             'event' => 'deployment_failed',
             'deployment_uuid' => $deployment->coolify_deployment_uuid,
             'application_uuid' => $deployment->site->coolify_app_uuid,
+            'message' => 'Validation failed.',
+            'errors' => ['fqdn' => ['This field is not allowed.']],
+            'logs' => 'compose failed on app',
         ])->assertOk();
 
         $deployment->refresh();
         $this->assertSame(DeploymentStatus::Failed, $deployment->status);
         $this->assertSame(SiteStatus::Error, $deployment->site->fresh()->status);
+        $this->assertStringContainsString('Validation failed.', (string) $deployment->error_message);
+        $this->assertStringContainsString('This field is not allowed.', (string) $deployment->error_message);
+        $this->assertStringContainsString('compose failed on app', (string) $deployment->log_excerpt);
+    }
+
+    public function test_failed_webhook_fetches_deployment_logs_when_connection_has_token(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.test',
+            'api_token' => 'test-coolify-token',
+        ]);
+
+        $deployment = $this->inProgressDeployment();
+        $deployment->site->forceFill(['coolify_connection_id' => $connection->id])->save();
+
+        Http::fake([
+            'https://coolify.test/api/v1/deployments/dep-1' => Http::response([
+                'uuid' => 'dep-1',
+                'status' => 'failed',
+                'message' => 'Build failed.',
+                'errors' => ['git_branch' => ['invalid']],
+                'logs' => 'remote log tail',
+            ], 200),
+        ]);
+
+        $this->signedPost([
+            'event' => 'deployment_failed',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+            'application_uuid' => $deployment->site->coolify_app_uuid,
+        ])->assertOk();
+
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Failed, $deployment->status);
+        $this->assertStringContainsString('Build failed.', (string) $deployment->error_message);
+        $this->assertStringContainsString('git_branch', (string) $deployment->error_message);
+        $this->assertStringContainsString('remote log tail', (string) $deployment->log_excerpt);
     }
 
     public function test_api_shaped_payload_status_field_is_mapped(): void
@@ -281,9 +322,10 @@ class CoolifyWebhookTest extends TestCase
             ->get(route('ops.sites.edit', $deployment->site))
             ->assertOk()
             ->assertSee('Deployments', false)
-            ->assertSee('in_progress', false)
+            ->assertSee('in progress', false)
             ->assertSee('abcdef1', false)
-            ->assertSee('Open in Coolify', false);
+            ->assertSee('Open in Coolify', false)
+            ->assertSee('data-href="'.route('ops.sites.deployments.show', [$deployment->site, $deployment]).'"', false);
     }
 
     /**

@@ -174,7 +174,8 @@ class SiteProvisioner
 
         if (in_array($mapped, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
             $status = $remote->status ?? $mapped->value;
-            $this->markFailed($site, 'Coolify deployment '.$status.'.', $deployment, $actorUserId, $ip);
+            $detail = DeploymentFailureText::fromRemote($site, $remote, 'Coolify deployment '.$status.'.');
+            $this->markFailed($site, $detail['error_message'], $deployment, $actorUserId, $ip, $detail['log_excerpt']);
 
             return true;
         }
@@ -224,17 +225,30 @@ class SiteProvisioner
         ?Deployment $deployment = null,
         ?int $actorUserId = null,
         ?string $ip = null,
+        ?string $logExcerpt = null,
     ): void {
         $safe = $this->redactSecrets($site, $message);
 
-        if ($deployment !== null) {
-            $deployment->status = $deployment->status === DeploymentStatus::Cancelled
-                ? DeploymentStatus::Cancelled
-                : DeploymentStatus::Failed;
-            $deployment->error_message = $safe;
-            $deployment->finished_at = now();
-            $deployment->save();
+        if ($deployment === null) {
+            $channel = $site->channel instanceof Channel ? $site->channel : Channel::from((string) $site->channel);
+            $deployment = $site->deployments()->create([
+                'channel' => $channel,
+                'trigger' => DeploymentTrigger::Create,
+                'status' => DeploymentStatus::Failed,
+                'started_at' => now(),
+                'requested_by' => $actorUserId,
+            ]);
         }
+
+        $deployment->status = $deployment->status === DeploymentStatus::Cancelled
+            ? DeploymentStatus::Cancelled
+            : DeploymentStatus::Failed;
+        $deployment->error_message = $safe;
+        if ($logExcerpt !== null) {
+            $deployment->log_excerpt = $this->redactSecrets($site, $logExcerpt);
+        }
+        $deployment->finished_at = now();
+        $deployment->save();
 
         if ($site->status !== SiteStatus::Error && $site->canTransitionTo(SiteStatus::Error)) {
             $site->transitionTo(SiteStatus::Error);
@@ -258,11 +272,11 @@ class SiteProvisioner
 
     public function safeFailureMessage(Site $site, Throwable $exception): string
     {
-        $message = $exception instanceof CoolifyApiException || $exception instanceof SiteProvisionException
+        $fallback = $exception instanceof CoolifyApiException || $exception instanceof SiteProvisionException
             ? $exception->getMessage()
             : 'Provisioning failed.';
 
-        return $this->redactSecrets($site, $message);
+        return DeploymentFailureText::fromException($site, $exception, $fallback)['error_message'];
     }
 
     public function mapRemoteStatus(?string $status): DeploymentStatus
@@ -427,14 +441,6 @@ class SiteProvisioner
 
     private function redactSecrets(Site $site, string $message): string
     {
-        $redacted = CoolifyApiException::redact($message);
-
-        foreach ([$site->app_key_encrypted, $site->agent_secret_encrypted] as $secret) {
-            if (is_string($secret) && $secret !== '' && str_contains($redacted, $secret)) {
-                $redacted = str_replace($secret, '[redacted]', $redacted);
-            }
-        }
-
-        return $redacted;
+        return DeploymentFailureText::redact($site, $message);
     }
 }

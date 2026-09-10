@@ -14,6 +14,8 @@ return [
 
     'channels' => ['main', 'beta', 'alpha'],
 
+    'locales' => ['en', 'tr'],
+
     'channel_switch' => [
         'main_minimum_version' => env('DEAMON_MAIN_MINIMUM_VERSION'),
         'downgrade_requires_confirm' => [
@@ -78,6 +80,7 @@ return [
         'environment_name' => env('COOLIFY_ENVIRONMENT_NAME', 'production'),
         'poll_seconds' => (int) env('COOLIFY_DEPLOY_POLL_SECONDS', 15),
         'poll_max_attempts' => (int) env('COOLIFY_DEPLOY_POLL_MAX_ATTEMPTS', 40),
+        'log_excerpt_bytes' => (int) env('COOLIFY_DEPLOY_LOG_EXCERPT_BYTES', 16000),
     ],
 
     /*

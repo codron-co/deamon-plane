@@ -88,6 +88,11 @@ class CoolifyConnectionsTest extends TestCase
             ->assertRedirect(route('ops.coolify.show', $connection))
             ->assertSessionHas('status');
 
+        $this->actingAs($this->operator())
+            ->get(route('ops.coolify.sync', $connection))
+            ->assertStatus(302)
+            ->assertRedirect(route('ops.coolify.show', $connection));
+
         Http::assertNothingSent();
     }
 

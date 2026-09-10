@@ -71,4 +71,31 @@ class FleetDashboardKpis
             ->orderBy('name')
             ->get(['id', 'slug', 'name', 'primary_domain', 'notes']);
     }
+
+    /**
+     * @return Collection<int, Site>
+     */
+    public function unhealthySites(): Collection
+    {
+        $evaluator = new SiteHealthEvaluator;
+
+        return Site::query()
+            ->orderBy('name')
+            ->get()
+            ->filter(static fn (Site $site): bool => $evaluator->countsAsUnhealthy($site))
+            ->values();
+    }
+
+    /**
+     * @return Collection<int, Deployment>
+     */
+    public function recentFailedDeploys(): Collection
+    {
+        return Deployment::query()
+            ->with('site')
+            ->where('status', DeploymentStatus::Failed)
+            ->latest('id')
+            ->limit(8)
+            ->get();
+    }
 }

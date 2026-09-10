@@ -9,7 +9,9 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | GET | `/sites` | `ops.sites` | All ops roles |
 | GET | `/sites/create` | `ops.sites.create` | operator, super_admin |
 | POST | `/sites` | `ops.sites.store` | operator, super_admin |
-| GET | `/sites/{site}` | `ops.sites.edit` | All ops roles (viewer read-only) |
+| GET | `/sites/{site}` | `ops.sites.show` | All ops roles |
+| GET | `/sites/{site}/deployments/{deployment}` | `ops.sites.deployments.show` | All ops roles |
+| GET | `/sites/{site}/edit` | `ops.sites.edit` | All ops roles (viewer read-only) |
 | PUT | `/sites/{site}` | `ops.sites.update` | operator, super_admin |
 | POST | `/sites/{site}/provision` | `ops.sites.provision` | operator, super_admin; draft or error only |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
@@ -58,7 +60,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Deployments
 
-Site detail includes a **Deployments** section (`ops/deployments/index`): last 25 rows, status chip, duration, commit, **Open in Coolify**. Rows are written by provision/channel jobs and updated by Coolify webhooks or `PollDeploymentJob`. See [coolify-webhooks.md](coolify-webhooks.md).
+Site detail and site edit include a **Deployments** table (`ops/deployments/index`): last 25 rows, status chip, duration, commit, **Open in Coolify**. Click a row (or **Show**) for `GET /sites/{site}/deployments/{deployment}` — status, channel, trigger, commit, duration, times, full Coolify error (`message` + `errors` JSON), truncated redacted logs in `<pre>`, and a copyable pasteable report. Poll (`PollDeploymentJob`) and Coolify webhook failures write this text onto the `deployments` row (`error_message` + `log_excerpt`); status `failed` alone is not enough. See [coolify-webhooks.md](coolify-webhooks.md).
 
 ## Policy
 

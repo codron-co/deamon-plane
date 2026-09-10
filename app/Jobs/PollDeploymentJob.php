@@ -3,10 +3,13 @@
 namespace App\Jobs;
 
 use App\Enums\DeploymentTrigger;
+use App\Models\CoolifyConnection;
 use App\Models\Deployment;
+use App\Models\Site;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Sites\ChannelSwitcher;
+use App\Services\Sites\DeploymentFailureText;
 use App\Services\Sites\SiteProvisioner;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -51,14 +54,20 @@ class PollDeploymentJob implements ShouldQueue
         }
 
         try {
-            $remote = $coolify->getDeployment($uuid);
+            $remote = $this->coolifyFor($deployment->site, $coolify)->getDeployment($uuid);
         } catch (CoolifyApiException $exception) {
+            $detail = DeploymentFailureText::fromException(
+                $deployment->site,
+                $exception,
+                $owner->safeFailureMessage($deployment->site, $exception),
+            );
             $owner->markFailed(
                 $deployment->site,
-                $owner->safeFailureMessage($deployment->site, $exception),
+                $detail['error_message'],
                 $deployment,
                 $this->actorUserId,
                 $this->ip,
+                $detail['log_excerpt'],
             );
 
             return;
@@ -92,5 +101,16 @@ class PollDeploymentJob implements ShouldQueue
 
         self::dispatch($this->deploymentId, $this->actorUserId, $this->ip, $this->pollAttempt + 1)
             ->delay(now()->addSeconds($delay));
+    }
+
+    private function coolifyFor(Site $site, CoolifyApplicationService $fallback): CoolifyApplicationService
+    {
+        $site->loadMissing('coolifyConnection');
+        $connection = $site->coolifyConnection;
+        if ($connection instanceof CoolifyConnection && $connection->hasToken()) {
+            return CoolifyApplicationService::forConnection($connection);
+        }
+
+        return $fallback;
     }
 }

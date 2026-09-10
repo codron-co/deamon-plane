@@ -416,6 +416,7 @@ class CoolifyClientTest extends TestCase
         $this->assertSame('dep-1', $deploy->firstDeploymentUuid());
         $this->assertSame('finished', $deployment->status);
         $this->assertArrayNotHasKey('logs', $deployment->raw);
+        $this->assertSame('THIS_MUST_NOT_BE_PERSISTED', $deployment->logsExcerpt);
 
         Http::assertSent(function (Request $request): bool {
             return $request->method() === 'PATCH'

@@ -1,0 +1,37 @@
+<?php
+
+return [
+    'title' => 'Hesap',
+    'preferences' => 'Tercihler',
+    'profile' => 'Profil',
+    'password' => 'Parola',
+    'avatar' => 'Fotoğraf',
+    'name' => 'Görünen ad',
+    'email' => 'E-posta',
+    'current_password' => 'Mevcut parola',
+    'new_password' => 'Yeni parola',
+    'password_confirmation' => 'Parolayı doğrula',
+    'save_profile' => 'Profili kaydet',
+    'change_password' => 'Parolayı değiştir',
+    'upload_photo' => 'Fotoğraf yükle',
+    'remove_photo' => 'Fotoğrafı kaldır',
+    'photo_hint' => 'JPG, PNG veya WebP. En fazla 2 MB.',
+    'language' => 'Dil',
+    'appearance' => 'Görünüm',
+    'appearance_hint' => 'Bu Plane hesabına uygulanır.',
+    'save_preferences' => 'Tercihleri kaydet',
+    'appearance_modes' => [
+        'light' => 'Açık',
+        'semidark' => 'Yarı koyu',
+        'dark' => 'Koyu',
+    ],
+    'flash' => [
+        'profile_updated' => 'Profil güncellendi.',
+        'password_updated' => 'Parola güncellendi.',
+        'avatar_updated' => 'Fotoğraf güncellendi.',
+        'avatar_removed' => 'Fotoğraf kaldırıldı.',
+        'preferences_updated' => 'Tercihler kaydedildi.',
+        'locale_updated' => 'Dil güncellendi.',
+        'appearance_updated' => 'Görünüm güncellendi.',
+    ],
+];

@@ -4,6 +4,7 @@ namespace App\Services\Coolify;
 
 use App\Enums\Channel;
 use App\Models\CoolifyConnection;
+use App\Models\Site;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Coolify\Dto\CoolifyDeployResult;
@@ -29,6 +30,16 @@ class CoolifyApplicationService
     public static function forConnection(CoolifyConnection $connection): self
     {
         return new self(new CoolifyClient($connection->credentials()));
+    }
+
+    public static function forSite(Site $site): self
+    {
+        $site->loadMissing('coolifyConnection');
+        if ($site->coolifyConnection instanceof CoolifyConnection) {
+            return self::forConnection($site->coolifyConnection);
+        }
+
+        return new self(new CoolifyClient(CoolifyCredentials::resolve()));
     }
 
     public function client(): CoolifyClient

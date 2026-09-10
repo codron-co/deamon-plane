@@ -14,6 +14,8 @@ class FleetController extends Controller
             'channels' => config('ops.channels'),
             'kpis' => $kpis->snapshot(),
             'dockerfilePackSites' => $kpis->dockerfilePackSites(),
+            'unhealthySites' => $kpis->unhealthySites(),
+            'failedDeploys' => $kpis->recentFailedDeploys(),
         ]);
     }
 }

@@ -1,0 +1,37 @@
+<?php
+
+return [
+    'title' => 'Account',
+    'preferences' => 'Preferences',
+    'profile' => 'Profile',
+    'password' => 'Password',
+    'avatar' => 'Photo',
+    'name' => 'Display name',
+    'email' => 'Email',
+    'current_password' => 'Current password',
+    'new_password' => 'New password',
+    'password_confirmation' => 'Confirm password',
+    'save_profile' => 'Save profile',
+    'change_password' => 'Change password',
+    'upload_photo' => 'Upload photo',
+    'remove_photo' => 'Remove photo',
+    'photo_hint' => 'JPG, PNG or WebP. Max 2 MB.',
+    'language' => 'Language',
+    'appearance' => 'Appearance',
+    'appearance_hint' => 'Applies to this account on this Plane.',
+    'save_preferences' => 'Save preferences',
+    'appearance_modes' => [
+        'light' => 'Light',
+        'semidark' => 'Semi-dark',
+        'dark' => 'Dark',
+    ],
+    'flash' => [
+        'profile_updated' => 'Profile updated.',
+        'password_updated' => 'Password updated.',
+        'avatar_updated' => 'Photo updated.',
+        'avatar_removed' => 'Photo removed.',
+        'preferences_updated' => 'Preferences saved.',
+        'locale_updated' => 'Language updated.',
+        'appearance_updated' => 'Appearance updated.',
+    ],
+];

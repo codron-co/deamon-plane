@@ -9,11 +9,8 @@ enum DeploymentTrigger: string
     case Manual = 'manual';
     case ThemeRollout = 'theme_rollout';
 
-    /**
-     * @return list<string>
-     */
-    public static function values(): array
+    public function label(): string
     {
-        return array_map(static fn (self $trigger) => $trigger->value, self::cases());
+        return __('ops.deploy_trigger.'.$this->value);
     }
 }

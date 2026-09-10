@@ -5,24 +5,20 @@
 @endphp
 
 <section class="settings-panel" aria-labelledby="site-themes-heading">
-    <h2 id="site-themes-heading">Themes</h2>
-    <p class="field-hint">
-        Assign installs via the CMS theme agent (<code>POST /internal/control/v1/themes/*</code>, HMAC <code>X-Deamon-*</code>).
-        Plane never uploads a ZIP and never copies random PHP onto Coolify volumes.
-        Auto-update stays <strong>off</strong> unless you opt in.
-    </p>
+    <h2 id="site-themes-heading">{{ __('sites.themes.title') }}</h2>
+    <p class="field-hint">{{ __('sites.themes.lede') }}</p>
 
     @if ($themeInstallations->isEmpty())
-        <p class="field-hint">No theme installations on this site.</p>
+        <p class="field-hint">{{ __('sites.themes.empty') }}</p>
     @else
         <table class="ops-table">
             <thead>
                 <tr>
-                    <th>Theme</th>
-                    <th>Ref / SHA</th>
-                    <th>Status</th>
-                    <th>Active</th>
-                    <th>Auto-update</th>
+                    <th>{{ __('sites.themes.columns.theme') }}</th>
+                    <th>{{ __('sites.themes.columns.ref') }}</th>
+                    <th>{{ __('sites.themes.columns.status') }}</th>
+                    <th>{{ __('sites.themes.columns.active') }}</th>
+                    <th>{{ __('sites.themes.columns.auto_update') }}</th>
                     <th></th>
                 </tr>
             </thead>
@@ -35,7 +31,7 @@
                                 <a href="{{ route('ops.themes.show', $installedTheme) }}">{{ $installedTheme->displayName() }}</a>
                                 <div class="site-slug">{{ $installedTheme->theme_id }}</div>
                             @else
-                                —
+                                {{ __('ops.none') }}
                             @endif
                         </td>
                         <td>
@@ -45,41 +41,41 @@
                             @endif
                         </td>
                         <td>
-                            <span class="status-chip">{{ $installation->status?->value }}</span>
+                            <span class="status-chip">{{ $installation->status?->label() ?? $installation->status?->value }}</span>
                             @if ($installation->last_error)
                                 <div class="site-slug">{{ $installation->last_error }}</div>
                             @endif
                         </td>
-                        <td>{{ $installation->is_active ? 'yes' : 'no' }}</td>
-                        <td>{{ $installation->auto_update ? 'on' : 'off' }}</td>
+                        <td>{{ $installation->is_active ? __('ops.yes') : __('ops.no') }}</td>
+                        <td>{{ $installation->auto_update ? __('ops.on') : __('ops.off') }}</td>
                         <td class="ops-row-actions">
                             @if ($canAssignTheme)
                                 <form method="POST" action="{{ route('ops.sites.themes.update', [$site, $installation]) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-ghost btn-sm">Update to latest</button>
+                                    <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.update_latest') }}</button>
                                 </form>
                                 <form method="POST" action="{{ route('ops.sites.themes.sync', [$site, $installation]) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-ghost btn-sm">Sync now</button>
+                                    <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync') }}</button>
                                 </form>
                                 @if (! $installation->is_active)
                                     <form
                                         method="POST"
                                         action="{{ route('ops.sites.themes.activate', [$site, $installation]) }}"
-                                        data-confirm="Activate {{ $installedTheme?->theme_id }} on {{ $site->name }}? This replaces the live CMS active theme."
-                                        data-confirm-title="Activate theme"
-                                        data-confirm-label="Activate"
+                                        data-confirm="{{ __('sites.themes.activate_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
+                                        data-confirm-title="{{ __('sites.themes.activate_title') }}"
+                                        data-confirm-label="{{ __('sites.themes.activate') }}"
                                     >
                                         @csrf
                                         <input type="hidden" name="confirmed" value="0">
-                                        <button type="submit" class="btn btn-ghost btn-sm">Activate</button>
+                                        <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.activate') }}</button>
                                     </form>
                                 @endif
                                 <form method="POST" action="{{ route('ops.sites.themes.auto-update', [$site, $installation]) }}">
                                     @csrf
                                     <input type="hidden" name="auto_update" value="{{ $installation->auto_update ? 0 : 1 }}">
                                     <button type="submit" class="btn btn-ghost btn-sm">
-                                        {{ $installation->auto_update ? 'Disable auto-update' : 'Enable auto-update' }}
+                                        {{ $installation->auto_update ? __('sites.themes.disable_auto') : __('sites.themes.enable_auto') }}
                                     </button>
                                 </form>
                             @endif
@@ -95,39 +91,39 @@
             method="POST"
             action="{{ route('ops.sites.themes.assign', $site) }}"
             class="ops-form settings-form"
-            data-confirm="Assign and activate this catalog theme on {{ $site->name }}? The CMS agent will git-install it. This is not a ZIP upload."
-            data-confirm-title="Assign theme"
-            data-confirm-label="Assign"
+            data-confirm="{{ __('sites.themes.assign_confirm', ['site' => $site->name]) }}"
+            data-confirm-title="{{ __('sites.themes.assign_title') }}"
+            data-confirm-label="{{ __('sites.themes.assign') }}"
             data-confirm-danger="true"
         >
             @csrf
             <input type="hidden" name="confirmed" value="0">
             <div class="field">
-                <label class="field-label" for="site-theme-id">Catalog theme</label>
+                <label class="field-label" for="site-theme-id">{{ __('sites.themes.catalog') }}</label>
                 <select id="site-theme-id" class="field-input" name="theme_id" required>
-                    <option value="">Select a theme</option>
+                    <option value="">{{ __('sites.themes.select') }}</option>
                     @foreach ($assignableThemes as $theme)
-                        <option value="{{ $theme->theme_id }}">{{ $theme->displayName() }} ({{ $theme->visibility?->value }})</option>
+                        <option value="{{ $theme->theme_id }}">{{ $theme->displayName() }} ({{ $theme->visibility?->label() }})</option>
                     @endforeach
                 </select>
             </div>
             <div class="field">
-                <label class="field-label" for="site-theme-ref">Ref</label>
-                <p class="field-hint">Branch or tag. Empty uses the catalog default_ref.</p>
+                <label class="field-label" for="site-theme-ref">{{ __('sites.themes.ref') }}</label>
+                <p class="field-hint">{{ __('sites.themes.ref_hint') }}</p>
                 <input id="site-theme-ref" class="field-input" type="text" name="ref" value="{{ old('ref') }}" placeholder="main">
             </div>
             <input type="hidden" name="activate" value="0">
             <input type="hidden" name="sync" value="0">
             <label class="field-check">
                 <input type="checkbox" name="activate" value="1" checked>
-                Activate after install (requires confirm)
+                {{ __('sites.themes.activate_after') }}
             </label>
             <label class="field-check">
                 <input type="checkbox" name="sync" value="1" checked>
-                Run theme sync after activate
+                {{ __('sites.themes.sync_after') }}
             </label>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Assign theme</button>
+                <button type="submit" class="btn btn-primary">{{ __('sites.themes.assign') }}</button>
             </div>
         </form>
     @endif

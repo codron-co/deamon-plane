@@ -46,7 +46,7 @@ class ProvisionSiteTest extends TestCase
 
         $this->actingAs($operator)
             ->post(route('ops.sites.provision', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');
 
         $site->refresh();
@@ -155,7 +155,7 @@ class ProvisionSiteTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.provision', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $error = session('error');
@@ -169,6 +169,13 @@ class ProvisionSiteTest extends TestCase
             ->first();
         $this->assertNotNull($failed);
         $this->assertStringContainsString('server_uuid', (string) ($failed->after['error'] ?? ''));
+
+        $deployment = $site->deployments()->latest('id')->first();
+        $this->assertNotNull($deployment);
+        $this->assertSame(DeploymentStatus::Failed, $deployment->status);
+        $this->assertStringContainsString('Validation failed.', (string) $deployment->error_message);
+        $this->assertStringContainsString('server_uuid', (string) $deployment->error_message);
+        $this->assertStringContainsString('Coolify errors:', (string) $deployment->error_message);
     }
 
     public function test_preflight_rejects_server_missing_from_list_servers(): void
@@ -191,7 +198,7 @@ class ProvisionSiteTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.provision', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $error = session('error');
@@ -216,7 +223,7 @@ class ProvisionSiteTest extends TestCase
 
         $this->actingAs($operator)
             ->post(route('ops.sites.provision', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
@@ -237,9 +244,15 @@ class ProvisionSiteTest extends TestCase
             'subject_id' => $site->id,
         ]);
 
-        $this->assertDatabaseMissing('deployments', [
+        $this->assertDatabaseHas('deployments', [
             'site_id' => $site->id,
+            'trigger' => DeploymentTrigger::Create->value,
+            'status' => DeploymentStatus::Failed->value,
         ]);
+
+        $row = $site->fresh()->deployments()->first();
+        $this->assertNotNull($row);
+        $this->assertStringContainsString('compose create failed', (string) $row->error_message);
 
         $failed = AuditLog::query()
             ->where('subject_id', $site->id)
@@ -266,7 +279,7 @@ class ProvisionSiteTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->post(route('ops.sites.provision', $site))
-            ->assertRedirect(route('ops.sites.edit', $site));
+            ->assertRedirect(route('ops.sites.show', $site));
 
         $site->refresh();
 
@@ -314,13 +327,91 @@ class ProvisionSiteTest extends TestCase
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.provision', $site))
-            ->assertRedirect(route('ops.sites.edit', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('error');
 
         $site->refresh();
         $this->assertSame(SiteStatus::Active, $site->status);
         $this->assertSame('already-there', $site->coolify_app_uuid);
         Http::assertNothingSent();
+    }
+
+    public function test_poll_failure_stores_coolify_message_errors_and_truncated_logs(): void
+    {
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if ($method === 'POST' && str_contains($url, '/applications/')) {
+                return Http::response([
+                    'uuid' => 'coolify-app-1',
+                    'name' => 'deamon-izyem',
+                    'git_branch' => 'beta',
+                    'build_pack' => 'dockercompose',
+                    'docker_compose_location' => '/docker-compose.coolify.yml',
+                ], 201);
+            }
+
+            if ($method === 'PATCH' && str_contains($url, '/envs/bulk')) {
+                return Http::response([], 200);
+            }
+
+            if ($method === 'PATCH' && preg_match('#/applications/[^/]+$#', $url) === 1) {
+                return Http::response([
+                    'uuid' => 'coolify-app-1',
+                    'name' => 'deamon-izyem',
+                    'docker_compose_domains' => [
+                        ['name' => 'app', 'domain' => 'https://shop.izyem.example.test'],
+                    ],
+                ], 200);
+            }
+
+            if ($method === 'POST' && str_contains($url, '/deploy')) {
+                return Http::response([
+                    'deployments' => [[
+                        'resource_uuid' => 'coolify-app-1',
+                        'deployment_uuid' => 'dep-fail',
+                        'message' => 'queued',
+                    ]],
+                ], 200);
+            }
+
+            if ($method === 'GET' && str_contains($url, '/deployments/dep-fail')) {
+                return Http::response([
+                    'uuid' => 'dep-fail',
+                    'status' => 'failed',
+                    'commit' => 'deadbeef',
+                    'message' => 'Validation failed.',
+                    'errors' => ['fqdn' => ['This field is not allowed.']],
+                    'logs' => "APP_KEY=base64:SHOULD_NOT_APPEAR\nCoolify compose build exploded on service app",
+                ], 200);
+            }
+
+            return Http::response(['error' => 'unexpected '.$url], 404);
+        });
+
+        $site = $this->draftSite();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.provision', $site))
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $deployment = $site->fresh()->deployments()->latest('id')->first();
+        $this->assertNotNull($deployment);
+        $this->assertSame(DeploymentStatus::Failed, $deployment->status);
+        $this->assertSame('deadbeef', $deployment->commit_sha);
+        $this->assertStringContainsString('Validation failed.', (string) $deployment->error_message);
+        $this->assertStringContainsString('This field is not allowed.', (string) $deployment->error_message);
+        $this->assertStringContainsString('compose build exploded', (string) $deployment->log_excerpt);
+        $this->assertStringNotContainsString('SHOULD_NOT_APPEAR', (string) $deployment->log_excerpt);
+        $this->assertStringNotContainsString('SHOULD_NOT_APPEAR', (string) $deployment->error_message);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.deployments.show', [$site, $deployment]))
+            ->assertOk()
+            ->assertSee('This field is not allowed.', false)
+            ->assertSee('compose build exploded', false)
+            ->assertDontSee('SHOULD_NOT_APPEAR', false);
     }
 
     /**

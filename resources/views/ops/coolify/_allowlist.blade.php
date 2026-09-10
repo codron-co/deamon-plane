@@ -7,17 +7,17 @@
     <p>{{ $hint }}</p>
 
     @if ($rows->isEmpty())
-        <p class="muted">Liste boş. Sync düğmesiyle API’den çekin.</p>
+        <p class="muted">{{ __('coolify.allowlist.empty') }}</p>
     @else
         <div class="sites-table-wrap">
             <table class="ops-table">
                 <thead>
                     <tr>
-                        <th>Ad</th>
+                        <th>{{ __('coolify.allowlist.name') }}</th>
                         @if ($extra)
-                            <th>{{ $extra === 'kind' ? 'Tür' : ($extra === 'ip' ? 'IP' : 'Proje') }}</th>
+                            <th>{{ $extra === 'kind' ? __('coolify.allowlist.kind') : ($extra === 'ip' ? __('coolify.allowlist.ip') : __('coolify.allowlist.project')) }}</th>
                         @endif
-                        <th>Durum</th>
+                        <th>{{ __('coolify.allowlist.status') }}</th>
                         @if ($canWrite)
                             <th></th>
                         @endif
@@ -37,14 +37,14 @@
                             @endif
                             <td>
                                 <span class="status-chip status-{{ $row->is_active ? 'active' : 'error' }}">
-                                    {{ $row->is_active ? 'aktif' : 'pasif' }}
+                                    {{ $row->is_active ? __('ops.active') : __('ops.inactive') }}
                                 </span>
                             </td>
                             @if ($canWrite)
                                 <td class="ops-row-actions">
                                     <form method="POST" action="{{ route($toggleRoute, ['connection' => $connection, $param => $row]) }}">
                                         @csrf
-                                        <button type="submit" class="btn btn-ghost btn-sm">{{ $row->is_active ? 'Pasif yap' : 'Aktif yap' }}</button>
+                                        <button type="submit" class="btn btn-ghost btn-sm">{{ $row->is_active ? __('coolify.allowlist.deactivate') : __('coolify.allowlist.activate') }}</button>
                                     </form>
                                 </td>
                             @endif
@@ -54,4 +54,4 @@
             </table>
         </div>
     @endif
-</section>
+@endsection

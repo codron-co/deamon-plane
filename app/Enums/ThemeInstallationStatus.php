@@ -10,11 +10,8 @@ enum ThemeInstallationStatus: string
     case Error = 'error';
     case Updating = 'updating';
 
-    /**
-     * @return list<string>
-     */
-    public static function values(): array
+    public function label(): string
     {
-        return array_map(static fn (self $status) => $status->value, self::cases());
+        return __('ops.theme_install_status.'.$this->value);
     }
 }

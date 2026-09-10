@@ -10,11 +10,8 @@ enum DeploymentStatus: string
     case Failed = 'failed';
     case Cancelled = 'cancelled';
 
-    /**
-     * @return list<string>
-     */
-    public static function values(): array
+    public function label(): string
     {
-        return array_map(static fn (self $status) => $status->value, self::cases());
+        return __('ops.deploy_status.'.$this->value);
     }
 }

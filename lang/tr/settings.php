@@ -1,0 +1,30 @@
+<?php
+
+return [
+    'title' => 'Sistem',
+    'lede' => 'Tema kataloğu GitHub App’i burada. Token asla gösterilmez.',
+    'defaults' => 'Müşteri site varsayılanları',
+    'defaults_hint' => 'Ortamdan. Provision işleri git + Docker Compose app oluşturur — Nixpacks yok, ham POST /applications/dockercompose yok.',
+    'repository' => 'Müşteri git deposu',
+    'compose' => 'Compose dosyası',
+    'github' => [
+        'title' => 'GitHub tema kataloğu',
+        'lede' => 'Org kilidi :org, repo öneki :prefix. PAT veya GitHub App kimlik bilgileri şifrelenir. Kaydettikten sonra görünmez. Coolify GitHub App UUID’sinden ayrıdır (müşteri compose app oluşturmak için).',
+        'org' => 'Organizasyon',
+        'token' => 'Fine-grained PAT',
+        'token_configured' => 'Token kayıtlı. Mevcut değeri korumak için boş bırakın.',
+        'token_hint' => 'GitHub App varsa isteğe bağlı. deamon-theme-* için Contents + metadata.',
+        'app_id' => 'GitHub App id',
+        'installation' => 'Installation id',
+        'private_key' => 'App private key (PEM)',
+        'key_configured' => 'Private key kayıtlı. Mevcut değeri korumak için boş bırakın.',
+        'key_hint' => 'Şifreli. Yalnızca kısa ömürlü installation token üretmek için. Log’a yazılmaz.',
+        'webhook_url' => 'Tema webhook URL',
+        'webhook_url_hint' => 'GitHub org/repo webhook → bu URL. Coolify deploy webhook’u değil.',
+        'webhook_secret' => 'GitHub webhook secret',
+        'webhook_secret_hint' => 'Şifreli. Header X-Hub-Signature-256. Boş secret reddedilir.',
+        'secret_configured' => 'Secret kayıtlı. Mevcut değeri korumak için boş bırakın.',
+        'save' => 'GitHub’ı kaydet',
+        'test' => 'GitHub’ı test et',
+    ],
+];

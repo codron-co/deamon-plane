@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Ops\DeploymentShowController;
 use App\Http\Controllers\Ops\SiteController;
 use App\Http\Controllers\Ops\SiteDetailController;
 use App\Http\Controllers\Ops\SiteThemeController;
@@ -9,6 +10,9 @@ Route::get('/sites', [SiteController::class, 'index'])->name('ops.sites');
 Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.create');
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
 Route::get('/sites/{site}', SiteDetailController::class)->name('ops.sites.show');
+Route::get('/sites/{site}/deployments/{deployment}', DeploymentShowController::class)
+    ->scopeBindings()
+    ->name('ops.sites.deployments.show');
 Route::get('/sites/{site}/edit', [SiteController::class, 'edit'])->name('ops.sites.edit');
 Route::put('/sites/{site}', [SiteController::class, 'update'])->name('ops.sites.update');
 Route::post('/sites/{site}/provision', [SiteController::class, 'provision'])->name('ops.sites.provision');

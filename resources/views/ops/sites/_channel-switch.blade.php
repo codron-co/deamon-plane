@@ -7,44 +7,43 @@
     $currentChannel = $site->channel?->value ?? 'main';
     $isDowngradeFromMain = $currentChannel === 'main';
     $defaultTarget = old('channel', $site->desired_channel?->value ?? ($channelSwitchTargets[0] ?? ''));
-    $volumeNote = 'Switch = Coolify PATCH git_branch + deploy. MySQL, Redis, themes, and storage volumes stay on this app. Never DELETE the Coolify application (delete_volumes defaults to true).';
+    $volumeNote = __('sites.channel_switch.volume_note');
 @endphp
 
 @if ($channelSwitchInProgress)
     <section class="ops-panel" aria-labelledby="channel-switch-heading">
-        <h2 id="channel-switch-heading">Channel switch</h2>
+        <h2 id="channel-switch-heading">{{ __('sites.channel_switch.title') }}</h2>
         <p class="ops-flash" role="status">
-            Switching to <strong>{{ $site->desired_channel?->value ?? 'the target channel' }}</strong>.
-            Coolify is redeploying. Volumes stay attached.
+            {{ __('sites.channel_switch.in_progress', ['channel' => $site->desired_channel?->value ?? '']) }}
         </p>
         <p class="field-hint">{{ $volumeNote }}</p>
     </section>
 @elseif ($canSwitchChannel)
     <section class="ops-panel" aria-labelledby="channel-switch-heading">
-        <h2 id="channel-switch-heading">Channel switch</h2>
-        <p>Current channel is <span class="channel-chip">{{ $currentChannel }}</span>. Allowlist: main · beta · alpha.</p>
-        <p class="field-hint">{{ $volumeNote }} Take a customer DB/volume backup reminder before leaving main. Failures need a manual channel rollback from this form — the app is never recreated.</p>
+        <h2 id="channel-switch-heading">{{ __('sites.channel_switch.title') }}</h2>
+        <p>{{ __('sites.channel_switch.current', ['channel' => $currentChannel]) }}</p>
+        <p class="field-hint">{{ $volumeNote }} {{ __('sites.channel_switch.backup_hint') }}</p>
 
         <form
             method="POST"
             action="{{ route('ops.sites.channel', $site) }}"
             class="ops-form"
             @if ($isDowngradeFromMain)
-                data-confirm="Leave main for {{ $defaultTarget !== '' ? $defaultTarget : 'beta/alpha' }}? This redeploys the existing Coolify app. Volumes (MySQL, Redis, themes, storage) persist. The application is not deleted."
-                data-confirm-title="Leave main?"
-                data-confirm-label="Switch channel"
+                data-confirm="{{ __('sites.channel_switch.confirm_leave', ['target' => $defaultTarget !== '' ? $defaultTarget : 'beta/alpha']) }}"
+                data-confirm-title="{{ __('sites.channel_switch.confirm_title') }}"
+                data-confirm-label="{{ __('sites.channel_switch.confirm_label') }}"
             @endif
         >
             @csrf
             <input type="hidden" name="confirmed" value="0">
 
             <div class="field">
-                <label class="field-label" for="site_switch_channel">Target channel</label>
+                <label class="field-label" for="site_switch_channel">{{ __('sites.channel_switch.target') }}</label>
                 <p class="field-hint">
                     @if ($isDowngradeFromMain)
-                        Leaving main needs the confirm modal. Coolify only changes git_branch.
+                        {{ __('sites.channel_switch.hint_leave_main') }}
                     @else
-                        Switching to main runs a version gate when last health has deamon_version. Missing health does not block.
+                        {{ __('sites.channel_switch.hint_to_main') }}
                     @endif
                 </p>
                 <select
@@ -62,18 +61,18 @@
 
             @if ($canForceChannel && $currentChannel !== 'main')
                 <div class="field">
-                    <span class="field-label">Force</span>
-                    <p class="field-hint">Bypass the version gate. Super Admin only. Audited.</p>
+                    <span class="field-label">{{ __('sites.channel_switch.force') }}</span>
+                    <p class="field-hint">{{ __('sites.channel_switch.force_hint') }}</p>
                     <input type="hidden" name="force" value="0">
                     <label class="field-check">
                         <input type="checkbox" name="force" value="1" @checked(old('force'))>
-                        Force switch to main
+                        {{ __('sites.channel_switch.force_label') }}
                     </label>
                 </div>
             @endif
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Switch channel</button>
+                <button type="submit" class="btn btn-primary">{{ __('sites.channel_switch.submit') }}</button>
             </div>
         </form>
     </section>
@@ -85,8 +84,9 @@
                 if (! select || ! form || ! form.hasAttribute('data-confirm')) {
                     return;
                 }
+                const template = @json(__('sites.channel_switch.confirm_leave', ['target' => '__TARGET__']));
                 const sync = () => {
-                    form.dataset.confirm = 'Leave main for ' + select.value + '? This redeploys the existing Coolify app. Volumes (MySQL, Redis, themes, storage) persist. The application is not deleted.';
+                    form.dataset.confirm = template.replace('__TARGET__', select.value);
                 };
                 select.addEventListener('change', sync);
                 sync();
