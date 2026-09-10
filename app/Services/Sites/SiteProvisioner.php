@@ -23,7 +23,6 @@ use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyCredentials;
 use App\Services\Coolify\CoolifyProvisionPreflight;
 use App\Services\Coolify\Dto\CoolifyDeployment;
-use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailOrderBinder;
@@ -40,6 +39,7 @@ class SiteProvisioner
         private readonly CoolifyProvisionPreflight $preflight,
         private readonly SiteAgentSecretInjector $agentSecrets,
         private readonly CloudflareZoneService $cloudflare,
+        private readonly SiteLanding $landing,
     ) {}
 
     public function canStart(Site $site): bool
@@ -104,7 +104,25 @@ class SiteProvisioner
             throw new SiteProvisionException(__('cloudflare.errors.not_configured'));
         }
 
-        $this->cloudflare->ensureZoneAndDns($site, $settings);
+        $result = $this->cloudflare->ensureZoneAndDns($site, $settings);
+        $site->refresh();
+        $this->landing->afterCloudflare($site, $settings, $result['zone']);
+
+        try {
+            $this->landing->ensureTemporaryPreview($site, $settings);
+        } catch (Throwable $exception) {
+            $site->auditLogs()->create([
+                'actor_user_id' => $actorUserId,
+                'action' => 'site.preview_unavailable',
+                'after' => [
+                    'slug' => $site->slug,
+                    'primary_domain' => $site->primary_domain,
+                    'error' => $this->redactSecrets($site, $exception->getMessage()),
+                ],
+                'ip' => $ip,
+            ]);
+        }
+
         $site->refresh();
 
         $site->auditLogs()->create([
@@ -115,6 +133,8 @@ class SiteProvisioner
                 'primary_domain' => $site->primary_domain,
                 'cloudflare_zone_id' => $site->cloudflare_zone_id,
                 'cloudflare_nameservers' => $site->cloudflare_nameservers,
+                'cloudflare_zone_status' => $site->cloudflare_zone_status,
+                'temporary_domain' => $site->temporary_domain,
             ],
             'ip' => $ip,
         ]);
@@ -140,9 +160,10 @@ class SiteProvisioner
             $site->save();
         }
 
-        $coolify->updateEnvs($appUuid, $this->composeEnvPairs($coolify, $appUuid, $site));
-
-        $coolify->setDomains($appUuid, $site->primary_domain);
+        $binding = $site->coolifyDomainBinding();
+        if ($binding !== '') {
+            $coolify->setDomains($appUuid, $binding);
+        }
 
         try {
             $this->agentSecrets->inject($site);
@@ -368,38 +389,6 @@ class SiteProvisioner
         }
     }
 
-    /**
-     * CMS compose interpolates ${DB_PASSWORD} / ${MYSQL_ROOT_PASSWORD} into MySQL + app.
-     * Coolify creates those keys empty; an empty root password makes MySQL exit before the app starts.
-     * First migrate also requires DEAMON_DEFAULT_ADMIN_PASSWORD (min 12) to seed support@codron.co.
-     * Retry must not rotate a secret that already has a value (volume may already be initialized).
-     *
-     * @return array<string, string>
-     */
-    private function composeEnvPairs(CoolifyApplicationService $coolify, string $appUuid, Site $site): array
-    {
-        $pairs = [
-            'APP_KEY' => (string) $site->app_key_encrypted,
-            'DEAMON_SITE_NAME' => $site->name,
-        ];
-
-        $existing = $coolify->listEnvs($appUuid);
-
-        foreach (['DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'DEAMON_DEFAULT_ADMIN_PASSWORD'] as $key) {
-            $row = $existing->first(
-                static fn (CoolifyEnvironmentVariable $env): bool => $env->key === $key && ! $env->isPreview,
-            );
-
-            if ($row instanceof CoolifyEnvironmentVariable && filled($row->value())) {
-                continue;
-            }
-
-            $pairs[$key] = Str::password(40, symbols: false);
-        }
-
-        return $pairs;
-    }
-
     private function cloudflareSettingsFor(Site $site): ?CloudflareSetting
     {
         if (filled($site->cloudflare_setting_id)) {
@@ -474,7 +463,7 @@ class SiteProvisioner
             privateKeyUuid: $privateKey,
             name: 'deamon-'.$site->slug,
             instantDeploy: false,
-            dockerComposeDomains: filled($site->primary_domain) ? (string) $site->primary_domain : null,
+            dockerComposeDomains: ($binding = $site->coolifyDomainBinding()) !== '' ? $binding : null,
             dockerComposeLocation: CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
         );
     }

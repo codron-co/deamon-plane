@@ -99,6 +99,40 @@
         >
         @error('domain') <p class="field-error">{{ $message }}</p> @enderror
     </div>
+
+    @php
+        $aliasValues = old('aliases', $site->exists ? $site->aliasHosts() : []);
+        if ($aliasValues === []) {
+            $aliasValues = [''];
+        }
+    @endphp
+    <div class="field" data-alias-field>
+        <label class="field-label" for="site_alias_0">{{ __('sites.form.aliases') }}</label>
+        <p class="field-hint">{{ __('sites.form.aliases_hint') }}</p>
+        <div class="ops-alias-list" data-alias-list>
+            @foreach ($aliasValues as $index => $alias)
+                <div class="ops-alias-row">
+                    <input
+                        id="site_alias_{{ $index }}"
+                        class="field-input"
+                        type="text"
+                        name="aliases[]"
+                        value="{{ $alias }}"
+                        autocomplete="off"
+                        maxlength="255"
+                        placeholder="{{ __('sites.form.alias_placeholder') }}"
+                        @readonly($readonly)
+                    >
+                </div>
+            @endforeach
+        </div>
+        @if (! $readonly)
+            <button type="button" class="btn btn-ghost btn-sm" data-alias-add>{{ __('sites.form.alias_add') }}</button>
+        @endif
+        @error('aliases') <p class="field-error">{{ $message }}</p> @enderror
+        @error('aliases.0') <p class="field-error">{{ $message }}</p> @enderror
+        @error('aliases.1') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
 </section>
 
 @php

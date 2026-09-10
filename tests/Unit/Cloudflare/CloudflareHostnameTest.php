@@ -62,4 +62,16 @@ class CloudflareHostnameTest extends TestCase
         $this->assertSame('codron.co', CloudflareHostname::apex('a.b.c.deamon.codron.co'));
         $this->assertSame('', CloudflareHostname::apex('localhost'));
     }
+
+    public function test_www_companion_keeps_the_operator_host(): void
+    {
+        $this->assertSame('www.example.com', CloudflareHostname::wwwHost('example.com'));
+        $this->assertSame('www.example.com', CloudflareHostname::wwwHost('www.example.com'));
+        $this->assertSame('www.shop.customer.example', CloudflareHostname::wwwHost('shop.customer.example'));
+        $this->assertTrue(CloudflareHostname::sameRegistrableApex('blog.customer.example', 'shop.customer.example'));
+        $this->assertFalse(CloudflareHostname::sameRegistrableApex('other.test', 'shop.customer.example'));
+        $this->assertTrue(CloudflareHostname::zoneIsReady('active'));
+        $this->assertTrue(CloudflareHostname::zoneIsReady(null));
+        $this->assertFalse(CloudflareHostname::zoneIsReady('pending'));
+    }
 }

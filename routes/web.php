@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('ops.settings');
     Route::post('/settings', [SettingsController::class, 'update'])->name('ops.settings.update');
+    Route::post('/settings/env-defaults', [SettingsController::class, 'updateEnvDefaults'])->name('ops.settings.env.update');
     Route::post('/settings/coolify/test', [SettingsController::class, 'testConnection'])->name('ops.settings.coolify.test');
     Route::post('/settings/github', [GithubSettingsController::class, 'update'])->name('ops.settings.github.update');
     Route::post('/settings/github/test', [GithubSettingsController::class, 'testConnection'])->name('ops.settings.github.test');

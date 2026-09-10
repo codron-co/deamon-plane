@@ -233,7 +233,7 @@ class SiteBulkActionsTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_bulk_redeploy_force_deploys_without_patch(): void
+    public function test_bulk_redeploy_force_deploys_without_application_patch(): void
     {
         $connection = $this->connection();
         $site = $this->site([
@@ -242,6 +242,9 @@ class SiteBulkActionsTest extends TestCase
         ]);
 
         Http::fake(function (Request $request) {
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
             if ($request->method() === 'POST' && str_contains($request->url(), '/deploy')) {
                 return Http::response(['deployments' => [['deployment_uuid' => 'dep-rd']]], 200);
             }
@@ -261,7 +264,10 @@ class SiteBulkActionsTest extends TestCase
                 && str_contains($request->url(), 'uuid=app-redeploy')
                 && str_contains($request->url(), 'force=true');
         });
-        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH' || $request->method() === 'DELETE');
+        Http::assertNotSent(function (Request $request): bool {
+            return ($request->method() === 'PATCH' && ! str_contains($request->url(), '/envs'))
+                || $request->method() === 'DELETE';
+        });
     }
 
     public function test_bulk_follow_head_and_pin_use_patch_then_deploy(): void
@@ -277,6 +283,9 @@ class SiteBulkActionsTest extends TestCase
         ]);
 
         Http::fake(function (Request $request) {
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
             if ($request->method() === 'PATCH' && str_contains($request->url(), '/applications/')) {
                 return Http::response(['uuid' => 'patched'], 200);
             }
@@ -354,6 +363,9 @@ class SiteBulkActionsTest extends TestCase
             $url = $request->url();
             $method = $request->method();
 
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
             if ($method === 'PATCH' && str_contains($url, '/envs')) {
                 return Http::response([], 200);
             }

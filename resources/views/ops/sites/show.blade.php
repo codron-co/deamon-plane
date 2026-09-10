@@ -23,7 +23,6 @@
         $failure = $site->lastFailureMessage();
         $primaryDomain = $site->primary_domain;
         $siteUrl = filled($primaryDomain) ? 'https://'.$primaryDomain : null;
-        $adminUrl = $siteUrl ? $siteUrl.'/admin' : null;
         $healthDisplay = $agentHealth->displayStatus($site);
     @endphp
 
@@ -87,10 +86,7 @@
 
     <section id="overview" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-tab-overview site-overview-heading">
         <div class="site-section-heading">
-            <div>
-                <span class="site-section-kicker">{{ __('sites.detail.operation') }}</span>
-                <h2 id="site-overview-heading">{{ __('sites.detail.overview') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.overview_lede')])</h2>
-            </div>
+            <h2 id="site-overview-heading">{{ __('sites.detail.overview') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.overview_lede')])</h2>
         </div>
 
         <div class="site-metric-grid">
@@ -141,52 +137,30 @@
             </article>
         </div>
 
-        <div class="site-overview-grid">
-            <article class="site-card site-release-card">
-                <div class="site-card-head">
-                    <div><span class="site-section-kicker">{{ __('sites.detail.current_release') }}</span><h3>{{ __('sites.detail.release') }}</h3></div>
-                    <div class="branch-version"><span class="branch-chip">{{ $branch }}</span><span class="version-chip">{{ $version ?: __('sites.detail.version_unknown') }}</span></div>
-                </div>
-                <dl class="site-fact-list">
-                    <div><dt>{{ __('sites.detail.git') }}</dt><dd><code>{{ $site->git_repository ?: __('ops.none') }}</code></dd></div>
-                    <div>
-                        <dt>{{ __('sites.detail.domain') }}</dt>
-                        <dd>
-                            @if ($siteUrl && $adminUrl)
-                                <a href="{{ $siteUrl }}" target="_blank" rel="noopener noreferrer">{{ $primaryDomain }}</a>
-                                <span aria-hidden="true">·</span>
-                                <a href="{{ $adminUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.detail.open_admin') }}</a>
-                            @else
-                                {{ $primaryDomain ?: __('ops.none') }}
-                            @endif
-                        </dd>
-                    </div>
-                    <div><dt>{{ __('sites.detail.latest_deployment') }}</dt><dd>{{ $latest?->started_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.none') }}</dd></div>
-                </dl>
-            </article>
-
-            @if ($site->status === \App\Enums\SiteStatus::Error || ($canProvision ?? false) || ($healthDisplay !== 'ok' && ($canCheckHealth ?? false)))
-                <aside class="site-card site-next-action">
-                    <div>
-                        <span class="site-section-kicker">{{ __('sites.detail.next_action') }}</span>
-                        @if ($site->status === \App\Enums\SiteStatus::Error)
-                            <h3>{{ __('sites.detail.resolve_error') }} @include('ops.dashboard._hint', ['text' => $failure ?: __('sites.detail.resolve_error_hint')])</h3>
-                        @elseif ($canProvision ?? false)
-                            <h3>{{ __('sites.detail.provision_ready') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.provision_ready_hint')])</h3>
-                        @else
-                            <h3>{{ __('sites.detail.health_attention') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.health_attention_hint')])</h3>
-                        @endif
-                    </div>
+        @if ($site->status === \App\Enums\SiteStatus::Error || ($canProvision ?? false) || $site->isWaitingOnDns() || ($healthDisplay !== 'ok' && ($canCheckHealth ?? false)))
+            <aside class="site-card site-next-action">
+                <div>
                     @if ($site->status === \App\Enums\SiteStatus::Error)
-                        <a class="btn btn-secondary btn-sm" href="#deployments">{{ __('sites.detail.inspect_deployments') }}</a>
+                        <h3>{{ __('sites.detail.resolve_error') }} @include('ops.dashboard._hint', ['text' => $failure ?: __('sites.detail.resolve_error_hint')])</h3>
                     @elseif ($canProvision ?? false)
-                        <form method="POST" action="{{ route('ops.sites.provision', $site) }}" data-ops-pending data-confirm="{{ __('sites.provision.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.provision.confirm_title') }}" data-confirm-label="{{ __('sites.provision.button') }}">@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button></form>
+                        <h3>{{ __('sites.detail.provision_ready') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.provision_ready_hint')])</h3>
+                    @elseif ($site->isWaitingOnDns())
+                        <h3>{{ __('sites.landing.title') }} @include('ops.dashboard._hint', ['text' => __('sites.landing.warning')])</h3>
                     @else
-                        <form method="POST" action="{{ route('ops.sites.health', $site) }}" data-ops-pending>@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.check') }}</button></form>
+                        <h3>{{ __('sites.detail.health_attention') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.health_attention_hint')])</h3>
                     @endif
-                </aside>
-            @endif
-        </div>
+                </div>
+                @if ($site->status === \App\Enums\SiteStatus::Error)
+                    <a class="btn btn-secondary btn-sm" href="#deployments">{{ __('sites.detail.inspect_deployments') }}</a>
+                @elseif ($canProvision ?? false)
+                    <form method="POST" action="{{ route('ops.sites.provision', $site) }}" data-ops-pending data-confirm="{{ __('sites.provision.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.provision.confirm_title') }}" data-confirm-label="{{ __('sites.provision.button') }}">@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button></form>
+                @elseif ($site->isWaitingOnDns() && ($canEdit ?? false))
+                    <form method="POST" action="{{ route('ops.sites.cloudflare.dns', $site) }}" data-ops-pending data-landing-confirm>@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.landing.confirm_dns') }}</button></form>
+                @else
+                    <form method="POST" action="{{ route('ops.sites.health', $site) }}" data-ops-pending>@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.check') }}</button></form>
+                @endif
+            </aside>
+        @endif
     </section>
 
     <section id="deployments" class="site-section site-section-surface" role="tabpanel" data-site-panel aria-labelledby="site-tab-deployments">@include('ops.deployments.index')</section>
@@ -194,10 +168,12 @@
 
     <section id="infrastructure" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-tab-infrastructure site-infrastructure-heading">
         <div class="site-section-heading">
-            <div><span class="site-section-kicker">{{ __('sites.detail.advanced') }}</span><h2 id="site-infrastructure-heading">{{ __('sites.detail.infrastructure') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.infrastructure_lede')])</h2></div>
+            <h2 id="site-infrastructure-heading">{{ __('sites.detail.infrastructure') }} @include('ops.dashboard._hint', ['text' => __('sites.detail.infrastructure_lede')])</h2>
         </div>
         <div class="site-operations-grid">
             <div class="site-operations-main">
+                @include('ops.sites._landing')
+                @include('ops.sites._domains')
                 @include('ops.sites._cloudflare')
                 @include('ops.sites._mail')
                 @include('ops.sites._channel-switch')
@@ -223,13 +199,14 @@
                 <details class="site-technical-card">
                     <summary><span><strong>{{ __('sites.detail.technical_details') }}</strong> @include('ops.dashboard._hint', ['text' => __('sites.detail.technical_details_hint')])</span><span class="site-disclosure-icon" aria-hidden="true"></span></summary>
                     <dl class="site-technical-list">
+                        <div><dt>{{ __('sites.detail.git') }}</dt><dd><code>{{ $site->git_repository ?: __('ops.none') }}</code></dd></div>
                         <div><dt>{{ __('sites.detail.app_uuid') }}</dt><dd><code>{{ $site->coolify_app_uuid ?: __('ops.none') }}</code></dd></div>
                         <div><dt>{{ __('sites.detail.server') }}</dt><dd><code>{{ $site->coolify_server_uuid ?: __('ops.none') }}</code></dd></div>
                         <div><dt>{{ __('sites.detail.project') }}</dt><dd><code>{{ $site->coolify_project_uuid ?: __('ops.none') }}</code></dd></div>
                         <div><dt>{{ __('sites.detail.environment') }}</dt><dd><code>{{ $site->coolify_environment_uuid ?: __('ops.none') }}</code></dd></div>
                     </dl>
                 </details>
-                @if (filled($site->notes))<article class="site-card"><span class="site-section-kicker">{{ __('sites.detail.notes') }}</span><p class="site-note">{{ $site->notes }}</p></article>@endif
+                @if (filled($site->notes))<article class="site-card"><h3>{{ __('sites.detail.notes') }}</h3><p class="site-note">{{ $site->notes }}</p></article>@endif
             </aside>
         </div>
     </section>
@@ -238,7 +215,6 @@
         <section id="danger" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-tab-danger site-danger-heading">
             <article class="site-card danger-zone">
                 <div>
-                    <span class="site-section-kicker">{{ __('sites.detail.danger') }}</span>
                     <h3 id="site-danger-heading">{{ __('sites.danger.title') }} @include('ops.dashboard._hint', ['text' => __('sites.danger.lede')])</h3>
                 </div>
                 <div class="danger-zone-actions">
@@ -256,4 +232,5 @@
 
 @section('scripts')
     <script src="{{ asset('js/sites-cloudflare.js') }}?v={{ filemtime(public_path('js/sites-cloudflare.js')) }}" defer></script>
+    <script src="{{ asset('js/sites-landing.js') }}?v={{ filemtime(public_path('js/sites-landing.js')) }}" defer></script>
 @endsection

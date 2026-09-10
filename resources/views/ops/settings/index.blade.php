@@ -2,12 +2,16 @@
 
 @section('title', __('settings.title'))
 
+@section('content_class', 'ops-content-wide')
+
 @section('breadcrumbs')
     <span>{{ __('settings.title') }}</span>
 @endsection
 
 @section('content')
     <p class="page-lede">{{ __('settings.lede') }}</p>
+
+    @include('ops.settings.partials.env-defaults')
 
     @include('ops.settings.partials.github')
 
@@ -34,4 +38,8 @@
             <a class="btn btn-secondary" href="{{ route('ops.coolify.index') }}">{{ __('settings.coolify.open') }}</a>
         </div>
     </section>
+@endsection
+
+@section('scripts')
+    <script src="{{ asset('js/ops-env-defaults.js') }}?v={{ filemtime(public_path('js/ops-env-defaults.js')) }}" defer></script>
 @endsection

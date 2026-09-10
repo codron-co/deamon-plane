@@ -266,6 +266,18 @@ class SiteCloudflareZoneTest extends TestCase
         $url = $request->url();
         $method = $request->method();
 
+        if ($method === 'GET' && preg_match('#/client/v4/zones/([a-z0-9-]+)$#', $url, $matches) === 1) {
+            return Http::response([
+                'success' => true,
+                'result' => [
+                    'id' => $matches[1],
+                    'name' => 'izyem.test',
+                    'status' => 'pending',
+                    'name_servers' => ['ada.ns.cloudflare.com', 'bob.ns.cloudflare.com'],
+                ],
+            ], 200);
+        }
+
         if ($method === 'GET' && preg_match('#/client/v4/zones(\?|$)#', $url) === 1) {
             return Http::response(['success' => true, 'result' => []], 200);
         }

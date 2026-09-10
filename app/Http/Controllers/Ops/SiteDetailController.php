@@ -24,6 +24,7 @@ class SiteDetailController extends Controller
 
         $site->load([
             'primaryDomainRecord',
+            'domains',
             'themeInstallations.theme',
             'coolifyConnection',
             'mailServer',

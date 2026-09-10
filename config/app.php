@@ -60,13 +60,15 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | Plane operators are in Turkey. Europe/Istanbul is UTC+3 with no DST.
+    | MySQL session time_zone must match (`DB_TIMEZONE=+03:00`) so TIMESTAMP
+    | columns keep the same instant and display as +03:00. Do not add 3 hours
+    | to existing TIMESTAMP rows after this switch — that would jump times
+    | forward. DATETIME columns (no time_zone) are shifted in a migration.
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'UTC'),
+    'timezone' => env('APP_TIMEZONE', 'Europe/Istanbul'),
 
     /*
     |--------------------------------------------------------------------------

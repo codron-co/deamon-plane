@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Ops;
 
 use App\Http\Requests\Ops\Concerns\ValidatesCoolifySiteTargets;
+use App\Http\Requests\Ops\Concerns\ValidatesSiteDomains;
 use App\Models\Site;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,6 +13,7 @@ use Illuminate\Validation\Validator;
 class StoreSiteRequest extends FormRequest
 {
     use ValidatesCoolifySiteTargets;
+    use ValidatesSiteDomains;
 
     public function authorize(): bool
     {
@@ -23,6 +25,7 @@ class StoreSiteRequest extends FormRequest
         $this->merge([
             'slug' => strtolower(trim((string) $this->input('slug'))),
             'domain' => strtolower(trim((string) $this->input('domain'))),
+            'aliases' => $this->normalizedAliases(),
             'coolify_server_uuid' => $this->normalizedOptional('coolify_server_uuid'),
             'coolify_project_uuid' => $this->normalizedOptional('coolify_project_uuid'),
             'coolify_environment_uuid' => $this->normalizedOptional('coolify_environment_uuid'),
@@ -43,7 +46,9 @@ class StoreSiteRequest extends FormRequest
         return array_merge([
             'slug' => ['required', 'string', 'min:2', 'max:64', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('sites', 'slug')->whereNull('deleted_at')],
             'name' => ['required', 'string', 'max:255'],
-            'domain' => ['required', 'string', 'max:255', 'regex:/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/', Rule::unique('sites', 'primary_domain')->whereNull('deleted_at'), Rule::unique('site_domains', 'domain')],
+            'domain' => ['required', 'string', 'max:255', 'regex:'.$this->hostnamePattern(), Rule::unique('sites', 'primary_domain')->whereNull('deleted_at'), Rule::unique('site_domains', 'domain')],
+            'aliases' => ['nullable', 'array', 'max:20'],
+            'aliases.*' => ['nullable', 'string', 'max:255', 'distinct', 'regex:'.$this->hostnamePattern(), Rule::unique('sites', 'primary_domain')->whereNull('deleted_at'), Rule::unique('site_domains', 'domain')],
             'channel' => ['required', 'string', Rule::in(config('ops.channels', []))],
             'notes' => ['nullable', 'string', 'max:5000'],
             'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
@@ -54,6 +59,7 @@ class StoreSiteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->withCoolifyTargetValidator($validator);
+        $this->validateAliasApex($validator);
     }
 
     /**
@@ -64,6 +70,7 @@ class StoreSiteRequest extends FormRequest
         return [
             'slug.regex' => 'Slug may contain lowercase letters, numbers, and hyphens.',
             'domain.regex' => 'Enter a valid hostname (for example shop.example.com).',
+            'aliases.*.regex' => 'Enter a valid hostname (for example shop.example.com).',
             'channel.in' => 'Channel must be one of: '.implode(', ', config('ops.channels', [])).'.',
         ];
     }

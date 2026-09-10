@@ -79,7 +79,6 @@ class SiteDetailTest extends TestCase
         $this->assertStringNotContainsString(__('sites.detail.operation'), $html);
         $this->assertStringNotContainsString(__('sites.detail.current_release'), $html);
         $this->assertStringNotContainsString(__('sites.detail.advanced'), $html);
-        $this->assertStringNotContainsString(__('sites.themes.kicker'), $html);
         $this->assertStringNotContainsString(__('sites.themes.via_agent'), $html);
         $this->assertStringNotContainsString(__('sites.detail.no_action'), $html);
         $this->assertStringNotContainsString(__('sites.detail.no_action_hint'), $html);

@@ -52,6 +52,7 @@ class PreviewHostname
     private function taken(string $host): bool
     {
         return Site::query()->where('primary_domain', $host)->exists()
+            || Site::query()->where('temporary_domain', $host)->exists()
             || Site::query()->whereHas('domains', static fn ($query) => $query->where('domain', $host))->exists();
     }
 }

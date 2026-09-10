@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Channel;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\SiteStatus;
+use App\Services\Cloudflare\CloudflareHostname;
 use App\Support\IdentityMark;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +32,7 @@ class Site extends Model
         'slug',
         'name',
         'primary_domain',
+        'temporary_domain',
         'channel',
         'desired_channel',
         'status',
@@ -54,6 +56,7 @@ class Site extends Model
         'last_live_favicon_url',
         'cloudflare_zone_id',
         'cloudflare_nameservers',
+        'cloudflare_zone_status',
         'cloudflare_setting_id',
         'dns_applied_at',
         'mail_server_id',
@@ -162,6 +165,80 @@ class Site extends Model
     public function primaryDomainRecord(): HasOne
     {
         return $this->hasOne(SiteDomain::class)->where('is_primary', true);
+    }
+
+    public function isWaitingOnDns(): bool
+    {
+        return filled($this->temporary_domain)
+            || ! CloudflareHostname::zoneIsReady($this->cloudflare_zone_status);
+    }
+
+    /**
+     * Operator hostnames (no temporary preview). Primary first, then www, then aliases.
+     *
+     * @return list<string>
+     */
+    public function operatorHosts(): array
+    {
+        $rows = $this->relationLoaded('domains') ? $this->domains : $this->domains()->get();
+        $stored = $rows
+            ->where('is_temporary', false)
+            ->pluck('domain')
+            ->filter(fn (mixed $domain): bool => is_string($domain) && $domain !== '')
+            ->map(fn (string $domain): string => CloudflareHostname::host($domain))
+            ->unique()
+            ->values();
+
+        $primary = CloudflareHostname::normalize((string) $this->primary_domain);
+        if ($stored->isEmpty() && $primary !== '') {
+            $stored = collect([$primary, CloudflareHostname::wwwHost($primary)])->filter()->values();
+        }
+
+        $wwwOfPrimary = $primary !== '' ? CloudflareHostname::wwwHost($primary) : '';
+        $ordered = [];
+        if ($primary !== '' && $stored->contains($primary)) {
+            $ordered[] = $primary;
+        }
+        if ($wwwOfPrimary !== '' && $stored->contains($wwwOfPrimary)) {
+            $ordered[] = $wwwOfPrimary;
+        }
+
+        foreach ($stored as $host) {
+            if (! in_array($host, $ordered, true)) {
+                $ordered[] = $host;
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * Coolify `app` domain list: comma-separated https hosts.
+     */
+    public function coolifyDomainBinding(): string
+    {
+        $hosts = $this->isWaitingOnDns() && filled($this->temporary_domain)
+            ? [CloudflareHostname::host((string) $this->temporary_domain)]
+            : $this->operatorHosts();
+
+        return implode(',', array_values(array_filter($hosts)));
+    }
+
+    /**
+     * Extra operator hosts shown on the form (not primary, not www, not temp).
+     *
+     * @return list<string>
+     */
+    public function aliasHosts(): array
+    {
+        $primary = CloudflareHostname::normalize((string) $this->primary_domain);
+
+        return array_values(array_filter(
+            $this->operatorHosts(),
+            static function (string $host) use ($primary): bool {
+                return $host !== $primary && ! str_starts_with($host, 'www.');
+            },
+        ));
     }
 
     public function deployments(): HasMany

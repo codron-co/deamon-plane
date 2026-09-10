@@ -19,6 +19,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_TIMEZONE" value="Europe/Istanbul"/>
         <env name="APP_KEY" value="base64:2fl+KTV4FBItFSNg2xzV/fmMvtWe6baApovqAY4ptGc="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

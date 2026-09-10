@@ -2,6 +2,22 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Coolify env default catalogs (2026-09-10)
+
+- Status: **code**. Settings holds per-pack catalogs (`dockerfile` / `dockercompose`) on `coolify_env_defaults` (seeded). Normal view: static / required / generated / site / Coolify-injects. Developer view is an open KEY=value dump. `CoolifyAppEnvSync` runs on every Plane `deploy()` and after Dockerfile → compose. Empty/placeholder MySQL secrets are filled; filled secrets are not rotated; compose `DB_HOST` is forced to `mysql`. Tests: CoolifyAppEnvSyncTest, SettingsEnvDefaultsTest (`Http::fake`).
+
+## Landing pause + multi-domain / www (2026-09-10)
+
+- Status: **code**. Create/edit `aliases[]` on the same apex; every host gets a `www` sibling on `site_domains`, Cloudflare A records, and Coolify `app` (`https://host,https://www.host`). Pending Cloudflare zone: provision still creates the app on a temporary `{adj}-{noun}.{wildcard}` host; site detail warns and offers **I updated DNS**. Confirm while pending keeps temp; confirm when active binds customer hosts and deletes the temp row. Detail can add another same-apex host. Tests: `SiteLandingFlowTest`, `CloudflareHostnameTest`, updated `ProvisionSiteTest` / `ProvisionSiteCloudflareTest`.
+
+## Europe/Istanbul (+03:00) everywhere (2026-09-10)
+
+- Status: **code**. `APP_TIMEZONE=Europe/Istanbul`, MySQL session/server `+03:00`, container `TZ` on app/MySQL/Redis, PHP `date.timezone`. TIMESTAMP rows are not +3-updated (would double-shift). DATETIME columns shift +3 once in `2026_09_10_160000_shift_mysql_datetime_columns_to_istanbul`. Tests: AppTimezoneTest, MysqlWallClockShiftTest.
+
+## Site detail + list deploy actions (2026-09-10)
+
+- Status: **code**. Site show **Deploy** menu: Redeploy (`POST /deploy?force=true`), Deploy HEAD (follow HEAD), Open in Coolify. Infrastructure auto-deploy card always shows commit pin, update-to-latest, redeploy, follow HEAD. Sites list selection: Redeploy, Deploy HEAD, pin SHA. Tests: CoolifyDeploySettingsTest, SiteBulkActionsTest (`Http::fake`). No Coolify DELETE except hard purge.
+
 ## Site Cloudflare account + Free zone NS (2026-09-10)
 
 - Status: **code**. `sites.cloudflare_setting_id` persists the selected account. Create/edit has an account select. Site detail Infrastructure card: account + **Add to Cloudflare (Free)** via AJAX (`POST /sites/{site}/cloudflare/zone`) returns copyable NS without reload. Unbound customer hostnames create a Free full zone on the apex instead of `{adjective}-{noun}.codron.co`. Provision uses the site account when set. Tests: `SiteCloudflareZoneTest`, `ProvisionSiteCloudflareTest`.

@@ -88,7 +88,7 @@
         </div>
         <div>
             <dt>{{ __('sites.detail.zone_status') }}</dt>
-            <dd data-cloudflare-zone-status>{{ __('ops.none') }}</dd>
+            <dd data-cloudflare-zone-status>{{ $site->cloudflare_zone_status ?: __('ops.none') }}</dd>
         </div>
         <div>
             <dt>{{ __('sites.detail.dns_applied') }}</dt>

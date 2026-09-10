@@ -24,6 +24,7 @@ Plane never shares MySQL/Redis with a customer site. Customer sites never share 
 8. **Environment** — copy `.env.production.example`:
    - Required: `APP_KEY` (`php artisan key:generate --show` once; store in Coolify).
    - URL: Coolify `SERVICE_URL_APP` / `SERVICE_FQDN_APP` (Dalga 1 maps `APP_URL` ← `SERVICE_URL_APP`). Do not duplicate `APP_URL` unless overriding.
+   - Timezone: compose sets `APP_TIMEZONE=Europe/Istanbul`, `DB_TIMEZONE=+03:00`, `TZ=Europe/Istanbul` on app/MySQL/Redis. MySQL `--default-time-zone=+03:00`. TIMESTAMP instants stay UTC internally and display +3; do not bulk-add 3 hours to TIMESTAMP columns.
    - Do **not** set `DB_*` / `REDIS_*` / `APP_DEBUG` in Coolify — compose `environment:` owns them.
    - After bootstrap: `COOLIFY_BASE_URL` (and optional `COOLIFY_API_TOKEN` fallback). Ops **Coolify** menu stores the fleet token and webhook signing secret encrypted on `coolify_connections` (legacy `coolify_settings` fallback; HMAC or query `token`). `COOLIFY_WEBHOOK_SECRET` is the env fallback. See [coolify-webhooks.md](coolify-webhooks.md). GitHub secrets stay in Settings. CMS agent secret is **per customer site** (`CONTROL_PLANE_AGENT_SECRET`) — not a Plane env. See [agent-client.md](agent-client.md).
 9. **Persistent volumes** come from compose (`plane_storage`, `plane_mysql`, `plane_redis`). Do not bind-mount `/root`. Channel/redeploy must not delete the application (Coolify `DELETE` defaults `delete_volumes=true`).

@@ -27,6 +27,7 @@ use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\SiteAgentSecretInjector;
 use App\Services\Sites\SiteAttacher;
+use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLifecycleException;
 use App\Services\Sites\SiteProvisioner;
@@ -116,13 +117,13 @@ class SiteController extends Controller
         ]);
     }
 
-    public function store(StoreSiteRequest $request, SiteAttacher $attacher, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
+    public function store(StoreSiteRequest $request, SiteAttacher $attacher, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer, SiteDomainSync $domains): RedirectResponse
     {
         $data = $request->validated();
         $targets = $this->coolifyTargetsFrom($data);
 
         try {
-            $site = DB::transaction(function () use ($request, $data, $targets, $attacher): Site {
+            $site = DB::transaction(function () use ($request, $data, $targets, $attacher, $domains): Site {
                 $site = Site::query()->create([
                     'slug' => $data['slug'],
                     'name' => $data['name'],
@@ -140,7 +141,7 @@ class SiteController extends Controller
                     'cloudflare_setting_id' => $data['cloudflare_setting_id'] ?? null,
                 ]);
 
-                $this->syncPrimaryDomain($site, $data['domain']);
+                $domains->sync($site, $data['domain'], $data['aliases'] ?? []);
 
                 if (($data['placement'] ?? 'provision') === 'attach' && filled($data['attach_app_uuid'] ?? null)) {
                     $connection = CoolifyConnection::query()->find($targets['connection_id']);
@@ -193,7 +194,7 @@ class SiteController extends Controller
     {
         $this->authorize('view', $site);
 
-        $site->load(['primaryDomainRecord', 'coolifyConnection']);
+        $site->load(['primaryDomainRecord', 'domains', 'coolifyConnection']);
         $connection = $site->coolifyConnection ?: CoolifyConnection::default();
 
         return view('ops.sites.edit', [
@@ -392,14 +393,14 @@ class SiteController extends Controller
             ->with('status', __('mail.flash.assigned').$this->mailFlashSuffix($bind, $configure));
     }
 
-    public function update(UpdateSiteRequest $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse
+    public function update(UpdateSiteRequest $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer, SiteDomainSync $domains): RedirectResponse
     {
         $data = $request->validated();
-        $site->load('primaryDomainRecord');
+        $site->load(['primaryDomainRecord', 'domains']);
         $previousMailServerId = $site->mail_server_id;
         $previousDomain = $site->primary_domain;
 
-        DB::transaction(function () use ($request, $site, $data): void {
+        DB::transaction(function () use ($request, $site, $data, $domains): void {
             $before = $this->auditSnapshot($site);
             $domainChanged = $site->primary_domain !== $data['domain'];
 
@@ -427,7 +428,7 @@ class SiteController extends Controller
             $site->fill($payload);
             $site->save();
 
-            $this->syncPrimaryDomain($site, $data['domain']);
+            $domains->sync($site, $data['domain'], $data['aliases'] ?? []);
 
             $after = $this->auditSnapshot($site->fresh() ?? $site);
 
@@ -533,26 +534,6 @@ class SiteController extends Controller
         return redirect()
             ->route('ops.sites')
             ->with('status', __('sites.flash.purged'));
-    }
-
-    private function syncPrimaryDomain(Site $site, string $domain): void
-    {
-        $primary = $site->primaryDomainRecord;
-
-        if ($primary === null) {
-            $site->domains()->create([
-                'domain' => $domain,
-                'is_primary' => true,
-            ]);
-
-            $site->unsetRelation('primaryDomainRecord');
-
-            return;
-        }
-
-        if ($primary->domain !== $domain) {
-            $primary->update(['domain' => $domain]);
-        }
     }
 
     /**

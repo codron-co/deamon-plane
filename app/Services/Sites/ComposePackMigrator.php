@@ -2,9 +2,11 @@
 
 namespace App\Services\Sites;
 
+use App\Enums\CoolifyEnvPack;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
+use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyDomainParser;
 use App\Services\Coolify\Dto\CoolifyApplication;
@@ -68,6 +70,7 @@ class ComposePackMigrator
 
         try {
             $this->restoreAppEnvs($coolify, $uuid, $snapshot);
+            app(CoolifyAppEnvSync::class)->sync($site, $coolify, CoolifyEnvPack::DockerCompose);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -115,8 +118,9 @@ class ComposePackMigrator
             return CoolifyDomainParser::forPatch($fromApp);
         }
 
-        if (filled($site->primary_domain)) {
-            return CoolifyDomainParser::forPatch((string) $site->primary_domain);
+        $hosts = implode(',', $site->operatorHosts());
+        if ($hosts !== '') {
+            return CoolifyDomainParser::forPatch($hosts);
         }
 
         return [];

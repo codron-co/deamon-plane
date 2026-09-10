@@ -1177,6 +1177,91 @@ div.ops-row-actions {
     margin-bottom: 10px;
 }
 
+.env-defaults-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 12px 0 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.env-defaults-tabs a {
+    position: relative;
+    padding: 8px 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.env-defaults-tabs a.is-active,
+.env-defaults-tabs a:hover,
+.env-defaults-tabs a:focus-visible {
+    color: var(--text);
+}
+
+.env-defaults-tabs a.is-active::after {
+    position: absolute;
+    right: 10px;
+    bottom: -1px;
+    left: 10px;
+    height: 2px;
+    background: var(--accent);
+    content: "";
+}
+
+.env-defaults-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 12px;
+}
+
+.env-defaults-table th:nth-child(1),
+.env-defaults-table td:nth-child(1) {
+    min-width: 180px;
+}
+
+.env-defaults-table th:nth-child(3),
+.env-defaults-table td:nth-child(3) {
+    min-width: 220px;
+}
+
+.env-defaults-table .field-hint {
+    margin: 4px 0 0;
+}
+
+.env-secret-flag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+}
+
+.env-defaults-developer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.env-defaults-developer h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.env-defaults-dump {
+    margin: 0;
+    padding: 12px 14px;
+    overflow: auto;
+    max-height: min(48vh, 28rem);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-base);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;

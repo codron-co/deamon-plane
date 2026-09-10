@@ -27,4 +27,5 @@
 
 @section('scripts')
     <script src="{{ asset('js/ops-coolify-form.js') }}" defer></script>
+    <script src="{{ asset('js/sites-aliases.js') }}?v={{ filemtime(public_path('js/sites-aliases.js')) }}" defer></script>
 @endsection

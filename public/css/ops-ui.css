@@ -1147,6 +1147,10 @@ html[data-theme="semidark"] .fleet-attention-list li {
 }
 .ops-ns-row code { font-size: 12px; overflow-wrap: anywhere; }
 .ops-ns-all { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+.ops-alias-list { display: grid; gap: 8px; }
+.ops-alias-row { display: grid; }
+#site-landing .ops-form,
+#site-domains .ops-form { margin-top: 12px; }
 .site-pin-status,
 .ops-pin-status { margin: 10px 0 0; color: var(--text-muted); font-size: 12px; }
 .site-pin-status b,

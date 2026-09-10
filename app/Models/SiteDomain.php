@@ -19,6 +19,8 @@ class SiteDomain extends Model
         'site_id',
         'domain',
         'is_primary',
+        'is_www',
+        'is_temporary',
         'coolify_domain_id',
         'verified_at',
     ];
@@ -30,6 +32,8 @@ class SiteDomain extends Model
     {
         return [
             'is_primary' => 'boolean',
+            'is_www' => 'boolean',
+            'is_temporary' => 'boolean',
             'verified_at' => 'datetime',
         ];
     }

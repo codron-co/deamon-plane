@@ -513,6 +513,10 @@ class ChannelSwitchTest extends TestCase
             $url = $request->url();
             $method = $request->method();
 
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
+
             if ($method === 'DELETE') {
                 return Http::response(['error' => 'DELETE is forbidden for channel switch'], 500);
             }

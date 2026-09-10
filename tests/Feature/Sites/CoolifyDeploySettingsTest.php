@@ -59,6 +59,9 @@ class CoolifyDeploySettingsTest extends TestCase
         $site = $this->site();
 
         Http::fake(function (Request $request) {
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
             if ($request->method() === 'PATCH' && str_ends_with($request->url(), '/applications/'.self::APP)) {
                 return Http::response($this->appPayload(sha: 'abc1234', autoDeploy: false), 200);
             }
@@ -95,6 +98,9 @@ class CoolifyDeploySettingsTest extends TestCase
         $site = $this->site();
 
         Http::fake(function (Request $request) {
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
             if ($request->method() === 'PATCH') {
                 return Http::response($this->appPayload(sha: '', autoDeploy: true), 200);
             }
@@ -149,11 +155,14 @@ class CoolifyDeploySettingsTest extends TestCase
         $this->assertStringContainsString(__('site_ops.redeploy.button'), $html);
     }
 
-    public function test_redeploy_posts_force_deploy_without_patch(): void
+    public function test_redeploy_posts_force_deploy_without_application_patch(): void
     {
         $site = $this->site();
 
         Http::fake(function (Request $request) {
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
             if ($request->method() === 'POST' && str_contains($request->url(), '/deploy')) {
                 return Http::response(['deployments' => [['deployment_uuid' => 'dep-3']]], 200);
             }
@@ -172,7 +181,13 @@ class CoolifyDeploySettingsTest extends TestCase
                 && str_contains($request->url(), 'uuid='.self::APP)
                 && str_contains($request->url(), 'force=true');
         });
-        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH');
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'PATCH' && str_contains($request->url(), '/envs/bulk');
+        });
+        Http::assertNotSent(function (Request $request): bool {
+            return $request->method() === 'PATCH'
+                && ! str_contains($request->url(), '/envs');
+        });
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
     }
 

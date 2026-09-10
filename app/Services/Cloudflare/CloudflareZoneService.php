@@ -46,10 +46,18 @@ class CloudflareZoneService
             }
 
             $zoneName = (string) ($zone['name'] ?? '');
-            $this->applyDnsForHost($client, (string) $zone['id'], $zoneName, $requested, $settings);
+            $hosts = $site->operatorHosts();
+            if ($hosts === []) {
+                $hosts = [$requested];
+            }
+            foreach ($hosts as $host) {
+                $this->applyDnsForHost($client, (string) $zone['id'], $zoneName, $host, $settings);
+            }
 
+            $status = strtolower(trim((string) ($zone['status'] ?? '')));
             $site->cloudflare_zone_id = (string) $zone['id'];
             $site->cloudflare_nameservers = $this->nameservers($zone);
+            $site->cloudflare_zone_status = $status !== '' ? $status : null;
             $site->dns_applied_at = now();
             $site->save();
 
@@ -100,6 +108,8 @@ class CloudflareZoneService
         Site::query()->where('cloudflare_zone_id', $zoneId)->update([
             'cloudflare_zone_id' => null,
             'cloudflare_nameservers' => null,
+            'cloudflare_zone_status' => null,
+            'temporary_domain' => null,
             'dns_applied_at' => null,
         ]);
     }
@@ -149,6 +159,59 @@ class CloudflareZoneService
         }
 
         return $zone;
+    }
+
+    public function attachPreviewHost(Site $site, CloudflareSetting $settings): string
+    {
+        $wildcard = CloudflareHostname::normalize((string) ($settings->wildcard_domain ?: ''));
+        if ($wildcard === '') {
+            throw new SiteProvisionException(__('sites.landing.preview_unavailable'));
+        }
+
+        $host = app(PreviewHostname::class)->allocate($wildcard);
+        $client = CloudflareClient::fromSettings($settings);
+        $zone = $this->findCoveringZone($client, trim((string) $settings->account_id), $host);
+        if ($zone === null) {
+            throw new SiteProvisionException(__('sites.landing.preview_unavailable'));
+        }
+
+        $this->applyDnsForHost(
+            $client,
+            (string) $zone['id'],
+            (string) ($zone['name'] ?? $wildcard),
+            $host,
+            $settings,
+        );
+
+        return $host;
+    }
+
+    public function releasePreviewHost(Site $site, CloudflareSetting $settings, string $host): void
+    {
+        $host = CloudflareHostname::host($host);
+        if ($host === '') {
+            return;
+        }
+
+        $client = CloudflareClient::fromSettings($settings);
+        $zone = $this->findCoveringZone($client, trim((string) $settings->account_id), $host);
+        if ($zone === null) {
+            return;
+        }
+
+        $zoneId = (string) $zone['id'];
+        $zoneName = (string) ($zone['name'] ?? '');
+        $existing = $this->findExisting(
+            $client,
+            $zoneId,
+            $zoneName,
+            $this->originA(CloudflareDnsRecord::relative($host, $zoneName), $settings->resolvedOriginIpv4()),
+        );
+        if ($existing === null) {
+            return;
+        }
+
+        $client->deleteDnsRecord($zoneId, (string) $existing['id']);
     }
 
     /**

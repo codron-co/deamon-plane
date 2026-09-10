@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Ops;
 use App\Http\Controllers\Controller;
 use App\Models\CloudflareSetting;
 use App\Models\Site;
+use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Cloudflare\CloudflareZoneService;
+use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteProvisionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,7 +16,7 @@ use Illuminate\Validation\Rule;
 
 class SiteCloudflareController extends Controller
 {
-    public function store(Request $request, Site $site, CloudflareZoneService $zones): RedirectResponse|JsonResponse
+    public function store(Request $request, Site $site, CloudflareZoneService $zones, SiteLanding $landing): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $site);
 
@@ -42,6 +44,8 @@ class SiteCloudflareController extends Controller
         }
 
         $site->refresh();
+        $landing->afterCloudflare($site, $settings, $result['zone']);
+        $site->refresh();
 
         $site->auditLogs()->create([
             'actor_user_id' => $request->user()?->id,
@@ -53,22 +57,27 @@ class SiteCloudflareController extends Controller
                 'cloudflare_setting_id' => $site->cloudflare_setting_id,
                 'cloudflare_zone_id' => $site->cloudflare_zone_id,
                 'cloudflare_nameservers' => $site->cloudflare_nameservers,
+                'cloudflare_zone_status' => $site->cloudflare_zone_status,
             ],
             'ip' => $request->ip(),
         ]);
 
         $zone = $result['zone'];
-        $message = __('sites.flash.cloudflare_zone_ready');
+        $ready = CloudflareHostname::zoneIsReady((string) ($zone['status'] ?? $site->cloudflare_zone_status));
+        $message = $ready
+            ? __('sites.flash.cloudflare_zone_ready')
+            : __('sites.flash.cloudflare_zone_pending');
 
         if ($request->expectsJson()) {
             return response()->json([
                 'ok' => true,
                 'message' => $message,
-                'type' => 'status',
+                'type' => $ready ? 'status' : 'warning',
                 'created' => $result['created'],
+                'waiting' => $site->isWaitingOnDns(),
                 'zone_id' => $site->cloudflare_zone_id,
                 'zone_name' => (string) ($zone['name'] ?? ''),
-                'zone_status' => (string) ($zone['status'] ?? ''),
+                'zone_status' => (string) ($zone['status'] ?? $site->cloudflare_zone_status ?? ''),
                 'nameservers' => is_array($site->cloudflare_nameservers) ? array_values($site->cloudflare_nameservers) : [],
             ]);
         }
@@ -76,6 +85,32 @@ class SiteCloudflareController extends Controller
         return redirect()
             ->route('ops.sites.show', $site)
             ->with('status', $message);
+    }
+
+    public function confirmDns(Request $request, Site $site, SiteLanding $landing): RedirectResponse|JsonResponse
+    {
+        $this->authorize('update', $site);
+
+        try {
+            $result = $landing->confirmDns($site, $request->user()?->id, $request->ip());
+        } catch (SiteProvisionException $exception) {
+            return $this->failed($request, $site, $exception->getMessage(), $exception->getCode());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'ready' => $result['ready'],
+                'message' => $result['message'],
+                'type' => $result['ready'] ? 'status' : 'warning',
+                'zone_status' => $result['zone_status'],
+                'nameservers' => $result['nameservers'],
+            ]);
+        }
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with($result['ready'] ? 'status' : 'error', $result['message']);
     }
 
     private function failed(Request $request, Site $site, string $message, int $status = 422): RedirectResponse|JsonResponse

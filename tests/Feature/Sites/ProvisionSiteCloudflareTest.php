@@ -191,7 +191,7 @@ class ProvisionSiteCloudflareTest extends TestCase
         $this->assertSame('zone-codron', $site->cloudflare_zone_id);
 
         $this->assertNoZoneCreate();
-        $this->assertSame(['*', 'test.deamon'], $this->postedANames());
+        $this->assertSame(['*', 'test.deamon', '*', 'www.test.deamon'], $this->postedANames());
     }
 
     public function test_existing_star_is_left_in_place_and_site_a_is_added(): void
@@ -223,7 +223,7 @@ class ProvisionSiteCloudflareTest extends TestCase
             ->assertRedirect(route('ops.sites.show', $site));
 
         $this->assertSame('amber-harbor.codron.co', $site->fresh()->primary_domain);
-        $this->assertSame(['amber-harbor'], $this->postedANames());
+        $this->assertSame(['amber-harbor', 'www.amber-harbor'], $this->postedANames());
         $this->assertNoZoneCreate();
     }
 
@@ -248,7 +248,7 @@ class ProvisionSiteCloudflareTest extends TestCase
             ->assertRedirect(route('ops.sites.show', $site));
 
         $this->assertSame('a.b.c.deamon.codron.co', $site->fresh()->primary_domain);
-        $this->assertSame(['*', 'a.b.c.deamon'], $this->postedANames());
+        $this->assertSame(['*', 'a.b.c.deamon', '*', 'www.a.b.c.deamon'], $this->postedANames());
         $this->assertNoZoneCreate();
     }
 
@@ -428,6 +428,16 @@ class ProvisionSiteCloudflareTest extends TestCase
     ): PromiseInterface {
         $url = $request->url();
         $method = $request->method();
+
+        if ($method === 'GET' && preg_match('#/client/v4/zones/([a-z0-9-]+)$#', $url, $matches) === 1) {
+            foreach ($zonesByName as $zone) {
+                if (($zone['id'] ?? '') === $matches[1]) {
+                    return Http::response(['success' => true, 'result' => $zone], 200);
+                }
+            }
+
+            return Http::response(['success' => true, 'result' => $this->zonePayload($matches[1], 'created.test')], 200);
+        }
 
         if ($method === 'GET' && preg_match('#/client/v4/zones(\?|$)#', $url) === 1) {
             $name = strtolower((string) ($request->data()['name'] ?? ''));

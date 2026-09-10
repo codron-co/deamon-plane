@@ -103,7 +103,7 @@ class ProvisionSiteTest extends TestCase
                 && ($body['environment_name'] ?? null) === 'main'
                 && ! array_key_exists('fqdn', $body)
                 && ($body['docker_compose_domains'] ?? null) === [
-                    ['name' => 'app', 'domain' => 'https://shop.izyem.example.test'],
+                    ['name' => 'app', 'domain' => 'https://shop.izyem.example.test,https://www.shop.izyem.example.test'],
                 ]
                 && empty($body['instant_deploy'])
                 && ! array_key_exists('docker_compose_raw', $body);
@@ -116,12 +116,22 @@ class ProvisionSiteTest extends TestCase
 
             $pairs = $request->data()['data'] ?? [];
             $keys = array_column($pairs, 'key');
+            $map = collect($pairs)->mapWithKeys(
+                static fn (array $row): array => [(string) ($row['key'] ?? '') => (string) ($row['value'] ?? '')],
+            );
 
-            return $keys === ['APP_KEY', 'DEAMON_SITE_NAME', 'DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'DEAMON_DEFAULT_ADMIN_PASSWORD']
-                && collect($pairs)->firstWhere('key', 'DEAMON_SITE_NAME')['value'] === 'Izyem'
-                && strlen((string) collect($pairs)->firstWhere('key', 'DB_PASSWORD')['value']) >= 32
-                && strlen((string) collect($pairs)->firstWhere('key', 'MYSQL_ROOT_PASSWORD')['value']) >= 32
-                && strlen((string) collect($pairs)->firstWhere('key', 'DEAMON_DEFAULT_ADMIN_PASSWORD')['value']) >= 12;
+            return in_array('APP_KEY', $keys, true)
+                && in_array('DB_PASSWORD', $keys, true)
+                && in_array('MYSQL_ROOT_PASSWORD', $keys, true)
+                && in_array('DEAMON_DEFAULT_ADMIN_PASSWORD', $keys, true)
+                && in_array('APP_TIMEZONE', $keys, true)
+                && in_array('DB_HOST', $keys, true)
+                && $map->get('APP_TIMEZONE') === 'Europe/Istanbul'
+                && $map->get('DB_HOST') === 'mysql'
+                && strlen((string) $map->get('DB_PASSWORD')) >= 32
+                && strlen((string) $map->get('MYSQL_ROOT_PASSWORD')) >= 32
+                && strlen((string) $map->get('DEAMON_DEFAULT_ADMIN_PASSWORD')) >= 12
+                && ! in_array('SERVICE_URL_APP', $keys, true);
         });
 
         Http::assertSent(function (Request $request): bool {
@@ -130,7 +140,7 @@ class ProvisionSiteTest extends TestCase
             return $request->method() === 'PATCH'
                 && $request->url() === 'https://coolify.test/api/v1/applications/coolify-app-1'
                 && ($body['docker_compose_domains'] ?? null) === [
-                    ['name' => 'app', 'domain' => 'https://shop.izyem.example.test'],
+                    ['name' => 'app', 'domain' => 'https://shop.izyem.example.test,https://www.shop.izyem.example.test'],
                 ]
                 && ! array_key_exists('fqdn', $body)
                 && ($body['force_domain_override'] ?? null) === false;
@@ -599,6 +609,17 @@ class ProvisionSiteTest extends TestCase
 
         $url = $request->url();
         $method = $request->method();
+
+        if ($method === 'GET' && preg_match('#/client/v4/zones/[a-z0-9-]+$#', $url) === 1) {
+            return Http::response([
+                'success' => true,
+                'result' => [
+                    'id' => 'zone-shop-izyem-example-test',
+                    'name' => 'shop.izyem.example.test',
+                    'name_servers' => ['ada.ns.cloudflare.com', 'bob.ns.cloudflare.com'],
+                ],
+            ], 200);
+        }
 
         if ($method === 'GET' && preg_match('#/client/v4/zones(\?|$)#', $url) === 1) {
             $name = strtolower((string) ($request->data()['name'] ?? ''));

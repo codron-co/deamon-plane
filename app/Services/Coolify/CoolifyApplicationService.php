@@ -20,6 +20,7 @@ use InvalidArgumentException;
 /**
  * Thin wrappers over CoolifyClient for list / create / env / domain / branch / deploy.
  * Channel switch PATCHes git_branch + APP_ENV / DEAMON_CHANNEL, then deploys.
+ * `deploy()` syncs Coolify env against Settings catalogs for Plane sites first.
  * Never DELETE the application except explicit hard-delete (`deleteApplication` with delete_volumes).
  */
 class CoolifyApplicationService
@@ -197,7 +198,23 @@ class CoolifyApplicationService
 
     public function deploy(string $uuid, bool $force = false): CoolifyDeployResult
     {
+        $this->syncSiteEnv($uuid);
+
         return $this->client->deploy($uuid, $force);
+    }
+
+    /**
+     * Every Plane-triggered deploy checks Coolify env against Settings catalogs.
+     * Apps that are not Plane sites (this Plane itself) are skipped.
+     */
+    private function syncSiteEnv(string $uuid): void
+    {
+        $site = Site::query()->where('coolify_app_uuid', $uuid)->first();
+        if (! $site instanceof Site) {
+            return;
+        }
+
+        app(CoolifyAppEnvSync::class)->sync($site, $this);
     }
 
     public function getDeployment(string $deploymentUuid): CoolifyDeployment

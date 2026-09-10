@@ -114,10 +114,31 @@ class ComposePackMigrateTest extends TestCase
                 && ! array_key_exists('available_in_services', $body);
         });
 
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'PATCH' || ! str_contains($request->url(), '/envs/bulk')) {
+                return false;
+            }
+
+            $map = collect($request->data()['data'] ?? [])->mapWithKeys(
+                static fn (array $row): array => [(string) ($row['key'] ?? '') => (string) ($row['value'] ?? '')],
+            );
+
+            return $map->get('DB_HOST') === 'mysql'
+                && strlen((string) $map->get('MYSQL_ROOT_PASSWORD')) >= 32
+                && ! $map->has('DB_PASSWORD');
+        });
+
         Http::assertNotSent(function (Request $request): bool {
             $body = $request->data();
 
-            return ($body['key'] ?? null) === 'DB_HOST' || ($body['key'] ?? null) === 'DB_PASSWORD';
+            if (($body['key'] ?? null) === 'DB_PASSWORD') {
+                return true;
+            }
+
+            $keys = array_column($body['data'] ?? [], 'key');
+
+            return ($body['key'] ?? null) === 'DB_HOST' && ($body['value'] ?? null) === '10.0.0.9'
+                || in_array('DB_PASSWORD', $keys, true);
         });
 
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
@@ -164,7 +185,7 @@ class ComposePackMigrateTest extends TestCase
 
             return ($body['docker_compose_domains'] ?? null) === [[
                 'name' => 'app',
-                'domain' => 'https://shop.izyem.example.test',
+                'domain' => 'https://shop.izyem.example.test,https://www.shop.izyem.example.test',
             ]];
         });
     }

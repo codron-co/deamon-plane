@@ -5,6 +5,7 @@ use App\Http\Controllers\Ops\SiteCloudflareController;
 use App\Http\Controllers\Ops\SiteController;
 use App\Http\Controllers\Ops\SiteCoolifyOpsController;
 use App\Http\Controllers\Ops\SiteDetailController;
+use App\Http\Controllers\Ops\SiteDomainController;
 use App\Http\Controllers\Ops\SiteThemeController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,8 @@ Route::get('/sites/{site}/edit', [SiteController::class, 'edit'])->name('ops.sit
 Route::put('/sites/{site}', [SiteController::class, 'update'])->name('ops.sites.update');
 Route::post('/sites/{site}/provision', [SiteController::class, 'provision'])->name('ops.sites.provision');
 Route::post('/sites/{site}/cloudflare/zone', [SiteCloudflareController::class, 'store'])->name('ops.sites.cloudflare.zone');
+Route::post('/sites/{site}/cloudflare/dns', [SiteCloudflareController::class, 'confirmDns'])->name('ops.sites.cloudflare.dns');
+Route::post('/sites/{site}/domains', [SiteDomainController::class, 'store'])->name('ops.sites.domains.store');
 Route::post('/sites/{site}/channel', [SiteController::class, 'switchChannel'])->name('ops.sites.channel');
 Route::post('/sites/{site}/health', [SiteController::class, 'checkHealth'])->name('ops.sites.health');
 Route::post('/sites/{site}/agent-secret', [SiteController::class, 'injectAgentSecret'])->name('ops.sites.agent-secret');
