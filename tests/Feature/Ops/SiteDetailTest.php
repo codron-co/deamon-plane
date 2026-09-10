@@ -97,6 +97,7 @@ class SiteDetailTest extends TestCase
             ->assertSee('data-favicon-host="'.$site->primary_domain.'"', false)
             ->assertSee('data-favicon-host="'.$unknown->primary_domain.'"', false)
             ->assertSee('data-href="'.route('ops.sites.show', $site).'"', false)
+            ->assertSee('class="ops-row-actions"', false)
             ->assertSee('href="https://'.$site->primary_domain.'"', false)
             ->assertSee('aria-label="'.__('sites.columns.open_live', ['domain' => $site->primary_domain]).'"', false)
             ->assertSee(route('ops.sites.edit', $site), false)

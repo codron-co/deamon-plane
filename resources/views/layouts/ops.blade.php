@@ -25,8 +25,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/ops.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/ops-ui.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/ops.css') }}?v={{ filemtime(public_path('css/ops.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/ops-ui.css') }}?v={{ filemtime(public_path('css/ops-ui.css')) }}">
 </head>
 <body class="ops-app">
     @php

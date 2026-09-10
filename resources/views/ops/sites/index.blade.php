@@ -101,7 +101,7 @@
                             <th>{{ __('sites.columns.status') }}</th>
                             <th>{{ __('sites.columns.live') }}</th>
                             <th>{{ __('sites.columns.theme') }}</th>
-                            <th></th>
+                            <th class="ops-actions-col"></th>
                         </tr>
                     </thead>
                     <tbody>

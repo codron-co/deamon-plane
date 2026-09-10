@@ -718,7 +718,8 @@ code {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .site-name {
@@ -753,11 +754,27 @@ code {
 }
 
 .ops-row-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
     white-space: nowrap;
+    text-align: right;
+}
+
+.ops-table .ops-actions-col,
+td.ops-row-actions {
+    width: 1%;
+}
+
+.ops-table .branch-version {
+    flex-wrap: nowrap;
+}
+
+td.ops-row-actions .btn + .btn {
+    margin-inline-start: 4px;
+}
+
+div.ops-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .status-chip {
