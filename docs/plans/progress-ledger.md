@@ -4,8 +4,12 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 
 ## Coolify deploy-row heal — generic API-failure race (2026-09-12)
 
-- Status: **code**. `ops:heal-throttled-deploys` also matches the bare `Coolify API request failed.` a raced status read leaves behind (Coolify answers an empty body mid cancel/restart, so the row lands `failed` while Coolify reports `cancelled-by-user`). When Coolify still says `failed` and carries no message or logs, the row's original text and `finished_at` are restored instead of the generic `Coolify deployment failed.`. Runbook: [../runbooks/coolify-rate-limit.md](../runbooks/coolify-rate-limit.md). Tests: `HealThrottledDeploysCommandTest`.
-- Live: the four rows left from the 2026-09-11 poll storm (izyem #737, Lökçe #738, ltscanta #739, makermak #740) are `cancelled` from Coolify truth. Older `failed` rows on other sites are real build failures, not this race.
+- Status: **code**. `ops:heal-throttled-deploys` markers now cover every sentence Plane writes about a *status read* rather than a build: the bare `Coolify API request failed.` a raced read leaves behind (empty body mid cancel/restart, so the row lands `failed` while Coolify reports `cancelled-by-user`) and `Timed out waiting for Coolify deployment.` from an exhausted poll. When Coolify still says `failed` and carries no message or logs, the row's original text and `finished_at` are restored instead of the generic `Coolify deployment failed.`. Runbook: [../runbooks/coolify-rate-limit.md](../runbooks/coolify-rate-limit.md). Tests: `HealThrottledDeploysCommandTest`.
+- Live: the four rows left from the 2026-09-11 poll storm (izyem #737, Lökçe #738, ltscanta #739, makermak #740) are `cancelled` from Coolify truth, and ltscanta #721 is `finished`. Older `failed` rows on other sites are real build failures, not this race.
+
+## CMS runtime image has no `git` — control-plane theme git is dead on live (2026-09-12)
+
+- Status: **blocker, CMS repo**. `themes/install` → `502 git_failed` and `themes/update` → `404 theme_not_found` on izyem because the CMS runtime image (`php:8.2-fpm-bookworm`, CMS `Dockerfile`) never installs `git`; `ProcessThemeGitRunner` shells out to `git clone`. `themes/.control-plane-git/` is empty on the site and `storage/app/theme-data/` does not exist, so CMS 1.2.14 `themes/data-install` has no source and answers `422 data_package_missing` — the Sync self-heal cannot fire. izyem's live `themes/izyem` carries theme files only (uploaded 2026-09-11 19:40), which is why Sync has always reported `sync.json tanımlı değil`. Fix is a CMS `Dockerfile` change plus a rebuild; not a Plane bug. Plane's error text is accurate and was left in place.
 
 ## Theme data package rollout fix (2026-09-11)
 

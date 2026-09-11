@@ -29,11 +29,13 @@ Coolify rejects before the controller runs. So a bulk action cannot double-deplo
 Olaydan kalan **Too Many Attempts.** satırları gerçek deploy hatası değil; sadece
 durum okuması engellenmişti. Coolify o build'leri büyük ihtimalle bitirdi.
 
-Aynı şey kuru **Coolify API request failed.** satırları için de geçerli: durum
-okuması bir cancel / restart ile yarıştığında Coolify boş gövde döner, poll job da
-bu cümleyi yazar. Coolify tarafında satır çoğunlukla `cancelled-by-user` görünür.
-Komut bu markerı da tarar; Coolify gerçekten `failed` diyorsa ve açıklama
-vermiyorsa satırın kendi metni korunur.
+Aynı şey kuru **Coolify API request failed.** ve **Timed out waiting for Coolify
+deployment.** satırları için de geçerli — ikisi de build hakkında değil, *durum
+okuması* hakkında yazılmış metin. Okuma bir cancel / restart ile yarıştığında
+Coolify boş gövde döner (satır Coolify'de çoğunlukla `cancelled-by-user`); poll
+denemeleri tükendiğinde ise Coolify build'i dakikalar sonra bitirir. Komut bu iki
+markerı da tarar; Coolify gerçekten `failed` diyorsa ve açıklama vermiyorsa
+satırın kendi metni korunur.
 
 1. Önce listeyi görün (hiçbir şey yazmaz):
 

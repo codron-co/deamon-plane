@@ -97,6 +97,24 @@ class HealThrottledDeploysCommandTest extends TestCase
         $this->assertNotNull($deployment->finished_at);
     }
 
+    public function test_a_poll_timeout_row_is_restored_when_coolify_finished_the_build(): void
+    {
+        $deployment = $this->throttleFailedDeployment('Timed out waiting for Coolify deployment.');
+
+        Http::fake([
+            'https://coolify.example/api/v1/deployments/dep-1' => Http::response([
+                'uuid' => 'dep-1',
+                'status' => 'finished',
+            ], 200),
+        ]);
+
+        $this->artisan('ops:heal-throttled-deploys')->assertSuccessful();
+
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Finished, $deployment->status);
+        $this->assertNull($deployment->error_message);
+    }
+
     public function test_dry_run_writes_nothing(): void
     {
         $deployment = $this->throttleFailedDeployment('Too Many Attempts.');

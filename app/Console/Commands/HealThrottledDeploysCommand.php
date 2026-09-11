@@ -25,9 +25,10 @@ class HealThrottledDeploysCommand extends Command
 
     /**
      * Markers left by the pre-fix poll job and by the current localized message.
-     * The bare "Coolify API request failed." belongs here too: a status read that
-     * races a cancel/restart answers with an empty body, so the poll job records
-     * that sentence for a build Coolify actually reports as cancelled or finished.
+     * Every entry is text Plane wrote about a *status read*, never about a build:
+     * a read that races a cancel/restart answers with an empty body ("Coolify API
+     * request failed."), and a poll that runs out of attempts gives up on a build
+     * Coolify often finishes minutes later.
      *
      * @var list<string>
      */
@@ -36,6 +37,7 @@ class HealThrottledDeploysCommand extends Command
         'istek sınırı',
         'rate limit',
         'Coolify API request failed.',
+        'Timed out waiting for Coolify deployment.',
     ];
 
     public function handle(CoolifyDeploymentSync $sync): int

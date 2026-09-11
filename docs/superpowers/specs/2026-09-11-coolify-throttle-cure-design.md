@@ -135,13 +135,14 @@ operator mashes.
 ### Layer 5 — heal the rows already poisoned
 
 `php artisan ops:heal-throttled-deploys` finds deployments marked `failed` whose
-`error_message` matches a throttle marker (raw `Too Many Attempts`, the Turkish
-string, or the bare `Coolify API request failed.` a raced status read leaves
-behind), re-reads each one from Coolify through the paced client, and rewrites the
-true status — recovering `sites.status` via the existing
-`recoverSiteIfLatestFinished()`. `--dry-run` lists without writing. The last marker
-is generic, so when Coolify still answers `failed` **and** carries no message or
-logs, the row's original text is restored instead of a generic sentence.
+`error_message` matches a marker Plane wrote about a *status read* — raw
+`Too Many Attempts`, the Turkish string, the bare `Coolify API request failed.` a
+raced read leaves behind, or `Timed out waiting for Coolify deployment.` from an
+exhausted poll — re-reads each one from Coolify through the paced client, and
+rewrites the true status, recovering `sites.status` via the existing
+`recoverSiteIfLatestFinished()`. `--dry-run` lists without writing. The last two
+markers are generic, so when Coolify still answers `failed` **and** carries no
+message or logs, the row's original text is restored instead of a generic sentence.
 
 ## Tests
 
@@ -156,8 +157,8 @@ logs, the row's original text is restored instead of a generic sentence.
 - Ops summaries carry no English `ok` / `failed`.
 - Heal command flips a throttle-failed row to finished from a faked Coolify, turns
   a generic `Coolify API request failed.` row into `cancelled` when Coolify says
-  `cancelled-by-user`, and keeps the row's own text when Coolify confirms a silent
-  failure.
+  `cancelled-by-user`, restores a poll-timeout row Coolify finished, and keeps the
+  row's own text when Coolify confirms a silent failure.
 
 ## Acceptance
 
