@@ -155,7 +155,7 @@ Manifest requires a **public** Plane URL GitHub can redirect to (`APP_URL` https
   "redirect_url": "{APP_URL}/themes/github/callback",
   "callback_urls": ["{APP_URL}/themes/github/callback"],
   "setup_url": "{APP_URL}/themes/github/installed",
-  "public": false,
+  "public": true,
   "default_permissions": {
     "contents": "read",
     "metadata": "read"

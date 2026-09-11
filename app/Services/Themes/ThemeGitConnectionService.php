@@ -48,7 +48,9 @@ class ThemeGitConnectionService
             'redirect_url' => route('ops.themes.git.callback'),
             'callback_urls' => [route('ops.themes.git.callback')],
             'setup_url' => route('ops.themes.git.installed'),
-            'public' => false,
+            // Private + user-owned App can only install on that personal account (GitHub rule).
+            // Public is required for the same App to install on orgs (ChatGPT/Claude model).
+            'public' => true,
             'default_permissions' => [
                 'metadata' => 'read',
                 'contents' => 'read',
