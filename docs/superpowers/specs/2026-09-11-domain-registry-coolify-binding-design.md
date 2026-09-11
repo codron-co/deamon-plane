@@ -1,7 +1,7 @@
 # Domain registry + Coolify domain binding reconcile
 
 **Date:** 2026-09-11  
-**Status:** draft — awaiting review  
+**Status:** draft — amended 2026-09-11 (domain silent gap emphasized)  
 **Repo:** Deamon Plane only  
 **Order:** Wave 3 of 3 (after bulk App health fixes and deploy-status sync)
 
@@ -11,16 +11,16 @@ Sites already have `site_domains` (primary, www, aliases, temporary wildcard hos
 
 Gaps operators reported:
 
-1. No fleet-level **domain management** screen to add domains and attach them to sites.
-2. Coolify Sync does not ingest Coolify-bound hosts into `site_domains` when Plane is missing them.
-3. No health check that Coolify still has the Plane domain set; if Coolify drops the binding, Plane should push it back.
-4. “Domain bağlı değil” needs a first-class App health (or Infrastructure) signal with a fix action.
+1. **Primary pain:** Plane lists domains (primary / www / aliases) but Coolify `docker_compose_domains` does **not** include them — and **nothing in Plane App health / list / detail currently says so**. Operators only notice when the public site is wrong.
+2. No fleet-level **domain management** screen to add domains and attach them to sites.
+3. Coolify Sync does not ingest Coolify-bound hosts into `site_domains` when Plane is missing them.
+4. No automatic rebind when Coolify drops a Plane-owned host.
 
 ## Goals
 
 - Ops UI to list Plane domains, create a domain (and optionally assign a site), and bind/unbind to a site within existing apex rules.
 - On Coolify site sync / inventory fill: parse Coolify `docker_compose_domains` (+ fqdn fallback), upsert missing non-generated hosts onto the matched site’s `site_domains`, and link orphan hosts when the site is unambiguous.
-- Detect Coolify missing Plane-required hosts; App health issue `domain_unbound` with fix `bind_domains`.
+- **Always surface** Plane-has / Coolify-missing hosts: App health issue `domain_unbound` (per site), Domains index **Unbound** filter, site detail domain rows with a clear unbound chip — never silent.
 - Fix / Sync path: `setDomains` with Plane’s desired binding string (primary + www + aliases + temp rules already used by provision/landing).
 - i18n, policies, `Http::fake` tests.
 
@@ -81,14 +81,20 @@ After `getApp`:
 
 ### App health
 
-New issue:
+New issue (mandatory — this is the silent-failure case operators already hit):
 
 | Code | Fix | When |
 |------|-----|------|
-| `domain_unbound` | `bind_domains` | Site has non-temporary domains and Coolify app domains miss any desired host (live inspect) |
-| `domain_missing_plane` | *(none or import-only)* | Optional: Coolify has customer host Plane lacks — Sync import should clear; if still present after sync failure, info-level only |
+| `domain_unbound` | `bind_domains` | Any **non-temporary** Plane desired host is absent from Coolify `docker_compose_domains` / fqdn for the linked app. Message must name at least one missing host (e.g. `example.com`). |
+| `domain_missing_plane` | *(none — Sync imports)* | Coolify has a customer host Plane lacks; after Sync import this should clear. Do not hide `domain_unbound` behind this. |
 
-`SiteAppHealthFixer` adds `bind_domains` → `CoolifyApplicationService::setDomains` with desired payload; then re-inspect.
+Rules:
+
+- Live inspect **and** Sync must be able to set/clear `domain_unbound`.
+- List App column / detail App card must show it like env issues (Wave 1 bulk can fix category `bind_domains`).
+- Temporary landing hosts: if Plane still expects the temp host, missing on Coolify counts; if landing already promoted to customer hosts, temp is not required on Coolify.
+
+`SiteAppHealthFixer` adds `bind_domains` → `CoolifyApplicationService::setDomains` with **full** desired payload (not a single host only — Coolify replace semantics); then re-inspect.
 
 Bulk Wave 1 fix order appends `bind_domains` after `sync_env` and before `inject_secret` once this wave lands (update Wave 1 runner when implementing Wave 3).
 
@@ -139,10 +145,15 @@ Bulk Wave 1 fix order appends `bind_domains` after `sync_env` and before `inject
 
 ## Acceptance
 
-- Operator can add a domain in `/domains` and attach it to a site.
+- A site with Plane domains missing from Coolify shows `domain_unbound` in App health (list + detail) — never silent.
+- Operator can add a domain in `/domains` and attach it to a site; unbound filter finds Plane→Coolify gaps.
 - Coolify Sync adds missing Coolify hosts to Plane for that site and rebinds Plane hosts missing in Coolify (per default auto-rebind).
-- App health surfaces unbound domains with a one-click fix.
+- `bind_domains` / Sync rebind restores Coolify `docker_compose_domains` to the full Plane desired set.
 - No cross-site domain theft; secrets unchanged.
+
+## Live debug
+
+When Coolify API responses disagree with the UI, implementers may inspect the Coolify host over SSH (`ssh coolify` / project convention) to read compose proxy domains — do not put SSH into product code paths.
 
 ## Dependency note
 

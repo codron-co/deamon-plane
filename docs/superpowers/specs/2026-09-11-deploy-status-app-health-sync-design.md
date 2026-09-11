@@ -1,7 +1,7 @@
 # Deploy status + App health sync freshness
 
 **Date:** 2026-09-11  
-**Status:** draft — awaiting review  
+**Status:** draft — amended 2026-09-11 (auto-deploy ↔ Coolify git deploy)  
 **Repo:** Deamon Plane only  
 **Order:** Wave 2 of 3 (after bulk App health fixes; before domain reconcile)
 
@@ -25,6 +25,7 @@ So “sync yaptım hâlâ başarısız” is expected with the current cache rul
 - Prefer Coolify’s **most recent** deployment (by Coolify start/finish time, then uuid) as the source of truth for “latest”, not only local autoincrement surprises.
 - Sync / poll paths remain `Http::fake`-testable; no live Coolify in CI.
 - Keep historical failed rows visible in the Deployments table (do not delete or rewrite finished→failed terminal history incorrectly).
+- Plane **Otomatik güncelleme** (auto-deploy) on/off must control Coolify’s **git auto-deploy** (`is_auto_deploy_enabled`) so push/webhook-triggered Coolify deploys follow Plane. Verify after write; detect drift on Sync.
 
 ## Non-goals
 
@@ -32,6 +33,7 @@ So “sync yaptım hâlâ başarısız” is expected with the current cache rul
 - Domain inventory (Wave 3).
 - Changing Coolify build/mysql root-cause of a true failed deploy.
 - Flipping `sites.status` from historical failed rows (existing rule stays).
+- Turning off Plane’s **inbound** Coolify Notifications webhook (`POST /webhooks/coolify`) when auto-deploy is off — that webhook is status reporting, not git auto-deploy.
 
 ## Approaches considered
 
@@ -91,6 +93,19 @@ Document in code: do not use “any failed row in last 25” for App health.
 - Confirm `listAppDeployments` uses Coolify’s newest-first page; if not, sort client-side by started/finished before upsert accounting.
 - When mapping remote status, keep `shouldKeepTerminal` (do not regress finished→queued).
 
+### 6. Auto-deploy ↔ Coolify git deploy
+
+Today `CoolifyDeploySettings::setAutoDeploy` already `PATCH`es `{ is_auto_deploy_enabled }`. Pin forces off; Follow HEAD forces on. Operators still ask whether “webhook deployları” follow Plane — meaning Coolify **application auto-deploy on git push**, not Plane’s notification webhook.
+
+Wave 2 hardens this:
+
+1. **After toggle:** re-`GET` the app (or trust PATCH response via `autoDeployState()`) and assert the flag matches the requested bool; if not, throw / flash error (do not silently show On while Coolify is Off).
+2. **Persist last intent (optional small column or audit-only):** prefer audit `site.auto_deploy_updated` + live Coolify as source of truth for the chip. No second Plane-only boolean that can diverge unless we already store one — do not invent a shadow flag.
+3. **Sync:** when filling the site from Coolify, refresh the Infrastructure auto-deploy chip from `autoDeployState()`. If an operator just set Plane and Coolify drifted (manual Coolify UI edit), chip shows Coolify truth; optional App health `auto_deploy_unknown` only when flag is missing (already “Unknown”).
+4. **Docs / UI hint:** Infrastructure copy states that On/Off controls Coolify git auto-deploy (push → deploy). Plane `POST /webhooks/coolify` keeps receiving deploy status either way.
+5. **Bulk auto-deploy:** same verify-after-write per site in the job runner.
+6. **Live debug:** if PATCH appears to succeed but Coolify UI disagrees, use `ssh coolify` to inspect the application row — not a product dependency.
+
 ### Tests
 
 - Cached payload has `deploy_failed`; latest deployment becomes `finished` → `forDisplay` has no `deploy_failed` without live Coolify.
@@ -98,6 +113,9 @@ Document in code: do not use “any failed row in last 25” for App health.
 - Older failed + newer finished → issue absent; only latest failed → issue present.
 - `latestOfMany` vs started_at: if an older-started row has higher id but earlier started_at than a finished row, health uses started_at rule (factory coverage).
 - Poll/webhook path refreshing local cache unit/feature test with Http::fake.
+- Auto-deploy On PATCHes `is_auto_deploy_enabled: true` and fails closed if subsequent GET reports false (Http::fake sequence).
+- Auto-deploy Off same for `false`.
+- Hint/docs assert notification webhook is out of scope for the toggle.
 
 ### Docs
 
@@ -110,7 +128,13 @@ Document in code: do not use “any failed row in last 25” for App health.
 - After Sync (or poll/webhook finish), site App health does not show deploy failed when the latest Coolify-synced deploy is finished.
 - Historical failed deployment pages remain accurate for that uuid.
 - List App column updates after refresh without requiring a full live Coolify inspect for deploy-only changes.
+- Plane auto-deploy On/Off updates Coolify `is_auto_deploy_enabled` and errors if Coolify does not reflect the change.
+- UI/docs make clear this is git auto-deploy, not the Plane notification webhook.
 
 ## Handoff
 
 Wave 1 bulk category counts for `redeploy` become correct once this merge lands; if Wave 1 ships first, counts may briefly over-count until Wave 2.
+
+## Live debug
+
+Stuck Coolify state: `ssh coolify` is allowed for implementers during this wave.
