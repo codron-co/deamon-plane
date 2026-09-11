@@ -21,6 +21,7 @@
 - [Related infra (Mailcow vb.)](related-infra.md) — Mailcow **coming soon**; Hostinger mail **in scope**
 - [Ops Sites CRUD](modules/ops-sites.md) — draft desired state + provision POST + channel switch
 - [Mail servers](modules/mail-servers.md) — Hostinger token in Plane; CMS HMAC proxy
+- [Software mail](modules/platform-mail.md) — Deamon product SMTP + notification toggles (global + per-site)
 - [Deployment (Coolify Compose)](modules/deployment.md)
 - [Coolify HTTP adapter](modules/coolify-client.md) — N connections, allowlists, site dropdowns
 - [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC or query token + deployments UI + fleet KPI

@@ -14,7 +14,7 @@ namespace App\Services\Agent;
  */
 final class ControlPlaneAgentContract
 {
-    public const CMS_VERSION = '1.2.7';
+    public const CMS_VERSION = '1.2.12';
 
     public const BASE_PATH = '/internal/control/v1';
 
@@ -31,6 +31,8 @@ final class ControlPlaneAgentContract
     public const THEME_SYNC_PATH = '/internal/control/v1/themes/sync';
 
     public const MAIL_CONFIGURE_PATH = '/internal/control/v1/mail/configure';
+
+    public const PLATFORM_MAIL_CONFIGURE_PATH = '/internal/control/v1/platform-mail/configure';
 
     public const HEADER_SITE = 'X-Deamon-Site';
 
@@ -106,6 +108,11 @@ final class ControlPlaneAgentContract
     public static function mailConfigurePath(): string
     {
         return self::configuredPath('ops.agent.mail_configure_path', self::MAIL_CONFIGURE_PATH);
+    }
+
+    public static function platformMailConfigurePath(): string
+    {
+        return self::configuredPath('ops.agent.platform_mail_configure_path', self::PLATFORM_MAIL_CONFIGURE_PATH);
     }
 
     /**

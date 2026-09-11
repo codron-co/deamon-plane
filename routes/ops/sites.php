@@ -52,6 +52,7 @@ Route::post('/sites/{site}/app-health', [SiteAppHealthController::class, 'refres
 Route::post('/sites/{site}/app-health/fix', [SiteAppHealthController::class, 'fix'])->name('ops.sites.app-health.fix');
 Route::post('/sites/{site}/agent-secret', [SiteController::class, 'injectAgentSecret'])->name('ops.sites.agent-secret');
 Route::post('/sites/{site}/mail', [SiteController::class, 'assignMail'])->name('ops.sites.mail');
+Route::post('/sites/{site}/platform-mail', [SiteController::class, 'assignPlatformMail'])->name('ops.sites.platform-mail');
 Route::post('/sites/{site}/mail-order', [SiteController::class, 'refreshMailOrder'])->name('ops.sites.mail-order');
 Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/fulfill', [SiteController::class, 'fulfillMailboxRequest'])->name('ops.sites.mailbox-requests.fulfill');
 Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/reject', [SiteController::class, 'rejectMailboxRequest'])->name('ops.sites.mailbox-requests.reject');

@@ -3,11 +3,13 @@
 namespace App\Services\Agent;
 
 use App\Models\Site;
+use App\Services\Mail\SiteHealthMailNotifier;
 
 class SiteHealthChecker
 {
     public function __construct(
         private readonly SiteAgentClient $client,
+        private readonly SiteHealthMailNotifier $mailNotifier,
     ) {}
 
     public function check(Site $site): AgentHealthResult
@@ -17,6 +19,8 @@ class SiteHealthChecker
         $site->last_health_at = now();
         $site->last_health_payload = $this->sanitizedSummary($site, $result->summary);
         $site->save();
+
+        $this->mailNotifier->afterHealthCheck($site->fresh() ?? $site, $result);
 
         return $result;
     }
@@ -37,6 +41,7 @@ class SiteHealthChecker
             'active_theme_id',
             'php',
             'queue_ok',
+            'site_status',
             'http_status',
         ];
 

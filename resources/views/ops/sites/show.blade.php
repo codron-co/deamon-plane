@@ -178,6 +178,7 @@
                 @include('ops.sites._domains')
                 @include('ops.sites._cloudflare')
                 @include('ops.sites._mail')
+                @include('ops.sites._platform-mail')
                 @include('ops.sites._channel-switch')
                 @include('ops.sites._coolify-ops')
                 @include('ops.sites._agent-health')

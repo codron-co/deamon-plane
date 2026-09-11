@@ -3,6 +3,7 @@
 @section('title', __('mail.title'))
 
 @section('actions')
+    <a class="btn btn-ghost btn-sm" href="{{ route('ops.platform-mail.edit') }}">{{ __('platform_mail.title') }}</a>
     @if ($canWrite)
         <a class="btn btn-primary btn-sm" href="{{ route('ops.mail-servers.create') }}">{{ __('mail.add') }}</a>
     @endif

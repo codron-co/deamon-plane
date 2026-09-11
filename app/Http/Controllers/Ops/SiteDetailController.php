@@ -11,6 +11,9 @@ use App\Models\Site;
 use App\Models\Theme;
 use App\Services\Agent\SiteHealthEvaluator;
 use App\Services\Cloudflare\CloudflareAccounts;
+use App\Services\Mail\PlatformMailConfigurer;
+use App\Services\Mail\PlatformMailResolver;
+use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\SiteMailOrderBinder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -19,8 +22,13 @@ class SiteDetailController extends Controller
 {
     use LoadsSiteOpsContext;
 
-    public function __invoke(Request $request, Site $site, SiteHealthEvaluator $agentHealth, SiteMailOrderBinder $mailBinder): View
-    {
+    public function __invoke(
+        Request $request,
+        Site $site,
+        SiteHealthEvaluator $agentHealth,
+        SiteMailOrderBinder $mailBinder,
+        PlatformMailResolver $platformMail,
+    ): View {
         $this->authorize('view', $site);
 
         $site->load([
@@ -74,6 +82,8 @@ class SiteDetailController extends Controller
             'mailCatalog' => $mailBinder->optionsForSite($site),
             'mailboxRequests' => $site->mailboxRequests,
             'cloudflareAccounts' => CloudflareAccounts::enabled(),
+            'platformMailDefinitions' => PlatformNotificationCatalog::definitions(),
+            'platformMailNotifications' => $platformMail->notificationsFor($site),
         ]);
     }
 }

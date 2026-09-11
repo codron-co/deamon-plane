@@ -65,6 +65,11 @@ class Site extends Model
         'mail_server_id',
         'hostinger_order_id',
         'mail_domain',
+        'platform_notification_overrides',
+        'platform_mail_recipient',
+        'last_notified_deamon_version',
+        'last_health_notify_status',
+        'last_health_notify_at',
     ];
 
     /**
@@ -98,6 +103,8 @@ class Site extends Model
             'last_app_health_payload' => 'array',
             'cloudflare_nameservers' => 'array',
             'dns_applied_at' => 'datetime',
+            'platform_notification_overrides' => 'array',
+            'last_health_notify_at' => 'datetime',
         ];
     }
 

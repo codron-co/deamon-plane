@@ -63,40 +63,50 @@ class CoolifyDeploymentSync
             ]);
         }
 
-        $deployment->status = $effective;
-        if (filled($remote->commit)) {
-            $deployment->commit_sha = $remote->commit;
-        }
-
-        $started = $remote->startedAt();
-        if ($started !== null && $deployment->started_at === null) {
-            $deployment->started_at = $started;
-        }
-
-        if (in_array($effective, [DeploymentStatus::Finished, DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
-            $deployment->finished_at = $remote->finishedAt() ?? $deployment->finished_at ?? now();
-        }
-
-        if (in_array($effective, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
-            $detail = DeploymentFailureText::fromRemote($site, $remote, 'Coolify deployment '.$effective->value.'.');
-            if (filled($remote->message) || filled($remote->logsExcerpt)) {
-                $deployment->error_message = $detail['error_message'];
-                if (filled($detail['log_excerpt'])) {
-                    $deployment->log_excerpt = $detail['log_excerpt'];
-                }
-            }
-        }
-
-        if (! $deployment->isDirty()) {
-            return false;
-        }
-
-        $deployment->save();
-
-        return true;
+        return $this->writeRemoteState($deployment, $site, $remote, $effective);
     }
 
-    private function mapRemoteStatus(?string $status): DeploymentStatus
+    /**
+     * Update an existing deployment from Coolify without changing site status.
+     * Used for Manual / ThemeRollout polls so cancel/fail does not flip Active sites to Error.
+     */
+    public function applyExisting(Deployment $deployment, CoolifyDeployment $remote): bool
+    {
+        $site = $deployment->site;
+        if ($site === null) {
+            return true;
+        }
+
+        $mapped = $this->mapRemoteStatus($remote->status);
+        $effective = $mapped === DeploymentStatus::Queued
+            ? DeploymentStatus::InProgress
+            : $mapped;
+
+        if ($this->shouldKeepTerminal($deployment, $effective)) {
+            return true;
+        }
+
+        $this->writeRemoteState($deployment, $site, $remote, $effective);
+
+        return in_array($effective, [
+            DeploymentStatus::Finished,
+            DeploymentStatus::Failed,
+            DeploymentStatus::Cancelled,
+        ], true);
+    }
+
+    public function failWithoutSiteChange(Deployment $deployment, string $message, ?string $logExcerpt = null): void
+    {
+        $deployment->status = DeploymentStatus::Failed;
+        $deployment->error_message = $message;
+        if ($logExcerpt !== null) {
+            $deployment->log_excerpt = $logExcerpt;
+        }
+        $deployment->finished_at = $deployment->finished_at ?? now();
+        $deployment->save();
+    }
+
+    public function mapRemoteStatus(?string $status): DeploymentStatus
     {
         $normalized = strtolower(str_replace(['-', ' '], '_', trim((string) $status)));
 
@@ -107,6 +117,73 @@ class CoolifyDeploymentSync
             'queued', 'pending' => DeploymentStatus::Queued,
             default => DeploymentStatus::InProgress,
         };
+    }
+
+    private function writeRemoteState(
+        Deployment $deployment,
+        Site $site,
+        CoolifyDeployment $remote,
+        DeploymentStatus $effective,
+    ): bool {
+        $deployment->status = $effective;
+        if (filled($remote->commit)) {
+            $deployment->commit_sha = $remote->commit;
+        }
+
+        $started = $remote->startedAt();
+        if ($started !== null) {
+            // Prefer Coolify's clock for both ends so duration is not Plane-now vs UTC skew.
+            $deployment->started_at = $started;
+        }
+
+        if (in_array($effective, [DeploymentStatus::Finished, DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
+            $finished = $remote->finishedAt() ?? $deployment->finished_at ?? now();
+            if ($deployment->started_at !== null && $finished->lt($deployment->started_at)) {
+                $finished = $deployment->started_at;
+            }
+            $deployment->finished_at = $finished;
+        }
+
+        if (in_array($effective, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
+            $detail = DeploymentFailureText::fromRemote($site, $remote, 'Coolify deployment '.$effective->value.'.');
+            if (filled($remote->message) || filled($remote->logsExcerpt)) {
+                $deployment->error_message = $detail['error_message'];
+                if (filled($detail['log_excerpt'])) {
+                    $deployment->log_excerpt = $detail['log_excerpt'];
+                }
+            } elseif (blank($deployment->error_message)) {
+                $deployment->error_message = $detail['error_message'];
+            }
+        }
+
+        if (! $deployment->isDirty()) {
+            return false;
+        }
+
+        $becameFailed = $effective === DeploymentStatus::Failed
+            && $deployment->isDirty('status');
+
+        $deployment->save();
+
+        if ($becameFailed) {
+            try {
+                app(\App\Services\Mail\PlatformOpsMailer::class)->send(
+                    $site,
+                    \App\Services\Mail\PlatformNotificationCatalog::DEPLOY_FAILED,
+                    'Deploy başarısız',
+                    sprintf(
+                        "%s deploy failed.\n%s\nPlane: %s",
+                        $site->name,
+                        (string) ($deployment->error_message ?: 'Coolify deployment failed.'),
+                        route('ops.sites.show', $site),
+                    ),
+                );
+            } catch (\Throwable) {
+                // Ops mail must not break deploy sync.
+            }
+        }
+
+        return true;
     }
 
     private function shouldKeepTerminal(Deployment $deployment, DeploymentStatus $incoming): bool

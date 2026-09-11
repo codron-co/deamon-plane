@@ -2,6 +2,10 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Software mail (Plane SMTP) — 2026-09-11
+
+- Status: **code**. Global `/platform-mail` SMTP + notification catalog; site Infrastructure overrides; push `POST /internal/control/v1/platform-mail/configure`. Plane sends site down/up/version/deploy-failed. CMS sends password reset, admin welcome, weekly report, member/order, publish toggle. Hostinger mailboxes unchanged. Docs: [modules/platform-mail.md](../modules/platform-mail.md).
+
 ## Site mailbox bindings + CMS requests (2026-09-10)
 
 - Status: **code**. Infrastructure mail card is mailbox-domain selects (existing values pre-selected), not “mail order” auto-match only. `site_mail_bindings` holds many domains; `site_mailbox_requests` is the CMS queue. Configure sends `mail_domains` (CMS `MailConfigureController` validates the array). Proxy lists all bindings; create accepts `domain`. Tests: Plane `SiteMailAssignTest` / `SiteMailProxyTest` / `MailServerOpsTest`; CMS `ControlPlaneMailConfigureTest` / `HostingerMailAdminTest` / `HostingerMailCustomerTest`.

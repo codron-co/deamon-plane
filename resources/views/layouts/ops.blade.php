@@ -84,7 +84,7 @@
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.2 11.5h8.1c1.2 0 2.2-1 2.2-2.2 0-1.1-.8-2-1.9-2.2.1-.3.2-.6.2-.9A2.7 2.7 0 0 0 10.1 3.5c-1.1 0-2.1.7-2.5 1.7A3.1 3.1 0 0 0 2.2 8.4c0 1.7 1.4 3.1 3.1 3.1Z" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
                     {{ __('ops.nav.cloudflare') }}
                 </a>
-                <a class="ops-nav-item {{ request()->routeIs('ops.mail-servers*') ? 'is-active' : '' }}" href="{{ route('ops.mail-servers.index') }}">
+                <a class="ops-nav-item {{ request()->routeIs('ops.mail-servers*', 'ops.platform-mail*') ? 'is-active' : '' }}" href="{{ route('ops.mail-servers.index') }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11v7h-11v-7Zm0 0 5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
                     {{ __('ops.nav.mail') }}
                 </a>

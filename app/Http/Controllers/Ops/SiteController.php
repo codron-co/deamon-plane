@@ -21,6 +21,8 @@ use App\Services\Agent\SiteHealthChecker;
 use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Hostinger\HostingerMailException;
+use App\Services\Mail\PlatformMailConfigurer;
+use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailConfigureResult;
 use App\Services\Mail\SiteMailOrderBinder;
@@ -427,6 +429,66 @@ class SiteController extends Controller
         return redirect()
             ->route('ops.sites.show', $site)
             ->with('status', __('mail.flash.assigned').$this->mailFlashSuffix($bind, $configure));
+    }
+
+    public function assignPlatformMail(Request $request, Site $site, PlatformMailConfigurer $configurer): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        $validated = $request->validate([
+            'platform_mail_recipient' => ['nullable', 'email', 'max:255'],
+            'notifications' => ['nullable', 'array'],
+        ]);
+
+        $before = $this->auditSnapshot($site);
+        $defaults = PlatformNotificationCatalog::defaultNotifications();
+        $input = is_array($validated['notifications'] ?? null) ? $validated['notifications'] : [];
+        $overrides = [];
+
+        foreach ($defaults as $key => $defaultRow) {
+            if (! array_key_exists($key, $input) || ! is_array($input[$key])) {
+                continue;
+            }
+            $row = $input[$key];
+            $merged = [
+                'enabled' => (bool) ($row['enabled'] ?? false),
+            ];
+            if ($key === PlatformNotificationCatalog::WEEKLY_VISITOR_REPORT) {
+                $merged['day'] = max(0, min(6, (int) ($row['day'] ?? $defaultRow['day'] ?? 1)));
+                $merged['hour'] = max(0, min(23, (int) ($row['hour'] ?? $defaultRow['hour'] ?? 8)));
+            }
+            if ($key === PlatformNotificationCatalog::SITE_VERSION_UPDATE) {
+                $on = (string) ($row['on'] ?? $defaultRow['on'] ?? 'patch');
+                $merged['on'] = in_array($on, ['major', 'minor', 'patch'], true) ? $on : 'patch';
+            }
+            $overrides[$key] = $merged;
+        }
+
+        $site->platform_mail_recipient = filled($validated['platform_mail_recipient'] ?? null)
+            ? (string) $validated['platform_mail_recipient']
+            : null;
+        $site->platform_notification_overrides = $overrides;
+        $site->save();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $request->user()?->id,
+            'action' => 'platform_mail.site_override_updated',
+            'before' => $before,
+            'after' => $this->auditSnapshot($site),
+            'ip' => $request->ip(),
+        ]);
+
+        $configure = $configurer->sync($site);
+        $status = __('platform_mail.flash.site_saved');
+        if ($configure->status === 'needs_secret') {
+            $status .= ' '.__('mail.flash.needs_secret');
+        } elseif ($configure->status === 'failed') {
+            $status .= ' '.__('mail.flash.configure_failed');
+        }
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', $status);
     }
 
     public function fulfillMailboxRequest(Request $request, Site $site, SiteMailboxRequest $mailboxRequest): RedirectResponse
