@@ -168,6 +168,70 @@ class SiteAppHealthTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_fix_all_with_no_fixable_issues_returns_ok(): void
+    {
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Draft,
+            'coolify_app_uuid' => null,
+            'agent_secret_encrypted' => null,
+            'notes' => null,
+        ]);
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.sites.app-health.fix', $site), ['fix' => 'all'])
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+    }
+
+    public function test_bulk_app_health_fix_queues_job_for_category(): void
+    {
+        $site = Site::factory()->dockerfilePack()->create([
+            'status' => SiteStatus::Active,
+            'coolify_app_uuid' => 'bulk-app-1',
+        ]);
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.sites.bulk.app-health-fix'), [
+                'all' => '1',
+                'fix' => 'migrate_compose',
+            ])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('job.type', 'sites.bulk_app_health_fix');
+
+        $this->assertDatabaseHas('ops_background_jobs', [
+            'type' => 'sites.bulk_app_health_fix',
+        ]);
+        $this->assertTrue($site->appHealth()->count() > 0);
+    }
+
+    public function test_sites_index_shows_bulk_and_row_fix_controls(): void
+    {
+        Site::factory()->dockerfilePack()->create([
+            'name' => 'Fix Menu Site',
+            'status' => SiteStatus::Active,
+        ]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->assertSee(__('sites.app_health.bulk'), false)
+            ->assertSee(route('ops.sites.bulk.app-health-fix'), false)
+            ->assertSee(__('sites.app_health.fix_all'), false);
+    }
+
+    public function test_viewer_cannot_bulk_app_health_fix(): void
+    {
+        Site::factory()->dockerfilePack()->create(['status' => SiteStatus::Active]);
+
+        $this->actingAs($this->viewer())
+            ->postJson(route('ops.sites.bulk.app-health-fix'), [
+                'all' => '1',
+                'fix' => 'migrate_compose',
+            ])
+            ->assertForbidden();
+    }
+
     public function test_detail_renders_app_health_card(): void
     {
         $site = Site::factory()->create(['status' => SiteStatus::Draft]);
@@ -178,6 +242,7 @@ class SiteAppHealthTest extends TestCase
             ->assertSee(__('sites.app_health.title'), false)
             ->assertSee(route('ops.sites.app-health', $site), false);
     }
+
 
     private function composeSite(): Site
     {

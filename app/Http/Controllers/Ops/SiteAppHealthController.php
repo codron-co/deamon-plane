@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
+use App\Http\Requests\Ops\BulkAppHealthFixRequest;
 use App\Models\Site;
 use App\Services\Sites\SiteAppHealthException;
 use App\Services\Sites\SiteAppHealthFixer;
@@ -11,10 +13,13 @@ use App\Services\Sites\SiteAppHealthReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 class SiteAppHealthController extends Controller
 {
+    use QueuesOpsJob;
+
     public function refresh(Request $request, Site $site, SiteAppHealthInspector $inspector): JsonResponse|RedirectResponse
     {
         $this->authorize('view', $site);
@@ -52,6 +57,42 @@ class SiteAppHealthController extends Controller
         );
     }
 
+    public function bulkFix(BulkAppHealthFixRequest $request, SiteAppHealthFixer $fixer): JsonResponse|RedirectResponse
+    {
+        $fix = (string) $request->validated('fix');
+        $sites = $this->sitesFromBulk($request);
+
+        foreach ($sites as $site) {
+            $this->authorize('update', $site);
+        }
+
+        $targets = $sites->filter(function (Site $site) use ($fixer, $fix): bool {
+            $needed = $fixer->neededFixes($site);
+
+            return $fix === 'all' ? $needed !== [] : in_array($fix, $needed, true);
+        })->values();
+
+        if ($targets->isEmpty()) {
+            return back()->with('error', __('sites.app_health.bulk_empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.bulk_app_health_fix', __('ops.jobs.bulk_app_health_fix'), [
+                'site_ids' => $targets->pluck('id')->all(),
+                'fix' => $fix,
+                'ip' => $request->ip(),
+            ]);
+        }
+
+        $result = $fixer->fixMany($targets, $fix, $request->user(), $request->ip());
+        $message = __('sites.app_health.bulk_done', [
+            'ok' => $result['ok'],
+            'failed' => $result['failed'],
+        ]);
+
+        return back()->with($result['failed'] > 0 ? 'error' : 'status', $message);
+    }
+
     /**
      * @param  array<string, mixed>  $health
      */
@@ -67,5 +108,27 @@ class SiteAppHealthController extends Controller
         }
 
         return back()->with($ok ? 'status' : 'error', $message);
+    }
+
+    /**
+     * @return Collection<int, Site>
+     */
+    private function sitesFromBulk(BulkAppHealthFixRequest $request): Collection
+    {
+        if ($request->boolean('all')) {
+            return Site::query()
+                ->with('latestDeployment')
+                ->matchingListFilters(
+                    trim((string) $request->input('filter_q', '')),
+                    (string) $request->input('filter_channel', ''),
+                    (string) $request->input('filter_status', ''),
+                )
+                ->orderBy('name')
+                ->get();
+        }
+
+        $ids = $request->validated('site_ids') ?? [];
+
+        return Site::query()->with('latestDeployment')->whereIn('id', $ids)->get();
     }
 }

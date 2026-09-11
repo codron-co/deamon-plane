@@ -160,6 +160,7 @@ return [
         'bulk_deploy' => 'Tekrar deploy',
         'bulk_follow_head' => 'HEAD’de deploy',
         'bulk_pin' => 'Commit pin',
+        'bulk_app_health_fix' => 'App hatalarını düzelt',
         'deployment' => 'Coolify deploy',
         'dismiss' => 'Kaldır',
         'stop' => 'Deploy’u durdur',

@@ -173,6 +173,28 @@
         });
     };
 
+    const applyAppHealthResults = function (job) {
+        if (!job || job.type !== "sites.bulk_app_health_fix" || !job.result || !Array.isArray(job.result.sites)) {
+            return;
+        }
+
+        job.result.sites.forEach(function (health) {
+            if (!health || !health.site_id) {
+                return;
+            }
+
+            const chip = document.querySelector('tr[data-site-id="' + health.site_id + '"] [data-app-health-copy]');
+            if (!chip) {
+                return;
+            }
+
+            chip.textContent = health.label || "";
+            chip.className = "status-chip status-" + (health.tone === "ok" ? "ok" : (health.tone === "error" ? "error" : "unknown"));
+            chip.setAttribute("data-copy-text", health.copy_text || "");
+            chip.setAttribute("title", health.copy_text || "");
+        });
+    };
+
     const visibleItems = function () {
         const jobs = Array.from(jobsById.values()).filter(function (item) {
             return !dismissedIds.has(item.id);
@@ -441,6 +463,7 @@
 
         if (job.type === "sites.live_sync" && job.status === "completed" && (!previous || previous.status !== "completed")) {
             applyLiveResults(job);
+            applyAppHealthResults(job);
         }
 
         if (isActive(job.status)) {

@@ -16,6 +16,8 @@ use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
+use App\Services\Sites\SiteAppHealthFixer;
+use App\Services\Sites\SiteAppHealthReport;
 use App\Services\Sites\SiteLiveProbe;
 use App\Services\Themes\ThemeCatalogSync;
 use Illuminate\Support\Collection;
@@ -36,6 +38,7 @@ class OpsJobRunner
             'sites.bulk_deploy' => $this->bulkDeploy($job),
             'sites.bulk_follow_head' => $this->bulkFollowHead($job),
             'sites.bulk_pin' => $this->bulkPin($job),
+            'sites.bulk_app_health_fix' => $this->bulkAppHealthFix($job),
             default => throw new RuntimeException('Unknown ops job type.'),
         };
     }
@@ -234,6 +237,42 @@ class OpsJobRunner
         $job->updateProgress(100);
 
         return __('site_ops.pin.bulk').' '.$result['ok'].' ok';
+    }
+
+    private function bulkAppHealthFix(OpsBackgroundJob $job): string
+    {
+        $fix = (string) ($job->payload['fix'] ?? 'all');
+        $sites = $this->sites($job)->loadMissing('latestDeployment');
+        $fixer = app(SiteAppHealthFixer::class);
+        $total = max(1, $sites->count());
+        $ok = 0;
+        $failed = 0;
+        $rows = [];
+
+        foreach ($sites->values() as $index => $site) {
+            $needed = $fixer->neededFixes($site);
+            $run = $fix === 'all' ? $needed !== [] : in_array($fix, $needed, true);
+            if (! $run) {
+                $job->updateProgress((int) ((($index + 1) / $total) * 100), $site->name);
+
+                continue;
+            }
+
+            try {
+                $report = $fixer->fix($site, $fix, $this->actor($job), isset($job->payload['ip']) ? (string) $job->payload['ip'] : null);
+                $ok++;
+                $rows[] = $report->toView($site->fresh() ?? $site);
+            } catch (\Throwable $exception) {
+                $failed++;
+                $rows[] = SiteAppHealthReport::forDisplay($site->fresh() ?? $site)->toView($site);
+            }
+            $job->updateProgress((int) ((($index + 1) / $total) * 100), $site->name);
+        }
+
+        $job->result = ['sites' => $rows];
+        $job->save();
+
+        return __('sites.app_health.bulk_done', ['ok' => $ok, 'failed' => $failed]);
     }
 
     /**

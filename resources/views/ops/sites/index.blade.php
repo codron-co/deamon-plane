@@ -6,6 +6,59 @@
 
 @section('actions')
     @if ($canWrite ?? false)
+        @php
+            $appHealthFixCounts = $appHealthFixCounts ?? [];
+        @endphp
+            <details class="ops-action-menu" data-ops-action-menu>
+                <summary class="btn btn-secondary btn-sm">{{ __('sites.app_health.bulk') }}</summary>
+                <div class="ops-action-popover" role="menu">
+                    @forelse ($appHealthFixCounts as $fixKey => $fixCount)
+                        <form
+                            method="POST"
+                            action="{{ route('ops.sites.bulk.app-health-fix') }}"
+                            data-ops-pending
+                            data-confirm="{{ __('sites.app_health.confirm_bulk_category', ['label' => __('sites.app_health.fixes.'.$fixKey), 'count' => $fixCount]) }}"
+                            data-confirm-title="{{ __('sites.app_health.bulk') }}"
+                            data-confirm-label="{{ __('sites.app_health.fixes.'.$fixKey) }}"
+                            data-confirm-danger="{{ in_array($fixKey, ['redeploy', 'inject_secret'], true) ? 'true' : 'false' }}"
+                        >
+                            @csrf
+                            <input type="hidden" name="all" value="1">
+                            <input type="hidden" name="fix" value="{{ $fixKey }}">
+                            <input type="hidden" name="filter_q" value="{{ $search }}">
+                            <input type="hidden" name="filter_channel" value="{{ $channel }}">
+                            <input type="hidden" name="filter_status" value="{{ $status }}">
+                            <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
+                                {{ __('sites.app_health.fix_category', ['label' => __('sites.app_health.fixes.'.$fixKey), 'count' => $fixCount]) }}
+                            </button>
+                        </form>
+                    @empty
+                        <span class="ops-menu-label">{{ __('sites.app_health.no_issues') }}</span>
+                    @endforelse
+                    @if ($appHealthFixCounts !== [])
+                        <div class="ops-action-sep" role="separator"></div>
+                        <form
+                            method="POST"
+                            action="{{ route('ops.sites.bulk.app-health-fix') }}"
+                            data-ops-pending
+                            data-confirm="{{ __('sites.app_health.confirm_bulk_all') }}"
+                            data-confirm-title="{{ __('sites.app_health.bulk') }}"
+                            data-confirm-label="{{ __('sites.app_health.fix_all_sites') }}"
+                            data-confirm-danger="true"
+                        >
+                            @csrf
+                            <input type="hidden" name="all" value="1">
+                            <input type="hidden" name="fix" value="all">
+                            <input type="hidden" name="filter_q" value="{{ $search }}">
+                            <input type="hidden" name="filter_channel" value="{{ $channel }}">
+                            <input type="hidden" name="filter_status" value="{{ $status }}">
+                            <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
+                                {{ __('sites.app_health.fix_all_sites') }}
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </details>
         <form
             method="POST"
             action="{{ route('ops.sites.bulk.sync') }}"
@@ -163,9 +216,11 @@
                                         <span class="version-chip">{{ $reportedVersion ?: __('sites.version_unknown') }}</span>
                                     </div>
                                 </td>
-                                @php($failure = $site->lastFailureMessage())
-                                @php($appHealth = $site->appHealth())
-                                @php($appHealthView = $appHealth->toView($site))
+                                @php
+                                    $failure = $site->lastFailureMessage();
+                                    $appHealth = $site->appHealth();
+                                    $appHealthView = $appHealth->toView($site);
+                                @endphp
                                 <td><span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span></td>
                                 <td>
                                     <button
@@ -183,6 +238,73 @@
                                 </td>
                                 <td class="muted">{{ $site->reportedActiveThemeId() ?: __('ops.none') }}</td>
                                 <td class="ops-row-actions">
+                                    @php
+                                        $rowFixes = \App\Services\Sites\SiteAppHealthFixer::orderedUniqueFixes($appHealth);
+                                    @endphp
+                                    @can('update', $site)
+                                        <details class="ops-action-menu ops-action-menu-compact" data-ops-action-menu data-row-action>
+                                            <summary
+                                                class="btn btn-ghost btn-sm"
+                                                aria-label="{{ __('sites.app_health.fix_menu', ['name' => $site->name]) }}"
+                                            >{{ __('sites.app_health.bulk') }}</summary>
+                                            <div class="ops-action-popover" role="menu">
+                                                @if ($rowFixes === [])
+                                                    <span class="ops-menu-label">{{ __('sites.app_health.no_issues') }}</span>
+                                                @else
+                                                    @foreach ($rowFixes as $fixKey)
+                                                        @if (in_array($fixKey, ['redeploy', 'inject_secret'], true))
+                                                            <form
+                                                                method="POST"
+                                                                action="{{ route('ops.sites.app-health.fix', $site) }}"
+                                                                data-ops-pending
+                                                                data-app-health-fix
+                                                                data-confirm="{{ __('sites.app_health.fixes.'.$fixKey) }} — {{ $site->name }}?"
+                                                                data-confirm-title="{{ __('sites.app_health.fixes.'.$fixKey) }}"
+                                                                data-confirm-label="{{ __('sites.app_health.fixes.'.$fixKey) }}"
+                                                                data-confirm-danger="true"
+                                                            >
+                                                                @csrf
+                                                                <input type="hidden" name="fix" value="{{ $fixKey }}">
+                                                                <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
+                                                                    {{ __('sites.app_health.fixes.'.$fixKey) }}
+                                                                </button>
+                                                            </form>
+                                                        @else
+                                                            <form
+                                                                method="POST"
+                                                                action="{{ route('ops.sites.app-health.fix', $site) }}"
+                                                                data-ops-pending
+                                                                data-app-health-fix
+                                                            >
+                                                                @csrf
+                                                                <input type="hidden" name="fix" value="{{ $fixKey }}">
+                                                                <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
+                                                                    {{ __('sites.app_health.fixes.'.$fixKey) }}
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    @endforeach
+                                                    <div class="ops-action-sep" role="separator"></div>
+                                                    <form
+                                                        method="POST"
+                                                        action="{{ route('ops.sites.app-health.fix', $site) }}"
+                                                        data-ops-pending
+                                                        data-app-health-fix
+                                                        data-confirm="{{ __('sites.app_health.confirm_fix_all', ['name' => $site->name]) }}"
+                                                        data-confirm-title="{{ __('sites.app_health.fix_all') }}"
+                                                        data-confirm-label="{{ __('sites.app_health.fix_all') }}"
+                                                        data-confirm-danger="true"
+                                                    >
+                                                        @csrf
+                                                        <input type="hidden" name="fix" value="all">
+                                                        <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
+                                                            {{ __('sites.app_health.fix_all') }}
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </details>
+                                    @endcan
                                     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
                                     @can('update', $site)
                                         <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.edit', $site) }}">{{ __('ops.actions.edit') }}</a>

@@ -39,4 +39,24 @@
     @if ($appHealthView['issues'] === [])
         <p class="muted" data-app-health-empty>{{ $appHealthView['copy_text'] }}</p>
     @endif
+    @if ($canFix && $appHealthView['issues'] !== [])
+        @php($detailFixes = \App\Services\Sites\SiteAppHealthFixer::orderedUniqueFixes($appHealth))
+        @if ($detailFixes !== [])
+            <form
+                method="POST"
+                action="{{ route('ops.sites.app-health.fix', $site) }}"
+                class="ops-app-health-fix-all"
+                data-ops-pending
+                data-app-health-fix
+                data-confirm="{{ __('sites.app_health.confirm_fix_all', ['name' => $site->name]) }}"
+                data-confirm-title="{{ __('sites.app_health.fix_all') }}"
+                data-confirm-label="{{ __('sites.app_health.fix_all') }}"
+                data-confirm-danger="true"
+            >
+                @csrf
+                <input type="hidden" name="fix" value="all">
+                <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.app_health.fix_all') }}</button>
+            </form>
+        @endif
+    @endif
 </article>

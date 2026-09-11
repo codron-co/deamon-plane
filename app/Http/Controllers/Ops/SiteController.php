@@ -30,6 +30,7 @@ use App\Services\Mail\SiteMailOrderBindResult;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\SiteAgentSecretInjector;
+use App\Services\Sites\SiteAppHealthFixer;
 use App\Services\Sites\SiteAttacher;
 use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLifecycle;
@@ -84,6 +85,9 @@ class SiteController extends Controller
             'bulkPinCommits' => $bulkPinCommits,
             'canCreate' => $request->user()?->can('create', Site::class) ?? false,
             'canWrite' => $request->user()?->canWriteOps() ?? false,
+            'appHealthFixCounts' => $request->user()?->canWriteOps()
+                ? app(SiteAppHealthFixer::class)->categoryCounts()
+                : [],
         ]);
     }
 

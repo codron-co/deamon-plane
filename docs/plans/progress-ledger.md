@@ -2,6 +2,10 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Site admin management (2026-09-11)
+
+- Status: **code**. Site detail **Admins** tab: list/create/reset (operator); deactivate/delete (Super Admin). HMAC `/internal/control/v1/admins*` (CMS **1.2.13+**). Passwords generate-or-manual, one-time flash only, never stored. Last active admin guarded. Spec: [../superpowers/specs/2026-09-11-site-admin-management-design.md](../superpowers/specs/2026-09-11-site-admin-management-design.md). Module: [modules/site-admins.md](../modules/site-admins.md). Tests: Plane `SiteAdminAgentTest`; CMS `ControlPlaneAdminAgentTest`.
+
 ## Software mail (Plane SMTP) — 2026-09-11
 
 - Status: **code**. Global `/platform-mail` SMTP + notification catalog; site Infrastructure overrides; push `POST /internal/control/v1/platform-mail/configure`. Plane sends site down/up/version/deploy-failed. CMS sends password reset, admin welcome, weekly report, member/order, publish toggle. Hostinger mailboxes unchanged. Docs: [modules/platform-mail.md](../modules/platform-mail.md).
@@ -13,6 +17,10 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 ## Sites App health + Coolify job widget (2026-09-10)
 
 - Status: **code**. Sites list **App** column (Healthy / N issues, hover + copy). Detail card with AJAX fixes (env sync, compose migrate, agent secret, redeploy, agent check). Jobs widget polls fleet Coolify `deployments` plus recent ops jobs. Manual redeploy/pin/HEAD now insert a local deployment row. Tests: `SiteAppHealthTest`.
+
+## Bulk App health fixes (2026-09-11)
+
+- Status: **code**. Sites list row + header Fix App issues menus; `fix=all`; bulk job `sites.bulk_app_health_fix`. Spec: [../superpowers/specs/2026-09-11-bulk-app-health-fixes-design.md](../superpowers/specs/2026-09-11-bulk-app-health-fixes-design.md).
 
 ## Theme Git connections — Settings paste → Themes Manifest (2026-09-10)
 

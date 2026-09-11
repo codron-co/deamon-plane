@@ -160,6 +160,7 @@ return [
         'bulk_deploy' => 'Redeploy',
         'bulk_follow_head' => 'Deploy HEAD',
         'bulk_pin' => 'Pin commit',
+        'bulk_app_health_fix' => 'Fix App issues',
         'deployment' => 'Coolify deploy',
         'dismiss' => 'Dismiss',
         'stop' => 'Stop deploy',

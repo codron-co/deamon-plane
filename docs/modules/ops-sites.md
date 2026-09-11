@@ -39,6 +39,11 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/deactivate` | `ops.sites.deactivate` | operator, super_admin; Coolify stop + status `archived` |
 | POST | `/sites/bulk/purge` | `ops.sites.bulk.purge` | operator, super_admin; hard-delete selected sites |
 | POST | `/sites/{site}/agent-secret` | `ops.sites.agent-secret` | operator, super_admin; Coolify env inject |
+| POST | `/sites/{site}/admins` | `ops.sites.admins.store` | operator, super_admin; CMS admin create |
+| POST | `/sites/{site}/admins/{remoteAdmin}/password` | `ops.sites.admins.password` | operator, super_admin; CMS password reset |
+| POST | `/sites/{site}/admins/{remoteAdmin}/deactivate` | `ops.sites.admins.deactivate` | super_admin |
+| POST | `/sites/{site}/admins/{remoteAdmin}/activate` | `ops.sites.admins.activate` | super_admin |
+| DELETE | `/sites/{site}/admins/{remoteAdmin}` | `ops.sites.admins.destroy` | super_admin |
 | DELETE | `/sites/{site}/purge` | `ops.sites.purge` | operator, super_admin; Coolify DELETE `delete_volumes=true` then `forceDelete` |
 | DELETE | `/sites/{site}` | `ops.sites.destroy` | operator, super_admin; **soft delete**. Coolify is not contacted |
 
@@ -89,7 +94,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 
 ## Site detail
 
-Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, then Deployments / Themes / Infrastructure / Danger. The topbar uses **Deploy** (Redeploy / Deploy HEAD / Open in Coolify), **Sync** (Coolify / Live Site / Health check), **Site** (homepage / admin panel), and **Settings** (Edit / Activate or Deactivate / Soft Delete / Hard Delete) dropdowns. Infrastructure auto-deploy card always exposes pin-commit, update-to-latest, redeploy, and follow HEAD. Provision stays a primary button on draft/error. **Edit** is a separate route. Explanatory copy lives in `i` hints (`ops.dashboard._hint`), not page paragraphs, kickers, or chips. Git repository sits under Technical identifiers. The next-action card appears only when there is work (error, provision, health). Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark uses `IdentityMark::letter()` (UTF-8 first character — not PHP `substr`) as the no-JS / failure fallback. JS prefers `data-favicon-src` from Live Sync, then `https://{host}/favicon.ico`, then `/apple-touch-icon.png`. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
+Site detail (`GET /sites/{site}`) is the operational overview: hero (status, domain, repo branch, reported version), sticky section nav, metrics, then Deployments / Themes / **Admins** / Infrastructure / Danger. The **Admins** tab (operator+) lists CMS admins via the signed agent; Super Admin can deactivate/delete. See [site-admins.md](site-admins.md). The topbar uses **Deploy** (Redeploy / Deploy HEAD / Open in Coolify), **Sync** (Coolify / Live Site / Health check), **Site** (homepage / admin panel), and **Settings** (Edit / Activate or Deactivate / Soft Delete / Hard Delete) dropdowns. Infrastructure auto-deploy card always exposes pin-commit, update-to-latest, redeploy, and follow HEAD. Provision stays a primary button on draft/error. **Edit** is a separate route. Explanatory copy lives in `i` hints (`ops.dashboard._hint`), not page paragraphs, kickers, or chips. Git repository sits under Technical identifiers. The next-action card appears only when there is work (error, provision, health). Overview, list, and the Themes tab show `activeThemeInstallation` when present; otherwise they show `last_health_payload.active_theme_id` as “reported by agent health” and do not claim the site has no theme. The identity mark uses `IdentityMark::letter()` (UTF-8 first character — not PHP `substr`) as the no-JS / failure fallback. JS prefers `data-favicon-src` from Live Sync, then `https://{host}/favicon.ico`, then `/apple-touch-icon.png`. Do not use a third-party icon CDN. Reference layout: [site-detail-reference.html](../prototypes/site-detail-reference.html).
 
 ## Deployments
 
@@ -97,7 +102,7 @@ Site detail includes a **Deployments** table (`ops/deployments/index`): last 25 
 
 ## Policy
 
-`App\Policies\SitePolicy`: viewer can `viewAny` / `view`. `create` / `update` / `delete` / `forceDelete` / `provision` / `switchChannel` / `checkHealth` require `User::canWriteOps()` (operator or super_admin). Force on the version gate is Super Admin only (enforced in `ChannelSwitcher`, not a separate Gate).
+`App\Policies\SitePolicy`: viewer can `viewAny` / `view`. `create` / `update` / `delete` / `forceDelete` / `provision` / `switchChannel` / `checkHealth` / `manageAdmins` require `User::canWriteOps()` (operator or super_admin). `toggleAdminActive` / `destroyAdmin` are Super Admin only. Force on the version gate is Super Admin only (enforced in `ChannelSwitcher`, not a separate Gate).
 
 ## Agent health
 
@@ -105,7 +110,7 @@ Site detail includes a **Deployments** table (`ops/deployments/index`): last 25 
 
 ## App health
 
-`SiteAppHealthInspector` scores Coolify pack / compose env / last deploy / agent. List **App** column: **Healthy** or **N issues**. Hover is the issue list; click copies it. Site detail shows the same issues with in-page POST fixes (`sync_env`, `migrate_compose`, `inject_secret`, `redeploy`, `check_health`) — `ops-async.js` keeps the page. Live Coolify inspect is cached on `last_app_health_*` and refreshed by `InspectSiteAppHealthJob` (same schedule as agent health) or **Check Coolify**. Secrets are never stored or shown. Manual / pin / HEAD deploys write a local `deployments` row so the jobs widget can follow Coolify success/failure.
+`SiteAppHealthInspector` scores Coolify pack / compose env / last deploy / agent. List **App** column: **Healthy** or **N issues**. Hover is the issue list; click copies it. Row **Fix App issues** menu runs one fix or all for that site. Header **Fix App issues** runs a category (or all) across sites that need it via `sites.bulk_app_health_fix`. Site detail shows the same issues with in-page POST fixes (`sync_env`, `migrate_compose`, `inject_secret`, `redeploy`, `check_health`, `fix=all`) — `ops-async.js` keeps the page. Live Coolify inspect is cached on `last_app_health_*` and refreshed by `InspectSiteAppHealthJob` (same schedule as agent health) or **Check Coolify**. Secrets are never stored or shown. Manual / pin / HEAD deploys write a local `deployments` row so the jobs widget can follow Coolify success/failure.
 
 ## List
 
