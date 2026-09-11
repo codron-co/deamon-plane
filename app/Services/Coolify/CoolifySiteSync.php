@@ -45,7 +45,15 @@ class CoolifySiteSync
             // Domain reconcile must not abort deployment sync.
         }
 
-        $deployments = (new CoolifyDeploymentSync)->sync($site->fresh() ?? $site, $coolify);
+        $deploymentSync = new CoolifyDeploymentSync;
+        $deployments = $deploymentSync->sync($site->fresh() ?? $site, $coolify);
+
+        try {
+            // Rows already Finished skip writeRemoteState dirty path — still clear stale Error.
+            $deploymentSync->recoverSiteIfLatestFinished($site->fresh() ?? $site);
+        } catch (\Throwable) {
+            // Status recovery must not abort sync.
+        }
 
         try {
             app(\App\Services\Sites\SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);

@@ -29,7 +29,8 @@ enum SiteStatus: string
      * Plan §4.2 — draft → provisioning → active ⇄ deploying → active;
      * draft → active when attaching an existing Coolify app (no second create);
      * active ⇄ stopped (Coolify start/stop); provisioning/deploying ↘ error;
-     * retry → deploying or provisioning; active/stopped → archived.
+     * retry → deploying or provisioning; error → active when latest Coolify deploy finished;
+     * active/stopped → archived.
      *
      * @return list<self>
      */
@@ -41,7 +42,7 @@ enum SiteStatus: string
             self::Active => [self::Deploying, self::Stopped, self::Archived],
             self::Deploying => [self::Active, self::Error],
             self::Stopped => [self::Active, self::Archived],
-            self::Error => [self::Deploying, self::Provisioning],
+            self::Error => [self::Deploying, self::Provisioning, self::Active],
             self::Archived => [],
         };
     }

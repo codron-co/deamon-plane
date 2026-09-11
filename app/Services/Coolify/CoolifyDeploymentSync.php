@@ -182,7 +182,7 @@ class CoolifyDeploymentSync
             }
         }
 
-        if ($becameFinished) {
+        if ($becameFinished || $effective === DeploymentStatus::Finished) {
             $this->recoverSiteIfLatestFinished($site);
         }
 
@@ -198,8 +198,9 @@ class CoolifyDeploymentSync
     /**
      * Poll timeout can leave sites.status=error even after Coolify finishes.
      * Recover only when the newest deployment (by started_at/id) is finished.
+     * Public so CoolifySiteSync can run recovery when deployment rows were already Finished (no dirty write).
      */
-    private function recoverSiteIfLatestFinished(Site $site): void
+    public function recoverSiteIfLatestFinished(Site $site): void
     {
         $site->refresh();
         if ($site->status !== \App\Enums\SiteStatus::Error) {

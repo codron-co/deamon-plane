@@ -139,6 +139,44 @@ class CoolifySiteSyncTest extends TestCase
         $this->assertSame(SiteStatus::Active, $site->fresh()->status);
     }
 
+    public function test_site_sync_recovers_error_when_latest_deploy_already_finished(): void
+    {
+        $site = $this->site();
+        $site->forceFill(['status' => SiteStatus::Error])->save();
+
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'coolify_deployment_uuid' => 'dep-done',
+            'status' => DeploymentStatus::Finished,
+            'started_at' => now()->subMinutes(5),
+            'finished_at' => now()->subMinute(),
+            'error_message' => 'Timed out waiting for Coolify deployment.',
+        ]);
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response($this->applicationPayload(), 200),
+            'https://coolify.example/api/v1/deployments/applications/'.self::APP.'*' => Http::response([
+                [
+                    'uuid' => 'dep-done',
+                    'status' => 'finished',
+                    'commit' => 'abc',
+                    'created_at' => now()->subMinutes(5)->utc()->toIso8601String(),
+                    'updated_at' => now()->subMinute()->utc()->toIso8601String(),
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.sync', $site))
+            ->assertRedirect();
+
+        $this->assertSame(SiteStatus::Active, $site->fresh()->status);
+        $this->assertDatabaseHas('deployments', [
+            'coolify_deployment_uuid' => 'dep-done',
+            'error_message' => null,
+        ]);
+    }
+
     public function test_get_site_sync_does_not_call_coolify(): void
     {
         $site = $this->site();

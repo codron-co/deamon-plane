@@ -99,7 +99,7 @@
             </article>
             <article class="site-metric">
                 <div class="site-metric-icon is-deploy" aria-hidden="true"><span></span></div>
-                <div><span>{{ __('sites.detail.latest_deployment') }}</span><strong>{{ $latest?->status?->label() ?? __('ops.none') }}</strong><small>{{ $latest?->started_at?->diffForHumans() ?? __('sites.deployments.empty_short') }}</small></div>
+                <div><span>{{ __('sites.detail.latest_deployment') }}</span><strong>{{ $latest?->status?->label() ?? __('ops.none') }}</strong><small>{{ ($latest?->finished_at ?? $latest?->started_at)?->diffForHumans() ?? __('sites.deployments.empty_short') }}</small></div>
             </article>
             <article class="site-metric">
                 <div class="site-metric-icon is-theme" aria-hidden="true"><span></span></div>

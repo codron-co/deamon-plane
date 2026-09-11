@@ -40,6 +40,7 @@ class SiteStatusTest extends TestCase
     {
         $this->assertTrue(SiteStatus::Error->canTransitionTo(SiteStatus::Deploying));
         $this->assertTrue(SiteStatus::Error->canTransitionTo(SiteStatus::Provisioning));
+        $this->assertTrue(SiteStatus::Error->canTransitionTo(SiteStatus::Active));
     }
 
     public function test_archived_is_terminal(): void

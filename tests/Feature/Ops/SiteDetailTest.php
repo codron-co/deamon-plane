@@ -3,8 +3,11 @@
 namespace Tests\Feature\Ops;
 
 use App\Enums\Channel;
+use App\Enums\DeploymentStatus;
+use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
+use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\Theme;
 use App\Models\User;
@@ -169,6 +172,32 @@ class SiteDetailTest extends TestCase
             ->getContent();
 
         $this->assertStringNotContainsString('window.confirm', $html);
+    }
+
+    public function test_show_recovers_stale_error_when_latest_deploy_finished(): void
+    {
+        $site = Site::factory()->create([
+            'name' => 'Recover Site',
+            'slug' => 'recover-site',
+            'status' => SiteStatus::Error,
+        ]);
+
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'channel' => Channel::Main,
+            'trigger' => DeploymentTrigger::Create,
+            'status' => DeploymentStatus::Finished,
+            'started_at' => now()->subHour(),
+            'finished_at' => now()->subMinutes(2),
+            'error_message' => 'Timed out waiting for Coolify deployment.',
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('status-chip status-active', false);
+
+        $this->assertSame(SiteStatus::Active, $site->fresh()->status);
     }
 
     public function test_viewer_can_open_detail_but_does_not_get_edit_or_danger_tab(): void

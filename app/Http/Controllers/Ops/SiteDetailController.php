@@ -33,6 +33,13 @@ class SiteDetailController extends Controller
     ): View {
         $this->authorize('view', $site);
 
+        try {
+            app(\App\Services\Coolify\CoolifyDeploymentSync::class)->recoverSiteIfLatestFinished($site);
+            $site->refresh();
+        } catch (\Throwable) {
+            // Stale Error chip must not break the detail page.
+        }
+
         $site->load([
             'primaryDomainRecord',
             'domains',
@@ -81,7 +88,8 @@ class SiteDetailController extends Controller
             'channelSwitchInProgress' => $site->status === SiteStatus::Deploying,
             'deployments' => $site->deployments()
                 ->with('requestedBy')
-                ->latest('id')
+                ->orderByDesc('started_at')
+                ->orderByDesc('id')
                 ->limit(25)
                 ->get(),
             'coolifyAppUrl' => $site->coolifyUiUrl(),

@@ -78,6 +78,7 @@ final class ThemeAgentResult
     public static function fromCmsError(?array $payload, int $httpStatus): self
     {
         $code = is_array($payload) ? self::stringOrNull($payload['error'] ?? null) : null;
+        $cmsMessage = is_array($payload) ? self::stringOrNull($payload['message'] ?? null) : null;
 
         $message = match (true) {
             $httpStatus === 401 || $httpStatus === 403 => 'Agent rejected the request signature.',
@@ -86,9 +87,10 @@ final class ThemeAgentResult
             $code === 'unsupported_source' => 'CMS rejected a non-git theme source.',
             $code === 'path_traversal' => 'Theme id failed the CMS path guard.',
             $code === 'system_theme' => 'The default system theme cannot be installed or updated.',
+            $code === 'validation_failed' && is_string($cmsMessage) => $cmsMessage,
             $code === 'validation_failed' => 'Theme agent validation failed.',
             $code === 'git_failed' || $httpStatus === 502 => 'CMS git install failed.',
-            default => 'Theme agent returned HTTP '.$httpStatus.'.',
+            default => is_string($cmsMessage) ? $cmsMessage : 'Theme agent returned HTTP '.$httpStatus.'.',
         };
 
         return self::failure($message, $httpStatus, $code);
