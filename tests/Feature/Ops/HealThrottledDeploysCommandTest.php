@@ -60,6 +60,61 @@ class HealThrottledDeploysCommandTest extends TestCase
         $this->assertSame(DeploymentStatus::Finished, Deployment::query()->first()?->status);
     }
 
+    public function test_a_generic_api_failure_that_coolify_calls_cancelled_is_corrected(): void
+    {
+        $deployment = $this->throttleFailedDeployment('Coolify API request failed.');
+
+        Http::fake([
+            'https://coolify.example/api/v1/deployments/dep-1' => Http::response([
+                'uuid' => 'dep-1',
+                'status' => 'cancelled-by-user',
+            ], 200),
+        ]);
+
+        $this->artisan('ops:heal-throttled-deploys')->assertSuccessful();
+
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Cancelled, $deployment->status);
+        $this->assertStringNotContainsString('Coolify API request failed', (string) $deployment->error_message);
+    }
+
+    public function test_a_real_failure_keeps_its_own_text_when_coolify_explains_nothing(): void
+    {
+        $deployment = $this->throttleFailedDeployment('Coolify API request failed.');
+
+        Http::fake([
+            'https://coolify.example/api/v1/deployments/dep-1' => Http::response([
+                'uuid' => 'dep-1',
+                'status' => 'failed',
+            ], 200),
+        ]);
+
+        $this->artisan('ops:heal-throttled-deploys')->assertSuccessful();
+
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Failed, $deployment->status);
+        $this->assertSame('Coolify API request failed.', $deployment->error_message);
+        $this->assertNotNull($deployment->finished_at);
+    }
+
+    public function test_a_poll_timeout_row_is_restored_when_coolify_finished_the_build(): void
+    {
+        $deployment = $this->throttleFailedDeployment('Timed out waiting for Coolify deployment.');
+
+        Http::fake([
+            'https://coolify.example/api/v1/deployments/dep-1' => Http::response([
+                'uuid' => 'dep-1',
+                'status' => 'finished',
+            ], 200),
+        ]);
+
+        $this->artisan('ops:heal-throttled-deploys')->assertSuccessful();
+
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Finished, $deployment->status);
+        $this->assertNull($deployment->error_message);
+    }
+
     public function test_dry_run_writes_nothing(): void
     {
         $deployment = $this->throttleFailedDeployment('Too Many Attempts.');

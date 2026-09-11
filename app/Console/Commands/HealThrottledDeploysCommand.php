@@ -25,6 +25,10 @@ class HealThrottledDeploysCommand extends Command
 
     /**
      * Markers left by the pre-fix poll job and by the current localized message.
+     * Every entry is text Plane wrote about a *status read*, never about a build:
+     * a read that races a cancel/restart answers with an empty body ("Coolify API
+     * request failed."), and a poll that runs out of attempts gives up on a build
+     * Coolify often finishes minutes later.
      *
      * @var list<string>
      */
@@ -32,6 +36,8 @@ class HealThrottledDeploysCommand extends Command
         'Too Many Attempts',
         'istek sınırı',
         'rate limit',
+        'Coolify API request failed.',
+        'Timed out waiting for Coolify deployment.',
     ];
 
     public function handle(CoolifyDeploymentSync $sync): int
@@ -73,6 +79,9 @@ class HealThrottledDeploysCommand extends Command
                 continue;
             }
 
+            $priorError = $deployment->error_message;
+            $priorFinishedAt = $deployment->finished_at;
+
             // Clear the fabricated failure so writeRemoteState can move the row.
             $deployment->status = DeploymentStatus::InProgress;
             $deployment->error_message = null;
@@ -82,12 +91,26 @@ class HealThrottledDeploysCommand extends Command
             $sync->applyExisting($deployment, $remote);
 
             $fresh = $deployment->fresh();
-            if ($fresh !== null && $fresh->status !== DeploymentStatus::Failed) {
+            if ($fresh === null) {
+                continue;
+            }
+
+            if ($fresh->status !== DeploymentStatus::Failed) {
                 $healed++;
                 $this->line('  '.$label.' → '.$fresh->status->value);
-            } else {
-                $unchanged++;
-                $this->line('  '.$label.' → still failed (real failure)');
+
+                continue;
+            }
+
+            $unchanged++;
+            $this->line('  '.$label.' → still failed (real failure)');
+
+            // Coolify confirms the failure but says nothing about it, so the row's
+            // own text is the only clue left. Do not trade it for a generic sentence.
+            if (blank($remote->message) && blank($remote->logsExcerpt) && filled($priorError)) {
+                $fresh->error_message = $priorError;
+                $fresh->finished_at = $fresh->finished_at ?? $priorFinishedAt;
+                $fresh->save();
             }
         }
 
