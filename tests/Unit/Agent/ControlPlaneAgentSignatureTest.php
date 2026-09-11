@@ -83,11 +83,30 @@ class ControlPlaneAgentSignatureTest extends TestCase
             ControlPlaneAgentSignature::sign('secret', '1700000000', 'nonce1', $body),
             $signed['signature'],
         );
-        $this->assertSame('1.2.7', ControlPlaneAgentContract::CMS_VERSION);
         $this->assertSame('/internal/control/v1/themes', ControlPlaneAgentContract::THEME_LIST_PATH);
         $this->assertSame(
             ['action' => 'sync_all', 'mode' => 'merge', 'theme_id' => 'beyazoglu'],
             ControlPlaneAgentContract::syncBody('beyazoglu'),
+        );
+    }
+
+    /**
+     * Pinning the exact version made this test fail on every CMS release, so assert
+     * the floor the Plane routes actually need instead: 1.2.14 shipped
+     * `themes/data-install`, which the sync self-heal calls.
+     */
+    public function test_cms_version_is_at_least_the_data_install_release(): void
+    {
+        $version = ControlPlaneAgentContract::CMS_VERSION;
+
+        $this->assertMatchesRegularExpression('/^\d+\.\d+\.\d+$/', $version);
+        $this->assertTrue(
+            version_compare($version, '1.2.14', '>='),
+            'CMS_VERSION must stay at or above 1.2.14 while Plane calls themes/data-install.',
+        );
+        $this->assertSame(
+            '/internal/control/v1/themes/data-install',
+            ControlPlaneAgentContract::THEME_DATA_INSTALL_PATH,
         );
     }
 }

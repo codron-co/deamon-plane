@@ -32,8 +32,9 @@ CMS theme sync reads `storage/app/theme-data/{theme_id}/sync.json`. SoT repos ke
 
 - CMS 1.2.14 `install` / `update` now install the data package themselves — no extra Plane call needed for new rollouts.
 - `POST /themes/sync` preflights the data root and returns `422 data_package_missing` instead of queueing a doomed task.
-- `ThemeRolloutService` retries once on that code: `POST /themes/data-install` (audited as `theme.data_installed` / `theme.data_install_failed`), then re-sends the sync. Sites installed by an older agent recover without SSH.
-- CMS < 1.2.14 has no `data-install` route (404); the original sync error is surfaced. Fix by upgrading the CMS or re-running **Update to latest**.
+- `ThemeRolloutService` retries once on that code: `POST /themes/data-install` (audited as `theme.data_installed` / `theme.data_install_failed`), then re-sends the sync. Sites installed by an older agent recover without SSH. Both **Assign** (install + sync) and **Sync now** take this path.
+- A sync that succeeds — including one that only succeeded after the repair — clears `last_error` and lifts the installation out of `error`, so a healed site stops reporting the fixed failure.
+- If the repair itself fails (404 on a CMS older than 1.2.14, pruned clone), the **original** sync error is surfaced, not the repair's; the repair failure stays in the audit log. Fix by upgrading the CMS or re-running **Update to latest**.
 
 `repo` on the wire stays `owner/repo` (`ControlPlaneAgentContract::installBody`). CMS **v1.2.7** accepts any github.com owner when `source=git`:
 

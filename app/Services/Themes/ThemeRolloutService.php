@@ -156,6 +156,16 @@ class ThemeRolloutService
 
             throw new ThemeRolloutException($result->safeMessage);
         }
+
+        // A sync that succeeded — including one that only succeeded after the
+        // data-package repair below — must clear the error a previous attempt
+        // parked on the row, or the panel keeps showing a fixed failure.
+        if ($installation->status === ThemeInstallationStatus::Error) {
+            $installation->status = ThemeInstallationStatus::Active;
+        }
+
+        $installation->last_error = null;
+        $installation->save();
     }
 
     public function activate(SiteThemeInstallation $installation, ?User $actor, ?string $ip, bool $confirmed): void
@@ -342,8 +352,11 @@ class ThemeRolloutService
             'ip' => $ip,
         ]);
 
+        // The repair is a best-effort side quest, so its own failure mode (a 404 on
+        // a CMS older than 1.2.14, a pruned clone) is only audit detail. Surface the
+        // original sync error, which names the missing data package for the operator.
         if (! $repair->ok) {
-            return $repair;
+            return $result;
         }
 
         return $this->agent->syncTheme($site, $body);
