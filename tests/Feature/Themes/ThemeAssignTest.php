@@ -192,6 +192,92 @@ class ThemeAssignTest extends TestCase
         $this->assertTrue($repaired, 'Plane must repair the data package before failing the sync.');
     }
 
+    public function test_sync_now_repairs_the_data_package_and_clears_a_stale_error(): void
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create(['theme_id' => 'izyem']);
+        $installation = SiteThemeInstallation::factory()->active()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+            'status' => ThemeInstallationStatus::Error,
+            'last_error' => 'Bu tema için sync.json tanımlı değil.',
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/data-install' => Http::response([
+                'ok' => true,
+                'theme_id' => 'izyem',
+            ], 200),
+            'https://shop.example.test/internal/control/v1/themes/sync' => Http::sequence()
+                ->push([
+                    'ok' => false,
+                    'error' => 'data_package_missing',
+                    'message' => 'Bu tema için sync.json tanımlı değil.',
+                ], 422)
+                ->push([
+                    'ok' => true,
+                    'queued' => true,
+                    'task_id' => 'task-1',
+                    'active_theme_id' => 'izyem',
+                ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]))
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        $installation->refresh();
+        $this->assertSame(ThemeInstallationStatus::Active, $installation->status);
+        $this->assertNull($installation->last_error);
+
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.data_installed')->exists());
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.sync_succeeded')->exists());
+
+        $paths = [];
+        Http::assertSent(function (Request $request) use (&$paths): bool {
+            $paths[] = parse_url($request->url(), PHP_URL_PATH);
+
+            return true;
+        });
+        $this->assertSame([
+            ControlPlaneAgentContract::THEME_SYNC_PATH,
+            ControlPlaneAgentContract::THEME_DATA_INSTALL_PATH,
+            ControlPlaneAgentContract::THEME_SYNC_PATH,
+        ], $paths);
+    }
+
+    public function test_sync_now_surfaces_the_cms_message_when_the_repair_route_is_missing(): void
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create(['theme_id' => 'izyem']);
+        $installation = SiteThemeInstallation::factory()->active()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+        ]);
+
+        Http::fake([
+            // CMS older than 1.2.14 never registered the repair route.
+            'https://shop.example.test/internal/control/v1/themes/data-install' => Http::response('', 404),
+            'https://shop.example.test/internal/control/v1/themes/sync' => Http::response([
+                'ok' => false,
+                'error' => 'data_package_missing',
+                'message' => 'Bu tema için sync.json tanımlı değil.',
+            ], 422),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Bu tema için sync.json tanımlı değil.');
+
+        $installation->refresh();
+        $this->assertSame(ThemeInstallationStatus::Error, $installation->status);
+        $this->assertSame('Bu tema için sync.json tanımlı değil.', $installation->last_error);
+
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.data_install_failed')->exists());
+    }
+
     public function test_system_theme_default_cannot_be_assigned(): void
     {
         $site = $this->readySite();

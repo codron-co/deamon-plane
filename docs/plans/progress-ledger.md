@@ -5,6 +5,7 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 ## Theme data package rollout fix (2026-09-11)
 
 - Status: **code**. CMS `themes/install|update` now publish the SoT repo-root data package (`sync.json` + `data/`) into `storage/app/theme-data/{id}` (CMS **1.2.14**), so Sync after Activate works without SSH. New `POST /internal/control/v1/themes/data-install` repairs sites installed by an older agent; `themes/sync` preflights and returns `data_package_missing`. `ThemeRolloutService` retries sync once through data-install (audit `theme.data_installed`). Merge mode no longer unpublishes rows the package stopped shipping. Docs: [modules/theme-agent-client.md](../modules/theme-agent-client.md). Tests: Plane `ThemeAssignTest`; CMS `ControlPlaneThemeDataPackageTest`, `ThemeSyncMergeContractTest`.
+- Follow-up (2026-09-12): **Sync now** self-heal is now covered end to end, and two holes on that path are closed — a healed sync clears `last_error` / lifts `error` status, and a failed repair surfaces the CMS data-package message instead of the misleading "CMS older than 1.2.5". `ControlPlaneAgentSignatureTest` asserts a `CMS_VERSION` floor of 1.2.14 rather than an exact pin that broke on every CMS release.
 
 ## Site admin management (2026-09-11)
 
