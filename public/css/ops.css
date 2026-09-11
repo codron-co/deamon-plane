@@ -733,9 +733,44 @@ code {
     vertical-align: middle;
 }
 
-.deployments-panel .ops-table {
-    width: max-content;
-    min-width: 100%;
+.deployments-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.deployments-col-status {
+    width: 28%;
+}
+
+.deployments-col-branch,
+.deployments-col-trigger,
+.deployments-col-commit,
+.deployments-col-duration {
+    width: 12%;
+}
+
+.deployments-col-started {
+    width: 24%;
+}
+
+.deployments-table th,
+.deployments-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: top;
+}
+
+.deployments-table .deployments-col-status {
+    white-space: normal;
+}
+
+.deployments-error-clip {
+    margin-top: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .ops-table tr:last-child td {

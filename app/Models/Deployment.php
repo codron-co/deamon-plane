@@ -73,7 +73,8 @@ class Deployment extends Model
         $site = $this->site;
         $active = in_array($this->status, [DeploymentStatus::Queued, DeploymentStatus::InProgress], true);
         $widgetStatus = match ($this->status) {
-            DeploymentStatus::Failed, DeploymentStatus::Cancelled => 'failed',
+            DeploymentStatus::Failed => 'failed',
+            DeploymentStatus::Cancelled => 'cancelled',
             DeploymentStatus::Finished => 'completed',
             default => 'running',
         };
@@ -87,7 +88,8 @@ class Deployment extends Model
             'type' => 'coolify.deployment',
             'title' => $site?->name ?? __('sites.title'),
             'status' => $widgetStatus,
-            'progress' => $active ? 55 : 100,
+            'progress' => $active ? null : 100,
+            'indeterminate' => $active,
             'message' => $message,
             'url' => $site !== null ? route('ops.sites.deployments.show', [$site, $this]) : null,
         ];
@@ -99,7 +101,8 @@ class Deployment extends Model
             return '—';
         }
 
-        $seconds = (int) $this->started_at->diffInSeconds($this->finished_at ?? now());
+        // Carbon 3 returns signed diffs by default; duration must stay non-negative.
+        $seconds = (int) $this->started_at->diffInSeconds($this->finished_at ?? now(), true);
         if ($seconds < 60) {
             return $seconds.'s';
         }

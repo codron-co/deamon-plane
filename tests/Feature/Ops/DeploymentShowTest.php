@@ -161,13 +161,17 @@ class DeploymentShowTest extends TestCase
         ]);
         Deployment::factory()->create([
             'site_id' => $site->id,
-            'status' => DeploymentStatus::Finished,
+            'status' => DeploymentStatus::Failed,
+            'error_message' => 'Coolify deployment failed.',
         ]);
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->get(route('ops.sites.show', $site))
             ->assertOk()
+            ->assertSee('class="ops-table deployments-table"', false)
             ->assertSee('class="ops-th-label"', false)
+            ->assertSee('deployments-error-clip', false)
+            ->assertSee('Coolify deployment failed.', false)
             ->assertSee(__('sites.deployments.columns.branch'), false)
             ->assertSee(__('sites.deployments.columns.trigger'), false)
             ->assertSee(__('sites.deployments.columns.commit'), false)

@@ -4,13 +4,18 @@ namespace App\Http\Controllers\Ops;
 
 use App\Enums\DeploymentStatus;
 use App\Http\Controllers\Controller;
+use App\Jobs\PollDeploymentJob;
 use App\Models\Deployment;
 use App\Models\OpsBackgroundJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class OpsJobController extends Controller
 {
+    private const STALE_POLL_SECONDS = 20;
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('ops.write');
@@ -32,7 +37,7 @@ class OpsJobController extends Controller
             ->map(fn (OpsBackgroundJob $job): array => $job->toWidget())
             ->values();
 
-        $deployments = Deployment::query()
+        $deploymentModels = Deployment::query()
             ->with('site')
             ->where(function ($query) use ($since): void {
                 $query->whereIn('status', [
@@ -48,7 +53,11 @@ class OpsJobController extends Controller
             })
             ->latest('id')
             ->limit(30)
-            ->get()
+            ->get();
+
+        $this->kickStaleDeploymentPolls($deploymentModels);
+
+        $deployments = $deploymentModels
             ->map(fn (Deployment $deployment): array => $deployment->toWidget())
             ->values();
 
@@ -66,5 +75,35 @@ class OpsJobController extends Controller
         return response()->json([
             'job' => $job->toWidget(),
         ]);
+    }
+
+    /**
+     * @param  Collection<int, Deployment>  $deployments
+     */
+    private function kickStaleDeploymentPolls(Collection $deployments): void
+    {
+        $cutoff = now()->subSeconds(self::STALE_POLL_SECONDS);
+
+        foreach ($deployments as $deployment) {
+            if (! in_array($deployment->status, [DeploymentStatus::Queued, DeploymentStatus::InProgress], true)) {
+                continue;
+            }
+
+            if (blank($deployment->coolify_deployment_uuid)) {
+                continue;
+            }
+
+            $started = $deployment->started_at ?? $deployment->created_at;
+            if ($started !== null && $started->gt($cutoff)) {
+                continue;
+            }
+
+            $key = 'ops.deploy.poll.'.$deployment->id;
+            if (! Cache::add($key, 1, now()->addSeconds(self::STALE_POLL_SECONDS))) {
+                continue;
+            }
+
+            PollDeploymentJob::dispatch($deployment->id, $deployment->requested_by, null);
+        }
     }
 }

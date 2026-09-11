@@ -82,7 +82,9 @@ final class CoolifyDeployment
         }
 
         try {
-            return CarbonImmutable::parse($value);
+            // Coolify emits UTC instants; naive strings must not inherit APP_TIMEZONE
+            // (Europe/Istanbul) or finished_at lands ~3h before Plane started_at.
+            return CarbonImmutable::parse(trim($value), 'UTC');
         } catch (Throwable) {
             return null;
         }

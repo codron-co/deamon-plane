@@ -14,6 +14,7 @@ class CoolifyWebhookHandler
 {
     public function __construct(
         private readonly SiteProvisioner $provisioner,
+        private readonly CoolifyDeploymentSync $deploymentSync,
     ) {}
 
     /**
@@ -37,7 +38,11 @@ class CoolifyWebhookHandler
             $remote = $this->enrichFromCoolify($deployment->site, $remote);
         }
 
-        $this->provisioner->applyRemoteDeployment($deployment, $remote);
+        if (in_array($deployment->trigger, [DeploymentTrigger::Manual, DeploymentTrigger::ThemeRollout], true)) {
+            $this->deploymentSync->applyExisting($deployment, $remote);
+        } else {
+            $this->provisioner->applyRemoteDeployment($deployment, $remote);
+        }
 
         return ['ok' => true, 'updated' => true];
     }
@@ -80,9 +85,11 @@ class CoolifyWebhookHandler
         return match ($event) {
             'deployment_success' => DeploymentStatus::Finished->value,
             'deployment_failed' => DeploymentStatus::Failed->value,
+            'deployment_cancelled', 'deployment_canceled', 'deployment_cancelled_by_user', 'deployment_canceled_by_user' => DeploymentStatus::Cancelled->value,
             default => match (true) {
                 ($payload['success'] ?? null) === true => DeploymentStatus::Finished->value,
                 ($payload['success'] ?? null) === false && str_contains($event, 'deployment') => DeploymentStatus::Failed->value,
+                str_contains($event, 'cancel') => DeploymentStatus::Cancelled->value,
                 default => DeploymentStatus::InProgress->value,
             },
         };

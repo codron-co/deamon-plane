@@ -13,6 +13,7 @@
     data-copy-running="{{ __('ops.jobs.status.running') }}"
     data-copy-completed="{{ __('ops.jobs.status.completed') }}"
     data-copy-failed="{{ __('ops.jobs.status.failed') }}"
+    data-copy-cancelled="{{ __('ops.jobs.status.cancelled') }}"
     data-copy-request-failed="{{ __('ops.jobs.request_failed') }}"
     data-copy-session="{{ __('ops.jobs.session_expired') }}"
     data-copy-copied="{{ __('sites.app_health.copied') }}"

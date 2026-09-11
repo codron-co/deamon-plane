@@ -166,6 +166,7 @@ return [
             'running' => 'Çalışıyor',
             'completed' => 'Bitti',
             'failed' => 'Başarısız',
+            'cancelled' => 'İptal',
         ],
     ],
 ];

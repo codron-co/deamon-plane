@@ -357,6 +357,35 @@ class CoolifyWebhookTest extends TestCase
         ], $body);
     }
 
+    public function test_cancelled_event_maps_to_cancelled_without_site_error_for_manual(): void
+    {
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Beta,
+            'coolify_app_uuid' => 'coolify-app-manual',
+            'primary_domain' => 'manual.example.test',
+        ]);
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'channel' => Channel::Beta,
+            'trigger' => DeploymentTrigger::Manual,
+            'coolify_deployment_uuid' => 'dep-cancel-wh',
+            'status' => DeploymentStatus::InProgress,
+            'started_at' => now()->subMinute(),
+        ]);
+
+        $this->unsignedPost([
+            'event' => 'deployment_cancelled',
+            'deployment_uuid' => $deployment->coolify_deployment_uuid,
+            'application_uuid' => $site->coolify_app_uuid,
+        ])->assertOk()->assertJson(['ok' => true, 'updated' => true]);
+
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Cancelled, $deployment->status);
+        $this->assertNotNull($deployment->finished_at);
+        $this->assertSame(SiteStatus::Active, $site->fresh()->status);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      */

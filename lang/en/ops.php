@@ -166,6 +166,7 @@ return [
             'running' => 'Running',
             'completed' => 'Done',
             'failed' => 'Failed',
+            'cancelled' => 'Cancelled',
         ],
     ],
 ];

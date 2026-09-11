@@ -4,6 +4,7 @@ namespace Tests\Feature\Sites;
 
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
+use App\Jobs\PollDeploymentJob;
 use App\Models\CoolifyConnection;
 use App\Models\Site;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class CoolifyDeploySettingsTest extends TestCase
@@ -158,6 +160,7 @@ class CoolifyDeploySettingsTest extends TestCase
     public function test_redeploy_posts_force_deploy_without_application_patch(): void
     {
         $site = $this->site();
+        Queue::fake();
 
         Http::fake(function (Request $request) {
             if ($sync = $this->coolifyEnvSyncResponse($request)) {
@@ -180,6 +183,10 @@ class CoolifyDeploySettingsTest extends TestCase
             'coolify_deployment_uuid' => 'dep-3',
             'status' => 'in_progress',
         ]);
+
+        Queue::assertPushed(PollDeploymentJob::class, function (PollDeploymentJob $job) use ($site): bool {
+            return $job->deploymentId === $site->deployments()->latest('id')->value('id');
+        });
 
         Http::assertSent(function (Request $request): bool {
             return $request->method() === 'POST'

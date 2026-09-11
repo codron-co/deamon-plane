@@ -48,7 +48,7 @@ Accepted shapes:
 1. Coolify notification: `event` `deployment_success` / `deployment_failed`, plus `deployment_uuid`, `application_uuid`, optional `commit`.
 2. API-shaped: `uuid` / `status` / `commit` / `application_uuid` (same fields as `GET /deployments/{uuid}`).
 
-Status map matches `SiteProvisioner::mapRemoteStatus` (`finished`/`success` → `finished`; `failed`/`error` → `failed`; `cancelled`; `queued`/`pending` → in-progress).
+Status map matches `SiteProvisioner::mapRemoteStatus` (`finished`/`success` → `finished`; `failed`/`error` → `failed`; `cancelled` / `deployment_cancelled`; `queued`/`pending` → in-progress). Manual / theme-rollout rows update deployment status only (site stays Active on cancel/fail); Create / channel-switch still drive site transitions.
 
 Lookup order: `coolify_deployment_uuid` → open (queued/in_progress) row for `sites.coolify_app_uuid` → create a `trigger=manual` row when the app uuid is known.
 
@@ -63,4 +63,4 @@ Terminal rows are not regressed by a later in-progress event (webhook and poll s
 
 ## Poll fallback
 
-`PollDeploymentJob` already polls `GET /deployments/{uuid}` every `ops.provision.poll_seconds` (default 15s). Webhooks are the fast path; poll remains the backup if notifications are misconfigured.
+`PollDeploymentJob` already polls `GET /deployments/{uuid}` every `ops.provision.poll_seconds` (default 15s). Webhooks are the fast path; poll remains the backup if notifications are misconfigured. Manual redeploy/pin/follow-head also dispatch the same poller. `GET /jobs` re-queues poll for open deployments older than ~20s (rate-limited) so cancelled Coolify deploys clear from the background widget.

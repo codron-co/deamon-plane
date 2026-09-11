@@ -24,6 +24,7 @@
 
     let trackedIds = new Set();
     let jobsById = new Map();
+    let dismissTimers = new Map();
     let messages = [];
     let pollTimer = null;
     let collapsed = false;
@@ -60,6 +61,10 @@
         return status === "queued" || status === "running";
     };
 
+    const isTerminal = function (status) {
+        return status === "completed" || status === "failed" || status === "cancelled";
+    };
+
     const statusLabel = function (status) {
         if (status === "queued") {
             return copy("queued", "Queued");
@@ -69,6 +74,9 @@
         }
         if (status === "failed") {
             return copy("failed", "Failed");
+        }
+        if (status === "cancelled") {
+            return copy("cancelled", "Cancelled");
         }
         return copy("completed", "Done");
     };
@@ -141,6 +149,31 @@
         return item && typeof item.url === "string" && item.url !== "" ? item.url : "";
     };
 
+    const clearDismissTimer = function (id) {
+        const timer = dismissTimers.get(id);
+        if (timer) {
+            window.clearTimeout(timer);
+            dismissTimers.delete(id);
+        }
+    };
+
+    const scheduleDismiss = function (id) {
+        if (dismissTimers.has(id)) {
+            return;
+        }
+
+        const timer = window.setTimeout(function () {
+            dismissTimers.delete(id);
+            jobsById.delete(id);
+            trackedIds.delete(id);
+            writeStorage();
+            render();
+            stopIfIdle();
+        }, DISMISS_MS);
+
+        dismissTimers.set(id, timer);
+    };
+
     const render = function () {
         const items = visibleItems();
         const active = items.filter(function (item) {
@@ -202,14 +235,21 @@
 
             if (isActive(item.status)) {
                 const bar = document.createElement("span");
-                bar.className = "ops-jobs-progress";
+                const indeterminate = item.indeterminate === true || item.progress == null;
+                bar.className = "ops-jobs-progress" + (indeterminate ? " is-indeterminate" : "");
                 bar.setAttribute("role", "progressbar");
                 bar.setAttribute("aria-valuemin", "0");
                 bar.setAttribute("aria-valuemax", "100");
-                const value = Math.max(0, Math.min(100, Number(item.progress) || 0));
-                bar.setAttribute("aria-valuenow", String(value));
+                if (indeterminate) {
+                    bar.setAttribute("aria-valuetext", statusLabel(item.status));
+                } else {
+                    const value = Math.max(0, Math.min(100, Number(item.progress) || 0));
+                    bar.setAttribute("aria-valuenow", String(value));
+                }
                 const fill = document.createElement("span");
-                fill.style.width = value + "%";
+                if (!indeterminate) {
+                    fill.style.width = Math.max(0, Math.min(100, Number(item.progress) || 0)) + "%";
+                }
                 bar.appendChild(fill);
                 li.appendChild(bar);
             }
@@ -230,33 +270,37 @@
             writeStorage();
         }
 
-        if (job.type === "coolify.deployment") {
-            render();
-            return;
-        }
-
-        if (job.status === "completed" && (!previous || previous.status !== "completed")) {
+        if (job.type === "sites.live_sync" && job.status === "completed" && (!previous || previous.status !== "completed")) {
             applyLiveResults(job);
-            window.setTimeout(function () {
-                jobsById.delete(job.id);
-                trackedIds.delete(job.id);
-                writeStorage();
-                render();
-                stopIfIdle();
-            }, DISMISS_MS);
         }
 
-        if (job.status === "failed" && (!previous || previous.status !== "failed")) {
-            window.setTimeout(function () {
-                jobsById.delete(job.id);
-                trackedIds.delete(job.id);
-                writeStorage();
-                render();
-                stopIfIdle();
-            }, DISMISS_MS);
+        if (isActive(job.status)) {
+            clearDismissTimer(job.id);
+        } else if (isTerminal(job.status) && (!previous || previous.status !== job.status)) {
+            scheduleDismiss(job.id);
         }
 
         render();
+    };
+
+    const pruneAbsentDeployments = function (payloadDeployments) {
+        const seen = new Set();
+        (payloadDeployments || []).forEach(function (job) {
+            if (job && job.id) {
+                seen.add(job.id);
+            }
+        });
+
+        Array.from(jobsById.values()).forEach(function (job) {
+            if (job.type !== "coolify.deployment") {
+                return;
+            }
+            if (seen.has(job.id)) {
+                return;
+            }
+            clearDismissTimer(job.id);
+            jobsById.delete(job.id);
+        });
     };
 
     const stopIfIdle = function () {
@@ -275,6 +319,9 @@
             }
             if (payload && Array.isArray(payload.deployments)) {
                 payload.deployments.forEach(upsertJob);
+                pruneAbsentDeployments(payload.deployments);
+            } else {
+                pruneAbsentDeployments([]);
             }
 
             const ids = Array.from(trackedIds);
@@ -360,6 +407,7 @@
             messages = [];
             Array.from(jobsById.values()).forEach(function (job) {
                 if (!isActive(job.status)) {
+                    clearDismissTimer(job.id);
                     jobsById.delete(job.id);
                     trackedIds.delete(job.id);
                 }
