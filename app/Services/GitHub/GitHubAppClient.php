@@ -31,12 +31,16 @@ class GitHubAppClient
      */
     public function convertAppManifest(string $code): array
     {
+        // Laravel Http::post($url) with no body sends JSON `[]`, which GitHub rejects with 422.
         $response = $this->unauthenticatedHttp()
-            ->post($this->apiUrl('/app-manifests/'.$code.'/conversions'));
+            ->withBody('')
+            ->post($this->apiUrl('/app-manifests/'.rawurlencode($code).'/conversions'));
 
         if ($response->failed()) {
+            $detail = trim((string) $response->json('message'));
             throw new GitHubApiException(
-                'GitHub App manifest conversion failed with HTTP '.$response->status().'.',
+                'GitHub App manifest conversion failed with HTTP '.$response->status().'.'
+                    .($detail !== '' ? ' '.$detail : ''),
                 $response->status(),
             );
         }
