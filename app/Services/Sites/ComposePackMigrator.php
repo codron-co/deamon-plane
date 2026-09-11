@@ -12,6 +12,7 @@ use App\Services\Coolify\CoolifyDomainParser;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use App\Services\Ops\PacedFanout;
 
 class ComposePackMigrator
 {
@@ -86,25 +87,14 @@ class ComposePackMigrator
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, errors: list<string>}
+     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool}
      */
     public function migrateMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {
-        $ok = 0;
-        $failed = 0;
-        $errors = [];
-
-        foreach ($sites as $site) {
-            try {
-                $this->migrate($site, $actor, $ip);
-                $ok++;
-            } catch (ComposePackException $exception) {
-                $failed++;
-                $errors[] = $site->name.': '.$exception->getMessage();
-            }
-        }
-
-        return ['ok' => $ok, 'failed' => $failed, 'errors' => $errors];
+        return app(PacedFanout::class)->run(
+            $sites,
+            fn (Site $site) => $this->migrate($site, $actor, $ip),
+        );
     }
 
     /**
