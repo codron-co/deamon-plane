@@ -1338,6 +1338,69 @@ html[data-theme="semidark"] .fleet-attention-list li {
     min-width: 0;
 }
 
+.ops-jobs-item-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ops-jobs-item-head > .ops-jobs-link,
+.ops-jobs-item-head > strong {
+    flex: 1;
+    min-width: 0;
+}
+
+.ops-jobs-item-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.ops-jobs-item:hover .ops-jobs-item-actions,
+.ops-jobs-item:focus-within .ops-jobs-item-actions {
+    opacity: 1;
+}
+
+.ops-jobs-item-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.ops-jobs-item-btn:hover,
+.ops-jobs-item-btn:focus-visible {
+    background: var(--surface-overlay);
+    color: var(--text);
+    outline: none;
+}
+
+.ops-jobs-item-btn.is-force:hover,
+.ops-jobs-item-btn.is-force:focus-visible {
+    color: var(--accent);
+}
+
+.ops-jobs-item-btn.is-dismiss:hover,
+.ops-jobs-item-btn.is-dismiss:focus-visible {
+    color: var(--danger-text, var(--danger));
+}
+
+.ops-jobs-item-btn:disabled {
+    opacity: 0.45;
+    cursor: wait;
+}
+
 .ops-jobs-item strong,
 .ops-jobs-link {
     color: var(--text);

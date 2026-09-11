@@ -16,6 +16,10 @@ final class CoolifyDeployResult
      */
     public static function fromArray(array $payload): self
     {
+        if (isset($payload['deployment_uuid']) && ! isset($payload['deployments'])) {
+            $payload = ['deployments' => [$payload]];
+        }
+
         $rows = $payload['deployments'] ?? $payload;
         if (! is_array($rows)) {
             $rows = [];

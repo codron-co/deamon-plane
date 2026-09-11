@@ -178,14 +178,27 @@ class CoolifyApplicationService
         return $this->client->updateBranch($uuid, $branch);
     }
 
-    public function startApplication(string $uuid): void
+    public function startApplication(string $uuid, bool $force = false, bool $instantDeploy = false): CoolifyDeployResult
     {
-        $this->client->startApplication($uuid);
+        return $this->client->startApplication($uuid, $force, $instantDeploy);
     }
 
     public function stopApplication(string $uuid): void
     {
         $this->client->stopApplication($uuid);
+    }
+
+    public function cancelDeployment(string $deploymentUuid): void
+    {
+        $this->client->cancelDeployment($deploymentUuid);
+    }
+
+    /**
+     * @return Collection<int, CoolifyDeployment>
+     */
+    public function listRunningDeployments(): Collection
+    {
+        return $this->client->listRunningDeployments();
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\PollDeploymentJob;
 use App\Models\Deployment;
 use App\Models\OpsBackgroundJob;
+use App\Services\Ops\OpsCoolifyDeployQueue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -16,7 +17,7 @@ class OpsJobController extends Controller
 {
     private const STALE_POLL_SECONDS = 20;
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, OpsCoolifyDeployQueue $queue): JsonResponse
     {
         $this->authorize('ops.write');
 
@@ -55,11 +56,35 @@ class OpsJobController extends Controller
             ->limit(30)
             ->get();
 
+        $queue->refreshOpen(
+            $deploymentModels->filter(
+                static fn (Deployment $deployment): bool => in_array(
+                    $deployment->status,
+                    [DeploymentStatus::Queued, DeploymentStatus::InProgress],
+                    true,
+                ),
+            )->values(),
+        );
+
+        $deploymentModels = $deploymentModels->map(
+            static fn (Deployment $deployment): Deployment => $deployment->fresh(['site']) ?? $deployment,
+        );
+
         $this->kickStaleDeploymentPolls($deploymentModels);
 
-        $deployments = $deploymentModels
+        $local = $deploymentModels
             ->map(fn (Deployment $deployment): array => $deployment->toWidget())
-            ->values();
+            ->keyBy(static fn (array $row): string => (string) ($row['coolify_deployment_uuid'] ?? $row['id']));
+
+        foreach ($queue->widgetRows() as $row) {
+            $key = (string) ($row['coolify_deployment_uuid'] ?? $row['id']);
+            if ($key === '' || $local->has($key)) {
+                continue;
+            }
+            $local->put($key, $row);
+        }
+
+        $deployments = $local->values();
 
         return response()->json([
             'jobs' => $jobs,
@@ -74,6 +99,65 @@ class OpsJobController extends Controller
 
         return response()->json([
             'job' => $job->toWidget(),
+        ]);
+    }
+
+    public function destroy(Request $request, OpsBackgroundJob $job): JsonResponse
+    {
+        $this->authorize('ops.write');
+        abort_unless($job->actor_user_id === $request->user()?->id, 404);
+        abort_unless(in_array($job->status, ['completed', 'failed', 'cancelled'], true), 422);
+
+        $job->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function cancelDeployment(Request $request, Deployment $deployment, OpsCoolifyDeployQueue $queue): JsonResponse
+    {
+        $this->authorize('ops.write');
+
+        $updated = $queue->cancel($deployment);
+
+        return response()->json([
+            'ok' => true,
+            'deployment' => $updated->toWidget(),
+        ]);
+    }
+
+    public function forceStartDeployment(Request $request, Deployment $deployment, OpsCoolifyDeployQueue $queue): JsonResponse
+    {
+        $this->authorize('ops.write');
+
+        $updated = $queue->forceStart($deployment);
+
+        return response()->json([
+            'ok' => true,
+            'deployment' => $updated->toWidget(),
+        ]);
+    }
+
+    public function cancelCoolifyDeployment(Request $request, string $uuid, OpsCoolifyDeployQueue $queue): JsonResponse
+    {
+        $this->authorize('ops.write');
+
+        $updated = $queue->cancelRemote($uuid);
+
+        return response()->json([
+            'ok' => true,
+            'deployment' => $updated?->toWidget(),
+        ]);
+    }
+
+    public function forceStartCoolifyDeployment(Request $request, string $uuid, OpsCoolifyDeployQueue $queue): JsonResponse
+    {
+        $this->authorize('ops.write');
+
+        $updated = $queue->forceStartRemote($uuid);
+
+        return response()->json([
+            'ok' => true,
+            'deployment' => $updated->toWidget(),
         ]);
     }
 

@@ -9,6 +9,7 @@ use App\Enums\SiteStatus;
 use App\Jobs\PollDeploymentJob;
 use App\Models\CoolifyConnection;
 use App\Models\Deployment;
+use App\Models\OpsBackgroundJob;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyDeploymentSync;
@@ -118,7 +119,158 @@ class DeploymentPollWidgetTest extends TestCase
             ->assertOk()
             ->assertJsonPath('deployments.0.title', 'Meyyit')
             ->assertJsonPath('deployments.0.status', 'cancelled')
-            ->assertJsonPath('deployments.0.progress', 100);
+            ->assertJsonPath('deployments.0.progress', 100)
+            ->assertJsonPath('deployments.0.actions.dismiss', true)
+            ->assertJsonPath('deployments.0.actions.cancel', false);
+    }
+
+    public function test_jobs_index_includes_coolify_queue_for_deamon_sites_only(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.example',
+            'api_token' => 'token',
+            'is_enabled' => true,
+            'is_default' => true,
+        ]);
+        $site = Site::factory()->create([
+            'name' => 'Moon Agro',
+            'coolify_app_uuid' => 'app-moon',
+            'coolify_connection_id' => $connection->id,
+        ]);
+
+        Http::fake([
+            'https://coolify.example/api/v1/deployments' => Http::response([
+                '1' => [
+                    'deployment_uuid' => 'dep-moon-q',
+                    'status' => 'queued',
+                    'application_name' => 'Moon Agro',
+                    'application_id' => 10,
+                ],
+                '2' => [
+                    'deployment_uuid' => 'dep-plane-q',
+                    'status' => 'queued',
+                    'application_name' => 'Deamon Plane',
+                    'application_id' => 11,
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->getJson(route('ops.jobs'))
+            ->assertOk()
+            ->assertJsonFragment(['coolify_deployment_uuid' => 'dep-moon-q'])
+            ->assertJsonMissing(['coolify_deployment_uuid' => 'dep-plane-q']);
+
+        $this->assertSame($site->id, Site::query()->where('name', 'Moon Agro')->value('id'));
+    }
+
+    public function test_cancel_deployment_calls_coolify_and_updates_local_row(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.example',
+            'api_token' => 'token',
+        ]);
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'coolify_app_uuid' => 'app-1',
+            'coolify_connection_id' => $connection->id,
+        ]);
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::InProgress,
+            'trigger' => DeploymentTrigger::Manual,
+            'coolify_deployment_uuid' => 'dep-run-1',
+            'started_at' => now()->subMinutes(2),
+        ]);
+
+        Http::fake([
+            'https://coolify.example/api/v1/deployments/dep-run-1/cancel' => Http::response([
+                'message' => 'Deployment cancelled successfully.',
+                'deployment_uuid' => 'dep-run-1',
+                'status' => 'cancelled-by-user',
+            ], 200),
+            'https://coolify.example/api/v1/deployments/dep-run-1' => Http::response([
+                'deployment_uuid' => 'dep-run-1',
+                'status' => 'cancelled-by-user',
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.jobs.deployments.cancel', $deployment))
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('deployment.status', 'cancelled');
+
+        $this->assertSame(DeploymentStatus::Cancelled, $deployment->fresh()->status);
+        $this->assertSame(SiteStatus::Active, $site->fresh()->status);
+    }
+
+    public function test_force_start_queued_deployment_cancels_then_instant_starts(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.example',
+            'api_token' => 'token',
+        ]);
+        $site = Site::factory()->create([
+            'coolify_app_uuid' => 'app-1',
+            'coolify_connection_id' => $connection->id,
+        ]);
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Queued,
+            'trigger' => DeploymentTrigger::Manual,
+            'coolify_deployment_uuid' => 'dep-q-1',
+            'started_at' => now()->subMinute(),
+        ]);
+
+        Http::fake([
+            'https://coolify.example/api/v1/deployments/dep-q-1/cancel' => Http::response([
+                'message' => 'Deployment cancelled successfully.',
+                'deployment_uuid' => 'dep-q-1',
+                'status' => 'cancelled-by-user',
+            ], 200),
+            'https://coolify.example/api/v1/applications/app-1/start*' => Http::response([
+                'message' => 'Deployment request queued.',
+                'deployment_uuid' => 'dep-new-1',
+            ], 200),
+            'https://coolify.example/api/v1/deployments/dep-new-1' => Http::response([
+                'deployment_uuid' => 'dep-new-1',
+                'status' => 'in_progress',
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.jobs.deployments.force-start', $deployment))
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('deployment.coolify_deployment_uuid', 'dep-new-1')
+            ->assertJsonPath('deployment.status', 'running');
+
+        $this->assertSame(DeploymentStatus::Cancelled, $deployment->fresh()->status);
+        $this->assertDatabaseHas('deployments', [
+            'coolify_deployment_uuid' => 'dep-new-1',
+            'site_id' => $site->id,
+        ]);
+    }
+
+    public function test_destroy_completed_background_job(): void
+    {
+        $operator = $this->operator();
+        $job = OpsBackgroundJob::query()->create([
+            'type' => 'sites.live_sync',
+            'title' => 'Live Sync',
+            'status' => 'completed',
+            'progress' => 100,
+            'message' => 'Done',
+            'actor_user_id' => $operator->id,
+        ]);
+
+        $this->actingAs($operator)
+            ->deleteJson(route('ops.jobs.destroy', $job))
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        $this->assertDatabaseMissing('ops_background_jobs', ['id' => $job->id]);
     }
 
     public function test_jobs_index_kicks_poll_for_stale_active_deployments(): void

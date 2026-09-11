@@ -18,6 +18,14 @@
     data-copy-session="{{ __('ops.jobs.session_expired') }}"
     data-copy-copied="{{ __('sites.app_health.copied') }}"
     data-copy-deploy="{{ __('ops.jobs.deployment') }}"
+    data-copy-dismiss="{{ __('ops.jobs.dismiss') }}"
+    data-copy-stop="{{ __('ops.jobs.stop') }}"
+    data-copy-force-start="{{ __('ops.jobs.force_start') }}"
+    data-jobs-destroy="{{ url('/jobs') }}"
+    data-jobs-deploy-cancel="{{ url('/jobs/deployments') }}"
+    data-jobs-deploy-force="{{ url('/jobs/deployments') }}"
+    data-jobs-coolify-cancel="{{ url('/jobs/coolify-deployments') }}"
+    data-jobs-coolify-force="{{ url('/jobs/coolify-deployments') }}"
 >
     <div class="ops-jobs-panel">
         <div class="ops-jobs-header">

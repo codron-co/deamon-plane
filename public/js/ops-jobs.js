@@ -2,6 +2,7 @@
     "use strict";
 
     const STORAGE_KEY = "planeOpsJobs";
+    const DISMISS_KEY = "planeOpsJobsDismissed";
     const POLL_MS = 1500;
     const DISMISS_MS = 30000;
 
@@ -21,15 +22,22 @@
     const canWrite = root.getAttribute("data-can-write") === "1";
     const indexUrl = root.getAttribute("data-jobs-index") || "/jobs";
     const showBase = (root.getAttribute("data-jobs-show") || "/jobs").replace(/\/$/, "");
+    const destroyBase = (root.getAttribute("data-jobs-destroy") || "/jobs").replace(/\/$/, "");
+    const deployCancelBase = (root.getAttribute("data-jobs-deploy-cancel") || "/jobs/deployments").replace(/\/$/, "");
+    const deployForceBase = (root.getAttribute("data-jobs-deploy-force") || "/jobs/deployments").replace(/\/$/, "");
+    const coolifyCancelBase = (root.getAttribute("data-jobs-coolify-cancel") || "/jobs/coolify-deployments").replace(/\/$/, "");
+    const coolifyForceBase = (root.getAttribute("data-jobs-coolify-force") || "/jobs/coolify-deployments").replace(/\/$/, "");
 
     let trackedIds = new Set();
     let jobsById = new Map();
+    let dismissedIds = new Set();
     let dismissTimers = new Map();
     let messages = [];
     let pollTimer = null;
     let collapsed = false;
     let dismissed = false;
     let messageSeq = 0;
+    let actionBusy = new Set();
 
     const copy = function (key, fallback) {
         return root.getAttribute("data-copy-" + key) || fallback;
@@ -52,6 +60,23 @@
     const writeStorage = function () {
         try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(trackedIds)));
+        } catch (error) {
+            /* sessionStorage can be unavailable */
+        }
+    };
+
+    const readDismissed = function () {
+        try {
+            const parsed = JSON.parse(sessionStorage.getItem(DISMISS_KEY) || "[]");
+            return Array.isArray(parsed) ? parsed.filter(function (id) { return typeof id === "string"; }) : [];
+        } catch (error) {
+            return [];
+        }
+    };
+
+    const writeDismissed = function () {
+        try {
+            sessionStorage.setItem(DISMISS_KEY, JSON.stringify(Array.from(dismissedIds)));
         } catch (error) {
             /* sessionStorage can be unavailable */
         }
@@ -81,14 +106,22 @@
         return copy("completed", "Done");
     };
 
-    const fetchJson = async function (url) {
+    const fetchJson = async function (url, options) {
+        const opts = options || {};
+        const headers = {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-TOKEN": csrfToken(),
+        };
+        if (opts.method && opts.method !== "GET") {
+            headers["Content-Type"] = "application/json";
+        }
+
         const response = await fetch(url, {
             credentials: "same-origin",
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "X-CSRF-TOKEN": csrfToken(),
-            },
+            method: opts.method || "GET",
+            headers: headers,
+            body: opts.body || undefined,
         });
 
         if (response.status === 403 || response.status === 401) {
@@ -141,7 +174,9 @@
     };
 
     const visibleItems = function () {
-        const jobs = Array.from(jobsById.values());
+        const jobs = Array.from(jobsById.values()).filter(function (item) {
+            return !dismissedIds.has(item.id);
+        });
         return jobs.concat(messages);
     };
 
@@ -172,6 +207,93 @@
         }, DISMISS_MS);
 
         dismissTimers.set(id, timer);
+    };
+
+    const markDismissed = function (id) {
+        clearDismissTimer(id);
+        jobsById.delete(id);
+        trackedIds.delete(id);
+        dismissedIds.add(id);
+        writeStorage();
+        writeDismissed();
+        render();
+    };
+
+    const actionsFor = function (item) {
+        const actions = item && item.actions && typeof item.actions === "object" ? item.actions : {};
+        return {
+            cancel: actions.cancel === true,
+            force_start: actions.force_start === true,
+            dismiss: actions.dismiss === true || (isTerminal(item.status) && item.type !== "message"),
+        };
+    };
+
+    const svgIcon = function (pathD) {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", "0 0 16 16");
+        svg.setAttribute("width", "12");
+        svg.setAttribute("height", "12");
+        svg.setAttribute("aria-hidden", "true");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", pathD);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", "currentColor");
+        path.setAttribute("stroke-width", "1.4");
+        path.setAttribute("stroke-linecap", "round");
+        path.setAttribute("stroke-linejoin", "round");
+        svg.appendChild(path);
+        return svg;
+    };
+
+    const runAction = async function (item, kind, button) {
+        if (!item || !item.id || actionBusy.has(item.id)) {
+            return;
+        }
+
+        actionBusy.add(item.id);
+        if (button) {
+            button.disabled = true;
+        }
+
+        try {
+            if (kind === "dismiss") {
+                if (item.type === "coolify.deployment") {
+                    markDismissed(item.id);
+                    return;
+                }
+                await fetchJson(destroyBase + "/" + encodeURIComponent(item.id), { method: "DELETE" });
+                markDismissed(item.id);
+                return;
+            }
+
+            let url = "";
+            if (item.deployment_id) {
+                url = (kind === "force_start" ? deployForceBase : deployCancelBase)
+                    + "/" + encodeURIComponent(String(item.deployment_id))
+                    + "/" + (kind === "force_start" ? "force-start" : "cancel");
+            } else if (item.coolify_deployment_uuid) {
+                url = (kind === "force_start" ? coolifyForceBase : coolifyCancelBase)
+                    + "/" + encodeURIComponent(String(item.coolify_deployment_uuid))
+                    + "/" + (kind === "force_start" ? "force-start" : "cancel");
+            } else {
+                throw new Error(copy("request-failed", "Request failed."));
+            }
+
+            const payload = await fetchJson(url, { method: "POST", body: "{}" });
+            if (payload && payload.deployment) {
+                if (kind === "cancel") {
+                    markDismissed(item.id);
+                }
+                upsertJob(payload.deployment);
+            } else {
+                await poll();
+            }
+        } catch (error) {
+            showMessage(error && error.message ? error.message : copy("request-failed", "Request failed."), "error");
+        } finally {
+            actionBusy.delete(item.id);
+            render();
+        }
     };
 
     const render = function () {
@@ -215,6 +337,9 @@
             const li = document.createElement("li");
             li.className = "ops-jobs-item is-" + (item.status || "completed");
 
+            const head = document.createElement("div");
+            head.className = "ops-jobs-item-head";
+
             const href = itemUrl(item);
             let title;
             if (href) {
@@ -226,11 +351,51 @@
             }
             title.textContent = item.title || copy("title", "Background tasks");
 
+            const actionsEl = document.createElement("div");
+            actionsEl.className = "ops-jobs-item-actions";
+            const actions = actionsFor(item);
+
+            if (actions.force_start) {
+                const forceBtn = document.createElement("button");
+                forceBtn.type = "button";
+                forceBtn.className = "ops-jobs-item-btn is-force";
+                forceBtn.setAttribute("aria-label", copy("force-start", "Force start"));
+                forceBtn.title = copy("force-start", "Force start");
+                forceBtn.appendChild(svgIcon("M4 3.5v9l9-4.5z"));
+                forceBtn.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    runAction(item, "force_start", forceBtn);
+                });
+                actionsEl.appendChild(forceBtn);
+            }
+
+            if (actions.cancel || actions.dismiss) {
+                const closeItemBtn = document.createElement("button");
+                closeItemBtn.type = "button";
+                closeItemBtn.className = "ops-jobs-item-btn is-dismiss";
+                const label = actions.cancel
+                    ? copy("stop", "Stop deploy")
+                    : copy("dismiss", "Dismiss");
+                closeItemBtn.setAttribute("aria-label", label);
+                closeItemBtn.title = label;
+                closeItemBtn.appendChild(svgIcon("M4 4l8 8M12 4l-8 8"));
+                closeItemBtn.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    runAction(item, actions.cancel ? "cancel" : "dismiss", closeItemBtn);
+                });
+                actionsEl.appendChild(closeItemBtn);
+            }
+
+            head.appendChild(title);
+            head.appendChild(actionsEl);
+
             const meta = document.createElement("span");
             meta.className = "ops-jobs-meta";
             meta.textContent = item.message || statusLabel(item.status);
 
-            li.appendChild(title);
+            li.appendChild(head);
             li.appendChild(meta);
 
             if (isActive(item.status)) {
@@ -260,6 +425,10 @@
 
     const upsertJob = function (job) {
         if (!job || !job.id) {
+            return;
+        }
+
+        if (dismissedIds.has(job.id)) {
             return;
         }
 
@@ -355,6 +524,10 @@
     const track = function (job) {
         dismissed = false;
         collapsed = false;
+        if (job && job.id) {
+            dismissedIds.delete(job.id);
+            writeDismissed();
+        }
         upsertJob(job);
         startPoll();
     };
@@ -370,10 +543,12 @@
         const id = "msg-" + String(++messageSeq);
         const item = {
             id: id,
+            type: "message",
             title: copy("title", "Background tasks"),
             status: type === "error" ? "failed" : (type === "warning" ? "running" : "completed"),
             progress: 100,
             message: text,
+            actions: { dismiss: true, cancel: false, force_start: false },
         };
         messages = messages.filter(function (entry) {
             return entry.message !== text;
@@ -410,9 +585,11 @@
                     clearDismissTimer(job.id);
                     jobsById.delete(job.id);
                     trackedIds.delete(job.id);
+                    dismissedIds.add(job.id);
                 }
             });
             writeStorage();
+            writeDismissed();
             render();
             if (Array.from(jobsById.values()).every(function (job) { return !isActive(job.status); })) {
                 root.hidden = true;
@@ -422,6 +599,9 @@
 
     readStorage().forEach(function (id) {
         trackedIds.add(id);
+    });
+    readDismissed().forEach(function (id) {
+        dismissedIds.add(id);
     });
     if (canWrite) {
         startPoll();

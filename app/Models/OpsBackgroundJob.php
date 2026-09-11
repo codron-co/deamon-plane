@@ -59,6 +59,11 @@ class OpsBackgroundJob extends Model
             'progress' => (int) $this->progress,
             'message' => $this->message,
             'result' => $this->result,
+            'actions' => [
+                'cancel' => false,
+                'force_start' => false,
+                'dismiss' => in_array($this->status, ['completed', 'failed', 'cancelled'], true),
+            ],
         ];
     }
 

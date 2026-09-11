@@ -46,7 +46,9 @@ Plane names ↔ Coolify HTTP. Paths are under `/api/v1`.
 | `deploy(uuid, force?)` | `POST /deploy?uuid={uuid}&force=` | Response: `{ deployments: [ { resource_uuid, deployment_uuid, message } ] }`. |
 | `getDeployment(deploymentUuid)` | `GET /deployments/{uuid}` | Schema `ApplicationDeploymentQueue` (`status`, etc.). |
 | `listAppDeployments(appUuid)` | `GET /deployments/applications/{uuid}?skip&take` | Site Deployments tab + poll fallback. |
-| `listRunningDeployments()` | `GET /deployments` | Currently running only. |
+| `listRunningDeployments()` | `GET /deployments` | Currently running + queued. Coolify may return an **assoc** Collection (keyed by row id); client normalizes to a list. |
+| `cancelDeployment(uuid)` | `POST /deployments/{uuid}/cancel` | Queued or in_progress only. |
+| `startApplication(uuid, force?, instantDeploy?)` | `POST /applications/{uuid}/start` | Optional `force` + `instant_deploy` (skip queue). Used for widget force-start after cancelling a queued row. |
 | `listStorages(uuid)` | `GET /applications/{uuid}/storages` | `{ persistent_storages, file_storages }` — volume persistence check. |
 | `start/stop/restart` | `POST /applications/{uuid}/start\|stop\|restart` | Start/stop used by site Activate / Deactivate (`active` ⇄ `stopped`). Restart unused. |
 

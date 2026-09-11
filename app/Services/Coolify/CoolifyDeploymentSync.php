@@ -43,10 +43,7 @@ class CoolifyDeploymentSync
             return false;
         }
 
-        $mapped = $this->mapRemoteStatus($remote->status);
-        $effective = $mapped === DeploymentStatus::Queued
-            ? DeploymentStatus::InProgress
-            : $mapped;
+        $effective = $this->mapRemoteStatus($remote->status);
 
         if ($deployment instanceof Deployment && $this->shouldKeepTerminal($deployment, $effective)) {
             return false;
@@ -77,10 +74,7 @@ class CoolifyDeploymentSync
             return true;
         }
 
-        $mapped = $this->mapRemoteStatus($remote->status);
-        $effective = $mapped === DeploymentStatus::Queued
-            ? DeploymentStatus::InProgress
-            : $mapped;
+        $effective = $this->mapRemoteStatus($remote->status);
 
         if ($this->shouldKeepTerminal($deployment, $effective)) {
             return true;

@@ -603,17 +603,66 @@ class CoolifyClientTest extends TestCase
     public function test_start_and_stop_application_post_to_coolify(): void
     {
         Http::fake([
-            'https://coolify.test/api/v1/applications/app-1/start' => Http::response(['message' => 'Starting'], 200),
+            'https://coolify.test/api/v1/applications/app-1/start*' => Http::response([
+                'message' => 'Deployment request queued.',
+                'deployment_uuid' => 'dep-start-1',
+            ], 200),
             'https://coolify.test/api/v1/applications/app-1/stop' => Http::response(['message' => 'Stopping'], 200),
         ]);
 
-        $this->client()->startApplication('app-1');
+        $started = $this->client()->startApplication('app-1', true, true);
         $this->client()->stopApplication('app-1');
 
+        $this->assertSame('dep-start-1', $started->firstDeploymentUuid());
         Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
-            && $request->url() === 'https://coolify.test/api/v1/applications/app-1/start');
+            && str_starts_with($request->url(), 'https://coolify.test/api/v1/applications/app-1/start')
+            && str_contains($request->url(), 'force=true')
+            && str_contains($request->url(), 'instant_deploy=true'));
         Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
             && $request->url() === 'https://coolify.test/api/v1/applications/app-1/stop');
+    }
+
+    public function test_cancel_deployment_posts_to_coolify(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/deployments/dep-1/cancel' => Http::response([
+                'message' => 'Deployment cancelled successfully.',
+                'deployment_uuid' => 'dep-1',
+                'status' => 'cancelled-by-user',
+            ], 200),
+        ]);
+
+        $this->client()->cancelDeployment('dep-1');
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://coolify.test/api/v1/deployments/dep-1/cancel');
+    }
+
+    public function test_list_running_deployments_accepts_assoc_collection_payload(): void
+    {
+        Http::fake([
+            'https://coolify.test/api/v1/deployments' => Http::response([
+                '12' => [
+                    'deployment_uuid' => 'dep-q1',
+                    'status' => 'queued',
+                    'application_name' => 'Moon Agro',
+                    'application_id' => 46,
+                ],
+                '13' => [
+                    'deployment_uuid' => 'dep-r1',
+                    'status' => 'in_progress',
+                    'application_name' => 'Susa',
+                    'application_id' => 47,
+                ],
+            ], 200),
+        ]);
+
+        $rows = $this->client()->listRunningDeployments();
+
+        $this->assertCount(2, $rows);
+        $this->assertSame('dep-q1', $rows[0]->uuid);
+        $this->assertSame('queued', $rows[0]->status);
+        $this->assertSame('dep-r1', $rows[1]->uuid);
     }
 
     public function test_delete_application_sends_delete_volumes_query_explicitly(): void

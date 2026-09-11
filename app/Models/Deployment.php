@@ -73,6 +73,7 @@ class Deployment extends Model
         $site = $this->site;
         $active = in_array($this->status, [DeploymentStatus::Queued, DeploymentStatus::InProgress], true);
         $widgetStatus = match ($this->status) {
+            DeploymentStatus::Queued => 'queued',
             DeploymentStatus::Failed => 'failed',
             DeploymentStatus::Cancelled => 'cancelled',
             DeploymentStatus::Finished => 'completed',
@@ -92,6 +93,13 @@ class Deployment extends Model
             'indeterminate' => $active,
             'message' => $message,
             'url' => $site !== null ? route('ops.sites.deployments.show', [$site, $this]) : null,
+            'deployment_id' => $this->id,
+            'coolify_deployment_uuid' => $this->coolify_deployment_uuid,
+            'actions' => [
+                'cancel' => $active && filled($this->coolify_deployment_uuid),
+                'force_start' => $this->status === DeploymentStatus::Queued && filled($this->coolify_deployment_uuid),
+                'dismiss' => in_array($widgetStatus, ['completed', 'failed', 'cancelled'], true),
+            ],
         ];
     }
 

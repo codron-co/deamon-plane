@@ -257,14 +257,29 @@ class CoolifyClient
         return CoolifyApplication::fromArray($this->unwrapResource($json));
     }
 
-    public function startApplication(string $uuid): void
+    public function startApplication(string $uuid, bool $force = false, bool $instantDeploy = false): CoolifyDeployResult
     {
-        $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/start');
+        $query = [];
+        if ($force) {
+            $query['force'] = 'true';
+        }
+        if ($instantDeploy) {
+            $query['instant_deploy'] = 'true';
+        }
+
+        $json = $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/start', $query);
+
+        return CoolifyDeployResult::fromArray(is_array($json) ? $json : []);
     }
 
     public function stopApplication(string $uuid): void
     {
         $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/stop');
+    }
+
+    public function cancelDeployment(string $deploymentUuid): void
+    {
+        $this->request('POST', '/deployments/'.$this->assertUuid($deploymentUuid).'/cancel');
     }
 
     /**
@@ -420,8 +435,18 @@ class CoolifyClient
             }
         }
 
-        if (isset($json['uuid']) || isset($json['id'])) {
+        if (isset($json['uuid']) || isset($json['id']) || isset($json['deployment_uuid'])) {
             return [$json];
+        }
+
+        // Coolify GET /deployments returns a Collection keyed by row id (assoc object).
+        $values = array_values($json);
+        if ($values !== [] && is_array($values[0]) && (
+            isset($values[0]['uuid'])
+            || isset($values[0]['deployment_uuid'])
+            || isset($values[0]['id'])
+        )) {
+            return $values;
         }
 
         return [];

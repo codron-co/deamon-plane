@@ -12,6 +12,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');
     Route::get('/jobs', [OpsJobController::class, 'index'])->name('ops.jobs');
     Route::get('/jobs/{job}', [OpsJobController::class, 'show'])->name('ops.jobs.show');
+    Route::delete('/jobs/{job}', [OpsJobController::class, 'destroy'])->name('ops.jobs.destroy');
+    Route::post('/jobs/deployments/{deployment}/cancel', [OpsJobController::class, 'cancelDeployment'])
+        ->name('ops.jobs.deployments.cancel');
+    Route::post('/jobs/deployments/{deployment}/force-start', [OpsJobController::class, 'forceStartDeployment'])
+        ->name('ops.jobs.deployments.force-start');
+    Route::post('/jobs/coolify-deployments/{uuid}/cancel', [OpsJobController::class, 'cancelCoolifyDeployment'])
+        ->where('uuid', '[A-Za-z0-9_-]+')
+        ->name('ops.jobs.coolify.cancel');
+    Route::post('/jobs/coolify-deployments/{uuid}/force-start', [OpsJobController::class, 'forceStartCoolifyDeployment'])
+        ->where('uuid', '[A-Za-z0-9_-]+')
+        ->name('ops.jobs.coolify.force-start');
     require __DIR__.'/ops/sites.php';
     require __DIR__.'/ops/coolify.php';
     require __DIR__.'/ops/cloudflare.php';
