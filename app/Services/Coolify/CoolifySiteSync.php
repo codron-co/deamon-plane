@@ -32,6 +32,19 @@ class CoolifySiteSync
         $coolify = CoolifyApplicationService::forSite($site);
         $app = $coolify->getApp($uuid);
         $filled = (new CoolifySiteTargetSync)->fillSite($site, $app, $connection);
+
+        $autoRebind = (bool) config('ops.coolify.auto_rebind_domains', true);
+        $domains = ['imported' => 0, 'conflicts' => 0, 'rebound' => false, 'missing' => []];
+        try {
+            $domains = app(\App\Services\Sites\SiteDomainReconciler::class)->reconcile(
+                $site->fresh() ?? $site,
+                $app,
+                $autoRebind,
+            );
+        } catch (\Throwable) {
+            // Domain reconcile must not abort deployment sync.
+        }
+
         $deployments = (new CoolifyDeploymentSync)->sync($site->fresh() ?? $site, $coolify);
 
         try {
@@ -43,6 +56,7 @@ class CoolifySiteSync
         return [
             'filled' => $filled,
             'deployments' => $deployments,
+            'domains' => $domains,
         ];
     }
 }

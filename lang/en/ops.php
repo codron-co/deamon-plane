@@ -7,6 +7,7 @@ return [
         'primary' => 'Primary',
         'fleet' => 'Fleet',
         'sites' => 'Sites',
+        'domains' => 'Domains',
         'coolify' => 'Coolify',
         'cloudflare' => 'Cloudflare',
         'mail' => 'Mail',

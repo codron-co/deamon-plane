@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
         ->where('uuid', '[A-Za-z0-9_-]+')
         ->name('ops.jobs.coolify.force-start');
     require __DIR__.'/ops/sites.php';
+    require __DIR__.'/ops/domains.php';
     require __DIR__.'/ops/coolify.php';
     require __DIR__.'/ops/cloudflare.php';
     require __DIR__.'/ops/mail-servers.php';

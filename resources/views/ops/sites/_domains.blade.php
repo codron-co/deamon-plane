@@ -24,6 +24,12 @@
                     @else
                         {{ __('sites.detail.domain_alias') }}
                     @endif
+                    ·
+                    @if ($row->verified_at)
+                        {{ __('domains.coolify.bound') }}
+                    @else
+                        {{ __('domains.coolify.unbound') }}
+                    @endif
                 </span>
             </li>
         @empty

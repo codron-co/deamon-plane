@@ -76,6 +76,10 @@
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 13.5V5.2L8 2.5l5.5 2.7v8.3H2.5Zm3-0.5v-4h5v4" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
                     {{ __('ops.nav.sites') }}
                 </a>
+                <a class="ops-nav-item {{ request()->routeIs('ops.domains*') ? 'is-active' : '' }}" href="{{ route('ops.domains') }}">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M2.75 8h10.5M8 2.75c1.6 1.7 2.4 3.4 2.4 5.25S9.6 11.55 8 13.25M8 2.75C6.4 4.45 5.6 6.15 5.6 8s.8 3.55 2.4 5.25" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+                    {{ __('ops.nav.domains') }}
+                </a>
                 <a class="ops-nav-item {{ request()->routeIs('ops.coolify*') ? 'is-active' : '' }}" href="{{ route('ops.coolify.index') }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 11.2c-1.2 0-2.2-1-2.2-2.2 0-1 .7-1.9 1.6-2.1A3.2 3.2 0 0 1 8.2 5c.2 0 .3 0 .5.1A2.8 2.8 0 0 1 14 7.8c0 .2 0 .3-.1.5 1 .3 1.6 1.2 1.6 2.2 0 1.3-1 2.4-2.3 2.4H3Z" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
                     {{ __('ops.nav.coolify') }}

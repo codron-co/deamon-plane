@@ -57,6 +57,7 @@ return [
             'wrong_env' => ':key is not the compose value (DB_HOST must be mysql).',
             'missing_agent_secret' => 'Plane has no agent secret for this site.',
             'deploy_failed' => 'The latest Coolify deployment failed.',
+            'domain_unbound' => 'Coolify is missing Plane domain :key (and possibly others).',
             'agent_unhealthy' => 'CMS agent health is failing (non-JSON 200, 404, signature, or timeout).',
             'coolify_unreachable' => 'Coolify could not be queried for this app.',
             'unknown' => 'App health reported an unknown issue.',
@@ -67,6 +68,7 @@ return [
             'inject_secret' => 'Inject agent secret',
             'redeploy' => 'Redeploy',
             'check_health' => 'Check agent',
+            'bind_domains' => 'Bind domains',
         ],
     ],
     'live' => [

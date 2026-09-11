@@ -57,6 +57,7 @@ return [
             'wrong_env' => ':key compose değeri değil (DB_HOST mysql olmalı).',
             'missing_agent_secret' => 'Bu site için Plane’de agent secret yok.',
             'deploy_failed' => 'Son Coolify deploy’u başarısız.',
+            'domain_unbound' => 'Coolify’de Plane domaini yok: :key (başkaları da eksik olabilir).',
             'agent_unhealthy' => 'CMS agent health başarısız (JSON olmayan 200, 404, imza veya zaman aşımı).',
             'coolify_unreachable' => 'Bu app için Coolify sorgulanamadı.',
             'unknown' => 'App sağlığı bilinmeyen bir sorun bildirdi.',
@@ -67,6 +68,7 @@ return [
             'inject_secret' => 'Agent secret bas',
             'redeploy' => 'Tekrar deploy',
             'check_health' => 'Agent kontrol',
+            'bind_domains' => 'Domain bağla',
         ],
     ],
     'live' => [

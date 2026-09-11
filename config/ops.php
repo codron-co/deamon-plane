@@ -92,6 +92,7 @@ return [
         'default_server_uuid' => env('COOLIFY_DEFAULT_SERVER_UUID'),
         'webhook_secret' => env('COOLIFY_WEBHOOK_SECRET'),
         'timeout' => (int) env('COOLIFY_HTTP_TIMEOUT', 30),
+        'auto_rebind_domains' => filter_var(env('COOLIFY_AUTO_REBIND_DOMAINS', true), FILTER_VALIDATE_BOOLEAN),
     ],
 
     'provision' => [

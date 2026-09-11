@@ -22,6 +22,14 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 
 - Status: **code**. Sites list row + header Fix App issues menus; `fix=all`; bulk job `sites.bulk_app_health_fix`. Spec: [../superpowers/specs/2026-09-11-bulk-app-health-fixes-design.md](../superpowers/specs/2026-09-11-bulk-app-health-fixes-design.md).
 
+## Deploy status App health sync + auto-deploy verify (2026-09-11)
+
+- Status: **code**. `forDisplay` merges local deploy/agent/secret into cached inspect; Sync/poll refresh local cache; latest deploy by `started_at`; auto-deploy verifies Coolify `is_auto_deploy_enabled` after PATCH. Spec: [../superpowers/specs/2026-09-11-deploy-status-app-health-sync-design.md](../superpowers/specs/2026-09-11-deploy-status-app-health-sync-design.md).
+
+## Domain registry + Coolify binding (2026-09-11)
+
+- Status: **code**. `/domains` fleet UI; Coolify Sync import + auto-rebind; App health `domain_unbound` + `bind_domains`. Spec: [../superpowers/specs/2026-09-11-domain-registry-coolify-binding-design.md](../superpowers/specs/2026-09-11-domain-registry-coolify-binding-design.md).
+
 ## Theme Git connections — Settings paste → Themes Manifest (2026-09-10)
 
 - Status: **code**. Themes hosts Connect GitHub (Manifest), Connect another (same App), PAT fallback, all vs selected, Sync repos, Disconnect (App stays). Settings GitHub paste removed (one-line pointer; leftover POSTs 302 to Themes). Catalog walks every `theme_git_connections` row. CMS **1.2.7** theme-git `repo` allowlist **landed** (any github.com owner); do not re-edit `deamon` for that contract. Plane `ControlPlaneAgentContract::CMS_VERSION` is **1.2.7**. Connect / connect-another / manifest forms are `data-ops-native` so `ops-async.js` does not swallow the GitHub redirect.

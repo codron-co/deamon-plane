@@ -7,6 +7,7 @@ return [
         'primary' => 'Birincil',
         'fleet' => 'Filo',
         'sites' => 'Siteler',
+        'domains' => 'Domainler',
         'coolify' => 'Coolify',
         'cloudflare' => 'Cloudflare',
         'mail' => 'Posta',

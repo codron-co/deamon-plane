@@ -48,6 +48,7 @@ final class SiteAppHealthIssue
             'wrong_env' => __('sites.app_health.issues.wrong_env', $replace),
             'missing_agent_secret' => __('sites.app_health.issues.missing_agent_secret'),
             'deploy_failed' => __('sites.app_health.issues.deploy_failed'),
+            'domain_unbound' => __('sites.app_health.issues.domain_unbound', $replace),
             'agent_unhealthy' => __('sites.app_health.issues.agent_unhealthy'),
             'coolify_unreachable' => __('sites.app_health.issues.coolify_unreachable'),
             default => __('sites.app_health.issues.unknown'),

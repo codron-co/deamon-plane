@@ -48,6 +48,8 @@ class SiteAppHealthInspector
                     $envs = $this->envMap($coolify->listEnvs((string) $site->coolify_app_uuid));
                     $issues = $this->mergeIssues($issues, $this->liveEnvIssues($site, $envs));
                 }
+
+                $issues = $this->mergeIssues($issues, $this->liveDomainIssues($site, $app));
             } catch (CoolifyApiException) {
                 $issues = $this->mergeIssues($issues, [
                     new SiteAppHealthIssue('coolify_unreachable'),
@@ -215,6 +217,22 @@ class SiteAppHealthInspector
         }
 
         return $issues;
+    }
+
+    /**
+     * @return list<SiteAppHealthIssue>
+     */
+    private function liveDomainIssues(Site $site, CoolifyApplication $app): array
+    {
+        $reconciler = app(SiteDomainReconciler::class);
+        $missing = $reconciler->missingOnCoolify($site, $reconciler->customerHosts($app));
+        if ($missing === []) {
+            return [];
+        }
+
+        return [
+            new SiteAppHealthIssue('domain_unbound', 'bind_domains', $missing[0]),
+        ];
     }
 
     /**

@@ -19,6 +19,7 @@ class SiteAppHealthFixer
     public const FIX_ORDER = [
         'migrate_compose',
         'sync_env',
+        'bind_domains',
         'inject_secret',
         'redeploy',
         'check_health',
@@ -98,6 +99,7 @@ class SiteAppHealthFixer
                 'inject_secret' => $this->secrets->inject($site, $actor, $ip),
                 'redeploy' => $this->deploys->redeploy($site, $actor, $ip),
                 'check_health' => $this->health->check($site),
+                'bind_domains' => $this->bindDomains($site),
                 default => throw new InvalidArgumentException(__('sites.app_health.unknown_fix')),
             };
         } catch (ComposePackException|SiteProvisionException|CoolifyApiException $exception) {
@@ -181,5 +183,18 @@ class SiteAppHealthFixer
         }
 
         $this->envSync->sync($site, CoolifyApplicationService::forSite($site), CoolifyEnvPack::DockerCompose);
+    }
+
+    private function bindDomains(Site $site): void
+    {
+        if (blank($site->coolify_app_uuid)) {
+            throw new SiteAppHealthException(__('site_ops.pack.missing_app'));
+        }
+
+        try {
+            app(SiteLanding::class)->syncCoolifyDomains($site);
+        } catch (SiteProvisionException $exception) {
+            throw new SiteAppHealthException($exception->getMessage(), (int) $exception->getCode(), $exception);
+        }
     }
 }
