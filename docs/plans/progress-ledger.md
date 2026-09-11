@@ -2,6 +2,11 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Coolify deploy-row heal — generic API-failure race (2026-09-12)
+
+- Status: **code**. `ops:heal-throttled-deploys` also matches the bare `Coolify API request failed.` a raced status read leaves behind (Coolify answers an empty body mid cancel/restart, so the row lands `failed` while Coolify reports `cancelled-by-user`). When Coolify still says `failed` and carries no message or logs, the row's original text and `finished_at` are restored instead of the generic `Coolify deployment failed.`. Runbook: [../runbooks/coolify-rate-limit.md](../runbooks/coolify-rate-limit.md). Tests: `HealThrottledDeploysCommandTest`.
+- Live: the four rows left from the 2026-09-11 poll storm (izyem #737, Lökçe #738, ltscanta #739, makermak #740) are `cancelled` from Coolify truth. Older `failed` rows on other sites are real build failures, not this race.
+
 ## Theme data package rollout fix (2026-09-11)
 
 - Status: **code**. CMS `themes/install|update` now publish the SoT repo-root data package (`sync.json` + `data/`) into `storage/app/theme-data/{id}` (CMS **1.2.14**), so Sync after Activate works without SSH. New `POST /internal/control/v1/themes/data-install` repairs sites installed by an older agent; `themes/sync` preflights and returns `data_package_missing`. `ThemeRolloutService` retries sync once through data-install (audit `theme.data_installed`). Merge mode no longer unpublishes rows the package stopped shipping. Docs: [modules/theme-agent-client.md](../modules/theme-agent-client.md). Tests: Plane `ThemeAssignTest`; CMS `ControlPlaneThemeDataPackageTest`, `ThemeSyncMergeContractTest`.

@@ -25,6 +25,9 @@ class HealThrottledDeploysCommand extends Command
 
     /**
      * Markers left by the pre-fix poll job and by the current localized message.
+     * The bare "Coolify API request failed." belongs here too: a status read that
+     * races a cancel/restart answers with an empty body, so the poll job records
+     * that sentence for a build Coolify actually reports as cancelled or finished.
      *
      * @var list<string>
      */
@@ -32,6 +35,7 @@ class HealThrottledDeploysCommand extends Command
         'Too Many Attempts',
         'istek sınırı',
         'rate limit',
+        'Coolify API request failed.',
     ];
 
     public function handle(CoolifyDeploymentSync $sync): int
@@ -73,6 +77,9 @@ class HealThrottledDeploysCommand extends Command
                 continue;
             }
 
+            $priorError = $deployment->error_message;
+            $priorFinishedAt = $deployment->finished_at;
+
             // Clear the fabricated failure so writeRemoteState can move the row.
             $deployment->status = DeploymentStatus::InProgress;
             $deployment->error_message = null;
@@ -82,12 +89,26 @@ class HealThrottledDeploysCommand extends Command
             $sync->applyExisting($deployment, $remote);
 
             $fresh = $deployment->fresh();
-            if ($fresh !== null && $fresh->status !== DeploymentStatus::Failed) {
+            if ($fresh === null) {
+                continue;
+            }
+
+            if ($fresh->status !== DeploymentStatus::Failed) {
                 $healed++;
                 $this->line('  '.$label.' → '.$fresh->status->value);
-            } else {
-                $unchanged++;
-                $this->line('  '.$label.' → still failed (real failure)');
+
+                continue;
+            }
+
+            $unchanged++;
+            $this->line('  '.$label.' → still failed (real failure)');
+
+            // Coolify confirms the failure but says nothing about it, so the row's
+            // own text is the only clue left. Do not trade it for a generic sentence.
+            if (blank($remote->message) && blank($remote->logsExcerpt) && filled($priorError)) {
+                $fresh->error_message = $priorError;
+                $fresh->finished_at = $fresh->finished_at ?? $priorFinishedAt;
+                $fresh->save();
             }
         }
 
