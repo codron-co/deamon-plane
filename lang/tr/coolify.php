@@ -168,6 +168,13 @@ return [
         'confirm' => ':name bağlantısını kes? Coolify uygulamaları silinmez.',
         'label' => 'Kes',
     ],
+    'errors' => [
+        'rate_limited' => 'Coolify istek sınırına takıldı (429). İşlem otomatik yavaşlatıldı; birkaç saniye sonra tekrar deneyin.',
+        'rate_limited_deploy' => 'Coolify istek sınırı nedeniyle deploy durumu okunamadı. Deploy Coolify’de sürüyor olabilir — Sync ile durumu tazeleyin.',
+        'unreachable' => 'Coolify’ye ulaşılamadı (bağlantı hatası veya zaman aşımı).',
+        'no_base_url' => 'Coolify base URL ayarlı değil.',
+        'not_configured' => 'Coolify bağlantısı ayarlı değil.',
+    ],
     'flash' => [
         'saved' => 'Coolify bağlantısı kaydedildi. Sunucu ve projeleri senkronlayın.',
         'updated' => 'Coolify bağlantısı güncellendi.',

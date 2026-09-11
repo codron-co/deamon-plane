@@ -144,6 +144,11 @@ return [
     ],
     'viewer_readonly' => 'İzleyici rolü salt okunur.',
     'dockerfile_chip' => 'Dockerfile (eski pack)',
+    'bulk' => [
+        'result' => ':ok tamam',
+        'result_failed' => ':ok tamam, :failed hata',
+        'rate_limited' => 'Coolify istek sınırı nedeniyle kalan siteler atlandı. Birkaç dakika sonra yalnızca hatalı siteler için tekrar çalıştırın.',
+    ],
     'jobs' => [
         'title' => 'Arka plan işlemleri',
         'minimize' => 'Daralt',

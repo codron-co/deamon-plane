@@ -81,6 +81,7 @@ final class ThemeAgentResult
         $cmsMessage = is_array($payload) ? self::stringOrNull($payload['message'] ?? null) : null;
 
         $message = match (true) {
+            $httpStatus === 429 => (string) __('sites.agent.rate_limited'),
             $httpStatus === 401 || $httpStatus === 403 => 'Agent rejected the request signature.',
             $httpStatus === 404 && $code === null => 'Theme agent is not registered on this CMS (secret missing or CMS older than 1.2.5).',
             $code === 'theme_not_found' => 'Theme was not found on the CMS instance.',

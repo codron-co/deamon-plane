@@ -12,6 +12,8 @@ final class AgentHealthReason
 
     public const HttpError = 'http_error';
 
+    public const RateLimited = 'rate_limited';
+
     public const NeedsSecret = 'needs_secret';
 
     public const NoBaseUrl = 'no_base_url';

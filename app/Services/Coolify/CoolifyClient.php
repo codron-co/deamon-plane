@@ -12,10 +12,14 @@ use App\Services\Coolify\Dto\CoolifyProjectEnvironment;
 use App\Services\Coolify\Dto\CoolifyServer;
 use App\Services\Coolify\Dto\CoolifyStorages;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use App\Support\RetryAfter;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use InvalidArgumentException;
 
 class CoolifyClient
@@ -354,16 +358,130 @@ class CoolifyClient
         $credentials = $this->credentials();
 
         if ($credentials->baseUrl === '') {
-            throw new CoolifyApiException('Coolify base URL is not configured.', 400);
+            throw new CoolifyApiException(__('coolify.errors.no_base_url'), 400);
         }
 
         if (! $credentials->hasToken()) {
             throw new CoolifyApiException('Coolify API token is not configured.', 401);
         }
 
+        $method = strtoupper($method);
+        $host = $credentials->apiRoot();
+        $guard = app(CoolifyRateGuard::class);
+        $maxAttempts = max(1, (int) config('ops.coolify.retry.max_attempts', 3));
+        $attempt = 0;
+
+        while (true) {
+            $attempt++;
+            $guard->await($host);
+
+            try {
+                $response = $this->send($method, $path, $query, $body, $credentials);
+            } catch (ConnectionException $exception) {
+                if ($attempt >= $maxAttempts || ! $this->mayRetryFailure($method)) {
+                    throw new CoolifyApiException(
+                        __('coolify.errors.unreachable'),
+                        0,
+                        previous: $exception,
+                    );
+                }
+
+                $this->waitBeforeRetry(
+                    $host,
+                    $method,
+                    $path,
+                    0,
+                    RetryAfter::backoff($attempt, $this->baseDelayMs(), $this->maxDelayMs()),
+                    $attempt,
+                );
+
+                continue;
+            }
+
+            $status = $response->status();
+
+            // 429 is safe to retry for any method: throttle middleware rejects the
+            // request before the controller runs, so nothing happened remotely.
+            $retryable = $status === 429
+                || ($this->mayRetryFailure($method) && in_array($status, [500, 502, 503, 504], true));
+
+            if (! $retryable || $attempt >= $maxAttempts) {
+                return $this->decode($response, $credentials->token());
+            }
+
+            $delay = $this->retryDelay($response, $attempt);
+
+            if ($status === 429) {
+                // Hold every other caller on this host too, so the rest of a bulk
+                // sweep waits instead of each site rediscovering the limit.
+                $guard->penalize($host, $delay);
+            }
+
+            $this->waitBeforeRetry($host, $method, $path, $status, $delay, $attempt);
+        }
+    }
+
+    /**
+     * GET is the only method we replay after a server/connection failure — a
+     * `POST /deploy` that failed mid-flight may already have started a build.
+     */
+    private function mayRetryFailure(string $method): bool
+    {
+        return $method === 'GET';
+    }
+
+    private function waitBeforeRetry(
+        string $host,
+        string $method,
+        string $path,
+        int $status,
+        float $delay,
+        int $attempt,
+    ): void {
+        Log::warning('Coolify API retry', [
+            'host' => $host,
+            'method' => $method,
+            'path' => $path,
+            'status' => $status,
+            'attempt' => $attempt,
+            'delay_seconds' => round($delay, 3),
+        ]);
+
+        if ($delay > 0) {
+            Sleep::for((int) ceil($delay * 1000))->milliseconds();
+        }
+    }
+
+    private function retryDelay(Response $response, int $attempt): float
+    {
+        $advertised = RetryAfter::fromResponse($response);
+
+        if ($advertised !== null) {
+            return RetryAfter::clamp($advertised, $this->maxDelayMs());
+        }
+
+        return RetryAfter::backoff($attempt, $this->baseDelayMs(), $this->maxDelayMs());
+    }
+
+    private function baseDelayMs(): int
+    {
+        return max(1, (int) config('ops.coolify.retry.base_delay_ms', 500));
+    }
+
+    private function maxDelayMs(): int
+    {
+        return max(1, (int) config('ops.coolify.retry.max_delay_ms', 8000));
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @param  array<string, mixed>|null  $body
+     */
+    private function send(string $method, string $path, array $query, ?array $body, CoolifyCredentials $credentials): Response
+    {
         $pending = $this->http($credentials);
 
-        $response = match (strtoupper($method)) {
+        return match ($method) {
             'GET' => $pending->get($path, $query),
             'POST' => $query === []
                 ? $pending->post($path, $body ?? [])
@@ -374,8 +492,6 @@ class CoolifyClient
                 : $pending->withQueryParameters($query)->delete($path),
             default => throw new InvalidArgumentException("Unsupported Coolify HTTP method [{$method}]."),
         };
-
-        return $this->decode($response, $credentials->token());
     }
 
     private function http(CoolifyCredentials $credentials): PendingRequest

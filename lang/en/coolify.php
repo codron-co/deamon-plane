@@ -168,6 +168,13 @@ return [
         'confirm' => 'Disconnect :name? Coolify applications are not deleted.',
         'label' => 'Disconnect',
     ],
+    'errors' => [
+        'rate_limited' => 'Coolify rate limit hit (429). Calls were slowed automatically; retry in a few seconds.',
+        'rate_limited_deploy' => 'Coolify rate limit blocked the deploy status read. The deploy may still be running — use Sync to refresh it.',
+        'unreachable' => 'Coolify could not be reached (connection error or timeout).',
+        'no_base_url' => 'Coolify base URL is not configured.',
+        'not_configured' => 'Coolify connection is not configured.',
+    ],
     'flash' => [
         'saved' => 'Coolify connection saved. Sync servers and projects.',
         'updated' => 'Coolify connection updated.',

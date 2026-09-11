@@ -11,6 +11,7 @@ use App\Policies\CoolifyConnectionPolicy;
 use App\Policies\SitePolicy;
 use App\Policies\ThemeGitConnectionPolicy;
 use App\Policies\ThemePolicy;
+use App\Services\Coolify\CoolifyRateGuard;
 use App\Support\OpsAppearance;
 use App\Support\ProductionDebugGuard;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +22,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // One guard per process so a bulk sweep shares the Coolify cooldown.
+        $this->app->singleton(CoolifyRateGuard::class);
     }
 
     public function boot(): void

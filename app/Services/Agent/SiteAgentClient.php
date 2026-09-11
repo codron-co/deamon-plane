@@ -32,10 +32,10 @@ class SiteAgentClient
         $timeout = max(1, (int) config('ops.agent.timeout_seconds', 10));
 
         try {
-            $response = Http::timeout($timeout)
+            $response = $this->sendWithRetry(fn (): Response => Http::timeout($timeout)
                 ->acceptJson()
                 ->withHeaders($signed['headers'])
-                ->get($url);
+                ->get($url));
         } catch (ConnectionException $exception) {
             $this->logFailure($site, AgentHealthReason::Timeout);
 
@@ -49,6 +49,17 @@ class SiteAgentClient
             return AgentHealthResult::failure(
                 AgentHealthReason::HttpError,
                 'Agent health request failed.',
+            );
+        }
+
+        // A throttled probe is not evidence that the CMS is unhealthy, so report
+        // it as unknown — SiteHealthEvaluator ignores unknown for the fleet KPI.
+        if ($response->status() === 429) {
+            $this->logFailure($site, AgentHealthReason::RateLimited, 429);
+
+            return AgentHealthResult::unknown(
+                AgentHealthReason::RateLimited,
+                (string) __('sites.agent.rate_limited'),
             );
         }
 
@@ -196,19 +207,21 @@ class SiteAgentClient
         $url = $baseUrl.$path;
 
         try {
-            $pending = Http::timeout($timeout)
-                ->acceptJson()
-                ->withHeaders($signed['headers']);
+            $response = $this->sendWithRetry(function () use ($timeout, $signed, $method, $url, $body): Response {
+                $pending = Http::timeout($timeout)
+                    ->acceptJson()
+                    ->withHeaders($signed['headers']);
 
-            $response = match ($method) {
-                'GET' => $pending->get($url),
-                'POST' => $pending->withBody($body, 'application/json')->post($url),
-                'PATCH' => $pending->withBody($body, 'application/json')->patch($url),
-                'DELETE' => $body === ''
-                    ? $pending->delete($url)
-                    : $pending->withBody($body, 'application/json')->delete($url),
-                default => throw new \InvalidArgumentException('Unsupported admin agent method.'),
-            };
+                return match ($method) {
+                    'GET' => $pending->get($url),
+                    'POST' => $pending->withBody($body, 'application/json')->post($url),
+                    'PATCH' => $pending->withBody($body, 'application/json')->patch($url),
+                    'DELETE' => $body === ''
+                        ? $pending->delete($url)
+                        : $pending->withBody($body, 'application/json')->delete($url),
+                    default => throw new \InvalidArgumentException('Unsupported admin agent method.'),
+                };
+            });
         } catch (ConnectionException) {
             $this->logAdminFailure($site, $path, 'timeout');
 
@@ -297,10 +310,10 @@ class SiteAgentClient
         $url = $baseUrl.$path;
 
         try {
-            $response = Http::timeout($timeout)
+            $response = $this->sendWithRetry(fn (): Response => Http::timeout($timeout)
                 ->acceptJson()
                 ->withHeaders($signed['headers'])
-                ->get($url);
+                ->get($url));
         } catch (ConnectionException) {
             $this->logThemeFailure($site, $path, 'timeout');
 

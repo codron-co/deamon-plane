@@ -62,6 +62,12 @@ return [
         'timeout_seconds' => (int) env('CONTROL_PLANE_AGENT_TIMEOUT', 10),
         'poll_minutes' => (int) env('CONTROL_PLANE_AGENT_POLL_MINUTES', 10),
         'stale_after_minutes' => (int) env('CONTROL_PLANE_AGENT_STALE_MINUTES', 30),
+        // CMS routes are Laravel-throttled; a rollout hitting one CMS repeatedly gets 429.
+        'retry' => [
+            'max_attempts' => (int) env('CONTROL_PLANE_AGENT_RETRY_ATTEMPTS', 2),
+            'base_delay_ms' => (int) env('CONTROL_PLANE_AGENT_RETRY_BASE_MS', 400),
+            'max_delay_ms' => (int) env('CONTROL_PLANE_AGENT_RETRY_MAX_MS', 5000),
+        ],
         'health_path' => '/internal/control/v1/health',
         'theme_list_path' => '/internal/control/v1/themes',
         'theme_install_path' => '/internal/control/v1/themes/install',
@@ -93,12 +99,32 @@ return [
         'webhook_secret' => env('COOLIFY_WEBHOOK_SECRET'),
         'timeout' => (int) env('COOLIFY_HTTP_TIMEOUT', 30),
         'auto_rebind_domains' => filter_var(env('COOLIFY_AUTO_REBIND_DOMAINS', true), FILTER_VALIDATE_BOOLEAN),
+
+        /*
+        | Coolify runs Laravel `throttle` middleware, so fleet-wide bulk ops trip
+        | 429 Too Many Attempts. `rate` paces outgoing calls per Coolify host and
+        | holds a shared cooldown once one call is throttled; `retry` absorbs the
+        | 429 itself. See docs/modules/coolify-client.md.
+        */
+        'rate' => [
+            'min_interval_ms' => (int) env('COOLIFY_MIN_INTERVAL_MS', 120),
+            'max_cooldown_ms' => (int) env('COOLIFY_MAX_COOLDOWN_MS', 30000),
+        ],
+        'retry' => [
+            'max_attempts' => (int) env('COOLIFY_RETRY_ATTEMPTS', 3),
+            'base_delay_ms' => (int) env('COOLIFY_RETRY_BASE_MS', 500),
+            'max_delay_ms' => (int) env('COOLIFY_RETRY_MAX_MS', 8000),
+        ],
     ],
 
     'provision' => [
         'environment_name' => env('COOLIFY_ENVIRONMENT_NAME', 'main'),
         'poll_seconds' => (int) env('COOLIFY_DEPLOY_POLL_SECONDS', 15),
+        'poll_max_seconds' => (int) env('COOLIFY_DEPLOY_POLL_MAX_SECONDS', 60),
         'poll_max_attempts' => (int) env('COOLIFY_DEPLOY_POLL_MAX_ATTEMPTS', 40),
+        // Throttle / gateway errors while reading status are retried this many
+        // times before the deployment row is allowed to record a failure.
+        'poll_transient_max_attempts' => (int) env('COOLIFY_DEPLOY_POLL_TRANSIENT_ATTEMPTS', 8),
         'log_excerpt_bytes' => (int) env('COOLIFY_DEPLOY_LOG_EXCERPT_BYTES', 16000),
     ],
 
