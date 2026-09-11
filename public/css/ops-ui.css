@@ -987,6 +987,7 @@ html[data-theme="semidark"] .fleet-attention-list li {
 .ops-hint,
 .site-hint {
     position: relative;
+    z-index: 1;
     display: inline-grid;
     place-items: center;
     width: 17px;
@@ -1002,10 +1003,14 @@ html[data-theme="semidark"] .fleet-attention-list li {
     vertical-align: 1px;
     cursor: help;
 }
+.ops-hint:is(:hover, :focus, :focus-visible, .is-open),
+.site-hint:is(:hover, :focus, :focus-visible, .is-open) {
+    z-index: 60;
+}
 .ops-hint [role="tooltip"],
 .site-hint [role="tooltip"] {
     position: absolute;
-    z-index: 20;
+    z-index: 60;
     top: calc(100% + 8px);
     left: 50%;
     width: max-content;
@@ -1021,6 +1026,7 @@ html[data-theme="semidark"] .fleet-attention-list li {
     line-height: 1.45;
     text-align: left;
     text-transform: none;
+    letter-spacing: normal;
     transform: translate(-50%, -3px);
     opacity: 0;
     visibility: hidden;
@@ -1033,9 +1039,45 @@ html[data-theme="semidark"] .fleet-attention-list li {
 .site-hint:hover [role="tooltip"],
 .site-hint:focus [role="tooltip"],
 .site-hint:focus-visible [role="tooltip"] { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+/* JS-enhanced hints escape overflow/stacking clipping via position:fixed. */
+html.ops-hints-ready .ops-hint:hover [role="tooltip"],
+html.ops-hints-ready .ops-hint:focus [role="tooltip"],
+html.ops-hints-ready .ops-hint:focus-visible [role="tooltip"],
+html.ops-hints-ready .site-hint:hover [role="tooltip"],
+html.ops-hints-ready .site-hint:focus [role="tooltip"],
+html.ops-hints-ready .site-hint:focus-visible [role="tooltip"] {
+    opacity: 0;
+    visibility: hidden;
+    transform: none;
+}
+html.ops-hints-ready .ops-hint.is-open [role="tooltip"],
+html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: auto;
+    bottom: auto;
+    z-index: 80;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+}
 @media (prefers-reduced-motion: reduce) {
     .ops-hint [role="tooltip"],
     .site-hint [role="tooltip"] { transition: none; }
+}
+/* Keep section/card surfaces from clipping absolute fallback tooltips. */
+.site-section,
+.site-section-heading,
+.site-section-surface,
+.site-operations-grid,
+.site-operations-main,
+.site-operations-aside,
+.site-card,
+.site-card-head,
+.site-technical-card,
+.ops-panel {
+    overflow: visible;
 }
 
 .site-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }

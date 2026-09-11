@@ -196,7 +196,8 @@ code {
 
 .ops-main {
     min-width: 0;
-    overflow-x: clip;
+    /* visible: overflow-x:clip creates a scrollport that clips hint tooltips */
+    overflow: visible;
     background: var(--surface-base);
 }
 

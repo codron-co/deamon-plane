@@ -977,6 +977,105 @@
         });
     }
 
+    function setupHints() {
+        const hints = Array.prototype.slice.call(document.querySelectorAll(".ops-hint, .site-hint"));
+        if (!hints.length) {
+            return;
+        }
+
+        let openHint = null;
+
+        const clearHint = function (hint) {
+            if (!hint) {
+                return;
+            }
+            hint.classList.remove("is-open");
+            const tip = hint.querySelector('[role="tooltip"]');
+            if (tip) {
+                tip.style.top = "";
+                tip.style.left = "";
+            }
+            if (openHint === hint) {
+                openHint = null;
+            }
+        };
+
+        const placeHint = function (hint) {
+            const tip = hint.querySelector('[role="tooltip"]');
+            if (!tip) {
+                return;
+            }
+
+            if (openHint && openHint !== hint) {
+                clearHint(openHint);
+            }
+
+            hint.classList.add("is-open");
+            openHint = hint;
+            tip.style.visibility = "hidden";
+            tip.style.opacity = "0";
+
+            const rect = hint.getBoundingClientRect();
+            const tipWidth = tip.offsetWidth;
+            const tipHeight = tip.offsetHeight;
+            const margin = 8;
+            let left = rect.left + rect.width / 2 - tipWidth / 2;
+            left = Math.max(margin, Math.min(left, window.innerWidth - tipWidth - margin));
+
+            let top = rect.bottom + margin;
+            if (top + tipHeight > window.innerHeight - margin && rect.top - margin - tipHeight >= margin) {
+                top = rect.top - margin - tipHeight;
+            } else {
+                top = Math.min(top, Math.max(margin, window.innerHeight - tipHeight - margin));
+            }
+
+            tip.style.top = Math.round(top) + "px";
+            tip.style.left = Math.round(left) + "px";
+            tip.style.visibility = "";
+            tip.style.opacity = "";
+        };
+
+        hints.forEach(function (hint) {
+            hint.addEventListener("mouseenter", function () {
+                placeHint(hint);
+            });
+            hint.addEventListener("focus", function () {
+                placeHint(hint);
+            });
+            hint.addEventListener("mouseleave", function () {
+                if (document.activeElement !== hint) {
+                    clearHint(hint);
+                }
+            });
+            hint.addEventListener("blur", function () {
+                clearHint(hint);
+            });
+            hint.addEventListener("keydown", function (event) {
+                if (event.key === "Escape") {
+                    clearHint(hint);
+                    hint.blur();
+                }
+            });
+        });
+
+        window.addEventListener(
+            "scroll",
+            function () {
+                if (openHint) {
+                    placeHint(openHint);
+                }
+            },
+            true
+        );
+        window.addEventListener("resize", function () {
+            if (openHint) {
+                placeHint(openHint);
+            }
+        });
+
+        document.documentElement.classList.add("ops-hints-ready");
+    }
+
     setupThemeControls();
     setupActionMenus();
     setupUserMenu();
@@ -989,6 +1088,7 @@
     setupListToolbars();
     setupFaviconMarks();
     setupBulkSelection();
+    setupHints();
     setupMailBindings();
 
     function setupMailBindings() {
