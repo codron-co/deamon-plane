@@ -66,7 +66,7 @@ class SiteDetailTest extends TestCase
 
         $this->assertNotSame(route('ops.sites.show', $site), route('ops.sites.edit', $site));
         $this->assertDoesNotMatchRegularExpression('/data-site-panel[^>]*\bhidden\b/', $html);
-        $this->assertDoesNotMatchRegularExpression('/id="(overview|deployments|theme|infrastructure|danger)"[^>]*\bhidden\b/', $html);
+        $this->assertDoesNotMatchRegularExpression('/id="(overview|deployments|theme|admins|infrastructure|danger)"[^>]*\bhidden\b/', $html);
         $this->assertMatchesRegularExpression('/id="danger"/', $html);
         $this->assertMatchesRegularExpression('/aria-controls="danger"/', $html);
         $this->assertStringContainsString('class="site-hint"', $html);

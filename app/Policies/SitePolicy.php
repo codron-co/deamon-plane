@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\OpsRole;
 use App\Models\Site;
 use App\Models\User;
 
@@ -50,5 +51,20 @@ class SitePolicy
     public function checkHealth(User $user, Site $site): bool
     {
         return $user->canWriteOps();
+    }
+
+    public function manageAdmins(User $user, Site $site): bool
+    {
+        return $user->canWriteOps();
+    }
+
+    public function toggleAdminActive(User $user, Site $site): bool
+    {
+        return $user->hasRole(OpsRole::SuperAdmin->value);
+    }
+
+    public function destroyAdmin(User $user, Site $site): bool
+    {
+        return $user->hasRole(OpsRole::SuperAdmin->value);
     }
 }

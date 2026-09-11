@@ -9,6 +9,8 @@ use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\Theme;
+use App\Services\Agent\AdminAgentResult;
+use App\Services\Agent\SiteAgentClient;
 use App\Services\Agent\SiteHealthEvaluator;
 use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Mail\PlatformMailConfigurer;
@@ -17,7 +19,6 @@ use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\SiteMailOrderBinder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-
 class SiteDetailController extends Controller
 {
     use LoadsSiteOpsContext;
@@ -28,6 +29,7 @@ class SiteDetailController extends Controller
         SiteHealthEvaluator $agentHealth,
         SiteMailOrderBinder $mailBinder,
         PlatformMailResolver $platformMail,
+        SiteAgentClient $agentClient,
     ): View {
         $this->authorize('view', $site);
 
@@ -44,6 +46,10 @@ class SiteDetailController extends Controller
         ]);
 
         $user = $request->user();
+        $canManageAdmins = $user?->can('manageAdmins', $site) ?? false;
+        $adminsResult = $canManageAdmins
+            ? $agentClient->listAdmins($site)
+            : AdminAgentResult::failure('Forbidden.');
 
         return view('ops.sites.show', [
             'site' => $site,
@@ -66,6 +72,10 @@ class SiteDetailController extends Controller
             'canDeactivate' => ($user?->can('update', $site) ?? false)
                 && $site->canBeDeactivated(),
             'canForceDelete' => $user?->can('forceDelete', $site) ?? false,
+            'canManageAdmins' => $canManageAdmins,
+            'canToggleAdminActive' => $user?->can('toggleAdminActive', $site) ?? false,
+            'canDestroyAdmin' => $user?->can('destroyAdmin', $site) ?? false,
+            'adminsResult' => $adminsResult,
             'agentHealth' => $agentHealth,
             'channelSwitchTargets' => $this->channelSwitchTargets($site),
             'channelSwitchInProgress' => $site->status === SiteStatus::Deploying,

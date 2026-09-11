@@ -12,6 +12,7 @@
 - [Progress ledger](plans/progress-ledger.md)
 - [Theme Git connections spec](superpowers/specs/2026-09-10-theme-git-connections-design.md) — one Plane GitHub App, many Themes installations (Settings paste retired)
 - [Theme Git connections plan](plans/2026-09-10-theme-git-connections.md) — code-worker todos; CMS **1.2.7** git `repo` allowlist already landed in `deamon`
+- [Site admin management spec](superpowers/specs/2026-09-11-site-admin-management-design.md) — HMAC CMS admins from site detail
 
 ## Referans
 
@@ -26,6 +27,7 @@
 - [Coolify HTTP adapter](modules/coolify-client.md) — N connections, allowlists, site dropdowns
 - [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC or query token + deployments UI + fleet KPI
 - [Site agent client](modules/agent-client.md) — HMAC health poll + version gate + unhealthy KPI
+- [Site admins](modules/site-admins.md) — CMS admin list/create/reset/deactivate/delete via agent
 - [Theme catalog](modules/theme-catalog.md) — Git connections under Themes (Manifest + all/selected; no ZIP)
 - [Theme agent client](modules/theme-agent-client.md) — assign via CMS `X-Deamon-*` HMAC
 - [GitHub theme webhooks](modules/github-webhooks.md) — distinct from Coolify deploy webhooks
