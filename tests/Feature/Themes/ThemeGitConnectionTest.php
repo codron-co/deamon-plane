@@ -92,7 +92,7 @@ class ThemeGitConnectionTest extends TestCase
             ]));
 
         $location = (string) $response->headers->get('Location');
-        $this->assertStringStartsWith('https://github.com/apps/deamon-plane-themes/installations/new?state=', $location);
+        $this->assertStringStartsWith('https://github.com/apps/deamon-plane-themes/installations/select_target?state=', $location);
         $this->assertStringNotContainsString('github-app-client-secret', $location);
         $this->assertStringNotContainsString($pem, $location);
 
@@ -484,7 +484,7 @@ class ThemeGitConnectionTest extends TestCase
             ->post(route('ops.themes.git.connect-another'));
 
         $this->assertStringStartsWith(
-            'https://github.com/apps/deamon-plane-themes/installations/new?state=',
+            'https://github.com/apps/deamon-plane-themes/installations/select_target?state=',
             (string) $response->headers->get('Location'),
         );
     }

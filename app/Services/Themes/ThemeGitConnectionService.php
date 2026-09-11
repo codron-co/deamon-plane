@@ -110,7 +110,9 @@ class ThemeGitConnectionService
             throw new GitHubCredentialsException(__('themes.git.errors.app_missing'));
         }
 
-        return $this->githubWebBase().'/apps/'.$slug.'/installations/new?state='.rawurlencode($state);
+        // /installations/new often skips the account picker and jumps to the already-installed
+        // personal target_id. /select_target forces the personal-vs-org chooser (ChatGPT/Claude/PicX).
+        return $this->githubWebBase().'/apps/'.$slug.'/installations/select_target?state='.rawurlencode($state);
     }
 
     public function beginInstall(): string

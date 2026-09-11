@@ -43,7 +43,7 @@ Coolify’s own `GET /github-apps` UUID (customer compose app git source) is a *
 Ops browser → Plane Themes
   → GitHub App Manifest (once)     POST github.com/settings/apps/new
   → Manifest conversion            POST /app-manifests/{code}/conversions
-  → App install (N times)          github.com/apps/{slug}/installations/new
+  → App install (N times)          github.com/apps/{slug}/installations/select_target
   → Installation API               GET /installation/repositories
   → Catalog upsert                 themes + theme_git_connection_repos
   → CMS agent (unchanged HMAC)     clone_token = installation token only
@@ -66,7 +66,7 @@ Do **not** drop this table. Stop treating `org` as a hard catalog lock. Stop tre
 | `org` | Legacy label only. Not used to list or filter the catalog. |
 | `token` | Column remains (encrypted + hidden). New PATs are **not** saved here. Migration may copy a legacy PAT onto a connection, then leave this null. Env `GITHUB_TOKEN` is the same class of leftover. |
 | `app_id` | Numeric GitHub App id from Manifest conversion (or legacy paste). |
-| `slug` | **New.** From conversion / `GET /app`. Needed for `https://github.com/apps/{slug}/installations/new`. |
+| `slug` | **New.** From conversion / `GET /app`. Needed for `https://github.com/apps/{slug}/installations/select_target`. |
 | `client_id` | **New.** From conversion. Not shown after save. |
 | `client_secret` | **New.** Encrypted + hidden. From conversion. Not used for clone. |
 | `installation_id` | Legacy singleton. Migration copies it onto the first connection, then Plane must not read this for list/mint. Column may stay nullable. |
@@ -170,7 +170,7 @@ Manifest requires a **public** Plane URL GitHub can redirect to (`APP_URL` https
 5. Plane rejects missing/mismatched/replayed `state` (403). Then `POST https://api.github.com/app-manifests/{code}/conversions` (no Plane user token; GitHub documents this as unauthenticated).
 6. Store on `github_settings` (encrypted where marked): `app_id` ← `id`, `slug`, `client_id`, `client_secret`, `webhook_secret`, `private_key` ← `pem`, optional `html_url`. **Never** log or put these in audit `after` or Blade.
 7. If `webhook_secret` was already set (legacy paste), Manifest **replaces** it — the new App signs with the new secret. Operator must not keep an old org webhook that used the previous secret. The App webhook URL is now the SoT.
-8. Redirect the browser to `https://github.com/apps/{slug}/installations/new` with a fresh `state` bound to “pending install”.
+8. Redirect the browser to `https://github.com/apps/{slug}/installations/select_target` with a fresh `state` bound to “pending install” (forces personal-vs-org picker; `/installations/new` often skips to the already-installed personal `target_id`).
 
 ### Flow B — install (first or “Connect another”)
 
