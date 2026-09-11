@@ -87,6 +87,10 @@ final class ThemeAgentResult
             $code === 'unsupported_source' => 'CMS rejected a non-git theme source.',
             $code === 'path_traversal' => 'Theme id failed the CMS path guard.',
             $code === 'system_theme' => 'The default system theme cannot be installed or updated.',
+            // CMS ships an actionable Turkish message for this one; show it verbatim.
+            $code === 'data_package_missing' => is_string($cmsMessage)
+                ? $cmsMessage
+                : 'CMS has no theme data package (sync.json). Update the theme or run data-install first.',
             $code === 'validation_failed' && is_string($cmsMessage) => $cmsMessage,
             $code === 'validation_failed' => 'Theme agent validation failed.',
             $code === 'git_failed' || $httpStatus === 502 => 'CMS git install failed.',

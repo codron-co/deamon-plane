@@ -14,7 +14,7 @@ namespace App\Services\Agent;
  */
 final class ControlPlaneAgentContract
 {
-    public const CMS_VERSION = '1.2.13';
+    public const CMS_VERSION = '1.2.14';
 
     public const BASE_PATH = '/internal/control/v1';
 
@@ -27,6 +27,9 @@ final class ControlPlaneAgentContract
     public const THEME_UPDATE_PATH = '/internal/control/v1/themes/update';
 
     public const THEME_ACTIVATE_PATH = '/internal/control/v1/themes/activate';
+
+    /** CMS 1.2.14+: installs the data package (sync.json + data/) from the clone. */
+    public const THEME_DATA_INSTALL_PATH = '/internal/control/v1/themes/data-install';
 
     public const THEME_SYNC_PATH = '/internal/control/v1/themes/sync';
 
@@ -100,6 +103,11 @@ final class ControlPlaneAgentContract
     public static function themeActivatePath(): string
     {
         return self::configuredPath('ops.agent.theme_activate_path', self::THEME_ACTIVATE_PATH);
+    }
+
+    public static function themeDataInstallPath(): string
+    {
+        return self::configuredPath('ops.agent.theme_data_install_path', self::THEME_DATA_INSTALL_PATH);
     }
 
     public static function themeSyncPath(): string

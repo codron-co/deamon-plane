@@ -126,6 +126,17 @@ class SiteAgentClient
     }
 
     /**
+     * Installs the CMS-side data package (sync.json + data/) from the control-plane
+     * clone. CMS < 1.2.14 has no such route and answers 404.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function installThemeData(Site $site, array $payload): ThemeAgentResult
+    {
+        return $this->postTheme($site, ControlPlaneAgentContract::themeDataInstallPath(), $payload);
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     public function syncTheme(Site $site, array $payload): ThemeAgentResult

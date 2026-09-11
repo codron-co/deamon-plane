@@ -21,9 +21,19 @@ Base: `/internal/control/v1`
 | POST | `/themes/install` | `{theme_id, repo, ref, source:"git", sha?, clone_token?}` |
 | POST | `/themes/update` | same as install |
 | POST | `/themes/activate` | `{theme_id}` |
+| POST | `/themes/data-install` | `{theme_id}` — CMS **1.2.14+** |
 | POST | `/themes/sync` | `{action:sync_all\|capability, mode:merge\|reset, theme_id?, capability_id?, preserve?}` |
 
 Install does **not** activate or data-sync. Assign flow is three separate calls: install → (optional) activate → (optional) sync.
+
+## Data package (CMS 1.2.14+)
+
+CMS theme sync reads `storage/app/theme-data/{theme_id}/sync.json`. SoT repos keep theme files under `theme/` and the data package (`sync.json` + `data/`) at the repo root, so CMS < 1.2.14 published only the theme subtree and every sync failed with `Bu tema için sync.json tanımlı değil.`
+
+- CMS 1.2.14 `install` / `update` now install the data package themselves — no extra Plane call needed for new rollouts.
+- `POST /themes/sync` preflights the data root and returns `422 data_package_missing` instead of queueing a doomed task.
+- `ThemeRolloutService` retries once on that code: `POST /themes/data-install` (audited as `theme.data_installed` / `theme.data_install_failed`), then re-sends the sync. Sites installed by an older agent recover without SSH.
+- CMS < 1.2.14 has no `data-install` route (404); the original sync error is surfaced. Fix by upgrading the CMS or re-running **Update to latest**.
 
 `repo` on the wire stays `owner/repo` (`ControlPlaneAgentContract::installBody`). CMS **v1.2.7** accepts any github.com owner when `source=git`:
 

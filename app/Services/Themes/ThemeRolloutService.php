@@ -11,6 +11,7 @@ use App\Models\Theme;
 use App\Models\User;
 use App\Services\Agent\ControlPlaneAgentContract;
 use App\Services\Agent\SiteAgentClient;
+use App\Services\Agent\ThemeAgentResult;
 use App\Services\GitHub\GitHubAppClient;
 use App\Services\GitHub\GitHubCredentialsException;
 use Illuminate\Support\Facades\DB;
@@ -136,7 +137,7 @@ class ThemeRolloutService
             throw new ThemeRolloutException('Site has no agent secret.');
         }
 
-        $result = $this->agent->syncTheme($site, ControlPlaneAgentContract::syncBody($theme->theme_id));
+        $result = $this->syncWithDataRepair($site, $theme, $actor, $ip);
 
         $site->auditLogs()->create([
             'actor_user_id' => $actor?->id,
@@ -232,7 +233,7 @@ class ThemeRolloutService
         }
 
         if ($sync) {
-            $syncResult = $this->agent->syncTheme($site, ControlPlaneAgentContract::syncBody($theme->theme_id));
+            $syncResult = $this->syncWithDataRepair($site, $theme, $actor, $ip);
             if (! $syncResult->ok) {
                 $this->markError($installation, $site, $theme, $actor, $ip, 'theme.sync_failed', $syncResult->safeMessage);
 
@@ -311,6 +312,41 @@ class ThemeRolloutService
             'after' => $this->auditSnapshot($installation->fresh() ?? $installation, $theme),
             'ip' => $ip,
         ]);
+    }
+
+    /**
+     * The CMS reports `data_package_missing` when the site has no theme-data root —
+     * typically a theme installed by an agent older than CMS 1.2.14, which published
+     * only the `theme/` subtree. Install the data package from the clone once, then
+     * retry the sync so the operator does not need SSH.
+     */
+    private function syncWithDataRepair(Site $site, Theme $theme, ?User $actor, ?string $ip): ThemeAgentResult
+    {
+        $body = ControlPlaneAgentContract::syncBody($theme->theme_id);
+        $result = $this->agent->syncTheme($site, $body);
+
+        if ($result->ok || $result->errorCode !== 'data_package_missing') {
+            return $result;
+        }
+
+        $repair = $this->agent->installThemeData($site, ['theme_id' => $theme->theme_id]);
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => $repair->ok ? 'theme.data_installed' : 'theme.data_install_failed',
+            'after' => [
+                'theme_id' => $theme->theme_id,
+                'ok' => $repair->ok,
+                'error' => $repair->ok ? null : $repair->safeMessage,
+            ],
+            'ip' => $ip,
+        ]);
+
+        if (! $repair->ok) {
+            return $repair;
+        }
+
+        return $this->agent->syncTheme($site, $body);
     }
 
     /**
