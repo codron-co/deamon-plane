@@ -4,6 +4,8 @@ namespace App\Services\Coolify;
 
 use App\Models\CoolifyConnection;
 use App\Models\Site;
+use App\Services\Sites\SiteAppHealthInspector;
+use App\Services\Sites\SiteDomainReconciler;
 
 class CoolifySiteSync
 {
@@ -26,7 +28,7 @@ class CoolifySiteSync
             : CoolifyConnection::default();
 
         if (! $connection instanceof CoolifyConnection) {
-            throw new CoolifyApiException('Coolify connection is not configured.', 400);
+            throw new CoolifyApiException(__('coolify.errors.not_configured'), 400);
         }
 
         $coolify = CoolifyApplicationService::forSite($site);
@@ -36,7 +38,7 @@ class CoolifySiteSync
         $autoRebind = (bool) config('ops.coolify.auto_rebind_domains', true);
         $domains = ['imported' => 0, 'conflicts' => 0, 'rebound' => false, 'missing' => []];
         try {
-            $domains = app(\App\Services\Sites\SiteDomainReconciler::class)->reconcile(
+            $domains = app(SiteDomainReconciler::class)->reconcile(
                 $site->fresh() ?? $site,
                 $app,
                 $autoRebind,
@@ -56,7 +58,7 @@ class CoolifySiteSync
         }
 
         try {
-            app(\App\Services\Sites\SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);
+            app(SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);
         } catch (\Throwable) {
             // Keep sync successful even if health cache refresh fails.
         }

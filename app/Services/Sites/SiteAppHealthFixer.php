@@ -9,6 +9,8 @@ use App\Services\Agent\SiteHealthChecker;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Ops\PacedFanout;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 class SiteAppHealthFixer
@@ -125,16 +127,12 @@ class SiteAppHealthFixer
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Site>|iterable<int, Site>  $sites
+     * @param  Collection<int, Site>|iterable<int, Site>  $sites
      * @return array{ok: int, failed: int, errors: list<string>, sites: list<array<string, mixed>>}
      */
     public function fixMany(iterable $sites, string $fix, ?User $actor = null, ?string $ip = null): array
     {
-        $ok = 0;
-        $failed = 0;
-        $errors = [];
-        $rows = [];
-
+        $targets = [];
         foreach ($sites as $site) {
             if (! $site instanceof Site) {
                 continue;
@@ -148,22 +146,31 @@ class SiteAppHealthFixer
                 continue;
             }
 
-            try {
-                $report = $this->fix($site, $fix, $actor, $ip);
-                $ok++;
-                $rows[] = $report->toView($site->fresh() ?? $site);
-            } catch (SiteAppHealthException|InvalidArgumentException $exception) {
-                $failed++;
-                $errors[] = $site->name.': '.$exception->getMessage();
-                $rows[] = SiteAppHealthReport::forDisplay($site->fresh() ?? $site)->toView($site);
-            }
+            $targets[] = $site;
         }
 
+        $rows = [];
+        $result = app(PacedFanout::class)->run(
+            $targets,
+            function (Site $site) use ($fix, $actor, $ip, &$rows): void {
+                try {
+                    $report = $this->fix($site, $fix, $actor, $ip);
+                } catch (SiteAppHealthException|InvalidArgumentException $exception) {
+                    $rows[$site->id] = SiteAppHealthReport::forDisplay($site->fresh() ?? $site)->toView($site);
+
+                    throw $exception;
+                }
+
+                $rows[$site->id] = $report->toView($site->fresh() ?? $site);
+            },
+        );
+
         return [
-            'ok' => $ok,
-            'failed' => $failed,
-            'errors' => $errors,
-            'sites' => $rows,
+            'ok' => $result['ok'],
+            'failed' => $result['failed'],
+            'errors' => $result['errors'],
+            'rate_limited' => $result['rate_limited'],
+            'sites' => array_values($rows),
         ];
     }
 
