@@ -13,6 +13,7 @@ use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployResult;
+use App\Services\Ops\PacedFanout;
 
 class CoolifyDeploySettings
 {
@@ -176,25 +177,11 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, errors: list<string>}
+     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool}
      */
     public function setAutoDeployMany(iterable $sites, bool $enabled, ?User $actor = null, ?string $ip = null): array
     {
-        $ok = 0;
-        $failed = 0;
-        $errors = [];
-
-        foreach ($sites as $site) {
-            try {
-                $this->setAutoDeploy($site, $enabled, $actor, $ip);
-                $ok++;
-            } catch (ComposePackException $exception) {
-                $failed++;
-                $errors[] = $site->name.': '.$exception->getMessage();
-            }
-        }
-
-        return ['ok' => $ok, 'failed' => $failed, 'errors' => $errors];
+        return $this->applyMany($sites, fn (Site $site) => $this->setAutoDeploy($site, $enabled, $actor, $ip));
     }
 
     /**
@@ -227,25 +214,11 @@ class CoolifyDeploySettings
     /**
      * @param  iterable<int, Site>  $sites
      * @param  callable(Site): void  $action
-     * @return array{ok: int, failed: int, errors: list<string>}
+     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool}
      */
     private function applyMany(iterable $sites, callable $action): array
     {
-        $ok = 0;
-        $failed = 0;
-        $errors = [];
-
-        foreach ($sites as $site) {
-            try {
-                $action($site);
-                $ok++;
-            } catch (ComposePackException $exception) {
-                $failed++;
-                $errors[] = $site->name.': '.$exception->getMessage();
-            }
-        }
-
-        return ['ok' => $ok, 'failed' => $failed, 'errors' => $errors];
+        return app(PacedFanout::class)->run($sites, $action);
     }
 
     private function recordDeployment(

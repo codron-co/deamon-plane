@@ -344,6 +344,9 @@ return [
         'confirm_switch' => 'Switch :site to :target? Coolify PATCHes git_branch, updates APP_ENV, and redeploys. Volumes stay. The application is not deleted.',
     ],
     'agent' => [
+        'rate_limited' => 'The CMS rate limit was hit (429). Retry in a few seconds.',
+        'timeout' => 'The CMS agent timed out.',
+        'failed' => 'The CMS agent request failed.',
         'title' => 'Agent health',
         'lede' => 'Signed poll of :path. Secrets stay encrypted and are never shown.',
         'status' => 'Status',

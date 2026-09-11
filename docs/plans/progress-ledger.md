@@ -2,6 +2,10 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Theme data package rollout fix (2026-09-11)
+
+- Status: **code**. CMS `themes/install|update` now publish the SoT repo-root data package (`sync.json` + `data/`) into `storage/app/theme-data/{id}` (CMS **1.2.14**), so Sync after Activate works without SSH. New `POST /internal/control/v1/themes/data-install` repairs sites installed by an older agent; `themes/sync` preflights and returns `data_package_missing`. `ThemeRolloutService` retries sync once through data-install (audit `theme.data_installed`). Merge mode no longer unpublishes rows the package stopped shipping. Docs: [modules/theme-agent-client.md](../modules/theme-agent-client.md). Tests: Plane `ThemeAssignTest`; CMS `ControlPlaneThemeDataPackageTest`, `ThemeSyncMergeContractTest`.
+
 ## Site admin management (2026-09-11)
 
 - Status: **code**. Site detail **Admins** tab: list/create/reset (operator); deactivate/delete (Super Admin). HMAC `/internal/control/v1/admins*` (CMS **1.2.13+**). Passwords generate-or-manual, one-time flash only, never stored. Last active admin guarded. Spec: [../superpowers/specs/2026-09-11-site-admin-management-design.md](../superpowers/specs/2026-09-11-site-admin-management-design.md). Module: [modules/site-admins.md](../modules/site-admins.md). Tests: Plane `SiteAdminAgentTest`; CMS `ControlPlaneAdminAgentTest`.

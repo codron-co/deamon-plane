@@ -132,6 +132,66 @@ class ThemeAssignTest extends TestCase
         $this->assertTrue($seen['sync']);
     }
 
+    public function test_sync_recovers_from_a_missing_cms_data_package(): void
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'izyem',
+            'repo_full_name' => 'deamon-themes/premium-izyem',
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/install' => Http::response([
+                'ok' => true,
+                'theme_id' => 'izyem',
+                'ref' => 'main',
+            ], 200),
+            'https://shop.example.test/internal/control/v1/themes/data-install' => Http::response([
+                'ok' => true,
+                'theme_id' => 'izyem',
+            ], 200),
+            'https://shop.example.test/internal/control/v1/themes/sync' => Http::sequence()
+                ->push([
+                    'ok' => false,
+                    'error' => 'data_package_missing',
+                    'message' => 'Bu tema için sync.json tanımlı değil.',
+                ], 422)
+                ->push([
+                    'ok' => true,
+                    'queued' => true,
+                    'task_id' => 'task-1',
+                    'active_theme_id' => 'izyem',
+                ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.assign', $site), [
+                'theme_id' => $theme->theme_id,
+                'ref' => 'main',
+                'activate' => '0',
+                'sync' => '1',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        $installation = SiteThemeInstallation::query()->where('site_id', $site->id)->firstOrFail();
+        $this->assertSame(ThemeInstallationStatus::Active, $installation->status);
+        $this->assertNull($installation->last_error);
+
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.data_installed')->exists());
+
+        $repaired = false;
+        Http::assertSent(function (Request $request) use (&$repaired): bool {
+            if (str_ends_with($request->url(), ControlPlaneAgentContract::THEME_DATA_INSTALL_PATH)) {
+                $repaired = true;
+                $this->assertSame('izyem', $request['theme_id']);
+            }
+
+            return true;
+        });
+        $this->assertTrue($repaired, 'Plane must repair the data package before failing the sync.');
+    }
+
     public function test_system_theme_default_cannot_be_assigned(): void
     {
         $site = $this->readySite();

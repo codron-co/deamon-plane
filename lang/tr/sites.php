@@ -344,6 +344,9 @@ return [
         'confirm_switch' => ':site :target dalına geçirilsin mi? Coolify git_branch ve APP_ENV günceller, sonra redeploy eder. Volume’lar kalır. Uygulama silinmez.',
     ],
     'agent' => [
+        'rate_limited' => 'CMS istek sınırına takıldı (429). Birkaç saniye sonra tekrar deneyin.',
+        'timeout' => 'CMS agent zaman aşımına uğradı.',
+        'failed' => 'CMS agent isteği başarısız.',
         'title' => 'Agent sağlığı',
         'lede' => ':path imzalı yoklama. Secret’lar şifreli kalır, gösterilmez.',
         'status' => 'Durum',

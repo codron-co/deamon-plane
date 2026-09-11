@@ -81,12 +81,17 @@ final class ThemeAgentResult
         $cmsMessage = is_array($payload) ? self::stringOrNull($payload['message'] ?? null) : null;
 
         $message = match (true) {
+            $httpStatus === 429 => (string) __('sites.agent.rate_limited'),
             $httpStatus === 401 || $httpStatus === 403 => 'Agent rejected the request signature.',
             $httpStatus === 404 && $code === null => 'Theme agent is not registered on this CMS (secret missing or CMS older than 1.2.5).',
             $code === 'theme_not_found' => 'Theme was not found on the CMS instance.',
             $code === 'unsupported_source' => 'CMS rejected a non-git theme source.',
             $code === 'path_traversal' => 'Theme id failed the CMS path guard.',
             $code === 'system_theme' => 'The default system theme cannot be installed or updated.',
+            // CMS ships an actionable Turkish message for this one; show it verbatim.
+            $code === 'data_package_missing' => is_string($cmsMessage)
+                ? $cmsMessage
+                : 'CMS has no theme data package (sync.json). Update the theme or run data-install first.',
             $code === 'validation_failed' && is_string($cmsMessage) => $cmsMessage,
             $code === 'validation_failed' => 'Theme agent validation failed.',
             $code === 'git_failed' || $httpStatus === 502 => 'CMS git install failed.',

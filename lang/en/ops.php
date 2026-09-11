@@ -144,6 +144,11 @@ return [
     ],
     'viewer_readonly' => 'Viewer role is read-only.',
     'dockerfile_chip' => 'Dockerfile (legacy pack)',
+    'bulk' => [
+        'result' => ':ok ok',
+        'result_failed' => ':ok ok, :failed failed',
+        'rate_limited' => 'Coolify rate limit skipped the remaining sites. Re-run in a few minutes for the failed sites only.',
+    ],
     'jobs' => [
         'title' => 'Background tasks',
         'minimize' => 'Minimize',

@@ -7,13 +7,11 @@ use App\Models\CoolifyConnection;
 use App\Models\OpsBackgroundJob;
 use App\Models\Site;
 use App\Models\User;
-use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyInventorySync;
 use App\Services\Coolify\CoolifySiteSync;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
 use App\Services\Sites\ChannelSwitcher;
-use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
 use App\Services\Sites\SiteAppHealthFixer;
@@ -76,25 +74,14 @@ class OpsJobRunner
     {
         $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
         $sync = app(CoolifySiteSync::class);
-        $total = max(1, $sites->count());
-        $ok = 0;
-        $failed = 0;
-        $deployments = 0;
-        $errors = [];
 
-        foreach ($sites->values() as $index => $site) {
-            try {
-                $result = $sync->sync($site);
-                $ok++;
-                $deployments += (int) ($result['deployments'] ?? 0);
-            } catch (CoolifyApiException $exception) {
-                $failed++;
-                $errors[] = $site->name.': '.$exception->getMessage();
-            }
-            $job->updateProgress((int) ((($index + 1) / $total) * 100), $site->name);
-        }
+        $result = $this->fanout(
+            $job,
+            $sites,
+            fn (Site $site) => $sync->sync($site),
+        );
 
-        return trim(__('sites.flash.bulk_synced').' '.$ok.' ok'.($failed > 0 ? ', '.$failed.' failed' : ''));
+        return $this->summaryFor(__('sites.flash.bulk_synced'), $result);
     }
 
     private function coolifyInventorySync(OpsBackgroundJob $job): string
@@ -137,48 +124,39 @@ class OpsJobRunner
         $actor = $this->actor($job);
         $sites = $this->sites($job);
         $switcher = app(ChannelSwitcher::class);
-        $total = max(1, $sites->count());
-        $ok = 0;
-        $failed = 0;
+        $ip = $this->ip($job);
 
-        foreach ($sites->values() as $index => $site) {
+        $targets = $sites->values()->filter(function (Site $site) use ($target): bool {
             $current = $site->channel instanceof Channel ? $site->channel : Channel::tryFrom((string) $site->channel);
-            if ($current === $target) {
-                $job->updateProgress((int) ((($index + 1) / $total) * 100), $site->name);
 
-                continue;
-            }
+            return $current !== $target;
+        });
 
-            try {
-                $switcher->start(
-                    $site,
-                    $target,
-                    $actor,
-                    isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
-                    (bool) ($job->payload['confirmed'] ?? false),
-                    (bool) ($job->payload['force'] ?? false),
-                );
-                $ok++;
-            } catch (ChannelSwitchException $exception) {
-                $failed++;
-            }
-            $job->updateProgress((int) ((($index + 1) / $total) * 100), $site->name);
-        }
+        $result = $this->fanout($job, $targets, fn (Site $site) => $switcher->start(
+            $site,
+            $target,
+            $actor,
+            $ip,
+            (bool) ($job->payload['confirmed'] ?? false),
+            (bool) ($job->payload['force'] ?? false),
+        ));
 
-        return __('sites.flash.bulk_channel', ['channel' => $target->value, 'skipped' => 0]).' '.$ok.' ok'.($failed > 0 ? ', '.$failed.' failed' : '');
+        return $this->summaryFor(
+            __('sites.flash.bulk_channel', ['channel' => $target->value, 'skipped' => 0]),
+            $result,
+        );
     }
 
     private function bulkCompose(OpsBackgroundJob $job): string
     {
         $sites = $this->sites($job)->filter(fn (Site $site): bool => $site->hasDockerfileBuildPackWarning());
-        $result = app(ComposePackMigrator::class)->migrateMany(
-            $sites,
-            $this->actor($job),
-            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
-        );
-        $job->updateProgress(100);
+        $migrator = app(ComposePackMigrator::class);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
 
-        return __('site_ops.pack.bulk').' '.$result['ok'].' ok';
+        $result = $this->fanout($job, $sites, fn (Site $site) => $migrator->migrate($site, $actor, $ip));
+
+        return $this->summaryFor(__('site_ops.pack.bulk'), $result);
     }
 
     private function bulkAutoDeploy(OpsBackgroundJob $job): string
@@ -188,55 +166,52 @@ class OpsJobRunner
         $enabled = array_key_exists('enabled', $job->payload)
             ? (bool) $job->payload['enabled']
             : $settings->toggleEnabledFor($sites);
-        $result = $settings->setAutoDeployMany(
-            $sites,
-            $enabled,
-            $this->actor($job),
-            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
-        );
-        $job->updateProgress(100);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
 
-        return ($enabled ? __('site_ops.auto_deploy.bulk_on') : __('site_ops.auto_deploy.bulk_off')).' '.$result['ok'].' ok';
+        $result = $this->fanout($job, $sites, fn (Site $site) => $settings->setAutoDeploy($site, $enabled, $actor, $ip));
+
+        return $this->summaryFor(
+            $enabled ? __('site_ops.auto_deploy.bulk_on') : __('site_ops.auto_deploy.bulk_off'),
+            $result,
+        );
     }
 
     private function bulkDeploy(OpsBackgroundJob $job): string
     {
         $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
-        $result = app(CoolifyDeploySettings::class)->redeployMany(
-            $sites,
-            $this->actor($job),
-            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
-        );
-        $job->updateProgress(100);
+        $settings = app(CoolifyDeploySettings::class);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
 
-        return __('site_ops.redeploy.bulk').' '.$result['ok'].' ok';
+        $result = $this->fanout($job, $sites, fn (Site $site) => $settings->redeploy($site, $actor, $ip));
+
+        return $this->summaryFor(__('site_ops.redeploy.bulk'), $result);
     }
 
     private function bulkFollowHead(OpsBackgroundJob $job): string
     {
         $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
-        $result = app(CoolifyDeploySettings::class)->followHeadMany(
-            $sites,
-            $this->actor($job),
-            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
-        );
-        $job->updateProgress(100);
+        $settings = app(CoolifyDeploySettings::class);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
 
-        return __('site_ops.pin.bulk_follow').' '.$result['ok'].' ok';
+        $result = $this->fanout($job, $sites, fn (Site $site) => $settings->followHead($site, $actor, $ip));
+
+        return $this->summaryFor(__('site_ops.pin.bulk_follow'), $result);
     }
 
     private function bulkPin(OpsBackgroundJob $job): string
     {
         $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
-        $result = app(CoolifyDeploySettings::class)->pinMany(
-            $sites,
-            (string) ($job->payload['ref'] ?? ''),
-            $this->actor($job),
-            isset($job->payload['ip']) ? (string) $job->payload['ip'] : null,
-        );
-        $job->updateProgress(100);
+        $settings = app(CoolifyDeploySettings::class);
+        $ref = (string) ($job->payload['ref'] ?? '');
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
 
-        return __('site_ops.pin.bulk').' '.$result['ok'].' ok';
+        $result = $this->fanout($job, $sites, fn (Site $site) => $settings->pin($site, $ref, $actor, $ip));
+
+        return $this->summaryFor(__('site_ops.pin.bulk'), $result);
     }
 
     private function bulkAppHealthFix(OpsBackgroundJob $job): string
@@ -244,35 +219,91 @@ class OpsJobRunner
         $fix = (string) ($job->payload['fix'] ?? 'all');
         $sites = $this->sites($job)->loadMissing('latestDeployment');
         $fixer = app(SiteAppHealthFixer::class);
-        $total = max(1, $sites->count());
-        $ok = 0;
-        $failed = 0;
-        $rows = [];
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
 
-        foreach ($sites->values() as $index => $site) {
+        $targets = $sites->values()->filter(function (Site $site) use ($fixer, $fix): bool {
             $needed = $fixer->neededFixes($site);
-            $run = $fix === 'all' ? $needed !== [] : in_array($fix, $needed, true);
-            if (! $run) {
-                $job->updateProgress((int) ((($index + 1) / $total) * 100), $site->name);
 
-                continue;
-            }
+            return $fix === 'all' ? $needed !== [] : in_array($fix, $needed, true);
+        });
 
+        $rows = [];
+        $result = $this->fanout($job, $targets, function (Site $site) use ($fixer, $fix, $actor, $ip, &$rows): void {
             try {
-                $report = $fixer->fix($site, $fix, $this->actor($job), isset($job->payload['ip']) ? (string) $job->payload['ip'] : null);
-                $ok++;
-                $rows[] = $report->toView($site->fresh() ?? $site);
+                $report = $fixer->fix($site, $fix, $actor, $ip);
             } catch (\Throwable $exception) {
-                $failed++;
-                $rows[] = SiteAppHealthReport::forDisplay($site->fresh() ?? $site)->toView($site);
-            }
-            $job->updateProgress((int) ((($index + 1) / $total) * 100), $site->name);
-        }
+                $rows[$site->id] = SiteAppHealthReport::forDisplay($site->fresh() ?? $site)->toView($site);
 
-        $job->result = ['sites' => $rows];
+                throw $exception;
+            }
+
+            $rows[$site->id] = $report->toView($site->fresh() ?? $site);
+        });
+
+        $job->result = ['sites' => array_values($rows)];
         $job->save();
 
-        return __('sites.app_health.bulk_done', ['ok' => $ok, 'failed' => $failed]);
+        $done = __('sites.app_health.bulk_done', [
+            'ok' => $result['ok'],
+            'failed' => $result['failed'],
+        ]);
+
+        return $result['rate_limited'] ? $done.' — '.__('ops.bulk.rate_limited') : $done;
+    }
+
+    /**
+     * Run one Coolify action per site through the paced fan-out, reporting live
+     * progress into the ops jobs widget.
+     *
+     * @param  Collection<int, Site>  $sites
+     * @param  callable(Site): void  $action
+     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool, deferrals: int, sites: list<Site>}
+     */
+    private function fanout(OpsBackgroundJob $job, $sites, callable $action): array
+    {
+        return app(PacedFanout::class)->run(
+            $sites->values(),
+            $action,
+            function (Site $site, int $completed, int $total) use ($job): void {
+                $job->updateProgress((int) (($completed / max(1, $total)) * 100), $site->name);
+            },
+        );
+    }
+
+    private function ip(OpsBackgroundJob $job): ?string
+    {
+        return isset($job->payload['ip']) ? (string) $job->payload['ip'] : null;
+    }
+
+    /**
+     * @param  array{ok: int, failed?: int, rate_limited?: bool}  $result
+     */
+    private function summaryFor(string $prefix, array $result): string
+    {
+        return $this->summary(
+            $prefix,
+            (int) $result['ok'],
+            (int) ($result['failed'] ?? 0),
+            (bool) ($result['rate_limited'] ?? false),
+        );
+    }
+
+    /**
+     * Bulk summaries used to append English " ok" / ", failed" to a translated
+     * prefix, and dropped the failure count entirely for the deploy family.
+     */
+    private function summary(string $prefix, int $ok, int $failed, bool $rateLimited = false): string
+    {
+        $counts = $failed > 0
+            ? __('ops.bulk.result_failed', ['ok' => $ok, 'failed' => $failed])
+            : __('ops.bulk.result', ['ok' => $ok]);
+
+        $text = trim($prefix.' '.$counts);
+
+        return $rateLimited
+            ? $text.' — '.__('ops.bulk.rate_limited')
+            : $text;
     }
 
     /**

@@ -22,7 +22,7 @@ Themes are **git-only**. Plane has no ZIP upload. Emergency ZIP is CMS Super Adm
 ## Update / sync
 
 - **Update to latest** — agent `themes/update` to catalog `latest_sha` / ref.
-- **Sync now** — agent `themes/sync` (CMS BackgroundTasks).
+- **Sync now** — agent `themes/sync` (CMS BackgroundTasks). If the CMS answers `data_package_missing`, Plane calls `themes/data-install` once and retries; see [theme-agent-client.md](../modules/theme-agent-client.md).
 - **Enable auto-update** — opt-in only. GitHub push then fans out [github-webhooks.md](../modules/github-webhooks.md).
 
 If `minimum_deamon_version` is set and last health `deamon_version` is lower, Plane skips and audits `theme.update_skipped_version`.

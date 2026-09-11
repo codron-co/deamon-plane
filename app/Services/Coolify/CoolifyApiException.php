@@ -32,6 +32,22 @@ class CoolifyApiException extends RuntimeException
         return $this->status === 404;
     }
 
+    public function isRateLimited(): bool
+    {
+        return $this->status === 429;
+    }
+
+    /**
+     * Throttles, gateway errors, and connection failures say nothing about the
+     * resource. Callers must retry these instead of recording them as an outcome.
+     */
+    public function isTransient(): bool
+    {
+        return $this->status === 429
+            || $this->status === 0
+            || in_array($this->status, [500, 502, 503, 504], true);
+    }
+
     public static function fromResponse(Response $response, ?string $token = null): self
     {
         $json = $response->json();
@@ -42,6 +58,12 @@ class CoolifyApiException extends RuntimeException
 
         if (is_array($json)) {
             $message = self::appendValidationErrors($message, $json['errors'] ?? null);
+        }
+
+        // Laravel's throttle middleware answers "Too Many Attempts." in English.
+        // Keep the raw body in $payload for logs, but never show it to an operator.
+        if ($response->status() === 429) {
+            $message = (string) __('coolify.errors.rate_limited');
         }
 
         $conflicts = [];

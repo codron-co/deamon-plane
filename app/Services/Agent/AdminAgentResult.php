@@ -77,6 +77,7 @@ final class AdminAgentResult
         $cmsMessage = is_array($payload) ? self::stringOrNull($payload['message'] ?? null) : null;
 
         $message = match (true) {
+            $httpStatus === 429 => (string) __('sites.agent.rate_limited'),
             $httpStatus === 401 || $httpStatus === 403 => 'Agent rejected the request signature.',
             $httpStatus === 404 && $code === null => 'CMS agent is too old for admin management (needs Deamon 1.2.13+).',
             $code === 'validation_failed' && is_string($cmsMessage) => $cmsMessage,
