@@ -8,6 +8,19 @@ use Illuminate\Support\Carbon;
 final class SiteAppHealthReport
 {
     /**
+     * Local-owned issue codes refreshed on every display / after deploy sync.
+     *
+     * @var list<string>
+     */
+    public const LOCAL_ISSUE_CODES = [
+        'missing_app',
+        'dockerfile_pack',
+        'missing_agent_secret',
+        'deploy_failed',
+        'agent_unhealthy',
+    ];
+
+    /**
      * @param  list<SiteAppHealthIssue>  $issues
      */
     public function __construct(
@@ -25,16 +38,16 @@ final class SiteAppHealthReport
     }
 
     /**
-     * Cached Coolify inspect when present; otherwise local signals only.
+     * Cached Coolify inspect merged with fresh local signals (deploy/agent/secret).
      */
     public static function forDisplay(Site $site): self
     {
         $stored = self::fromStored($site);
-        if ($stored->checked) {
-            return $stored;
+        if (! $stored->checked) {
+            return app(SiteAppHealthInspector::class)->localReport($site);
         }
 
-        return app(SiteAppHealthInspector::class)->localReport($site);
+        return self::mergeLocalInto($stored, $site);
     }
 
     public static function fromStored(Site $site): self
@@ -58,6 +71,49 @@ final class SiteAppHealthReport
             composeLocation: is_string($payload['compose_location'] ?? null) ? $payload['compose_location'] : null,
             issues: $issues,
             checkedAt: $site->last_app_health_at,
+        );
+    }
+
+    public static function mergeLocalInto(self $stored, Site $site): self
+    {
+        $local = app(SiteAppHealthInspector::class)->localIssues($site);
+        $kept = array_values(array_filter(
+            $stored->issues,
+            static fn (SiteAppHealthIssue $issue): bool => ! in_array($issue->code, self::LOCAL_ISSUE_CODES, true),
+        ));
+
+        // Keep live dockerfile_pack from Coolify inspect; drop notes-flag duplicate if live already has it.
+        $localCodes = array_map(static fn (SiteAppHealthIssue $i): string => $i->code, $kept);
+        $localFiltered = array_values(array_filter(
+            $local,
+            static function (SiteAppHealthIssue $issue) use ($localCodes): bool {
+                if ($issue->code === 'dockerfile_pack' && in_array('dockerfile_pack', $localCodes, true)) {
+                    return false;
+                }
+
+                return true;
+            },
+        ));
+
+        $issues = array_merge($kept, $localFiltered);
+        $seen = [];
+        $unique = [];
+        foreach ($issues as $issue) {
+            $fp = $issue->code.'|'.($issue->key ?? '');
+            if (isset($seen[$fp])) {
+                continue;
+            }
+            $seen[$fp] = true;
+            $unique[] = $issue;
+        }
+
+        return new self(
+            checked: true,
+            ok: $unique === [],
+            buildPack: $stored->buildPack,
+            composeLocation: $stored->composeLocation,
+            issues: $unique,
+            checkedAt: $stored->checkedAt,
         );
     }
 

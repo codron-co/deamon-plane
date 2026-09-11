@@ -243,6 +243,64 @@ class SiteAppHealthTest extends TestCase
             ->assertSee(route('ops.sites.app-health', $site), false);
     }
 
+    public function test_display_clears_stale_deploy_failed_when_latest_finished(): void
+    {
+        $site = Site::factory()->create(['status' => SiteStatus::Active]);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Failed,
+            'started_at' => now()->subHour(),
+            'finished_at' => now()->subHour(),
+            'error_message' => 'old fail',
+        ]);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Finished,
+            'started_at' => now()->subMinutes(5),
+            'finished_at' => now()->subMinutes(4),
+            'error_message' => null,
+        ]);
+
+        $site->last_app_health_at = now()->subDay();
+        $site->last_app_health_payload = [
+            'ok' => false,
+            'build_pack' => 'dockercompose',
+            'compose_location' => '/docker-compose.coolify.yml',
+            'issues' => [
+                ['code' => 'deploy_failed', 'fix' => 'redeploy', 'key' => null],
+                ['code' => 'wrong_env', 'fix' => 'sync_env', 'key' => 'DB_HOST'],
+            ],
+        ];
+        $site->save();
+
+        $codes = collect($site->fresh()->appHealth()->issues)->map(fn ($i) => $i->code)->all();
+        $this->assertNotContains('deploy_failed', $codes);
+        $this->assertContains('wrong_env', $codes);
+    }
+
+    public function test_auto_deploy_fails_when_coolify_does_not_keep_flag(): void
+    {
+        $site = $this->composeSite();
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::sequence()
+                ->push([
+                    'uuid' => self::APP,
+                    'is_auto_deploy_enabled' => false,
+                    'settings' => ['is_auto_deploy_enabled' => false],
+                ], 200)
+                ->push([
+                    'uuid' => self::APP,
+                    'is_auto_deploy_enabled' => false,
+                    'settings' => ['is_auto_deploy_enabled' => false],
+                ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.auto-deploy', $site), ['enabled' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+    }
 
     private function composeSite(): Site
     {

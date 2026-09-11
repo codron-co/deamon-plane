@@ -36,7 +36,7 @@ class CoolifyDeploySettingsTest extends TestCase
         $site = $this->site();
 
         Http::fake([
-            'https://coolify.example/api/v1/applications/'.self::APP => Http::response($this->appPayload(), 200),
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response($this->appPayload(autoDeploy: true), 200),
         ]);
 
         $this->actingAs($this->operator())

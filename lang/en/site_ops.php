@@ -17,7 +17,7 @@ return [
     ],
     'auto_deploy' => [
         'title' => 'Auto-deploy',
-        'lede' => 'Coolify git-webhook auto-deploy (`settings.is_auto_deploy` / `is_auto_deploy_enabled`). Pin turns this off. Follow HEAD turns it on and deploys the branch tip. Redeploy rebuilds the currently pinned commit or HEAD without changing the pin.',
+        'lede' => 'Controls Coolify git auto-deploy (push → deploy via is_auto_deploy_enabled). Does not disable Plane’s Coolify status webhook. Pin turns this off. Follow HEAD turns it on and deploys the branch tip. Redeploy rebuilds the currently pinned commit or HEAD without changing the pin.',
         'on_button' => 'Enable auto-deploy',
         'off_button' => 'Disable auto-deploy',
         'on' => 'Auto-deploy on for :name.',
@@ -28,6 +28,7 @@ return [
         'status_off' => 'Off',
         'status_unknown' => 'Unknown',
         'unknown_hint' => 'Coolify did not return an auto-deploy flag on this GET. Enable or disable writes is_auto_deploy_enabled. Do not assume it is off.',
+        'verify_failed' => 'Coolify did not keep auto-deploy :expected for :name after PATCH. Check the Coolify app setting.',
         'confirm_on_title' => 'Enable auto-deploy?',
         'confirm_off_title' => 'Disable auto-deploy?',
         'confirm_on' => 'Enable Coolify auto-deploy (git webhook) for :name?',

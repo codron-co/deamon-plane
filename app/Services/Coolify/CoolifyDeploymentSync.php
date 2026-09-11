@@ -177,6 +177,12 @@ class CoolifyDeploymentSync
             }
         }
 
+        try {
+            app(\App\Services\Sites\SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);
+        } catch (\Throwable) {
+            // App health cache refresh must not break deploy sync.
+        }
+
         return true;
     }
 

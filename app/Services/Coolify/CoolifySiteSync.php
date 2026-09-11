@@ -34,6 +34,12 @@ class CoolifySiteSync
         $filled = (new CoolifySiteTargetSync)->fillSite($site, $app, $connection);
         $deployments = (new CoolifyDeploymentSync)->sync($site->fresh() ?? $site, $coolify);
 
+        try {
+            app(\App\Services\Sites\SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);
+        } catch (\Throwable) {
+            // Keep sync successful even if health cache refresh fails.
+        }
+
         return [
             'filled' => $filled,
             'deployments' => $deployments,

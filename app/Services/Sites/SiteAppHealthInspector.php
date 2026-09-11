@@ -108,9 +108,7 @@ class SiteAppHealthInspector
             );
         }
 
-        $latest = $site->relationLoaded('latestDeployment')
-            ? $site->latestDeployment
-            : $site->latestDeployment()->first();
+        $latest = $this->latestDeployment($site);
 
         if ($latest?->status === DeploymentStatus::Failed) {
             $issues[] = new SiteAppHealthIssue(
@@ -124,6 +122,43 @@ class SiteAppHealthInspector
         }
 
         return $issues;
+    }
+
+    /**
+     * Persist display merge without Coolify HTTP (after deploy sync / poll).
+     */
+    public function refreshLocalCached(Site $site): SiteAppHealthReport
+    {
+        $stored = SiteAppHealthReport::fromStored($site);
+        $merged = $stored->checked
+            ? SiteAppHealthReport::mergeLocalInto($stored, $site)
+            : $this->localReport($site);
+
+        $site->last_app_health_at = now();
+        $site->last_app_health_payload = $merged->toArray();
+        $site->save();
+
+        return $merged;
+    }
+
+    /**
+     * Latest deployment by Coolify/started clock, then id.
+     */
+    public function latestDeployment(Site $site): ?\App\Models\Deployment
+    {
+        if ($site->relationLoaded('deployments')) {
+            return $site->deployments
+                ->sortByDesc(fn ($d) => [
+                    $d->started_at?->getTimestamp() ?? 0,
+                    $d->id,
+                ])
+                ->first();
+        }
+
+        return $site->deployments()
+            ->orderByDesc('started_at')
+            ->orderByDesc('id')
+            ->first();
     }
 
     /**

@@ -55,6 +55,17 @@ class CoolifyDeploySettings
 
         try {
             $app = $coolify->patchApplication($uuid, ['is_auto_deploy_enabled' => $enabled]);
+            $verified = $app->autoDeployState();
+            if ($verified !== $enabled) {
+                $app = $coolify->getApp($uuid);
+                $verified = $app->autoDeployState();
+            }
+            if ($verified !== $enabled) {
+                throw new ComposePackException(__('site_ops.auto_deploy.verify_failed', [
+                    'name' => $site->name,
+                    'expected' => $enabled ? 'on' : 'off',
+                ]));
+            }
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }

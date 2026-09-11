@@ -17,7 +17,7 @@ return [
     ],
     'auto_deploy' => [
         'title' => 'Oto-deploy',
-        'lede' => 'Coolify git-webhook oto-deploy (`settings.is_auto_deploy` / `is_auto_deploy_enabled`). Pin bunu kapatır. HEAD’di takip et açar ve dal ucunu dağıtır. Tekrar deploy pin’i değiştirmeden mevcut commit veya HEAD’i yeniden derler.',
+        'lede' => 'Coolify git oto-deploy’unu kontrol eder (push → deploy, is_auto_deploy_enabled). Plane’in Coolify durum webhook’unu kapatmaz. Pin bunu kapatır. HEAD’i takip et açar ve dal ucunu dağıtır. Tekrar deploy pin’i değiştirmeden mevcut commit veya HEAD’i yeniden derler.',
         'on_button' => 'Oto-deploy aç',
         'off_button' => 'Oto-deploy kapat',
         'on' => ':name için oto-deploy açık.',
@@ -28,6 +28,7 @@ return [
         'status_off' => 'Kapalı',
         'status_unknown' => 'Bilinmiyor',
         'unknown_hint' => 'Coolify bu GET’te oto-deploy bayrağı döndürmedi. Aç/kapat is_auto_deploy_enabled yazar. Kapalı varsaymayın.',
+        'verify_failed' => 'Coolify, :name için oto-deploy’u PATCH sonrası :expected olarak tutmadı. Coolify app ayarını kontrol edin.',
         'confirm_on_title' => 'Oto-deploy açılsın mı?',
         'confirm_off_title' => 'Oto-deploy kapatılsın mı?',
         'confirm_on' => ':name için Coolify oto-deploy (git webhook) açılsın mı?',
