@@ -138,7 +138,10 @@ class CoolifyDeploymentSync
             $deployment->finished_at = $finished;
         }
 
-        if (in_array($effective, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
+        if ($effective === DeploymentStatus::Finished) {
+            // Poll timeout / earlier failure text must not stick on a successful Coolify row.
+            $deployment->error_message = null;
+        } elseif (in_array($effective, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
             $detail = DeploymentFailureText::fromRemote($site, $remote, 'Coolify deployment '.$effective->value.'.');
             if (filled($remote->message) || filled($remote->logsExcerpt)) {
                 $deployment->error_message = $detail['error_message'];
@@ -155,6 +158,8 @@ class CoolifyDeploymentSync
         }
 
         $becameFailed = $effective === DeploymentStatus::Failed
+            && $deployment->isDirty('status');
+        $becameFinished = $effective === DeploymentStatus::Finished
             && $deployment->isDirty('status');
 
         $deployment->save();
@@ -177,6 +182,10 @@ class CoolifyDeploymentSync
             }
         }
 
+        if ($becameFinished) {
+            $this->recoverSiteIfLatestFinished($site);
+        }
+
         try {
             app(\App\Services\Sites\SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);
         } catch (\Throwable) {
@@ -184,6 +193,28 @@ class CoolifyDeploymentSync
         }
 
         return true;
+    }
+
+    /**
+     * Poll timeout can leave sites.status=error even after Coolify finishes.
+     * Recover only when the newest deployment (by started_at/id) is finished.
+     */
+    private function recoverSiteIfLatestFinished(Site $site): void
+    {
+        $site->refresh();
+        if ($site->status !== \App\Enums\SiteStatus::Error) {
+            return;
+        }
+
+        $latest = app(\App\Services\Sites\SiteAppHealthInspector::class)->latestDeployment($site);
+        if ($latest === null || $latest->status !== DeploymentStatus::Finished) {
+            return;
+        }
+
+        if ($site->canTransitionTo(\App\Enums\SiteStatus::Active)) {
+            $site->transitionTo(\App\Enums\SiteStatus::Active);
+            $site->save();
+        }
     }
 
     private function shouldKeepTerminal(Deployment $deployment, DeploymentStatus $incoming): bool

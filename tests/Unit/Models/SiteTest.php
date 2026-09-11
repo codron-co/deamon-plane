@@ -217,6 +217,20 @@ class SiteTest extends TestCase
         $this->assertSame('Cloudflare zone create failed: 403', $site->fresh()->lastFailureMessage());
     }
 
+    public function test_last_failure_message_ignores_stale_error_on_finished_deploy(): void
+    {
+        $site = Site::factory()->create(['status' => SiteStatus::Error]);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'channel' => Channel::Main,
+            'trigger' => DeploymentTrigger::Create,
+            'status' => DeploymentStatus::Finished,
+            'error_message' => 'Timed out waiting for Coolify deployment.',
+        ]);
+
+        $this->assertNull($site->fresh()->lastFailureMessage());
+    }
+
     public function test_identity_mark_letter_keeps_turkish_capital_i(): void
     {
         $site = Site::factory()->make([

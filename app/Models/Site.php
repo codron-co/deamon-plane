@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Channel;
 use App\Enums\CoolifyGitSourceKind;
+use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
 use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Sites\SiteAppHealthReport;
@@ -292,11 +293,21 @@ class Site extends Model
         $deployment = $this->relationLoaded('latestDeployment')
             ? $this->latestDeployment
             : ($this->relationLoaded('deployments')
-                ? $this->deployments->first()
+                ? $this->deployments->sortByDesc('id')->first()
                 : $this->deployments()->latest('id')->first());
 
-        if (filled($deployment?->error_message)) {
+        // Finished rows can still carry a stale poll-timeout message; only surface real failures.
+        if (
+            $deployment !== null
+            && in_array($deployment->status, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)
+            && filled($deployment->error_message)
+        ) {
             return trim((string) $deployment->error_message);
+        }
+
+        // A successful latest deploy means the site recovered; ignore older audit errors for the banner.
+        if ($deployment?->status === DeploymentStatus::Finished) {
+            return null;
         }
 
         $audit = $this->auditLogs()
