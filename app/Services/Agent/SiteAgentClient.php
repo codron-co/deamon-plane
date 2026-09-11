@@ -4,13 +4,48 @@ namespace App\Services\Agent;
 
 use App\Models\Site;
 use App\Support\ControlPlaneAgentSignature;
+use App\Support\RetryAfter;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use Throwable;
 
 class SiteAgentClient
 {
+    /**
+     * CMS control routes are Laravel-throttled, so a rollout that touches one CMS
+     * repeatedly can draw a 429. Replay it after the advertised delay.
+     *
+     * @param  callable(): Response  $send
+     */
+    private function sendWithRetry(callable $send): Response
+    {
+        $max = max(1, (int) config('ops.agent.retry.max_attempts', 2));
+        $baseMs = max(1, (int) config('ops.agent.retry.base_delay_ms', 400));
+        $maxMs = max(1, (int) config('ops.agent.retry.max_delay_ms', 5000));
+        $attempt = 0;
+
+        while (true) {
+            $attempt++;
+            $response = $send();
+
+            if ($response->status() !== 429 || $attempt >= $max) {
+                return $response;
+            }
+
+            $delay = RetryAfter::clamp(
+                RetryAfter::fromResponse($response) ?? RetryAfter::backoff($attempt, $baseMs, $maxMs),
+                $maxMs,
+            );
+
+            if ($delay > 0) {
+                Sleep::for((int) ceil($delay * 1000))->milliseconds();
+            }
+        }
+    }
+
     public function health(Site $site): AgentHealthResult
     {
         if (! $site->hasAgentSecret()) {
@@ -134,6 +169,17 @@ class SiteAgentClient
     public function activateTheme(Site $site, array $payload): ThemeAgentResult
     {
         return $this->postTheme($site, ControlPlaneAgentContract::themeActivatePath(), $payload);
+    }
+
+    /**
+     * Installs the CMS-side data package (sync.json + data/) from the control-plane
+     * clone. CMS < 1.2.14 has no such route and answers 404.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function installThemeData(Site $site, array $payload): ThemeAgentResult
+    {
+        return $this->postTheme($site, ControlPlaneAgentContract::themeDataInstallPath(), $payload);
     }
 
     /**
@@ -373,11 +419,11 @@ class SiteAgentClient
         $url = $baseUrl.$path;
 
         try {
-            $response = Http::timeout($timeout)
+            $response = $this->sendWithRetry(fn (): Response => Http::timeout($timeout)
                 ->acceptJson()
                 ->withHeaders($signed['headers'])
                 ->withBody($body, 'application/json')
-                ->post($url);
+                ->post($url));
         } catch (ConnectionException) {
             $this->logThemeFailure($site, $path, 'timeout');
 
