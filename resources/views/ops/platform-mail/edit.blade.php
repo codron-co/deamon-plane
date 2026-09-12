@@ -29,6 +29,15 @@
         @csrf
         @method('PUT')
 
+        @if ($errors->any())
+            <p class="ops-alert" role="alert">{{ __('platform_mail.form_errors') }}</p>
+            <ul class="ops-alert-list">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        @endif
+
         <article class="site-card">
             <h2>{{ __('platform_mail.smtp.title') }}</h2>
             <p class="field-hint">{{ __('platform_mail.smtp.hint') }}</p>

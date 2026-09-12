@@ -3,8 +3,9 @@
 return [
     'title' => 'Software mail',
     'lede' => 'Deamon software emails (password reset, new order/member, weekly report, site status). Separate from Hostinger mailboxes. Settings are pushed to sites over HMAC; per-site notification overrides live on the site detail page.',
-    'save' => 'Save and push to sites',
+    'save' => 'Save',
     'push' => 'Re-push to sites',
+    'form_errors' => 'Fix the highlighted fields and try again.',
     'smtp' => [
         'title' => 'SMTP',
         'hint' => 'CMS admin software mail and Plane ops alerts use this SMTP. Storefront customer/contact mail stays on the site mail module.',
@@ -38,8 +39,17 @@ return [
         'site_override' => 'Notification overrides (empty = global)',
     ],
     'flash' => [
-        'saved' => 'Software mail settings saved. Push attempted for :count site(s).',
+        'saved' => 'Software mail settings saved.',
+        'saved_push_queued' => 'Software mail settings saved. Push to sites queued.',
         'pushed' => 'Software mail settings re-pushed to :count site(s).',
         'site_saved' => 'Site software-mail overrides saved.',
+    ],
+    'test' => [
+        'button' => 'Send test email',
+        'to' => 'Test recipient',
+        'to_hint' => 'Defaults to the default recipient above.',
+        'sent' => 'Test email sent to :email.',
+        'failed' => 'Test email failed. Check SMTP settings.',
+        'not_ready' => 'Enable software mail and fill host, username, password, and from address first.',
     ],
 ];

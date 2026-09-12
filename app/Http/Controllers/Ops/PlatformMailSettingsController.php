@@ -25,7 +25,7 @@ class PlatformMailSettingsController extends Controller
         ]);
     }
 
-    public function update(Request $request, PlatformMailConfigurer $configurer): RedirectResponse
+    public function update(Request $request): RedirectResponse
     {
         $this->authorize('ops.write');
 
@@ -77,11 +77,9 @@ class PlatformMailSettingsController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        $pushed = $configurer->syncAllSites();
-
         return redirect()
             ->route('ops.platform-mail.edit')
-            ->with('status', __('platform_mail.flash.saved', ['count' => $pushed]));
+            ->with('status', __('platform_mail.flash.saved'));
     }
 
     public function push(Request $request, PlatformMailConfigurer $configurer): RedirectResponse

@@ -3,8 +3,9 @@
 return [
     'title' => 'Yazılım e-postası',
     'lede' => 'Deamon yazılım mailleri (şifre sıfırlama, yeni sipariş/üye, haftalık rapor, site durumu). Hostinger posta kutularından ayrıdır. Ayarlar tüm sitelere HMAC ile aktarılır; site başına bildirim override’ı site detayındadır.',
-    'save' => 'Kaydet ve sitelere aktar',
+    'save' => 'Kaydet',
     'push' => 'Sitelere yeniden aktar',
+    'form_errors' => 'İşaretli alanları düzeltip tekrar deneyin.',
     'smtp' => [
         'title' => 'SMTP',
         'hint' => 'CMS admin yazılım mailleri ve Plane ops bildirimleri bu SMTP üzerinden gider. Site üye/iletişim mailleri site mail modülünde kalır.',
@@ -38,8 +39,17 @@ return [
         'site_override' => 'Bildirim override (boş = global)',
     ],
     'flash' => [
-        'saved' => 'Yazılım e-posta ayarları kaydedildi. :count siteye aktarım denendi.',
+        'saved' => 'Yazılım e-posta ayarları kaydedildi.',
+        'saved_push_queued' => 'Yazılım e-posta ayarları kaydedildi. Sitelere aktarım kuyruğa alındı.',
         'pushed' => 'Yazılım e-posta ayarları :count siteye yeniden aktarıldı.',
         'site_saved' => 'Site yazılım e-posta override kaydedildi.',
+    ],
+    'test' => [
+        'button' => 'Test e-postası gönder',
+        'to' => 'Test alıcısı',
+        'to_hint' => 'Varsayılan olarak yukarıdaki varsayılan alıcı kullanılır.',
+        'sent' => 'Test e-postası :email adresine gönderildi.',
+        'failed' => 'Test e-postası gönderilemedi. SMTP ayarlarını kontrol edin.',
+        'not_ready' => 'Önce yazılım e-postasını etkinleştirin; host, kullanıcı, şifre ve gönderen adresini doldurun.',
     ],
 ];

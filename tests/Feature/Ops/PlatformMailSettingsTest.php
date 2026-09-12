@@ -56,6 +56,48 @@ class PlatformMailSettingsTest extends TestCase
             ->assertDontSee('super-secret-smtp', false);
     }
 
+    public function test_save_flashes_status_without_waiting_on_sites(): void
+    {
+        $this->actingAs($this->operator())
+            ->put(route('ops.platform-mail.update'), [
+                'enabled' => '1',
+                'host' => 'smtp.example.com',
+                'port' => 465,
+                'encryption' => 'ssl',
+                'username' => 'u@example.com',
+                'password' => 'secret-pass',
+                'from_address' => 'noreply@example.com',
+                'from_name' => 'Test',
+                'default_admin_recipient' => 'ops@example.com',
+                'notifications' => [],
+            ])
+            ->assertRedirect(route('ops.platform-mail.edit'))
+            ->assertSessionHas('status');
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.platform-mail.edit'))
+            ->assertOk()
+            ->assertSee(__('platform_mail.flash.saved'), false);
+    }
+
+    public function test_invalid_from_address_redirects_back_with_errors(): void
+    {
+        $this->actingAs($this->operator())
+            ->from(route('ops.platform-mail.edit'))
+            ->put(route('ops.platform-mail.update'), [
+                'enabled' => '1',
+                'host' => 'smtp.example.com',
+                'port' => 465,
+                'encryption' => 'ssl',
+                'username' => 'u@example.com',
+                'password' => 'secret-pass',
+                'from_address' => 'not-an-email',
+                'from_name' => 'Test',
+            ])
+            ->assertRedirect(route('ops.platform-mail.edit'))
+            ->assertSessionHasErrors(['from_address']);
+    }
+
     private function operator(): User
     {
         $operator = User::factory()->create();
