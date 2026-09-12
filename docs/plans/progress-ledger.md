@@ -35,6 +35,7 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 ## Software mail (Plane SMTP) — 2026-09-11
 
 - Status: **code**. Global `/platform-mail` SMTP + notification catalog; site Infrastructure overrides; push `POST /internal/control/v1/platform-mail/configure`. Plane sends site down/up/version/deploy-failed. CMS sends password reset, admin welcome, weekly report, member/order, publish toggle. Hostinger mailboxes unchanged. Docs: [modules/platform-mail.md](../modules/platform-mail.md).
+- Follow-up (2026-09-12): save/push flashes immediately; site configure via `DispatchPlatformMailPushJob`; `POST /platform-mail/test`; signed ops unsubscribe on Plane + `users.mail_notification_opt_outs`. Spec: [../superpowers/specs/2026-09-12-platform-mail-feedback-prefs-unsubscribe-design.md](../superpowers/specs/2026-09-12-platform-mail-feedback-prefs-unsubscribe-design.md) (Plane slice **code**; CMS prefs/unsubscribe companion pending).
 
 ## Site mailbox bindings + CMS requests (2026-09-10)
 
