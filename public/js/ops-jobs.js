@@ -38,6 +38,8 @@
     let dismissed = false;
     let messageSeq = 0;
     let actionBusy = new Set();
+    /* Rendered rows keyed by job id, so a poll can patch instead of rebuild. */
+    const rowStates = new Map();
 
     const copy = function (key, fallback) {
         return root.getAttribute("data-copy-" + key) || fallback;
@@ -318,6 +320,251 @@
         }
     };
 
+    const titleTextFor = function (item) {
+        if (item && typeof item.title === "string" && item.title !== "") {
+            return item.title;
+        }
+
+        return copy("title", "Background tasks");
+    };
+
+    // "manuel · kuyrukta": what the work is doing, then where it stands. The kind
+    // of work ("Coolify deploy · beyazlar") lives in the title.
+    const metaTextFor = function (item) {
+        const parts = [];
+        const detail = typeof item.detail === "string" && item.detail !== ""
+            ? item.detail
+            : (typeof item.message === "string" ? item.message : "");
+
+        if (detail !== "") {
+            parts.push(detail);
+        }
+
+        if (item.type !== "message") {
+            const status = typeof item.status_label === "string" && item.status_label !== ""
+                ? item.status_label
+                : statusLabel(item.status);
+            if (status !== "" && parts[parts.length - 1] !== status) {
+                parts.push(status);
+            }
+        }
+
+        return parts.join(" · ");
+    };
+
+    const createRow = function (item) {
+        const li = document.createElement("li");
+        li.className = "ops-jobs-item";
+        li.setAttribute("data-job-id", String(item.id));
+
+        const head = document.createElement("div");
+        head.className = "ops-jobs-item-head";
+
+        const actionsEl = document.createElement("div");
+        actionsEl.className = "ops-jobs-item-actions";
+
+        const forceBtn = document.createElement("button");
+        forceBtn.type = "button";
+        forceBtn.className = "ops-jobs-item-btn is-force";
+        forceBtn.hidden = true;
+        forceBtn.appendChild(svgIcon("M4 3.5v9l9-4.5z"));
+
+        const dismissBtn = document.createElement("button");
+        dismissBtn.type = "button";
+        dismissBtn.className = "ops-jobs-item-btn is-dismiss";
+        dismissBtn.hidden = true;
+        dismissBtn.appendChild(svgIcon("M4 4l8 8M12 4l-8 8"));
+
+        actionsEl.appendChild(forceBtn);
+        actionsEl.appendChild(dismissBtn);
+        head.appendChild(actionsEl);
+
+        const meta = document.createElement("span");
+        meta.className = "ops-jobs-meta";
+
+        li.appendChild(head);
+        li.appendChild(meta);
+
+        const state = {
+            item: item,
+            el: li,
+            head: head,
+            actionsEl: actionsEl,
+            titleEl: null,
+            titleIsLink: null,
+            titleText: null,
+            href: null,
+            meta: meta,
+            metaText: null,
+            forceBtn: forceBtn,
+            dismissBtn: dismissBtn,
+            dismissLabel: null,
+            statusClass: null,
+            bar: null,
+            fill: null,
+            barClass: null,
+            barWidth: null,
+        };
+
+        // Listeners bind once and read the freshest payload off the row state, so
+        // a poll can refresh a row without replacing the button under the cursor.
+        forceBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            runAction(state.item, "force_start", forceBtn);
+        });
+
+        dismissBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            runAction(state.item, actionsFor(state.item).cancel ? "cancel" : "dismiss", dismissBtn);
+        });
+
+        const forceLabel = copy("force-start", "Force start");
+        forceBtn.setAttribute("aria-label", forceLabel);
+        forceBtn.title = forceLabel;
+
+        return state;
+    };
+
+    const patchProgress = function (state, item) {
+        if (!isActive(item.status)) {
+            if (state.bar) {
+                state.bar.remove();
+                state.bar = null;
+                state.fill = null;
+                state.barClass = null;
+                state.barWidth = null;
+            }
+
+            return;
+        }
+
+        // Only work Coolify is actually building may animate. A queued item gets an
+        // inert rail so the row keeps its rhythm without claiming progress it does
+        // not have.
+        const waiting = item.status === "queued";
+        const indeterminate = !waiting && (item.indeterminate === true || item.progress == null);
+
+        if (!state.bar) {
+            const bar = document.createElement("span");
+            bar.setAttribute("role", "progressbar");
+            bar.setAttribute("aria-valuemin", "0");
+            bar.setAttribute("aria-valuemax", "100");
+            const fill = document.createElement("span");
+            bar.appendChild(fill);
+            state.el.appendChild(bar);
+            state.bar = bar;
+            state.fill = fill;
+            state.barClass = null;
+            state.barWidth = null;
+        }
+
+        const barClass = "ops-jobs-progress"
+            + (indeterminate ? " is-indeterminate" : "")
+            + (waiting ? " is-waiting" : "");
+        // Rewriting the class would restart the indeterminate animation mid-build.
+        if (state.barClass !== barClass) {
+            state.bar.className = barClass;
+            state.barClass = barClass;
+        }
+
+        if (indeterminate) {
+            state.bar.removeAttribute("aria-valuenow");
+            state.bar.setAttribute("aria-valuetext", statusLabel(item.status));
+            if (state.barWidth !== null) {
+                state.fill.style.removeProperty("width");
+                state.barWidth = null;
+            }
+        } else {
+            const value = waiting ? 0 : Math.max(0, Math.min(100, Number(item.progress) || 0));
+            state.bar.setAttribute("aria-valuenow", String(value));
+            if (waiting) {
+                state.bar.setAttribute("aria-valuetext", statusLabel(item.status));
+            } else {
+                state.bar.removeAttribute("aria-valuetext");
+            }
+
+            const width = value + "%";
+            if (state.barWidth !== width) {
+                state.fill.style.width = width;
+                state.barWidth = width;
+            }
+        }
+    };
+
+    const patchRow = function (state, item) {
+        state.item = item;
+
+        const statusClass = "ops-jobs-item is-" + (item.status || "completed");
+        if (state.statusClass !== statusClass) {
+            state.el.className = statusClass;
+            state.statusClass = statusClass;
+        }
+
+        const href = itemUrl(item);
+        const wantLink = href !== "";
+        if (state.titleEl === null || state.titleIsLink !== wantLink) {
+            const titleEl = document.createElement(wantLink ? "a" : "strong");
+            if (wantLink) {
+                titleEl.className = "ops-jobs-link";
+            }
+            if (state.titleEl) {
+                state.head.replaceChild(titleEl, state.titleEl);
+            } else {
+                state.head.insertBefore(titleEl, state.actionsEl);
+            }
+            state.titleEl = titleEl;
+            state.titleIsLink = wantLink;
+            state.titleText = null;
+            state.href = null;
+        }
+
+        if (wantLink && state.href !== href) {
+            state.titleEl.setAttribute("href", href);
+            state.href = href;
+        }
+
+        const titleText = titleTextFor(item);
+        if (state.titleText !== titleText) {
+            state.titleEl.textContent = titleText;
+            state.titleText = titleText;
+        }
+
+        const metaText = metaTextFor(item);
+        if (state.metaText !== metaText) {
+            state.meta.textContent = metaText;
+            state.metaText = metaText;
+        }
+
+        const actions = actionsFor(item);
+        const busy = actionBusy.has(item.id);
+
+        state.forceBtn.hidden = !actions.force_start;
+        state.forceBtn.disabled = busy;
+
+        const showDismiss = actions.cancel || actions.dismiss;
+        state.dismissBtn.hidden = !showDismiss;
+        state.dismissBtn.disabled = busy;
+        if (showDismiss) {
+            const label = actions.cancel ? copy("stop", "Stop deploy") : copy("dismiss", "Dismiss");
+            if (state.dismissLabel !== label) {
+                state.dismissBtn.setAttribute("aria-label", label);
+                state.dismissBtn.title = label;
+                state.dismissLabel = label;
+            }
+        }
+
+        patchProgress(state, item);
+    };
+
+    const clearRows = function () {
+        rowStates.forEach(function (state) {
+            state.el.remove();
+        });
+        rowStates.clear();
+    };
+
     const render = function () {
         const items = visibleItems();
         const active = items.filter(function (item) {
@@ -325,11 +572,13 @@
         }).length;
 
         if (items.length === 0) {
+            clearRows();
             root.hidden = true;
             return;
         }
 
         if (dismissed && active === 0 && messages.length === 0) {
+            clearRows();
             root.hidden = true;
             return;
         }
@@ -354,106 +603,55 @@
             return;
         }
 
-        listEl.replaceChildren();
+        // A poll every 1.5s must not rebuild the list: a row replaced under the
+        // pointer eats the click on its own cancel/dismiss button. Patch what
+        // changed, leave the rest of the DOM — and its focus — alone.
+        const focused = document.activeElement;
+        const hadFocus = focused !== null && listEl.contains(focused);
+
+        const seen = new Set();
+        let index = 0;
+
         items.forEach(function (item) {
-            const li = document.createElement("li");
-            li.className = "ops-jobs-item is-" + (item.status || "completed");
-
-            const head = document.createElement("div");
-            head.className = "ops-jobs-item-head";
-
-            const href = itemUrl(item);
-            let title;
-            if (href) {
-                title = document.createElement("a");
-                title.href = href;
-                title.className = "ops-jobs-link";
-            } else {
-                title = document.createElement("strong");
-            }
-            title.textContent = item.title || copy("title", "Background tasks");
-
-            const actionsEl = document.createElement("div");
-            actionsEl.className = "ops-jobs-item-actions";
-            const actions = actionsFor(item);
-
-            if (actions.force_start) {
-                const forceBtn = document.createElement("button");
-                forceBtn.type = "button";
-                forceBtn.className = "ops-jobs-item-btn is-force";
-                forceBtn.setAttribute("aria-label", copy("force-start", "Force start"));
-                forceBtn.title = copy("force-start", "Force start");
-                forceBtn.appendChild(svgIcon("M4 3.5v9l9-4.5z"));
-                forceBtn.addEventListener("click", function (event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    runAction(item, "force_start", forceBtn);
-                });
-                actionsEl.appendChild(forceBtn);
+            if (!item || item.id === undefined || item.id === null) {
+                return;
             }
 
-            if (actions.cancel || actions.dismiss) {
-                const closeItemBtn = document.createElement("button");
-                closeItemBtn.type = "button";
-                closeItemBtn.className = "ops-jobs-item-btn is-dismiss";
-                const label = actions.cancel
-                    ? copy("stop", "Stop deploy")
-                    : copy("dismiss", "Dismiss");
-                closeItemBtn.setAttribute("aria-label", label);
-                closeItemBtn.title = label;
-                closeItemBtn.appendChild(svgIcon("M4 4l8 8M12 4l-8 8"));
-                closeItemBtn.addEventListener("click", function (event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    runAction(item, actions.cancel ? "cancel" : "dismiss", closeItemBtn);
-                });
-                actionsEl.appendChild(closeItemBtn);
+            const id = String(item.id);
+            seen.add(id);
+
+            let state = rowStates.get(id);
+            if (!state) {
+                state = createRow(item);
+                rowStates.set(id, state);
             }
 
-            head.appendChild(title);
-            head.appendChild(actionsEl);
+            patchRow(state, item);
 
-            const meta = document.createElement("span");
-            meta.className = "ops-jobs-meta";
-            meta.textContent = item.message || statusLabel(item.status);
-
-            li.appendChild(head);
-            li.appendChild(meta);
-
-            if (isActive(item.status)) {
-                // Only work Coolify is actually building may animate. A queued item
-                // gets an inert rail so the row keeps its rhythm without claiming
-                // progress it does not have.
-                const waiting = item.status === "queued";
-                const indeterminate = !waiting && (item.indeterminate === true || item.progress == null);
-                const bar = document.createElement("span");
-                bar.className = "ops-jobs-progress"
-                    + (indeterminate ? " is-indeterminate" : "")
-                    + (waiting ? " is-waiting" : "");
-                bar.setAttribute("role", "progressbar");
-                bar.setAttribute("aria-valuemin", "0");
-                bar.setAttribute("aria-valuemax", "100");
-                if (indeterminate) {
-                    bar.setAttribute("aria-valuetext", statusLabel(item.status));
-                } else if (waiting) {
-                    bar.setAttribute("aria-valuenow", "0");
-                    bar.setAttribute("aria-valuetext", statusLabel(item.status));
-                } else {
-                    const value = Math.max(0, Math.min(100, Number(item.progress) || 0));
-                    bar.setAttribute("aria-valuenow", String(value));
-                }
-                const fill = document.createElement("span");
-                if (waiting) {
-                    fill.style.width = "0%";
-                } else if (!indeterminate) {
-                    fill.style.width = Math.max(0, Math.min(100, Number(item.progress) || 0)) + "%";
-                }
-                bar.appendChild(fill);
-                li.appendChild(bar);
+            const atIndex = listEl.children[index];
+            if (atIndex !== state.el) {
+                listEl.insertBefore(state.el, atIndex || null);
             }
-
-            listEl.appendChild(li);
+            index += 1;
         });
+
+        const stale = [];
+        rowStates.forEach(function (state, id) {
+            if (!seen.has(id)) {
+                stale.push(id);
+            }
+        });
+        stale.forEach(function (id) {
+            const state = rowStates.get(id);
+            if (state) {
+                state.el.remove();
+            }
+            rowStates.delete(id);
+        });
+
+        if (hadFocus && document.activeElement !== focused && focused.isConnected) {
+            focused.focus();
+        }
     };
 
     const upsertJob = function (job) {

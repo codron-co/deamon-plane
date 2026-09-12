@@ -1412,8 +1412,11 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
     transition: opacity 120ms ease;
 }
 
+/* Running work must keep stop/force reachable without hunting for the row. */
 .ops-jobs-item:hover .ops-jobs-item-actions,
-.ops-jobs-item:focus-within .ops-jobs-item-actions {
+.ops-jobs-item:focus-within .ops-jobs-item-actions,
+.ops-jobs-item.is-queued .ops-jobs-item-actions,
+.ops-jobs-item.is-running .ops-jobs-item-actions {
     opacity: 1;
 }
 

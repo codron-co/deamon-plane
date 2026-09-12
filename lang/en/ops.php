@@ -170,6 +170,8 @@ return [
         'bulk_pin' => 'Pin commit',
         'bulk_app_health_fix' => 'Fix App issues',
         'deployment' => 'Coolify deploy',
+        'source_coolify' => 'Coolify queue',
+        'subject_sites' => ':count site|:count sites',
         'dismiss' => 'Dismiss',
         'stop' => 'Stop deploy',
         'force_start' => 'Force start',

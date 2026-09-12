@@ -117,11 +117,72 @@ class DeploymentPollWidgetTest extends TestCase
         $this->actingAs($this->operator())
             ->getJson(route('ops.jobs'))
             ->assertOk()
-            ->assertJsonPath('deployments.0.title', 'Meyyit')
+            ->assertJsonPath('deployments.0.title', __('ops.jobs.deployment').' · Meyyit')
             ->assertJsonPath('deployments.0.status', 'cancelled')
             ->assertJsonPath('deployments.0.progress', 100)
             ->assertJsonPath('deployments.0.actions.dismiss', true)
             ->assertJsonPath('deployments.0.actions.cancel', false);
+    }
+
+    public function test_deployment_widget_row_names_kind_site_and_status(): void
+    {
+        $site = Site::factory()->create(['name' => 'beyazlar']);
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Queued,
+            'trigger' => DeploymentTrigger::Manual,
+            'coolify_deployment_uuid' => 'dep-label-1',
+        ]);
+
+        $row = ($deployment->fresh(['site']) ?? $deployment)->toWidget();
+
+        $this->assertSame(__('ops.jobs.deployment').' · beyazlar', $row['title']);
+        $this->assertSame(__('ops.jobs.deployment'), $row['kind_label']);
+        $this->assertSame('beyazlar', $row['subject']);
+        $this->assertSame(__('ops.deploy_trigger.manual'), $row['detail']);
+        $this->assertSame(__('ops.deploy_status.queued'), $row['status_label']);
+        $this->assertSame(
+            __('ops.deploy_trigger.manual').' · '.__('ops.deploy_status.queued'),
+            $row['message'],
+        );
+    }
+
+    public function test_jobs_index_labels_background_job_with_kind_and_subject(): void
+    {
+        $operator = $this->operator();
+        OpsBackgroundJob::query()->create([
+            'type' => 'sites.live_sync',
+            'title' => 'Live Sync',
+            'status' => 'running',
+            'progress' => 40,
+            'message' => '2/5',
+            'payload' => ['site_ids' => ['site-1'], 'subject' => 'beyazlar'],
+            'actor_user_id' => $operator->id,
+        ]);
+
+        $this->actingAs($operator)
+            ->getJson(route('ops.jobs'))
+            ->assertOk()
+            ->assertJsonPath('jobs.0.title', __('ops.jobs.live_sync').' · beyazlar')
+            ->assertJsonPath('jobs.0.kind_label', __('ops.jobs.live_sync'))
+            ->assertJsonPath('jobs.0.detail', '2/5')
+            ->assertJsonPath('jobs.0.status_label', __('ops.jobs.status.running'));
+    }
+
+    public function test_background_job_without_subject_falls_back_to_site_count(): void
+    {
+        $job = OpsBackgroundJob::query()->create([
+            'type' => 'sites.bulk_app_health_fix',
+            'title' => 'App',
+            'status' => 'queued',
+            'progress' => 0,
+            'payload' => ['site_ids' => ['a', 'b', 'c']],
+        ]);
+
+        $this->assertSame(
+            __('ops.jobs.bulk_app_health_fix').' · '.trans_choice('ops.jobs.subject_sites', 3, ['count' => 3]),
+            $job->toWidget()['title'],
+        );
     }
 
     public function test_jobs_index_includes_coolify_queue_for_deamon_sites_only(): void

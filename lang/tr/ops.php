@@ -170,6 +170,8 @@ return [
         'bulk_pin' => 'Commit pin',
         'bulk_app_health_fix' => 'App hatalarını düzelt',
         'deployment' => 'Coolify deploy',
+        'source_coolify' => 'Coolify kuyruğu',
+        'subject_sites' => ':count site',
         'dismiss' => 'Kaldır',
         'stop' => 'Deploy’u durdur',
         'force_start' => 'Zorla başlat',

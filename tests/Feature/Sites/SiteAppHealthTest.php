@@ -150,7 +150,7 @@ class SiteAppHealthTest extends TestCase
         $this->actingAs($this->operator())
             ->getJson(route('ops.jobs'))
             ->assertOk()
-            ->assertJsonPath('deployments.0.title', 'Widget Site')
+            ->assertJsonPath('deployments.0.title', __('ops.jobs.deployment').' · Widget Site')
             ->assertJsonPath('deployments.0.status', 'running')
             ->assertJsonPath('deployments.0.indeterminate', true);
     }

@@ -139,6 +139,7 @@ class SiteCoolifyOpsController extends Controller
         if ($request->expectsJson()) {
             return $this->queueOpsJob($request, 'sites.coolify_sync', __('ops.jobs.coolify_sync'), [
                 'site_ids' => [$site->id],
+                'subject' => $site->name,
             ]);
         }
 
@@ -217,6 +218,7 @@ class SiteCoolifyOpsController extends Controller
         if ($request->expectsJson()) {
             return $this->queueOpsJob($request, 'sites.live_sync', __('ops.jobs.live_sync'), [
                 'site_ids' => [$site->id],
+                'subject' => $site->name,
             ]);
         }
 

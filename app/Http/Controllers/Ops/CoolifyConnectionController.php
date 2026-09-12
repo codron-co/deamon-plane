@@ -194,6 +194,7 @@ class CoolifyConnectionController extends Controller
         if ($request->expectsJson()) {
             return $this->queueOpsJob($request, 'coolify.inventory_sync', __('ops.jobs.inventory_sync'), [
                 'connection_id' => $connection->id,
+                'subject' => $connection->name,
             ]);
         }
 
