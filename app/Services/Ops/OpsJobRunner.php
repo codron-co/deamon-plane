@@ -3,6 +3,7 @@
 namespace App\Services\Ops;
 
 use App\Enums\Channel;
+use App\Enums\CmsPublishStatus;
 use App\Models\CoolifyConnection;
 use App\Models\OpsBackgroundJob;
 use App\Models\Site;
@@ -17,6 +18,7 @@ use App\Services\Sites\CoolifyDeploySettings;
 use App\Services\Sites\SiteAppHealthFixer;
 use App\Services\Sites\SiteAppHealthReport;
 use App\Services\Sites\SiteLiveProbe;
+use App\Services\Sites\SitePublishStateUpdater;
 use App\Services\Themes\ThemeCatalogSync;
 use Illuminate\Support\Collection;
 use RuntimeException;
@@ -37,6 +39,7 @@ class OpsJobRunner
             'sites.bulk_follow_head' => $this->bulkFollowHead($job),
             'sites.bulk_pin' => $this->bulkPin($job),
             'sites.bulk_app_health_fix' => $this->bulkAppHealthFix($job),
+            'sites.bulk_publish_status' => $this->bulkPublishStatus($job),
             default => throw new RuntimeException('Unknown ops job type.'),
         };
     }
@@ -212,6 +215,35 @@ class OpsJobRunner
         $result = $this->fanout($job, $sites, fn (Site $site) => $settings->pin($site, $ref, $actor, $ip));
 
         return $this->summaryFor(__('site_ops.pin.bulk'), $result);
+    }
+
+    private function bulkPublishStatus(OpsBackgroundJob $job): string
+    {
+        $target = CmsPublishStatus::from((string) ($job->payload['publish_status'] ?? ''));
+        $sites = $this->sites($job)->filter(fn (Site $site): bool => $site->canChangePublishStatus());
+        $updater = app(SitePublishStateUpdater::class);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
+
+        $rows = [];
+        $result = $this->fanout($job, $sites, function (Site $site) use ($updater, $target, $actor, $ip, &$rows): void {
+            $applied = $updater->apply($site, $target, $actor, $ip);
+            $rows[] = [
+                'id' => $site->id,
+                'publish_label' => $applied->label(),
+                'publish_tone' => $applied->tone(),
+            ];
+        });
+
+        $job->result = ['sites' => $rows];
+        $job->save();
+
+        return $this->summaryFor(
+            $target === CmsPublishStatus::Published
+                ? __('sites.publish.flash.bulk_published')
+                : __('sites.publish.flash.bulk_unpublished'),
+            $result,
+        );
     }
 
     private function bulkAppHealthFix(OpsBackgroundJob $job): string

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Channel;
+use App\Enums\CmsPublishStatus;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
@@ -38,6 +39,8 @@ class Site extends Model
         'channel',
         'desired_channel',
         'status',
+        'cms_site_status',
+        'cms_site_status_at',
         'coolify_app_uuid',
         'coolify_connection_id',
         'coolify_server_uuid',
@@ -94,6 +97,8 @@ class Site extends Model
             'coolify_git_source_kind' => CoolifyGitSourceKind::class,
             'channel_needs_review' => 'boolean',
             'status' => SiteStatus::class,
+            'cms_site_status' => CmsPublishStatus::class,
+            'cms_site_status_at' => 'datetime',
             'app_key_encrypted' => 'encrypted',
             'agent_secret_encrypted' => 'encrypted',
             'last_health_at' => 'datetime',
@@ -494,6 +499,35 @@ class Site extends Model
         return 'unhealthy';
     }
 
+    /**
+     * CMS publish state, or null when the agent has never reported one.
+     */
+    public function publishStatus(): ?CmsPublishStatus
+    {
+        return $this->cms_site_status instanceof CmsPublishStatus
+            ? $this->cms_site_status
+            : CmsPublishStatus::tryFrom((string) $this->cms_site_status);
+    }
+
+    public function publishLabel(): string
+    {
+        return $this->publishStatus()?->label() ?? __('sites.publish.states.unknown');
+    }
+
+    public function publishTone(): string
+    {
+        return $this->publishStatus()?->tone() ?? 'unknown';
+    }
+
+    /**
+     * Publish state can only be changed through the signed agent, so a site with
+     * no secret has no write path — the operator has to inject one first.
+     */
+    public function canChangePublishStatus(): bool
+    {
+        return $this->hasAgentSecret() && $this->resolvedAgentBaseUrl() !== null;
+    }
+
     public function reportedDeamonVersion(): ?string
     {
         $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
@@ -571,11 +605,12 @@ class Site extends Model
      * @param  Builder<Site>  $query
      * @return Builder<Site>
      */
-    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = ''): Builder
+    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = '', string $publish = ''): Builder
     {
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
         $status = in_array($status, SiteStatus::values(), true) ? $status : '';
+        $publish = in_array($publish, [...CmsPublishStatus::values(), 'unknown'], true) ? $publish : '';
 
         if ($search !== '') {
             $term = addcslashes($search, '%_\\');
@@ -592,6 +627,12 @@ class Site extends Model
 
         if ($status !== '') {
             $query->where('status', $status);
+        }
+
+        if ($publish === 'unknown') {
+            $query->whereNull('cms_site_status');
+        } elseif ($publish !== '') {
+            $query->where('cms_site_status', $publish);
         }
 
         return $query;

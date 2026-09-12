@@ -13,12 +13,13 @@ use App\Services\Agent\AdminAgentResult;
 use App\Services\Agent\SiteAgentClient;
 use App\Services\Agent\SiteHealthEvaluator;
 use App\Services\Cloudflare\CloudflareAccounts;
-use App\Services\Mail\PlatformMailConfigurer;
+use App\Services\Coolify\CoolifyDeploymentSync;
 use App\Services\Mail\PlatformMailResolver;
 use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\SiteMailOrderBinder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+
 class SiteDetailController extends Controller
 {
     use LoadsSiteOpsContext;
@@ -34,7 +35,7 @@ class SiteDetailController extends Controller
         $this->authorize('view', $site);
 
         try {
-            app(\App\Services\Coolify\CoolifyDeploymentSync::class)->recoverSiteIfLatestFinished($site);
+            app(CoolifyDeploymentSync::class)->recoverSiteIfLatestFinished($site);
             $site->refresh();
         } catch (\Throwable) {
             // Stale Error chip must not break the detail page.
@@ -68,6 +69,7 @@ class SiteDetailController extends Controller
                 && $site->canSwitchChannel(),
             'canForceChannel' => $user?->hasRole(OpsRole::SuperAdmin->value) ?? false,
             'canCheckHealth' => $user?->can('checkHealth', $site) ?? false,
+            'canChangePublishStatus' => $user?->can('update', $site) ?? false,
             'canInjectAgentSecret' => ($user?->can('update', $site) ?? false)
                 && filled($site->coolify_app_uuid),
             'canSyncCoolify' => ($user?->can('update', $site) ?? false)

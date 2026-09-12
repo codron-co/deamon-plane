@@ -27,6 +27,7 @@ class User extends Authenticatable
         'locale',
         'appearance',
         'avatar_path',
+        'list_preferences',
     ];
 
     /**
@@ -46,7 +47,35 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'appearance' => Appearance::class,
+            'list_preferences' => 'array',
         ];
+    }
+
+    /**
+     * Stored table layout for one ops list (visible columns + sort).
+     *
+     * @return array<string, mixed>
+     */
+    public function listPreference(string $list): array
+    {
+        $all = is_array($this->list_preferences) ? $this->list_preferences : [];
+        $row = $all[$list] ?? null;
+
+        return is_array($row) ? $row : [];
+    }
+
+    /**
+     * Merges into the stored row so saving a sort does not wipe the columns.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function saveListPreference(string $list, array $values): void
+    {
+        $all = is_array($this->list_preferences) ? $this->list_preferences : [];
+        $all[$list] = array_merge($this->listPreference($list), $values);
+
+        $this->list_preferences = $all;
+        $this->save();
     }
 
     public function initials(): string

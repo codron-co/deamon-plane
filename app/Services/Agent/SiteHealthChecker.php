@@ -2,6 +2,7 @@
 
 namespace App\Services\Agent;
 
+use App\Enums\CmsPublishStatus;
 use App\Models\Site;
 use App\Services\Mail\SiteHealthMailNotifier;
 
@@ -16,8 +17,20 @@ class SiteHealthChecker
     {
         $result = $this->client->health($site);
 
+        $summary = $this->sanitizedSummary($site, $result->summary);
+
         $site->last_health_at = now();
-        $site->last_health_payload = $this->sanitizedSummary($site, $result->summary);
+        $site->last_health_payload = $summary;
+
+        // Mirror the CMS publish state so the sites list can sort/filter on a real
+        // column. A poll that could not reach the CMS says nothing about publish
+        // state, so it must not clear a value we already know.
+        if ($result->ok || array_key_exists('site_status', $summary)) {
+            $reported = CmsPublishStatus::tryFrom((string) ($summary['site_status'] ?? ''));
+            $site->cms_site_status = $reported;
+            $site->cms_site_status_at = $reported === null ? null : now();
+        }
+
         $site->save();
 
         $this->mailNotifier->afterHealthCheck($site->fresh() ?? $site, $result);

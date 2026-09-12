@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Ops;
 
+use App\Enums\CmsPublishStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class BulkSiteIdsRequest extends FormRequest
+class BulkSitePublishStatusRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -17,14 +19,11 @@ class BulkSiteIdsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'site_ids' => ['required_without_all:all_dockerfile,all', 'array'],
+            'publish_status' => ['required', 'string', Rule::in(CmsPublishStatus::values())],
+            'site_ids' => ['required_without:all', 'array'],
             'site_ids.*' => ['required', 'ulid'],
-            'all_dockerfile' => ['sometimes', 'boolean'],
             'all' => ['sometimes', 'boolean'],
-            'enabled' => ['sometimes', 'boolean'],
-            'channel' => ['sometimes', 'string', 'in:'.implode(',', config('ops.channels', []))],
             'confirmed' => ['sometimes', 'boolean'],
-            'force' => ['sometimes', 'boolean'],
             'filter_q' => ['sometimes', 'nullable', 'string', 'max:120'],
             'filter_channel' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_status' => ['sometimes', 'nullable', 'string', 'max:32'],

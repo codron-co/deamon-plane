@@ -336,6 +336,62 @@ td.ops-row-actions .ops-action-menu {
     margin: 0;
 }
 
+.ops-columns-popover {
+    min-width: 15rem;
+}
+
+.ops-columns-list {
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+}
+
+.ops-columns-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 4px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.ops-columns-option:hover {
+    background: var(--surface-hover, rgba(127, 127, 127, 0.08));
+}
+
+.ops-columns-option.is-locked {
+    cursor: default;
+    color: var(--text-muted);
+}
+
+.ops-columns-option input[type="checkbox"] {
+    flex-shrink: 0;
+}
+
+.ops-columns-locked {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.ops-menu-hint {
+    margin: 0 0 8px;
+    padding: 0 6px;
+    color: var(--text-faint);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.ops-columns-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 6px 2px;
+}
+
 .ops-action-sep {
     height: 1px;
     margin: 5px 6px;
