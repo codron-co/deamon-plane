@@ -28,6 +28,7 @@ class User extends Authenticatable
         'appearance',
         'avatar_path',
         'list_preferences',
+        'mail_notification_opt_outs',
     ];
 
     /**
@@ -48,7 +49,24 @@ class User extends Authenticatable
             'password' => 'hashed',
             'appearance' => Appearance::class,
             'list_preferences' => 'array',
+            'mail_notification_opt_outs' => 'array',
         ];
+    }
+
+    public function hasMailOptOut(string $key): bool
+    {
+        $optOuts = is_array($this->mail_notification_opt_outs) ? $this->mail_notification_opt_outs : [];
+
+        return (bool) ($optOuts[$key] ?? false);
+    }
+
+    public function optOutMail(string $key): void
+    {
+        $optOuts = is_array($this->mail_notification_opt_outs) ? $this->mail_notification_opt_outs : [];
+        $optOuts[$key] = true;
+
+        $this->mail_notification_opt_outs = $optOuts;
+        $this->save();
     }
 
     /**

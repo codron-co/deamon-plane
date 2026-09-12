@@ -4,9 +4,17 @@ use App\Http\Controllers\Ops\AccountController;
 use App\Http\Controllers\Ops\FleetController;
 use App\Http\Controllers\Ops\GithubSettingsController;
 use App\Http\Controllers\Ops\OpsJobController;
+use App\Http\Controllers\Ops\PlatformMailUnsubscribeController;
 use App\Http\Controllers\Ops\PreferencesController;
 use App\Http\Controllers\Ops\SettingsController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/platform-mail/unsubscribe', [PlatformMailUnsubscribeController::class, 'show'])
+    ->middleware('signed')
+    ->name('ops.platform-mail.unsubscribe');
+Route::post('/platform-mail/unsubscribe', [PlatformMailUnsubscribeController::class, 'show'])
+    ->middleware('signed')
+    ->name('ops.platform-mail.unsubscribe.post');
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');

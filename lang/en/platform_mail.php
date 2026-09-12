@@ -56,4 +56,10 @@ return [
         'not_ready' => 'Enable software mail and fill host, username, password, and from address first.',
         'no_recipient' => 'Enter a test recipient or set the default recipient above.',
     ],
+    'unsubscribe' => [
+        'title' => 'Email preference updated',
+        'done' => 'You will no longer receive this type of Plane operations notification.',
+        'footer' => 'You are receiving this operations notification as a Plane user.',
+        'link' => 'Unsubscribe from this notification type',
+    ],
 ];

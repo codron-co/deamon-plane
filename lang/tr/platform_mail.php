@@ -56,4 +56,10 @@ return [
         'not_ready' => 'Önce yazılım e-postasını etkinleştirin; host, kullanıcı, şifre ve gönderen adresini doldurun.',
         'no_recipient' => 'Test alıcısı girin veya yukarıda varsayılan alıcıyı ayarlayın.',
     ],
+    'unsubscribe' => [
+        'title' => 'E-posta tercihi güncellendi',
+        'done' => 'Artık bu tür Plane operasyon bildirimlerini almayacaksınız.',
+        'footer' => 'Bu operasyon bildirimini bir Plane kullanıcısı olduğunuz için alıyorsunuz.',
+        'link' => 'Bu bildirim türünden ayrıl',
+    ],
 ];
