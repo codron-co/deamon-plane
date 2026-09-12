@@ -6,6 +6,7 @@ return [
     'search' => 'Domain ara',
     'filter_unbound' => 'Yalnızca bağlı olmayan',
     'clear' => 'Filtreleri temizle',
+    'pagination' => 'Domain sayfalama',
     'columns' => [
         'domain' => 'Domain',
         'site' => 'Site',

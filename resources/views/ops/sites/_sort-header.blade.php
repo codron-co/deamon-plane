@@ -14,6 +14,7 @@
         <a
             class="ops-sort-link @if ($active) is-sorted is-{{ $direction }} @endif"
             href="{{ request()->fullUrlWithQuery(['sort' => $column, 'dir' => $listView->nextDirectionFor($column), 'page' => null]) }}"
+            data-ops-list-focus="sort:{{ $column }}"
             aria-label="{{ $active
                 ? __('sites.sort.active', ['column' => $label, 'direction' => __('sites.sort.'.$direction)])
                 : __('sites.sort.by', ['column' => $label]) }}"

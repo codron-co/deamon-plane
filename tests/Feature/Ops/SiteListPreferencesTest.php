@@ -7,6 +7,7 @@ use App\Enums\CmsPublishStatus;
 use App\Enums\OpsRole;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\Lists\ListFragment;
 use App\Support\Lists\SiteListColumns;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,6 +68,67 @@ class SiteListPreferencesTest extends TestCase
         $this->assertStringContainsString('sort=updated', $html);
         $this->assertStringNotContainsString('sort=live', $html);
         $this->assertStringNotContainsString('sort=channel', $html);
+    }
+
+    public function test_saving_over_ajax_returns_the_stored_layout_so_the_table_can_refresh(): void
+    {
+        $user = $this->user(OpsRole::Operator);
+
+        // The picker posts over fetch: without the saved layout in the response the
+        // table and the checkboxes would only agree again after a reload.
+        $this->actingAs($user)
+            ->postJson(route('ops.sites.list-preferences'), [
+                'columns' => ['site', 'publish', 'updated'],
+            ])
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'message' => __('sites.columns_picker.saved'),
+                'list' => SiteListColumns::LIST_KEY,
+                'columns' => ['site', 'publish', 'updated'],
+                'refresh_list' => true,
+            ]);
+
+        $this->assertSame(
+            ['site', 'publish', 'updated'],
+            $user->fresh()->listPreference(SiteListColumns::LIST_KEY)['columns'],
+        );
+    }
+
+    public function test_resetting_over_ajax_returns_the_default_layout(): void
+    {
+        $user = $this->user(OpsRole::Operator);
+        $user->saveListPreference(SiteListColumns::LIST_KEY, ['columns' => ['site']]);
+
+        $this->actingAs($user)
+            ->deleteJson(route('ops.sites.list-preferences.reset'))
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'message' => __('sites.columns_picker.reset_done'),
+                'columns' => SiteListColumns::defaults(),
+                'refresh_list' => true,
+            ]);
+    }
+
+    public function test_a_saved_layout_shows_up_in_the_table_region_alone(): void
+    {
+        Site::factory()->create();
+        $user = $this->user(OpsRole::Operator);
+
+        $this->actingAs($user)
+            ->postJson(route('ops.sites.list-preferences'), ['columns' => ['site', 'updated']])
+            ->assertOk();
+
+        // This is the round trip the picker performs after saving.
+        $html = $this->actingAs($user->fresh())
+            ->withHeader(ListFragment::HEADER, ListFragment::VALUE)
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('sort=updated', $html);
+        $this->assertStringNotContainsString('sort=live', $html);
     }
 
     public function test_unknown_columns_are_dropped_and_an_empty_pick_falls_back_to_defaults(): void

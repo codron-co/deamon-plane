@@ -38,10 +38,12 @@ use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLifecycleException;
 use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
+use App\Support\Lists\ListFragment;
 use App\Support\Lists\SiteListView;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -50,7 +52,7 @@ class SiteController extends Controller
 {
     use LoadsSiteOpsContext;
 
-    public function index(Request $request): View
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Site::class);
 
@@ -80,7 +82,7 @@ class SiteController extends Controller
             ->unique(fn (Deployment $deployment): string => (string) $deployment->commit_sha)
             ->values();
 
-        return view('ops.sites.index', [
+        return ListFragment::respond($request, 'ops.sites.index', 'ops.sites._region', [
             'sites' => $sites,
             'search' => $search,
             'channel' => $channel,

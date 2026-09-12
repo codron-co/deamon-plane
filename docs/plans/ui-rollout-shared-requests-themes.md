@@ -13,7 +13,7 @@ Screen owners: Themes index, Theme show/detail. Site assignment UI stays on `res
 
 - **Extract detail tabs** — Theme show inlines the same tab script as Site detail, on `[data-ops-tabs]` / `[data-ops-panel]`. Move it to `public/js/ops-ui.js` and point Site detail at the same primitive. Do not keep a second copy per screen.
 - **Rename Site primitives to `ops-*`** — Theme detail reuses `.site-hero`, `.site-section-nav`, `.site-hint`, `.site-metric-grid`, `.site-card`, `.site-fact-list`, `.site-next-action`, `.site-technical-card`. These are now used by two screens; aliases or a rename belong in orchestrator-owned `ops-ui.css`.
-- **List toolbar auto-submit** — Themes index duplicates the Sites toolbar debounce (`[data-ops-list-toolbar]` + `[data-ops-list-filter]`). Lift that into `ops-ui.js` and stop shipping `ops-sites-list.js` as the only copy.
+- ~~**List toolbar auto-submit**~~ — done: the debounce and filter binding live in `ops-ui.js`, the async swap in `ops-list.js`, and `ops-sites-list.js` is gone. See [async list regions](../modules/ops-list-async.md).
 - **Catalog sync error on the row** — Index can only show `last_synced_at` / never. There is no per-theme catalog sync error column. If operators need failed GitHub fetches on the scan table, add a stored field or `withCount` of `status=error` installations in `ThemeController@index` (out of this agent’s edit set).
 
 ## Intentionally not requested
