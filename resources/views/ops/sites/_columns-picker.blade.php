@@ -3,7 +3,7 @@
     $catalog = \App\Support\Lists\SiteListColumns::keys();
 @endphp
 
-<details class="ops-action-menu ops-columns-picker" data-ops-action-menu>
+<details class="ops-action-menu ops-columns-picker" data-ops-action-menu data-ops-columns-picker>
     <summary class="btn btn-secondary btn-sm">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4">
             <rect x="2.25" y="2.75" width="11.5" height="10.5" rx="1.5"/>
@@ -12,7 +12,8 @@
         {{ __('sites.columns_picker.trigger') }}
     </summary>
     <div class="ops-action-popover ops-columns-popover" role="menu">
-        <form method="POST" action="{{ route('ops.sites.list-preferences') }}" data-ops-pending>
+        {{-- data-ops-list-refresh: the saved layout only shows up once the table region is re-rendered. --}}
+        <form method="POST" action="{{ route('ops.sites.list-preferences') }}" data-ops-pending data-ops-list-refresh>
             @csrf
             <p class="ops-menu-label">{{ __('sites.columns_picker.title') }}</p>
             <ul class="ops-columns-list">
@@ -45,7 +46,7 @@
             </div>
         </form>
         <div class="ops-action-sep" role="separator"></div>
-        <form method="POST" action="{{ route('ops.sites.list-preferences.reset') }}" data-ops-pending>
+        <form method="POST" action="{{ route('ops.sites.list-preferences.reset') }}" data-ops-pending data-ops-list-refresh>
             @csrf
             @method('DELETE')
             <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">

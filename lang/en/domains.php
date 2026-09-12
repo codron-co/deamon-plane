@@ -6,6 +6,7 @@ return [
     'search' => 'Search domains',
     'filter_unbound' => 'Unbound only',
     'clear' => 'Clear filters',
+    'pagination' => 'Domains pagination',
     'columns' => [
         'domain' => 'Domain',
         'site' => 'Site',

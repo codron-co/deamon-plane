@@ -111,21 +111,46 @@
         popover.style.bottom = Math.max(8, window.innerHeight - rect.top + 8) + "px";
     }
 
-    function setupActionMenus() {
-        const menus = Array.from(document.querySelectorAll("[data-ops-action-menu]"));
-        if (!menus.length) {
-            return;
+    // Kept at module scope so menus rendered later — a swapped list region, for
+    // instance — join the same outside-click and Escape handling.
+    const actionMenus = [];
+    let actionMenuKeysBound = false;
+
+    function scopeOf(scope) {
+        return scope instanceof Element || scope instanceof DocumentFragment ? scope : document;
+    }
+
+    function findIn(scope, selector) {
+        const root = scopeOf(scope);
+        const found = Array.prototype.slice.call(root.querySelectorAll(selector));
+        if (root instanceof Element && root.matches(selector)) {
+            found.unshift(root);
+        }
+        return found;
+    }
+
+    function closeActionMenus(except) {
+        actionMenus.forEach(function (menu) {
+            if (menu !== except && menu.open) {
+                menu.removeAttribute("open");
+            }
+        });
+    }
+
+    function setupActionMenus(scope) {
+        for (let index = actionMenus.length - 1; index >= 0; index -= 1) {
+            if (!actionMenus[index].isConnected) {
+                actionMenus.splice(index, 1);
+            }
         }
 
-        function closeAll(except) {
-            menus.forEach(function (menu) {
-                if (menu !== except && menu.open) {
-                    menu.removeAttribute("open");
-                }
-            });
-        }
+        findIn(scope, "[data-ops-action-menu]").forEach(function (menu) {
+            if (menu.dataset.opsMenuEnhanced === "true") {
+                return;
+            }
+            menu.dataset.opsMenuEnhanced = "true";
+            actionMenus.push(menu);
 
-        menus.forEach(function (menu) {
             const summary = menu.querySelector("summary");
             if (summary) {
                 summary.setAttribute("aria-haspopup", "menu");
@@ -139,7 +164,7 @@
                 if (!menu.open) {
                     return;
                 }
-                closeAll(menu);
+                closeActionMenus(menu);
                 const userMenu = document.querySelector("[data-user-menu]");
                 if (userMenu) {
                     userMenu.removeAttribute("open");
@@ -147,18 +172,23 @@
             });
         });
 
+        if (actionMenuKeysBound) {
+            return;
+        }
+        actionMenuKeysBound = true;
+
         document.addEventListener("click", function (event) {
             if (event.target.closest("[data-ops-action-menu]")) {
                 return;
             }
-            closeAll(null);
+            closeActionMenus(null);
         });
 
         document.addEventListener("keydown", function (event) {
             if (event.key !== "Escape") {
                 return;
             }
-            const openMenu = menus.find(function (menu) {
+            const openMenu = actionMenus.find(function (menu) {
                 return menu.open;
             });
             if (!openMenu) {
@@ -834,8 +864,8 @@
         });
     }
 
-    function setupListToolbars() {
-        document.querySelectorAll("[data-ops-list-toolbar]").forEach(function (form) {
+    function setupListToolbars(scope) {
+        findIn(scope, "[data-ops-list-toolbar]").forEach(function (form) {
             if (!(form instanceof HTMLFormElement) || form.dataset.enhanced === "true") {
                 return;
             }
@@ -853,8 +883,12 @@
                 });
             }
 
-            form.querySelectorAll("select[data-ops-list-filter]").forEach(function (select) {
-                select.addEventListener("change", function () {
+            // Selects and checkboxes alike: a filter the operator changed applies at once.
+            form.querySelectorAll("[data-ops-list-filter]").forEach(function (control) {
+                control.addEventListener("change", function () {
+                    if (form.dataset.opsListSyncing === "1") {
+                        return;
+                    }
                     form.requestSubmit();
                 });
             });
@@ -905,8 +939,8 @@
         tryAt(0);
     }
 
-    function setupFaviconMarks() {
-        document.querySelectorAll("[data-favicon-host]").forEach(function (mark) {
+    function setupFaviconMarks(scope) {
+        findIn(scope, "[data-favicon-host]").forEach(function (mark) {
             loadFaviconMark(mark);
         });
         window.PlaneFavicon = {
@@ -918,8 +952,8 @@
         };
     }
 
-    function setupBulkSelection() {
-        document.querySelectorAll("[data-ops-bulk]").forEach(function (form) {
+    function setupBulkSelection(scope) {
+        findIn(scope, "[data-ops-bulk]").forEach(function (form) {
             if (!(form instanceof HTMLFormElement) || form.dataset.bulkEnhanced === "true") {
                 return;
             }
@@ -977,13 +1011,17 @@
         });
     }
 
-    function setupHints() {
-        const hints = Array.prototype.slice.call(document.querySelectorAll(".ops-hint, .site-hint"));
-        if (!hints.length) {
-            return;
-        }
+    let openHint = null;
+    let hintViewportBound = false;
 
-        let openHint = null;
+    function setupHints(scope) {
+        const hints = findIn(scope, ".ops-hint, .site-hint").filter(function (hint) {
+            return hint.dataset.opsHintEnhanced !== "true";
+        });
+
+        if (openHint && !openHint.isConnected) {
+            openHint = null;
+        }
 
         const clearHint = function (hint) {
             if (!hint) {
@@ -1036,6 +1074,7 @@
         };
 
         hints.forEach(function (hint) {
+            hint.dataset.opsHintEnhanced = "true";
             hint.addEventListener("mouseenter", function () {
                 placeHint(hint);
             });
@@ -1058,6 +1097,15 @@
             });
         });
 
+        if (hints.length) {
+            document.documentElement.classList.add("ops-hints-ready");
+        }
+
+        if (hintViewportBound) {
+            return;
+        }
+        hintViewportBound = true;
+
         window.addEventListener(
             "scroll",
             function () {
@@ -1072,8 +1120,6 @@
                 placeHint(openHint);
             }
         });
-
-        document.documentElement.classList.add("ops-hints-ready");
     }
 
     setupThemeControls();
@@ -1090,6 +1136,23 @@
     setupBulkSelection();
     setupHints();
     setupMailBindings();
+
+    /**
+     * Re-arm the primitives that bind per element after markup is replaced, so a
+     * freshly fetched list region behaves exactly like a server-rendered one.
+     * Delegated behavior (row clicks, confirmations, pending buttons, selects)
+     * already survives on its own.
+     */
+    window.PlaneUI = Object.assign(window.PlaneUI || {}, {
+        refresh: function (scope) {
+            const root = scopeOf(scope);
+            setupActionMenus(root);
+            setupListToolbars(root);
+            setupFaviconMarks(root);
+            setupBulkSelection(root);
+            setupHints(root);
+        },
+    });
 
     function setupMailBindings() {
         document.querySelectorAll("[data-mail-bindings]").forEach(function (root) {

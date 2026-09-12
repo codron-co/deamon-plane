@@ -1081,6 +1081,23 @@ button.status-chip {
     margin-top: 14px;
 }
 
+/* Async list region: the old rows stay readable while the new ones are fetched. */
+.ops-list-region {
+    position: relative;
+}
+
+.ops-list-region.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ops-list-region.is-loading {
+        transition: none;
+    }
+}
+
 .ops-page-meta {
     color: var(--text-faint);
     font-size: 12px;

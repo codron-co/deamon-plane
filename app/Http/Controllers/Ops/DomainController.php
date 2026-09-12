@@ -11,13 +11,14 @@ use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteProvisionException;
+use App\Support\Lists\ListFragment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Http\Response;
 
 class DomainController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Site::class);
 
@@ -33,7 +34,7 @@ class DomainController extends Controller
             $query->whereNull('verified_at')->where('is_temporary', false);
         }
 
-        return view('ops.domains.index', [
+        return ListFragment::respond($request, 'ops.domains.index', 'ops.domains._region', [
             'domains' => $query->paginate(50)->withQueryString(),
             'search' => $search,
             'unbound' => $unbound,

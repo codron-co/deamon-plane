@@ -228,6 +228,7 @@
     <script src="{{ asset('js/ops-ui.js') }}?v={{ filemtime(public_path('js/ops-ui.js')) }}" defer></script>
     <script src="{{ asset('js/ops-jobs.js') }}?v={{ filemtime(public_path('js/ops-jobs.js')) }}" defer></script>
     <script src="{{ asset('js/ops-async.js') }}?v={{ filemtime(public_path('js/ops-async.js')) }}" defer></script>
+    <script src="{{ asset('js/ops-list.js') }}?v={{ filemtime(public_path('js/ops-list.js')) }}" defer></script>
     <script src="{{ asset('js/ops-app-health.js') }}?v={{ filemtime(public_path('js/ops-app-health.js')) }}" defer></script>
     @yield('scripts')
 </body>

@@ -14,17 +14,19 @@ use App\Models\ThemeGitConnection;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
 use App\Services\Themes\ThemeCatalogSync;
+use App\Support\Lists\ListFragment;
 use App\Support\PublicAppUrl;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ThemeController extends Controller
 {
     use QueuesOpsJob;
 
-    public function index(Request $request): View
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Theme::class);
 
@@ -56,7 +58,7 @@ class ThemeController extends Controller
             ->orderBy('account_login')
             ->get();
 
-        return view('ops.themes.index', [
+        return ListFragment::respond($request, 'ops.themes.index', 'ops.themes._region', [
             'themes' => $query->withCount(['installations', 'accessEntries'])->paginate(25)->withQueryString(),
             'search' => $search,
             'visibility' => $visibility,

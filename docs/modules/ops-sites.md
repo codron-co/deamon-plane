@@ -161,11 +161,14 @@ Writes go through the signed agent (`SitePublishStateUpdater` → `SiteAgentClie
 
 GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status` (lifecycle), `publish` (`published` \| `draft` \| `unknown`). Search input debounces a GET submit (300 ms). Bulk forms carry the active filters as `filter_q` / `filter_channel` / `filter_status` / `filter_publish` hidden inputs so `all=1` re-resolves the same set via `Site::matchingListFilters`.
 
+Search, filters, sort, pagination and the column layout update the table **in place** — see [async list regions](ops-list-async.md).
+
 ### Columns and sorting
 
 `SiteListColumns` is the catalog (key → i18n label + sortable SQL column + whether it is on by default). `SiteListView::resolve()` turns the request plus the operator's saved layout into the visible column list and the active sort.
 
 - **Column picker** (toolbar **Kolonlar**): checkboxes POST `columns[]`, stored per user in `users.list_preferences` JSON under the `sites` key — **in the database**, not `localStorage`, so the layout follows the operator to another browser. Reset is a `DELETE` on the same route. `site` is **locked** (disabled checkbox plus a hidden input, and `sanitize()` forces it back server-side); unknown keys are dropped and an empty pick falls back to defaults. Catalog order always wins over checkbox order.
+- Over fetch both routes answer `{ ok, message, list, columns, refresh_list }` instead of a redirect, so the picker re-checks its boxes and the table re-renders **without F5**. A plain POST still redirects back with a flash for the no-JS path.
 - Viewers may save their own layout — it is a personal view setting, not an ops write.
 - **Sorting** is real `<a>` headers carrying `?sort={key}&dir={asc|desc}` through `fullUrlWithQuery` with `page` dropped, so it works without JS, survives filters, and is shareable. `aria-sort` is on the `<th>`; the caret is decorative and never the only signal. Ties break on `name` so pagination stays stable. Unsortable columns (App, Theme) render a plain header.
 - The chosen sort is remembered in the same preferences row, so the next unqualified visit to `/sites` reopens the operator's last sort. A stored or default sort key on a column the operator has since **hidden** falls back to the default column *and* the default direction, so nobody gets stuck sorted by something invisible.
