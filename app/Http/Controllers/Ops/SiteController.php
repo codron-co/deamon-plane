@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Enums\Channel;
+use App\Enums\CmsPublishStatus;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
@@ -37,6 +38,7 @@ use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLifecycleException;
 use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
+use App\Support\Lists\SiteListView;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,18 +57,23 @@ class SiteController extends Controller
         $search = trim((string) $request->query('q', ''));
         $channel = (string) $request->query('channel', '');
         $status = (string) $request->query('status', '');
+        $publish = (string) $request->query('publish', '');
 
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
         $status = in_array($status, SiteStatus::values(), true) ? $status : '';
+        $publishFilters = [...CmsPublishStatus::values(), 'unknown'];
+        $publish = in_array($publish, $publishFilters, true) ? $publish : '';
+
+        $listView = SiteListView::resolve($request, $request->user());
+        $listView->rememberSort($request->user());
 
         $query = Site::query()
             ->with(['activeThemeInstallation.theme', 'latestDeployment'])
-            ->matchingListFilters($search, $channel, $status)
-            ->orderBy('name');
+            ->matchingListFilters($search, $channel, $status, $publish);
 
         $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
-        $sites = $query->paginate(25)->withQueryString();
+        $sites = $listView->applySort($query)->paginate(25)->withQueryString();
         $bulkPinCommits = $sites->getCollection()
             ->map(fn (Site $site) => $site->latestDeployment)
             ->filter(fn ($deployment): bool => $deployment instanceof Deployment && filled($deployment->commit_sha))
@@ -78,9 +85,12 @@ class SiteController extends Controller
             'search' => $search,
             'channel' => $channel,
             'status' => $status,
+            'publish' => $publish,
             'channels' => $allowedChannels,
             'statuses' => SiteStatus::values(),
-            'filtersActive' => $search !== '' || $channel !== '' || $status !== '',
+            'publishFilters' => $publishFilters,
+            'listView' => $listView,
+            'filtersActive' => $search !== '' || $channel !== '' || $status !== '' || $publish !== '',
             'hasDockerfileSites' => $hasDockerfileSites,
             'bulkPinCommits' => $bulkPinCommits,
             'canCreate' => $request->user()?->can('create', Site::class) ?? false,

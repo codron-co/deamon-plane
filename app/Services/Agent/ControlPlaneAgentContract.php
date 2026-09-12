@@ -14,11 +14,14 @@ namespace App\Services\Agent;
  */
 final class ControlPlaneAgentContract
 {
-    public const CMS_VERSION = '1.2.14';
+    public const CMS_VERSION = '1.2.16';
 
     public const BASE_PATH = '/internal/control/v1';
 
     public const HEALTH_PATH = '/internal/control/v1/health';
+
+    /** CMS 1.2.16+: sets the publish state (`draft` | `published`). */
+    public const SITE_STATUS_PATH = '/internal/control/v1/site/status';
 
     public const THEME_LIST_PATH = '/internal/control/v1/themes';
 
@@ -83,6 +86,11 @@ final class ControlPlaneAgentContract
     public static function healthPath(): string
     {
         return self::configuredPath('ops.agent.health_path', self::HEALTH_PATH);
+    }
+
+    public static function siteStatusPath(): string
+    {
+        return self::configuredPath('ops.agent.site_status_path', self::SITE_STATUS_PATH);
     }
 
     public static function themeListPath(): string

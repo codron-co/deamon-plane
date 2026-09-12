@@ -724,6 +724,78 @@ code {
     white-space: nowrap;
 }
 
+/* Sortable headers: real links, so sorting survives no-JS and stays shareable. */
+.ops-table th.ops-th-sortable {
+    padding: 0;
+}
+
+.ops-sort-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    padding: 10px 12px;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-decoration: none;
+    border-radius: 6px;
+}
+
+.ops-sort-link:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover, rgba(127, 127, 127, 0.08));
+}
+
+.ops-sort-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.ops-sort-link.is-sorted {
+    color: var(--text-primary);
+}
+
+.ops-sort-caret {
+    flex-shrink: 0;
+    opacity: 0.35;
+    transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.ops-sort-link:hover .ops-sort-caret {
+    opacity: 0.7;
+}
+
+.ops-sort-link.is-sorted .ops-sort-caret {
+    opacity: 1;
+}
+
+.ops-sort-link.is-desc .ops-sort-caret {
+    transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ops-sort-caret {
+        transition: none;
+    }
+}
+
+.ops-list-toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.ops-list-toolbar-row > .ops-list-toolbar {
+    flex: 1 1 320px;
+}
+
+.ops-list-toolbar-row > .ops-columns-picker {
+    margin-bottom: 16px;
+}
+
 .ops-table th .site-hint,
 .ops-table th .ops-hint,
 .ops-th-label .site-hint,

@@ -2,6 +2,7 @@
 
 namespace App\Services\Agent;
 
+use App\Enums\CmsPublishStatus;
 use App\Models\Site;
 use App\Support\ControlPlaneAgentSignature;
 use App\Support\RetryAfter;
@@ -140,6 +141,80 @@ class SiteAgentClient
         }
 
         return AgentHealthResult::fromCmsPayload($json, $response->status());
+    }
+
+    /**
+     * Sets the CMS publish state (`draft` | `published`). CMS 1.2.16+.
+     */
+    public function setSiteStatus(Site $site, CmsPublishStatus $status): SitePublishAgentResult
+    {
+        if (! $site->hasAgentSecret()) {
+            return SitePublishAgentResult::needsSecret();
+        }
+
+        $baseUrl = $site->resolvedAgentBaseUrl();
+        if ($baseUrl === null) {
+            return SitePublishAgentResult::failure((string) __('sites.publish.errors.no_base_url'));
+        }
+
+        $path = ControlPlaneAgentContract::siteStatusPath();
+        $body = ControlPlaneAgentContract::encodeJson(['status' => $status->value]);
+        if ($body === '') {
+            return SitePublishAgentResult::failure((string) __('sites.publish.errors.unreadable'));
+        }
+
+        $secret = (string) $site->agent_secret_encrypted;
+        $signed = ControlPlaneAgentSignature::headers($secret, $body);
+        $timeout = max(1, (int) config('ops.agent.timeout_seconds', 10));
+
+        try {
+            $response = $this->sendWithRetry(fn (): Response => Http::timeout($timeout)
+                ->acceptJson()
+                ->withHeaders($signed['headers'])
+                ->withBody($body, 'application/json')
+                ->post($baseUrl.$path));
+        } catch (ConnectionException) {
+            $this->logPublishFailure($site, 'timeout');
+
+            return SitePublishAgentResult::failure((string) __('sites.publish.errors.timeout'));
+        } catch (Throwable) {
+            $this->logPublishFailure($site, 'http_error');
+
+            return SitePublishAgentResult::failure((string) __('sites.publish.errors.request'));
+        }
+
+        if ($response->failed()) {
+            $json = $response->json();
+            $result = SitePublishAgentResult::fromCmsError(is_array($json) ? $json : null, $response->status());
+            $this->logPublishFailure($site, $result->errorCode ?? 'http_error', $response->status());
+
+            return $result;
+        }
+
+        $json = $response->json();
+        if (! is_array($json)) {
+            $this->logPublishFailure($site, 'http_error', $response->status());
+
+            return SitePublishAgentResult::failure((string) __('sites.publish.errors.unreadable'), $response->status());
+        }
+
+        if ($this->payloadContainsSecret($site, $json)) {
+            $this->logPublishFailure($site, 'secret_echo', $response->status());
+
+            return SitePublishAgentResult::failure((string) __('sites.publish.errors.unreadable'), $response->status());
+        }
+
+        return SitePublishAgentResult::fromCmsPayload($json, $response->status());
+    }
+
+    private function logPublishFailure(Site $site, string $reason, ?int $httpStatus = null): void
+    {
+        Log::warning('Site publish state agent call failed', [
+            'site_id' => $site->id,
+            'site_slug' => $site->slug,
+            'reason' => $reason,
+            'http_status' => $httpStatus,
+        ]);
     }
 
     public function listThemes(Site $site): ThemeAgentResult

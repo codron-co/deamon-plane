@@ -19,6 +19,10 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/domains` | `ops.sites.domains.store` | operator, super_admin; add extra host + www on the same apex |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
+| POST | `/sites/{site}/publish-status` | `ops.sites.publish-status` | operator, super_admin; CMS yayın durumu via signed agent |
+| POST | `/sites/bulk/publish-status` | `ops.sites.bulk.publish-status` | operator, super_admin; publish/unpublish selected or `all=1` |
+| POST | `/sites/list-preferences` | `ops.sites.list-preferences` | All ops roles; own column layout |
+| DELETE | `/sites/list-preferences` | `ops.sites.list-preferences.reset` | All ops roles; back to default columns + sort |
 | POST | `/sites/{site}/deploy` | `ops.sites.deploy` | operator, super_admin; Coolify `POST /deploy?force=true`; rebuilds the ref the app already points at, pin untouched |
 | POST | `/sites/{site}/pin` | `ops.sites.pin` | operator, super_admin; pin SHA + auto-deploy off + deploy |
 | POST | `/sites/{site}/follow-head` | `ops.sites.follow-head` | operator, super_admin; `git_commit_sha: HEAD` + auto-deploy on + deploy |
@@ -55,7 +59,7 @@ Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 
 Authenticated mutating forms in the ops shell submit over `fetch` (`Accept: application/json`). HTML POST still **redirects** (existing tests). JSON callers get `{ ok, message, type, redirect }` instead of following the 302 — `ConvertOpsAjaxRedirect` rewrites flash redirects and leaves existing `JsonResponse` (appearance/locale, site Cloudflare zone) alone. Navigate only when `redirect` pathname differs (create/destroy). Site Cloudflare zone create returns `{ ok, nameservers, zone_id, zone_status }` with no `redirect` so the detail page can show copyable NS without a reload.
 
-Slow syncs and list bulk work queue `ops_background_jobs` and return `{ ok, job }` immediately. `ProcessOpsBackgroundJob` runs `afterResponse()` (`dispatchSync` after the HTTP response) so Plane does not need a queue worker. Job types: `sites.live_sync`, `sites.coolify_sync`, `coolify.inventory_sync`, `themes.catalog_sync`, `sites.bulk_channel`, `sites.bulk_compose`, `sites.bulk_auto_deploy`, `sites.bulk_deploy`, `sites.bulk_follow_head`, `sites.bulk_pin`. Status is `GET /jobs` + `GET /jobs/{job}` (`ops.jobs`, `ops.jobs.show`) — writer only, own jobs. `DELETE /jobs/{job}` dismisses completed/failed own jobs. The bottom-right widget (`data-ops-jobs`, `ops-jobs.js`) polls ~1.5s and applies Live column/favicon from `result.sites` without reload. Coolify deployments (manual redeploy / pin / follow-head, plus provision and channel switch) appear in the same widget; **live Coolify queue** (`GET /deployments`) is merged for **Plane Deamon sites only** (matched by site name / app uuid; Plane itself and other apps are hidden). Hover actions: **X** dismisses finished rows or **cancels** queued/running Coolify deploys (`POST /deployments/{uuid}/cancel`); **play** force-starts a queued Deamon deploy (cancel queue row + `POST /applications/{uuid}/start?force=true&instant_deploy=true`). `PollDeploymentJob` keeps local `deployments.status` in sync (cancel → `cancelled` without flipping Active sites to Error for Manual/ThemeRollout). `GET /jobs` also refreshes stale open deployments from Coolify and re-kicks poll (~20s). Logout and `data-ops-native` / `data-pref-form` stay native.
+Slow syncs and list bulk work queue `ops_background_jobs` and return `{ ok, job }` immediately. `ProcessOpsBackgroundJob` runs `afterResponse()` (`dispatchSync` after the HTTP response) so Plane does not need a queue worker. Job types: `sites.live_sync`, `sites.coolify_sync`, `coolify.inventory_sync`, `themes.catalog_sync`, `sites.bulk_channel`, `sites.bulk_compose`, `sites.bulk_auto_deploy`, `sites.bulk_deploy`, `sites.bulk_follow_head`, `sites.bulk_pin`, `sites.bulk_publish_status`. Status is `GET /jobs` + `GET /jobs/{job}` (`ops.jobs`, `ops.jobs.show`) — writer only, own jobs. `DELETE /jobs/{job}` dismisses completed/failed own jobs. The bottom-right widget (`data-ops-jobs`, `ops-jobs.js`) polls ~1.5s and applies Live column/favicon from `result.sites` without reload. Coolify deployments (manual redeploy / pin / follow-head, plus provision and channel switch) appear in the same widget; **live Coolify queue** (`GET /deployments`) is merged for **Plane Deamon sites only** (matched by site name / app uuid; Plane itself and other apps are hidden). Hover actions: **X** dismisses finished rows or **cancels** queued/running Coolify deploys (`POST /deployments/{uuid}/cancel`); **play** force-starts a queued Deamon deploy (cancel queue row + `POST /applications/{uuid}/start?force=true&instant_deploy=true`). `PollDeploymentJob` keeps local `deployments.status` in sync (cancel → `cancelled` without flipping Active sites to Error for Manual/ThemeRollout). `GET /jobs` also refreshes stale open deployments from Coolify and re-kicks poll (~20s). Logout and `data-ops-native` / `data-pref-form` stay native.
 
 A widget row says **what kind of work it is** before anything else. Every payload (`OpsBackgroundJob::toWidget`, `Deployment::toWidget`, `OpsCoolifyDeployQueue::remoteWidget`) carries `kind_label`, `subject`, `status_label` and `detail`; the title is `kind_label · subject` (`Coolify deploy · beyazlar`, `Live Sync · beyazlar`, `App hatalarını düzelt · 3 site`) and the meta line is `detail · status_label` (`manuel · kuyrukta`). `subject` comes from `payload.subject` when a job targets one thing, otherwise it is the site count. A Coolify queue row Plane did not start reads `Coolify kuyruğu` as its detail instead of inventing a Plane trigger.
 
@@ -114,13 +118,42 @@ Site detail includes a **Deployments** table (`ops/deployments/index`): last 25 
 
 `SiteAgentClient` + `CheckSiteHealthJob` (schedule 5–15 min) + on-demand **Check health**. Persists `last_health_at` / `last_health_payload` summary. Sites without `agent_secret` are `needs_secret` (import does not invent secrets). Contract and header names: [agent-client.md](agent-client.md). Secret inject: [agent-secret-inject.md](../runbooks/agent-secret-inject.md).
 
+Health also **mirrors** the CMS publish state onto `sites.cms_site_status` / `cms_site_status_at` — see [Yayın durumu](#yayın-durumu-cms-publish-state).
+
+## Yayın durumu (CMS publish state)
+
+Publish is **CMS-owned**. The CMS `sites.status` column (`draft` \| `published`) is what drives its storefront maintenance page; Plane's own `sites.status` is the **Coolify lifecycle** (`draft`/`provisioning`/`active`/…) and is a different thing. The list therefore has two chips: **Yayın** (publish) and **Durum** (lifecycle). Design note: [2026-09-12 spec](../superpowers/specs/2026-09-12-site-publish-state-and-list-preferences-design.md).
+
+Plane **mirrors** the CMS value into real columns so the list can sort and filter on it:
+
+- `sites.cms_site_status` (`draft` \| `published` \| `null`), `sites.cms_site_status_at` (when the CMS last confirmed it).
+- `null` renders as **Bilinmiyor** — it is not the same as `draft`. It means no CMS has reported yet (never polled, no secret, or CMS older than 1.2.16).
+- `SiteHealthChecker` writes the mirror from the health payload's `site_status`. A poll that **could not reach** the CMS leaves a known value alone; a poll that reached a CMS which reported nothing clears it rather than keeping a stale claim.
+
+Writes go through the signed agent (`SitePublishStateUpdater` → `SiteAgentClient::setSiteStatus` → CMS `POST /internal/control/v1/site/status`). Rules:
+
+- The mirror stores **what the CMS echoed**, never what Plane asked for. A failed call changes nothing and writes no audit row.
+- Sites without an agent secret or a resolvable base URL cannot be toggled (`Site::canChangePublishStatus()`); the detail card says why and bulk reports them as such.
+- Audit: `site.published` / `site.unpublished`, written only on an actual transition.
+- A CMS that answers 404 is too old for the endpoint and says so in Turkish instead of leaking an HTTP code.
+- Site detail has a **Yayın durumu** card offering only the opposite action, with a confirm (danger when unpublishing). The list has **Yayına al** / **Yayından kaldır** bulk buttons (`sites.bulk_publish_status` when queued over JSON).
+
 ## App health
 
 `SiteAppHealthInspector` scores Coolify pack / compose env / domains / last deploy / agent. List **App** column: **Healthy** or **N issues**. Hover is the issue list; click copies it. Row **Fix App issues** menu runs one fix or all for that site. Header **Fix App issues** runs a category (or all) across sites that need it via `sites.bulk_app_health_fix`. Site detail shows the same issues with in-page POST fixes (`sync_env`, `migrate_compose`, `bind_domains`, `inject_secret`, `redeploy`, `check_health`, `fix=all`) — `ops-async.js` keeps the page. Coolify Sync imports app hosts into `site_domains` and auto-rebinds Plane hosts missing on Coolify (`ops.coolify.auto_rebind_domains`). Fleet **Domains** (`/domains`) lists hosts with unbound filter and bind action. Live Coolify inspect is cached on `last_app_health_*` and refreshed by `InspectSiteAppHealthJob` (same schedule as agent health) or **Check Coolify**. Secrets are never stored or shown. Manual / pin / HEAD deploys write a local `deployments` row so the jobs widget can follow Coolify success/failure.
 
 ## List
 
-GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status`. Search input debounces a GET submit (300 ms).
+GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `status` (lifecycle), `publish` (`published` \| `draft` \| `unknown`). Search input debounces a GET submit (300 ms). Bulk forms carry the active filters as `filter_q` / `filter_channel` / `filter_status` / `filter_publish` hidden inputs so `all=1` re-resolves the same set via `Site::matchingListFilters`.
+
+### Columns and sorting
+
+`SiteListColumns` is the catalog (key → i18n label + sortable SQL column + whether it is on by default). `SiteListView::resolve()` turns the request plus the operator's saved layout into the visible column list and the active sort.
+
+- **Column picker** (toolbar **Kolonlar**): checkboxes POST `columns[]`, stored per user in `users.list_preferences` JSON under the `sites` key — **in the database**, not `localStorage`, so the layout follows the operator to another browser. Reset is a `DELETE` on the same route. `site` is **locked** (disabled checkbox plus a hidden input, and `sanitize()` forces it back server-side); unknown keys are dropped and an empty pick falls back to defaults. Catalog order always wins over checkbox order.
+- Viewers may save their own layout — it is a personal view setting, not an ops write.
+- **Sorting** is real `<a>` headers carrying `?sort={key}&dir={asc|desc}` through `fullUrlWithQuery` with `page` dropped, so it works without JS, survives filters, and is shareable. `aria-sort` is on the `<th>`; the caret is decorative and never the only signal. Ties break on `name` so pagination stays stable. Unsortable columns (App, Theme) render a plain header.
+- The chosen sort is remembered in the same preferences row, so the next unqualified visit to `/sites` reopens the operator's last sort. A stored or default sort key on a column the operator has since **hidden** falls back to the default column *and* the default direction, so nobody gets stuck sorted by something invisible.
 
 **Sync Coolify** on the list (`POST /sites/bulk/sync`, `all=1` or selected ids) is the same `CoolifySiteSync` as site detail. Sites without `coolify_app_uuid` are skipped. GET `/sites/bulk/sync` is a 302.
 
@@ -128,7 +161,7 @@ GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `stat
 
 Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip and an App-health issue. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. After the pack PATCH (and on an already-compose retry), env sync applies the **compose** catalog: `DB_HOST=mysql`, empty `MYSQL_ROOT_PASSWORD` / `DB_PASSWORD` generated, existing `DB_PASSWORD` not copied-over-if-filled. Recreate required → abort. Pack migrate does **not** by itself `POST /deploy` — operator Redeploy / App fix **Redeploy** starts the stack.
 
-List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off), **Redeploy**, **Deploy HEAD**, **Deploy commit** (SHA from the page’s latest deployments or a typed ref; all selected sites share `codron-co/deamon`), **Hard Delete**. Confirm on each. Viewer forbidden.
+List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Yayına al** / **Yayından kaldır**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off), **Redeploy**, **Deploy HEAD**, **Deploy commit** (SHA from the page’s latest deployments or a typed ref; all selected sites share `codron-co/deamon`), **Hard Delete**. Confirm on each. Viewer forbidden.
 
 ### Redeploy never picks between pin and HEAD
 

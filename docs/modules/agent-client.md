@@ -1,6 +1,6 @@
 # Site agent client
 
-Task 9. Plane polls each Deamon CMS instance over a signed HTTP agent. CMS routes live in `codron-co/deamon` (health, themes **v1.2.7+**, admins **v1.2.13+**). Do not copy CMS middleware here. CMS SoT: `docs/modules/control-plane-agent.md` in the Deamon repo. Theme POSTs: [theme-agent-client.md](theme-agent-client.md). Admin mutations: [site-admins.md](site-admins.md).
+Task 9. Plane polls each Deamon CMS instance over a signed HTTP agent. CMS routes live in `codron-co/deamon` (health, themes **v1.2.7+**, admins **v1.2.13+**, site publish status **v1.2.16+**). Do not copy CMS middleware here. CMS SoT: `docs/modules/control-plane-agent.md` in the Deamon repo. Theme POSTs: [theme-agent-client.md](theme-agent-client.md). Admin mutations: [site-admins.md](site-admins.md).
 
 ## Endpoint (CMS)
 
@@ -15,6 +15,7 @@ Expected JSON (no secrets):
 | `active_theme_id` | Optional |
 | `php` | Optional |
 | `queue_ok` | `false` counts as fleet **unhealthy** |
+| `site_status` | CMS publish state (`draft` \| `published`). Absent on CMS < 1.2.x. Mirrored onto `sites.cms_site_status` |
 
 `sites.agent_base_url` is preferred. If empty, Plane uses `https://{primary_domain}`.
 
@@ -38,7 +39,8 @@ Header names live in `App\Services\Agent\ControlPlaneAgentContract`. Signing is 
 | Piece | Role |
 |-------|------|
 | `SiteAgentClient` | Signs and GET-polls health; also themes / mail / **admins**. Never logs the secret. |
-| `SiteHealthChecker` | Persists `last_health_at` + allowlisted summary (`deamon_version`, `active_theme_id`, `queue_ok`, …). |
+| `SiteHealthChecker` | Persists `last_health_at` + allowlisted summary (`deamon_version`, `active_theme_id`, `queue_ok`, …) and mirrors `site_status` onto `cms_site_status` / `cms_site_status_at`. |
+| `SitePublishStateUpdater` | Writes the publish state through `POST /internal/control/v1/site/status`, then mirrors **what the CMS echoed**. See [ops-sites.md](ops-sites.md#yayın-durumu-cms-publish-state). |
 | `CheckSiteHealthJob` | One site. Unique per site for 4 minutes. |
 | `DispatchSiteHealthChecksJob` | Scheduler fan-out. |
 | Schedule | Every 5–15 minutes (`CONTROL_PLANE_AGENT_POLL_MINUTES`, default 10). |
@@ -49,7 +51,7 @@ On-demand: operator / super_admin **Check health** on site edit (`POST /sites/{s
 
 Import (Task 7) does **not** generate secrets. Poll is skipped. Payload status is `needs_secret` / `unknown`. Plane does not invent a secret. See [agent-secret-inject.md](../runbooks/agent-secret-inject.md).
 
-Health checks never change `sites.status`. A timeout does not flip the site to `error`.
+Health checks never change `sites.status` (Plane's Coolify lifecycle). A timeout does not flip the site to `error`, and it does not clear a publish state Plane already knows.
 
 ## Fleet unhealthy KPI
 

@@ -28,6 +28,7 @@
                             <input type="hidden" name="filter_q" value="{{ $search }}">
                             <input type="hidden" name="filter_channel" value="{{ $channel }}">
                             <input type="hidden" name="filter_status" value="{{ $status }}">
+                            <input type="hidden" name="filter_publish" value="{{ $publish }}">
                             <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
                                 {{ __('sites.app_health.fix_category', ['label' => __('sites.app_health.fixes.'.$fixKey), 'count' => $fixCount]) }}
                             </button>
@@ -52,6 +53,7 @@
                             <input type="hidden" name="filter_q" value="{{ $search }}">
                             <input type="hidden" name="filter_channel" value="{{ $channel }}">
                             <input type="hidden" name="filter_status" value="{{ $status }}">
+                            <input type="hidden" name="filter_publish" value="{{ $publish }}">
                             <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
                                 {{ __('sites.app_health.fix_all_sites') }}
                             </button>
@@ -93,6 +95,8 @@
 
 @section('content')
     <div class="sites-page">
+        {{-- The column picker posts its own form, so it sits beside the GET filter form, never inside it. --}}
+        <div class="ops-list-toolbar-row">
         <form method="GET" action="{{ route('ops.sites') }}" class="ops-list-toolbar" data-ops-list-toolbar>
             <label class="ops-search">
                 <span class="visually-hidden">{{ __('sites.search') }}</span>
@@ -110,10 +114,18 @@
                     <option value="{{ $statusOption }}" @selected($status === $statusOption)>{{ __('ops.site_status.'.$statusOption) }}</option>
                 @endforeach
             </select>
+            <select name="publish" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('sites.filter_publish') }}">
+                <option value="">{{ __('sites.all_publish') }}</option>
+                @foreach ($publishFilters as $publishOption)
+                    <option value="{{ $publishOption }}" @selected($publish === $publishOption)>{{ __('sites.publish.states.'.$publishOption) }}</option>
+                @endforeach
+            </select>
             @if ($filtersActive)
                 <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites') }}">{{ __('ops.actions.clear') }}</a>
             @endif
         </form>
+            @include('ops.sites._columns-picker')
+        </div>
 
         @if ($sites->isEmpty() && ! $filtersActive)
             <div class="empty-panel">
@@ -136,6 +148,7 @@
                 <input type="hidden" name="filter_q" value="{{ $search }}">
                 <input type="hidden" name="filter_channel" value="{{ $channel }}">
                 <input type="hidden" name="filter_status" value="{{ $status }}">
+                <input type="hidden" name="filter_publish" value="{{ $publish }}">
             <div class="sites-table-wrap">
                 <table class="ops-table">
                     <thead>
@@ -148,13 +161,9 @@
                                     </label>
                                 </th>
                             @endcan
-                            <th>{{ __('sites.columns.site') }}</th>
-                            <th>{{ __('sites.columns.domain') }}</th>
-                            <th>{{ __('sites.columns.repo_branch') }}</th>
-                            <th>{{ __('sites.columns.status') }}</th>
-                            <th>{{ __('sites.columns.app') }}</th>
-                            <th>{{ __('sites.columns.live') }}</th>
-                            <th>{{ __('sites.columns.theme') }}</th>
+                            @foreach ($listView->columns as $columnKey)
+                                @include('ops.sites._sort-header', ['column' => $columnKey])
+                            @endforeach
                             <th class="ops-actions-col"></th>
                         </tr>
                     </thead>
@@ -163,6 +172,9 @@
                             @php
                                 $reportedVersion = $site->reportedDeamonVersion();
                                 $markLetter = $site->identityMarkLetter();
+                                $failure = $site->lastFailureMessage();
+                                $appHealth = $site->appHealth();
+                                $appHealthView = $appHealth->toView($site);
                             @endphp
                             <tr data-href="{{ route('ops.sites.show', $site) }}" data-site-id="{{ $site->id }}" tabindex="0">
                                 @can('create', \App\Models\Site::class)
@@ -173,70 +185,9 @@
                                         </label>
                                     </td>
                                 @endcan
-                                <td>
-                                    <div class="site-name-row">
-                                        <div
-                                            class="site-identity-mark is-compact"
-                                            aria-hidden="true"
-                                            @if (filled($site->primary_domain))
-                                                data-favicon-host="{{ $site->primary_domain }}"
-                                                data-favicon-fallback="{{ $markLetter }}"
-                                                @if (filled($site->last_live_favicon_url))
-                                                    data-favicon-src="{{ $site->last_live_favicon_url }}"
-                                                @endif
-                                            @endif
-                                        >{{ $markLetter }}</div>
-                                        <div>
-                                            <div class="site-name-row">
-                                                <a class="site-name" href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
-                                                @if ($site->hasDockerfileBuildPackWarning())
-                                                    <span class="status-chip status-dockerfile">{{ __('ops.dockerfile_chip') }}</span>
-                                                @endif
-                                            </div>
-                                            <div class="site-slug">{{ $site->slug }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    @if (filled($site->primary_domain))
-                                        <a
-                                            class="ops-domain-link"
-                                            href="https://{{ $site->primary_domain }}"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            aria-label="{{ __('sites.columns.open_live', ['domain' => $site->primary_domain]) }}"
-                                        ><code>{{ $site->primary_domain }}</code></a>
-                                    @else
-                                        <span class="muted">{{ __('ops.none') }}</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="branch-version" aria-label="{{ __('sites.columns.repo_branch') }}">
-                                        <span class="branch-chip">{{ $site->channel->value }}</span>
-                                        <span class="version-chip">{{ $reportedVersion ?: __('sites.version_unknown') }}</span>
-                                    </div>
-                                </td>
-                                @php
-                                    $failure = $site->lastFailureMessage();
-                                    $appHealth = $site->appHealth();
-                                    $appHealthView = $appHealth->toView($site);
-                                @endphp
-                                <td><span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span></td>
-                                <td>
-                                    <button
-                                        type="button"
-                                        class="status-chip status-{{ $appHealthView['tone'] === 'ok' ? 'ok' : ($appHealthView['tone'] === 'error' ? 'error' : 'unknown') }}"
-                                        data-app-health-copy
-                                        data-row-action
-                                        data-copy-text="{{ $appHealthView['copy_text'] }}"
-                                        title="{{ $appHealthView['copy_text'] }}"
-                                        aria-label="{{ __('sites.app_health.copy_named', ['name' => $site->name]) }}"
-                                    >{{ $appHealthView['label'] }}</button>
-                                </td>
-                                <td>
-                                    <span class="status-chip status-{{ $site->liveHttpTone() }}" data-live-chip @if ($site->last_live_checked_at) title="{{ $site->last_live_checked_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}" @endif>{{ $site->liveHttpLabel() }}</span>
-                                </td>
-                                <td class="muted">{{ $site->reportedActiveThemeId() ?: __('ops.none') }}</td>
+                                @foreach ($listView->columns as $columnKey)
+                                    @include('ops.sites._cell', ['column' => $columnKey])
+                                @endforeach
                                 <td class="ops-row-actions">
                                     @php
                                         $rowFixes = \App\Services\Sites\SiteAppHealthFixer::orderedUniqueFixes($appHealth);
@@ -335,6 +286,28 @@
                             data-confirm-template="{{ __('site_ops.bulk.confirm_branch', ['target' => '__TARGET__']) }}"
                             data-confirm-danger="false"
                         >{{ __('site_ops.bulk.change_branch') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-secondary btn-sm"
+                            formaction="{{ route('ops.sites.bulk.publish-status') }}"
+                            name="publish_status"
+                            value="published"
+                            data-confirm="{{ __('sites.publish.bulk.confirm_publish') }}"
+                            data-confirm-title="{{ __('sites.publish.bulk.confirm_title') }}"
+                            data-confirm-label="{{ __('sites.publish.bulk.publish') }}"
+                            data-confirm-danger="false"
+                        >{{ __('sites.publish.bulk.publish') }}</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost btn-sm"
+                            formaction="{{ route('ops.sites.bulk.publish-status') }}"
+                            name="publish_status"
+                            value="draft"
+                            data-confirm="{{ __('sites.publish.bulk.confirm_unpublish') }}"
+                            data-confirm-title="{{ __('sites.publish.bulk.confirm_title') }}"
+                            data-confirm-label="{{ __('sites.publish.bulk.unpublish') }}"
+                            data-confirm-danger="true"
+                        >{{ __('sites.publish.bulk.unpublish') }}</button>
                         @if ($hasDockerfileSites ?? false)
                             <button
                                 type="submit"

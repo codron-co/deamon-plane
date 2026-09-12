@@ -65,6 +65,9 @@ final class AgentHealthResult
                 'active_theme_id' => self::nullableString($payload['active_theme_id'] ?? null),
                 'php' => self::nullableString($payload['php'] ?? null),
                 'queue_ok' => $queueOk,
+                // CMS publish state (`draft` | `published`), mirrored onto the site
+                // by SiteHealthChecker. Absent on CMS older than 1.2.x.
+                'site_status' => self::nullableString($payload['site_status'] ?? null),
                 'http_status' => $httpStatus,
             ]),
         );

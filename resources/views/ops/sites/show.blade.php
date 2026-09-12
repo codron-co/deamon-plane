@@ -44,6 +44,10 @@
                 <div class="site-title-row">
                     <h2>{{ $site->name }}</h2>
                     <span class="status-chip status-{{ $site->status?->value }}">{{ $site->status?->label() ?? __('ops.unknown') }}</span>
+                    <span
+                        class="status-chip status-{{ $site->publishTone() }}"
+                        title="{{ __('sites.publish.title') }}"
+                    >{{ $site->publishLabel() }}</span>
                 </div>
                 <div class="site-domain-row">
                     @if ($siteUrl)
@@ -183,6 +187,7 @@
                 @include('ops.sites._cloudflare')
                 @include('ops.sites._mail')
                 @include('ops.sites._platform-mail')
+                @include('ops.sites._publish-state')
                 @include('ops.sites._channel-switch')
                 @include('ops.sites._coolify-ops')
                 @include('ops.sites._agent-health')

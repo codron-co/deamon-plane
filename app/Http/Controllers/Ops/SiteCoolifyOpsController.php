@@ -486,6 +486,7 @@ class SiteCoolifyOpsController extends Controller
                     trim((string) $request->input('filter_q', '')),
                     (string) $request->input('filter_channel', ''),
                     (string) $request->input('filter_status', ''),
+                    (string) $request->input('filter_publish', ''),
                 )
                 ->orderBy('name')
                 ->get();

@@ -175,6 +175,26 @@
         });
     };
 
+    const applyPublishResults = function (job) {
+        if (!job || job.type !== "sites.bulk_publish_status" || !job.result || !Array.isArray(job.result.sites)) {
+            return;
+        }
+
+        job.result.sites.forEach(function (row) {
+            if (!row || !row.id) {
+                return;
+            }
+
+            const chip = document.querySelector('tr[data-site-id="' + row.id + '"] [data-publish-chip]');
+            if (!chip) {
+                return;
+            }
+
+            chip.textContent = row.publish_label || "";
+            chip.className = "status-chip status-" + (row.publish_tone || "unknown");
+        });
+    };
+
     const applyAppHealthResults = function (job) {
         if (!job || job.type !== "sites.bulk_app_health_fix" || !job.result || !Array.isArray(job.result.sites)) {
             return;
@@ -670,9 +690,11 @@
             writeStorage();
         }
 
-        if (job.type === "sites.live_sync" && job.status === "completed" && (!previous || previous.status !== "completed")) {
+        // Each applier guards on its own job type, so gate only on "just finished".
+        if (job.status === "completed" && (!previous || previous.status !== "completed")) {
             applyLiveResults(job);
             applyAppHealthResults(job);
+            applyPublishResults(job);
         }
 
         if (isActive(job.status)) {

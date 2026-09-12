@@ -8,12 +8,17 @@ use App\Http\Controllers\Ops\SiteController;
 use App\Http\Controllers\Ops\SiteCoolifyOpsController;
 use App\Http\Controllers\Ops\SiteDetailController;
 use App\Http\Controllers\Ops\SiteDomainController;
+use App\Http\Controllers\Ops\SiteListPreferencesController;
+use App\Http\Controllers\Ops\SitePublishStatusController;
 use App\Http\Controllers\Ops\SiteThemeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/sites', [SiteController::class, 'index'])->name('ops.sites');
 Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.create');
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
+Route::post('/sites/list-preferences', [SiteListPreferencesController::class, 'update'])->name('ops.sites.list-preferences');
+Route::delete('/sites/list-preferences', [SiteListPreferencesController::class, 'destroy'])->name('ops.sites.list-preferences.reset');
+Route::post('/sites/bulk/publish-status', [SitePublishStatusController::class, 'bulkUpdate'])->name('ops.sites.bulk.publish-status');
 Route::post('/sites/bulk/compose', [SiteCoolifyOpsController::class, 'bulkMigrateCompose'])->name('ops.sites.bulk.compose');
 Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAutoDeploy'])->name('ops.sites.bulk.auto-deploy');
 Route::post('/sites/bulk/deploy', [SiteCoolifyOpsController::class, 'bulkDeploy'])->name('ops.sites.bulk.deploy');
@@ -50,6 +55,7 @@ Route::post('/sites/{site}/cloudflare/dns', [SiteCloudflareController::class, 'c
 Route::post('/sites/{site}/domains', [SiteDomainController::class, 'store'])->name('ops.sites.domains.store');
 Route::post('/sites/{site}/channel', [SiteController::class, 'switchChannel'])->name('ops.sites.channel');
 Route::post('/sites/{site}/health', [SiteController::class, 'checkHealth'])->name('ops.sites.health');
+Route::post('/sites/{site}/publish-status', [SitePublishStatusController::class, 'update'])->name('ops.sites.publish-status');
 Route::post('/sites/{site}/app-health', [SiteAppHealthController::class, 'refresh'])->name('ops.sites.app-health');
 Route::post('/sites/{site}/app-health/fix', [SiteAppHealthController::class, 'fix'])->name('ops.sites.app-health.fix');
 Route::post('/sites/{site}/agent-secret', [SiteController::class, 'injectAgentSecret'])->name('ops.sites.agent-secret');

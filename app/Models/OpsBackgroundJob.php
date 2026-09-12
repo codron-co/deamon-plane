@@ -28,6 +28,7 @@ class OpsBackgroundJob extends Model
         'sites.bulk_follow_head' => 'bulk_follow_head',
         'sites.bulk_pin' => 'bulk_pin',
         'sites.bulk_app_health_fix' => 'bulk_app_health_fix',
+        'sites.bulk_publish_status' => 'bulk_publish_status',
     ];
 
     /**
