@@ -1,7 +1,8 @@
 # Platform mail — save feedback, test mail, per-admin prefs, unsubscribe
 
 **Date:** 2026-09-12  
-**Status:** approved (awaiting implementation plan)  
+**Status:** planned  
+**Plans:** `docs/superpowers/plans/2026-09-12-platform-mail-plane-feedback-test-unsubscribe.md` + CMS companion plan  
 **Repos:** `deamon-plane` + `deamon` (CMS)  
 **CMS mirror:** `deamon` → `docs/superpowers/specs/2026-09-12-platform-mail-feedback-prefs-unsubscribe-design.md`
 
