@@ -21,7 +21,10 @@ final class PlatformOpsMailer
         $settings = $this->resolver->settings();
         $this->applyRuntimeMailer($settings);
 
-        Mail::mailer('platform_ops')->to($to)->send(new PlatformTestMail);
+        Mail::mailer('platform_ops')->to($to)->send(new PlatformTestMail(
+            (string) $settings->from_address,
+            (string) ($settings->from_name ?: $settings->from_address),
+        ));
     }
 
     public function send(Site $site, string $notificationKey, string $subject, string $body): bool

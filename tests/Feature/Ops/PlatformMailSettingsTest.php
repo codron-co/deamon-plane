@@ -165,7 +165,8 @@ class PlatformMailSettingsTest extends TestCase
             ->assertSessionHas('status');
 
         Mail::assertSent(\App\Mail\PlatformTestMail::class, function (\App\Mail\PlatformTestMail $mail): bool {
-            return $mail->hasTo('probe@example.com');
+            return $mail->hasTo('probe@example.com')
+                && $mail->hasFrom('noreply@example.com', 'Test');
         });
     }
 
