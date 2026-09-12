@@ -28,6 +28,7 @@ Plane never shares MySQL/Redis with a customer site. Customer sites never share 
    - Do **not** set `DB_*` / `REDIS_*` / `APP_DEBUG` in Coolify — compose `environment:` owns them.
    - After bootstrap: `COOLIFY_BASE_URL` (and optional `COOLIFY_API_TOKEN` fallback). Ops **Coolify** menu stores the fleet token and webhook signing secret encrypted on `coolify_connections` (legacy `coolify_settings` fallback; HMAC or query `token`). `COOLIFY_WEBHOOK_SECRET` is the env fallback. See [coolify-webhooks.md](coolify-webhooks.md). GitHub secrets stay in Settings. CMS agent secret is **per customer site** (`CONTROL_PLANE_AGENT_SECRET`) — not a Plane env. See [agent-client.md](agent-client.md).
 9. **Persistent volumes** come from compose (`plane_storage`, `plane_mysql`, `plane_redis`). Do not bind-mount `/root`. Channel/redeploy must not delete the application (Coolify `DELETE` defaults `delete_volumes=true`).
+10. **Shared-host resource caps:** `docker-compose.coolify.yml` (and local `docker-compose.yml`) set `mem_limit` / `cpus` / `pids_limit` on `app` (768m / 1.5 / 256), `mysql` (768m / 1.0 / 256), and `redis` (128m / 0.25 / 64). MySQL also caps InnoDB (`innodb-buffer-pool-size=256M` and the same family flags as CMS coolify compose) while keeping `--default-time-zone=+03:00`. Coolify UI limits do not apply to compose child services — rely on the compose file. After changing limits, Redeploy (or `docker update`) so live containers pick them up.
 
 ## First deploy gate
 

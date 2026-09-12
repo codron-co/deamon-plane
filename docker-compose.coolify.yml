@@ -44,11 +44,14 @@ services:
         condition: service_healthy
     volumes:
       - plane_storage:/var/www/html/storage/app/public
+    mem_limit: 768m
+    cpus: "1.5"
+    pids_limit: 256
     restart: unless-stopped
 
   mysql:
     image: mysql:8.0
-    command: --default-time-zone=+03:00
+    command: --default-time-zone=+03:00 --innodb-buffer-pool-size=256M --innodb-buffer-pool-instances=1 --innodb-flush-log-at-trx-commit=2 --max-connections=50 --performance-schema=OFF --skip-log-bin --tmp-table-size=32M --max-heap-table-size=32M --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
       TZ: Europe/Istanbul
       MYSQL_DATABASE: plane
@@ -62,6 +65,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    mem_limit: 768m
+    cpus: "1.0"
+    pids_limit: 256
     restart: unless-stopped
 
   redis:
@@ -76,6 +82,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    mem_limit: 128m
+    cpus: "0.25"
+    pids_limit: 64
     restart: unless-stopped
 
 volumes:
