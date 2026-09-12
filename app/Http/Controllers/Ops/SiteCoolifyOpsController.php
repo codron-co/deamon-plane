@@ -11,6 +11,7 @@ use App\Http\Requests\Ops\PinSiteRequest;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifySiteSync;
+use App\Services\Ops\BulkResultSummary;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\ComposePackException;
@@ -431,7 +432,7 @@ class SiteCoolifyOpsController extends Controller
     }
 
     /**
-     * @param  callable(Collection<int, Site>): array{ok: int, failed: int, errors: list<string>}  $run
+     * @param  callable(Collection<int, Site>): array{ok: int, failed: int, skipped: int, errors: list<string>}  $run
      * @param  array<string, mixed>  $extraPayload
      */
     private function runBulkDeploy(
@@ -494,18 +495,10 @@ class SiteCoolifyOpsController extends Controller
     }
 
     /**
-     * @param  array{ok: int, failed: int, errors: list<string>}  $result
+     * @param  array{ok: int, failed: int, skipped?: int, errors: list<string>}  $result
      */
     private function bulkFlash(array $result, string $prefix): string
     {
-        $message = $prefix.' '.$result['ok'].' ok';
-        if ($result['failed'] > 0) {
-            $message .= ', '.$result['failed'].' failed';
-            if ($result['errors'] !== []) {
-                $message .= ': '.implode(' ', array_slice($result['errors'], 0, 3));
-            }
-        }
-
-        return $message;
+        return BulkResultSummary::format($prefix, $result, errorLimit: 3);
     }
 }

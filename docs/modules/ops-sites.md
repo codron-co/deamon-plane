@@ -19,7 +19,7 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/domains` | `ops.sites.domains.store` | operator, super_admin; add extra host + www on the same apex |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
-| POST | `/sites/{site}/deploy` | `ops.sites.deploy` | operator, super_admin; Coolify `POST /deploy?force=true` (current pin or HEAD) |
+| POST | `/sites/{site}/deploy` | `ops.sites.deploy` | operator, super_admin; Coolify `POST /deploy?force=true`; rebuilds the ref the app already points at, pin untouched |
 | POST | `/sites/{site}/pin` | `ops.sites.pin` | operator, super_admin; pin SHA + auto-deploy off + deploy |
 | POST | `/sites/{site}/follow-head` | `ops.sites.follow-head` | operator, super_admin; `git_commit_sha: HEAD` + auto-deploy on + deploy |
 | POST | `/sites/bulk/channel` | `ops.sites.bulk.channel` | operator, super_admin; branch + APP_ENV for selected or `all=1` |
@@ -56,6 +56,8 @@ Routes live in `routes/ops/sites.php` (required from `routes/web.php`).
 Authenticated mutating forms in the ops shell submit over `fetch` (`Accept: application/json`). HTML POST still **redirects** (existing tests). JSON callers get `{ ok, message, type, redirect }` instead of following the 302 — `ConvertOpsAjaxRedirect` rewrites flash redirects and leaves existing `JsonResponse` (appearance/locale, site Cloudflare zone) alone. Navigate only when `redirect` pathname differs (create/destroy). Site Cloudflare zone create returns `{ ok, nameservers, zone_id, zone_status }` with no `redirect` so the detail page can show copyable NS without a reload.
 
 Slow syncs and list bulk work queue `ops_background_jobs` and return `{ ok, job }` immediately. `ProcessOpsBackgroundJob` runs `afterResponse()` (`dispatchSync` after the HTTP response) so Plane does not need a queue worker. Job types: `sites.live_sync`, `sites.coolify_sync`, `coolify.inventory_sync`, `themes.catalog_sync`, `sites.bulk_channel`, `sites.bulk_compose`, `sites.bulk_auto_deploy`, `sites.bulk_deploy`, `sites.bulk_follow_head`, `sites.bulk_pin`. Status is `GET /jobs` + `GET /jobs/{job}` (`ops.jobs`, `ops.jobs.show`) — writer only, own jobs. `DELETE /jobs/{job}` dismisses completed/failed own jobs. The bottom-right widget (`data-ops-jobs`, `ops-jobs.js`) polls ~1.5s and applies Live column/favicon from `result.sites` without reload. Coolify deployments (manual redeploy / pin / follow-head, plus provision and channel switch) appear in the same widget; **live Coolify queue** (`GET /deployments`) is merged for **Plane Deamon sites only** (matched by site name / app uuid; Plane itself and other apps are hidden). Hover actions: **X** dismisses finished rows or **cancels** queued/running Coolify deploys (`POST /deployments/{uuid}/cancel`); **play** force-starts a queued Deamon deploy (cancel queue row + `POST /applications/{uuid}/start?force=true&instant_deploy=true`). `PollDeploymentJob` keeps local `deployments.status` in sync (cancel → `cancelled` without flipping Active sites to Error for Manual/ThemeRollout). `GET /jobs` also refreshes stale open deployments from Coolify and re-kicks poll (~20s). Logout and `data-ops-native` / `data-pref-form` stay native.
+
+Widget motion is a status signal, not decoration: only a **running** row gets the animated indeterminate bar (`is-indeterminate`). A **queued** row (`kuyrukta`) renders an inert muted rail (`is-waiting`, `aria-valuenow="0"`), so a 25-item sweep shows at a glance which site Coolify is building and which are still waiting. `indeterminate` in the widget payload (`Deployment::toWidget`, `OpsCoolifyDeployQueue`) therefore means "running with unknown progress" and is `false` while queued; `ops-jobs.js` also derives it from `status` so a stale payload cannot animate a queued row.
 
 ## Fields
 
@@ -123,6 +125,22 @@ GET filters with `withQueryString`: `q` (name / slug / domain), `channel`, `stat
 Imported sites whose Coolify `build_pack` is `dockerfile` keep a `dockerfile_build_pack` line in `notes`. The list shows a **Dockerfile (eski pack)** chip and an App-health issue. Site detail / edit can **PATCH** the existing Coolify app to `dockercompose` + `/docker-compose.coolify.yml` (no DELETE). Compose brings its own MySQL+Redis; external Dockerfile DB data stays put; `APP_KEY` is rewritten onto service `app` only. After the pack PATCH (and on an already-compose retry), env sync applies the **compose** catalog: `DB_HOST=mysql`, empty `MYSQL_ROOT_PASSWORD` / `DB_PASSWORD` generated, existing `DB_PASSWORD` not copied-over-if-filled. Recreate required → abort. Pack migrate does **not** by itself `POST /deploy` — operator Redeploy / App fix **Redeploy** starts the stack.
 
 List header checkbox **Select all** sends `all=1` for the current filters (every matching site, not only the page). Bulk `form-actions` show only when something is selected: **Change branch**, **Switch to Compose** (only if a Dockerfile leftover exists), **Auto-deploy on/off** (all on → off; all off → on; mixed → off), **Redeploy**, **Deploy HEAD**, **Deploy commit** (SHA from the page’s latest deployments or a typed ref; all selected sites share `codron-co/deamon`), **Hard Delete**. Confirm on each. Viewer forbidden.
+
+### Redeploy never picks between pin and HEAD
+
+`POST /deploy?force=true` is the whole action: no `git_commit_sha` PATCH, no `is_auto_deploy_enabled` PATCH. Each app therefore rebuilds the ref it already points at — a pinned site rebuilds its pinned commit, an unpinned site rebuilds the branch tip. **Redeploy is never an operator choice between pin and HEAD**, and it never moves a site off its pin; **Deploy HEAD** (`bulk.follow-head`) and **Deploy commit** (`bulk.pin`) are the two actions that do change the ref. Copy must state that rule instead of "pin or HEAD": the site detail card knows the live `git_commit_sha`, so it names the pinned short SHA (`site_ops.redeploy.confirm_pinned`) or the branch (`site_ops.redeploy.confirm_head`); the list has no per-site pin state without one Coolify GET per row, so the bulk confirm (`site_ops.bulk.confirm_redeploy`) states the per-site rule and points at the other two actions.
+
+### Bulk counting: ok / hata / atlandı
+
+`PacedFanout` defers a throttled site to the back of the queue, so a 429 seen mid-sweep says nothing about the outcome. Accounting is therefore:
+
+- `ok` — the action went through, including sites that only succeeded after being re-queued behind a 429.
+- `failed` — terminal non-throttle error (`hata`).
+- `skipped` — ran out of `ops.coolify.bulk.max_site_attempts` while still throttled, so Coolify was never told to act (`atlandı (istek sınırı)`).
+- `rate_limited` is `skipped > 0`, never "a 429 happened". Only that flag appends `ops.bulk.rate_limited`, which asks the operator to re-run **the skipped sites**.
+- `throttled` / `deferred` / `deferrals` are observability only and never reach operator copy.
+
+`BulkResultSummary` renders this one way for both the jobs widget (`OpsJobRunner`) and the no-JS flash (`SiteCoolifyOpsController::bulkFlash`), so a sweep where every selected site started reads `Pin: 27 tamam` with no skip warning attached.
 
 ## Import existing Coolify apps
 

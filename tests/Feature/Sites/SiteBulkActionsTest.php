@@ -72,6 +72,23 @@ class SiteBulkActionsTest extends TestCase
         $this->assertStringContainsString((string) $dockerfile->id, $html);
     }
 
+    public function test_bulk_redeploy_confirm_states_the_pin_rule_instead_of_pin_or_head(): void
+    {
+        $this->app->setLocale('tr');
+        $this->site(['name' => 'Confirm Copy']);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            'data-confirm="'.e(__('site_ops.bulk.confirm_redeploy')).'"',
+            $html,
+        );
+        $this->assertStringNotContainsString('pin veya HEAD', $html);
+    }
+
     public function test_compose_action_is_hidden_when_no_dockerfile_sites(): void
     {
         $this->site(['name' => 'Already Compose']);

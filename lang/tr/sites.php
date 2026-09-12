@@ -41,6 +41,7 @@ return [
         'bulk' => 'App hatalarını düzelt',
         'bulk_empty' => 'Bu App düzeltmesine ihtiyaç duyan site yok.',
         'bulk_done' => 'App düzeltmeleri: :ok tamam, :failed hata.',
+        'bulk_done_skipped' => 'App düzeltmeleri: :ok tamam, :failed hata, :skipped atlandı (istek sınırı).',
         'fix_all' => 'Bu site için hepsini düzelt',
         'fix_all_sites' => 'Tüm siteleri düzelt',
         'fix_category' => ':label (:count)',

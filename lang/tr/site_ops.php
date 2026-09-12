@@ -17,7 +17,7 @@ return [
     ],
     'auto_deploy' => [
         'title' => 'Oto-deploy',
-        'lede' => 'Coolify git oto-deploy’unu kontrol eder (push → deploy, is_auto_deploy_enabled). Plane’in Coolify durum webhook’unu kapatmaz. Pin bunu kapatır. HEAD’i takip et açar ve dal ucunu dağıtır. Tekrar deploy pin’i değiştirmeden mevcut commit veya HEAD’i yeniden derler.',
+        'lede' => 'Coolify git oto-deploy’unu kontrol eder (push → deploy, is_auto_deploy_enabled). Plane’in Coolify durum webhook’unu kapatmaz. Pin bunu kapatır. HEAD’i takip et açar ve dal ucunu dağıtır. Tekrar deploy pin’i hiç değiştirmez: site pinliyse pinli commiti, pinli değilse dal ucunu (HEAD) yeniden derler.',
         'on_button' => 'Oto-deploy aç',
         'off_button' => 'Oto-deploy kapat',
         'on' => ':name için oto-deploy açık.',
@@ -65,11 +65,12 @@ return [
     'redeploy' => [
         'button' => 'Tekrar deploy',
         'working' => 'Deploy ediliyor…',
-        'done' => ':name mevcut commit ile yeniden dağıtılıyor.',
+        'done' => ':name bulunduğu commit ile yeniden dağıtılıyor. Pin değişmedi.',
         'bulk' => 'Tekrar deploy:',
         'confirm_title' => 'Tekrar deploy edilsin mi?',
-        'confirm' => ':name mevcut pin (veya HEAD) ile yeniden dağıtılsın mı? Volume’lar geri sarılmaz. Coolify force ile yeniden derler.',
-        'confirm_bulk' => 'Seçili siteler mevcut pin veya HEAD ile yeniden dağıtılsın mı? Volume’lar kalır.',
+        'confirm' => ':name şu an bulunduğu commit ile yeniden derlensin mi? Pin değişmez: site pinliyse pinli commit, pinli değilse dal ucu (HEAD) derlenir. Volume’lar geri sarılmaz.',
+        'confirm_pinned' => ':name pinli olduğu :sha commiti ile yeniden derlensin mi? Pin değişmez, dal ucuna (HEAD) geçilmez. Volume’lar geri sarılmaz.',
+        'confirm_head' => ':name dal ucu (HEAD) ile yeniden derlensin mi? Site pinli olmadığı için Coolify :branch dalının son commitini alır. Volume’lar geri sarılmaz.',
     ],
     'bulk' => [
         'selected' => 'Seçili siteler',
@@ -92,7 +93,7 @@ return [
         'follow_head' => 'HEAD’de deploy',
         'pin' => 'Commite geç',
         'ref' => 'Commit',
-        'confirm_redeploy' => 'Seçili siteler mevcut pin veya HEAD ile yeniden dağıtılsın mı? Volume’lar kalır.',
+        'confirm_redeploy' => 'Seçili sitelerin her biri şu an bulunduğu commit ile yeniden derlenir: pinli olan pinli committe kalır, pinli olmayan dal ucunu (HEAD) alır. Tekrar deploy pin’i hiç değiştirmez. Volume’lar kalır. Hepsini dal ucuna almak için «HEAD’de deploy», hepsini tek bir commite almak için «Commite geç» kullanın.',
         'confirm_follow' => 'Seçili sitelerin pin’i kaldırılsın, Coolify oto-deploy açılsın ve her dal ucu dağıtılsın mı?',
         'confirm_pin' => 'Seçili siteler seçilen commite pinlensin ve Coolify oto-deploy kapansın mı? Volume’lar geri sarılmaz.',
         'empty' => 'Eşleşen site yok.',

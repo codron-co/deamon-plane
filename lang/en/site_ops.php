@@ -17,7 +17,7 @@ return [
     ],
     'auto_deploy' => [
         'title' => 'Auto-deploy',
-        'lede' => 'Controls Coolify git auto-deploy (push → deploy via is_auto_deploy_enabled). Does not disable Plane’s Coolify status webhook. Pin turns this off. Follow HEAD turns it on and deploys the branch tip. Redeploy rebuilds the currently pinned commit or HEAD without changing the pin.',
+        'lede' => 'Controls Coolify git auto-deploy (push → deploy via is_auto_deploy_enabled). Does not disable Plane’s Coolify status webhook. Pin turns this off. Follow HEAD turns it on and deploys the branch tip. Redeploy never changes the pin: a pinned site rebuilds its pinned commit, an unpinned site rebuilds the branch tip (HEAD).',
         'on_button' => 'Enable auto-deploy',
         'off_button' => 'Disable auto-deploy',
         'on' => 'Auto-deploy on for :name.',
@@ -65,11 +65,12 @@ return [
     'redeploy' => [
         'button' => 'Redeploy',
         'working' => 'Redeploying…',
-        'done' => ':name is redeploying the current commit.',
+        'done' => ':name is rebuilding the commit it is on. The pin did not change.',
         'bulk' => 'Redeploy:',
         'confirm_title' => 'Redeploy?',
-        'confirm' => 'Redeploy :name as it is pinned now (or HEAD)? Volumes are not rolled back. Coolify rebuilds with force.',
-        'confirm_bulk' => 'Redeploy the selected sites at their current pin or HEAD? Volumes stay.',
+        'confirm' => 'Rebuild :name at the commit it is on right now? The pin does not change: a pinned site rebuilds its pinned commit, an unpinned site rebuilds the branch tip (HEAD). Volumes are not rolled back.',
+        'confirm_pinned' => 'Rebuild :name at its pinned commit :sha? The pin does not change and the site is not moved to the branch tip (HEAD). Volumes are not rolled back.',
+        'confirm_head' => 'Rebuild :name at the branch tip (HEAD)? The site is not pinned, so Coolify takes the latest commit on :branch. Volumes are not rolled back.',
     ],
     'bulk' => [
         'selected' => 'Selected sites',
@@ -92,7 +93,7 @@ return [
         'follow_head' => 'Deploy HEAD',
         'pin' => 'Deploy commit',
         'ref' => 'Commit',
-        'confirm_redeploy' => 'Redeploy selected sites at their current pin or HEAD? Volumes stay.',
+        'confirm_redeploy' => 'Every selected site is rebuilt at the commit it is on right now: a pinned site stays on its pinned commit, an unpinned site takes the branch tip (HEAD). Redeploy never changes the pin. Volumes stay. Use “Deploy HEAD” to move them all to the branch tip, or “Deploy commit” to move them all to one commit.',
         'confirm_follow' => 'Clear pins on selected sites, turn Coolify auto-deploy on, and deploy each branch tip?',
         'confirm_pin' => 'Pin selected sites to the chosen commit and turn Coolify auto-deploy off? Volumes are not rolled back.',
         'empty' => 'No matching sites.',

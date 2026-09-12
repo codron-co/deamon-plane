@@ -244,12 +244,7 @@ class OpsJobRunner
         $job->result = ['sites' => array_values($rows)];
         $job->save();
 
-        $done = __('sites.app_health.bulk_done', [
-            'ok' => $result['ok'],
-            'failed' => $result['failed'],
-        ]);
-
-        return $result['rate_limited'] ? $done.' — '.__('ops.bulk.rate_limited') : $done;
+        return $fixer->summarize($result);
     }
 
     /**
@@ -258,7 +253,7 @@ class OpsJobRunner
      *
      * @param  Collection<int, Site>  $sites
      * @param  callable(Site): void  $action
-     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool, deferrals: int, sites: list<Site>}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool, throttled: bool, deferrals: int, deferred: int, sites: list<Site>}
      */
     private function fanout(OpsBackgroundJob $job, $sites, callable $action): array
     {
@@ -277,33 +272,11 @@ class OpsJobRunner
     }
 
     /**
-     * @param  array{ok: int, failed?: int, rate_limited?: bool}  $result
+     * @param  array{ok?: int, failed?: int, skipped?: int}  $result
      */
     private function summaryFor(string $prefix, array $result): string
     {
-        return $this->summary(
-            $prefix,
-            (int) $result['ok'],
-            (int) ($result['failed'] ?? 0),
-            (bool) ($result['rate_limited'] ?? false),
-        );
-    }
-
-    /**
-     * Bulk summaries used to append English " ok" / ", failed" to a translated
-     * prefix, and dropped the failure count entirely for the deploy family.
-     */
-    private function summary(string $prefix, int $ok, int $failed, bool $rateLimited = false): string
-    {
-        $counts = $failed > 0
-            ? __('ops.bulk.result_failed', ['ok' => $ok, 'failed' => $failed])
-            : __('ops.bulk.result', ['ok' => $ok]);
-
-        $text = trim($prefix.' '.$counts);
-
-        return $rateLimited
-            ? $text.' — '.__('ops.bulk.rate_limited')
-            : $text;
+        return BulkResultSummary::format($prefix, $result);
     }
 
     /**

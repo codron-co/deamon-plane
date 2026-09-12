@@ -177,7 +177,7 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
      */
     public function setAutoDeployMany(iterable $sites, bool $enabled, ?User $actor = null, ?string $ip = null): array
     {
@@ -186,7 +186,7 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, errors: list<string>}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
      */
     public function redeployMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {
@@ -195,7 +195,7 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, errors: list<string>}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
      */
     public function followHeadMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {
@@ -204,7 +204,7 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, errors: list<string>}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
      */
     public function pinMany(iterable $sites, string $ref, ?User $actor = null, ?string $ip = null): array
     {
@@ -214,7 +214,7 @@ class CoolifyDeploySettings
     /**
      * @param  iterable<int, Site>  $sites
      * @param  callable(Site): void  $action
-     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
      */
     private function applyMany(iterable $sites, callable $action): array
     {

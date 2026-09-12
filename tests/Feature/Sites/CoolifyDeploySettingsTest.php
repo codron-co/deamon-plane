@@ -157,6 +157,56 @@ class CoolifyDeploySettingsTest extends TestCase
         $this->assertStringContainsString(__('site_ops.redeploy.button'), $html);
     }
 
+    public function test_redeploy_confirm_names_the_pinned_commit_instead_of_pin_or_head(): void
+    {
+        $site = $this->site();
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response($this->appPayload(sha: 'deadbeefcafe', autoDeploy: false), 200),
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            'data-confirm="'.e(__('site_ops.redeploy.confirm_pinned', ['name' => $site->name, 'sha' => 'deadbee'])).'"',
+            $html,
+        );
+        $this->assertStringNotContainsString(
+            e(__('site_ops.redeploy.confirm_head', ['name' => $site->name, 'branch' => 'main'])),
+            $html,
+        );
+    }
+
+    public function test_redeploy_confirm_says_branch_tip_when_the_site_is_not_pinned(): void
+    {
+        $site = $this->site();
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response([
+                'uuid' => self::APP,
+                'build_pack' => 'dockercompose',
+                'git_commit_sha' => 'HEAD',
+                'settings' => ['is_auto_deploy_enabled' => true],
+            ], 200),
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            'data-confirm="'.e(__('site_ops.redeploy.confirm_head', [
+                'name' => $site->name,
+                'branch' => $site->channel->value,
+            ])).'"',
+            $html,
+        );
+    }
+
     public function test_redeploy_posts_force_deploy_without_application_patch(): void
     {
         $site = $this->site();

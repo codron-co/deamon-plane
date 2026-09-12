@@ -90,7 +90,8 @@ class Deployment extends Model
             'title' => $site?->name ?? __('sites.title'),
             'status' => $widgetStatus,
             'progress' => $active ? null : 100,
-            'indeterminate' => $active,
+            // Queued is waiting, not progressing: the widget must not animate it.
+            'indeterminate' => $this->status === DeploymentStatus::InProgress,
             'message' => $message,
             'url' => $site !== null ? route('ops.sites.deployments.show', [$site, $this]) : null,
             'deployment_id' => $this->id,

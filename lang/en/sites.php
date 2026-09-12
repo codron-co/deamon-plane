@@ -41,6 +41,7 @@ return [
         'bulk' => 'Fix App issues',
         'bulk_empty' => 'No sites need that App fix.',
         'bulk_done' => 'App fixes: :ok ok, :failed failed.',
+        'bulk_done_skipped' => 'App fixes: :ok ok, :failed failed, :skipped skipped (rate limit).',
         'fix_all' => 'Fix all for this site',
         'fix_all_sites' => 'Fix all sites',
         'fix_category' => ':label (:count)',

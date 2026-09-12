@@ -421,20 +421,31 @@
             li.appendChild(meta);
 
             if (isActive(item.status)) {
+                // Only work Coolify is actually building may animate. A queued item
+                // gets an inert rail so the row keeps its rhythm without claiming
+                // progress it does not have.
+                const waiting = item.status === "queued";
+                const indeterminate = !waiting && (item.indeterminate === true || item.progress == null);
                 const bar = document.createElement("span");
-                const indeterminate = item.indeterminate === true || item.progress == null;
-                bar.className = "ops-jobs-progress" + (indeterminate ? " is-indeterminate" : "");
+                bar.className = "ops-jobs-progress"
+                    + (indeterminate ? " is-indeterminate" : "")
+                    + (waiting ? " is-waiting" : "");
                 bar.setAttribute("role", "progressbar");
                 bar.setAttribute("aria-valuemin", "0");
                 bar.setAttribute("aria-valuemax", "100");
                 if (indeterminate) {
+                    bar.setAttribute("aria-valuetext", statusLabel(item.status));
+                } else if (waiting) {
+                    bar.setAttribute("aria-valuenow", "0");
                     bar.setAttribute("aria-valuetext", statusLabel(item.status));
                 } else {
                     const value = Math.max(0, Math.min(100, Number(item.progress) || 0));
                     bar.setAttribute("aria-valuenow", String(value));
                 }
                 const fill = document.createElement("span");
-                if (!indeterminate) {
+                if (waiting) {
+                    fill.style.width = "0%";
+                } else if (!indeterminate) {
                     fill.style.width = Math.max(0, Math.min(100, Number(item.progress) || 0)) + "%";
                 }
                 bar.appendChild(fill);
