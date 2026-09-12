@@ -147,7 +147,9 @@ return [
     'bulk' => [
         'result' => ':ok tamam',
         'result_failed' => ':ok tamam, :failed hata',
-        'rate_limited' => 'Coolify istek sınırı nedeniyle kalan siteler atlandı. Birkaç dakika sonra yalnızca hatalı siteler için tekrar çalıştırın.',
+        'result_skipped' => ':ok tamam, :skipped atlandı (istek sınırı)',
+        'result_failed_skipped' => ':ok tamam, :failed hata, :skipped atlandı (istek sınırı)',
+        'rate_limited' => 'Atlanan siteler Coolify istek sınırı yüzünden hiç tetiklenemedi. Birkaç dakika sonra yalnızca bu siteler için tekrar çalıştırın. Tamam yazan siteler tetiklendi.',
     ],
     'jobs' => [
         'title' => 'Arka plan işlemleri',

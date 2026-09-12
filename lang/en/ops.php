@@ -147,7 +147,9 @@ return [
     'bulk' => [
         'result' => ':ok ok',
         'result_failed' => ':ok ok, :failed failed',
-        'rate_limited' => 'Coolify rate limit skipped the remaining sites. Re-run in a few minutes for the failed sites only.',
+        'result_skipped' => ':ok ok, :skipped skipped (rate limit)',
+        'result_failed_skipped' => ':ok ok, :failed failed, :skipped skipped (rate limit)',
+        'rate_limited' => 'The skipped sites were never triggered because of the Coolify rate limit. Re-run in a few minutes for those sites only. Every site counted as ok was triggered.',
     ],
     'jobs' => [
         'title' => 'Background tasks',

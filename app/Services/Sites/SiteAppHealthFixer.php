@@ -9,6 +9,7 @@ use App\Services\Agent\SiteHealthChecker;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Ops\BulkResultSummary;
 use App\Services\Ops\PacedFanout;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -128,7 +129,7 @@ class SiteAppHealthFixer
 
     /**
      * @param  Collection<int, Site>|iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, errors: list<string>, sites: list<array<string, mixed>>}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool, sites: list<array<string, mixed>>}
      */
     public function fixMany(iterable $sites, string $fix, ?User $actor = null, ?string $ip = null): array
     {
@@ -168,10 +169,32 @@ class SiteAppHealthFixer
         return [
             'ok' => $result['ok'],
             'failed' => $result['failed'],
+            'skipped' => $result['skipped'],
             'errors' => $result['errors'],
             'rate_limited' => $result['rate_limited'],
             'sites' => array_values($rows),
         ];
+    }
+
+    /**
+     * @param  array{ok?: int, failed?: int, skipped?: int}  $result
+     */
+    public function summarize(array $result): string
+    {
+        $skipped = BulkResultSummary::skipped($result);
+        $counts = [
+            'ok' => (int) ($result['ok'] ?? 0),
+            'failed' => (int) ($result['failed'] ?? 0),
+            'skipped' => $skipped,
+        ];
+
+        $done = $skipped > 0
+            ? __('sites.app_health.bulk_done_skipped', $counts)
+            : __('sites.app_health.bulk_done', $counts);
+
+        $note = BulkResultSummary::throttleNote($result);
+
+        return $note === '' ? $done : $done.' '.$note;
     }
 
     private function reinspect(Site $site): SiteAppHealthReport

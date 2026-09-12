@@ -78,6 +78,14 @@
     } else {
         $pinStatus = __('site_ops.pin.status_unpinned');
     }
+    // Redeploy keeps the app on whatever ref it already points at, so the
+    // confirm can name the exact commit instead of offering "pin or HEAD".
+    $redeployConfirm = $currentSha
+        ? __('site_ops.redeploy.confirm_pinned', ['name' => $site->name, 'sha' => $currentShort])
+        : __('site_ops.redeploy.confirm_head', [
+            'name' => $site->name,
+            'branch' => $site->channel instanceof \App\Enums\Channel ? $site->channel->value : (string) $site->channel,
+        ]);
 @endphp
 
 @if ($showPack)
@@ -208,7 +216,7 @@
                         method="POST"
                         action="{{ route('ops.sites.deploy', $site) }}"
                         data-ops-pending
-                        data-confirm="{{ __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
+                        data-confirm="{{ $redeployConfirm }}"
                         data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
                         data-confirm-label="{{ __('site_ops.redeploy.button') }}"
                         data-confirm-danger="false"

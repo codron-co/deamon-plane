@@ -25,18 +25,23 @@ class PacedFanout
     ) {}
 
     /**
+     * A site deferred by a throttle and then completed counts as `ok`: the only
+     * sites in `skipped` are the ones that ran out of attempts while throttled,
+     * so `rate_limited` answers "did the throttle leave work undone?" and never
+     * "did we see a 429 somewhere?".
+     *
      * @param  iterable<int, Site>  $sites
      * @param  callable(Site): void  $action
      * @param  null|callable(Site, int, int): void  $onProgress  Receives (site, completed, total).
-     * @return array{ok: int, failed: int, errors: list<string>, rate_limited: bool, deferrals: int, sites: list<Site>}
+     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool, throttled: bool, deferrals: int, deferred: int, sites: list<Site>}
      */
     public function run(iterable $sites, callable $action, ?callable $onProgress = null): array
     {
-        /** @var list<array{site: Site, attempt: int}> $pending */
+        /** @var list<array{site: Site, attempt: int, deferred: bool}> $pending */
         $pending = [];
         foreach ($sites as $site) {
             if ($site instanceof Site) {
-                $pending[] = ['site' => $site, 'attempt' => 0];
+                $pending[] = ['site' => $site, 'attempt' => 0, 'deferred' => false];
             }
         }
 
@@ -45,25 +50,32 @@ class PacedFanout
 
         $ok = 0;
         $failed = 0;
+        $skipped = 0;
         $completed = 0;
         $deferrals = 0;
-        $rateLimited = false;
+        $deferred = 0;
+        $throttled = false;
         $errors = [];
         $done = [];
 
         while ($pending !== []) {
-            /** @var array{site: Site, attempt: int} $entry */
+            /** @var array{site: Site, attempt: int, deferred: bool} $entry */
             $entry = array_shift($pending);
             $site = $entry['site'];
 
             try {
                 $action($site);
                 $ok++;
+                if ($entry['deferred']) {
+                    $deferred++;
+                }
             } catch (Throwable $exception) {
+                $throttled = $throttled || $this->isRateLimited($exception);
+
                 if ($this->isTransient($exception) && $maxAttempts > $entry['attempt'] + 1) {
                     $entry['attempt']++;
+                    $entry['deferred'] = true;
                     $deferrals++;
-                    $rateLimited = $rateLimited || $this->isRateLimited($exception);
 
                     Log::info('Bulk Coolify action deferred', [
                         'site_id' => $site->id,
@@ -79,8 +91,12 @@ class PacedFanout
                     continue;
                 }
 
-                $failed++;
-                $rateLimited = $rateLimited || $this->isRateLimited($exception);
+                if ($this->isRateLimited($exception)) {
+                    $skipped++;
+                } else {
+                    $failed++;
+                }
+
                 $errors[] = $site->name.': '.$exception->getMessage();
             }
 
@@ -95,9 +111,12 @@ class PacedFanout
         return [
             'ok' => $ok,
             'failed' => $failed,
+            'skipped' => $skipped,
             'errors' => $errors,
-            'rate_limited' => $rateLimited,
+            'rate_limited' => $skipped > 0,
+            'throttled' => $throttled,
             'deferrals' => $deferrals,
+            'deferred' => $deferred,
             'sites' => $done,
         ];
     }

@@ -127,6 +127,8 @@ New keys (en + tr):
 - `coolify.errors.rate_limited`, `coolify.errors.unreachable`, `coolify.errors.not_configured`
 - `sites.agent.rate_limited`, `sites.agent.timeout`, `sites.agent.failed`
 - `ops.bulk.result` / `ops.bulk.result_failed` for the job runner summary
+  (later joined by `ops.bulk.result_skipped` / `ops.bulk.result_failed_skipped`;
+  see "Bulk counting" in [ops-sites.md](../../modules/ops-sites.md))
 
 ### 4. Agent-side retry
 
@@ -154,6 +156,12 @@ All env-overridable so a noisy Coolify instance can be slowed without a deploy.
 `OpsJobRunner` currently concatenates `' ok'` / `', failed'` onto translated
 prefixes, so a Turkish operator reads `Tekrar deploy: 3 ok, 1 failed`. Replace with
 `__('ops.bulk.result')` / `__('ops.bulk.result_failed')`.
+
+> Follow-up (2026-09-12): the `rate_limited` flag shipped here was set on **every**
+> deferred 429, so a sweep where all 27 sites succeeded after retries still told the
+> operator the rest were skipped. `PacedFanout` now counts a recovered site as `ok`
+> and reports `skipped` only for sites that never got through, and
+> `BulkResultSummary` owns the rendering for both the widget and the no-JS flash.
 `CoolifySiteSync`'s hardcoded `'Coolify connection is not configured.'` and
 `CoolifyClient`'s configuration errors move to `coolify.errors.*`.
 

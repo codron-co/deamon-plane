@@ -151,7 +151,25 @@ class SiteAppHealthTest extends TestCase
             ->getJson(route('ops.jobs'))
             ->assertOk()
             ->assertJsonPath('deployments.0.title', 'Widget Site')
-            ->assertJsonPath('deployments.0.status', 'running');
+            ->assertJsonPath('deployments.0.status', 'running')
+            ->assertJsonPath('deployments.0.indeterminate', true);
+    }
+
+    public function test_jobs_index_does_not_mark_a_queued_deployment_as_progressing(): void
+    {
+        $site = Site::factory()->create(['name' => 'Queued Site']);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Queued,
+            'trigger' => DeploymentTrigger::Manual,
+            'error_message' => null,
+        ]);
+
+        $this->actingAs($this->operator())
+            ->getJson(route('ops.jobs'))
+            ->assertOk()
+            ->assertJsonPath('deployments.0.status', 'queued')
+            ->assertJsonPath('deployments.0.indeterminate', false);
     }
 
     public function test_viewer_cannot_fix_or_list_jobs(): void

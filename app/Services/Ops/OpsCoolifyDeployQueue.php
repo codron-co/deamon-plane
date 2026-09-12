@@ -346,7 +346,8 @@ class OpsCoolifyDeployQueue
             'title' => $site->name,
             'status' => $widgetStatus,
             'progress' => in_array($widgetStatus, ['queued', 'running'], true) ? null : 100,
-            'indeterminate' => in_array($widgetStatus, ['queued', 'running'], true),
+            // Queued is waiting, not progressing: the widget must not animate it.
+            'indeterminate' => $widgetStatus === 'running',
             'message' => __('ops.jobs.deployment').' · '.($status->label()),
             'url' => route('ops.sites.show', $site),
             'deployment_id' => null,

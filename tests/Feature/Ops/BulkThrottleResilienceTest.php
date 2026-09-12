@@ -83,7 +83,31 @@ class BulkThrottleResilienceTest extends TestCase
         $this->assertStringNotContainsString('failed', $message);
     }
 
-    public function test_a_site_that_never_recovers_is_reported_as_a_real_failure_in_turkish(): void
+    public function test_a_throttled_sweep_that_finishes_every_site_never_claims_sites_were_skipped(): void
+    {
+        $this->app->setLocale('tr');
+        $sites = $this->sites(3);
+        $throttleBudget = 4;
+
+        Http::fake(function (Request $request) use (&$throttleBudget) {
+            if ($throttleBudget > 0) {
+                $throttleBudget--;
+
+                return Http::response(['message' => 'Too Many Attempts.'], 429);
+            }
+
+            return $this->coolifyResponse($request);
+        });
+
+        $message = app(OpsJobRunner::class)->run($this->job('sites.bulk_pin', $sites, ['ref' => 'abc1234']));
+
+        $this->assertSame(__('site_ops.pin.bulk').' '.__('ops.bulk.result', ['ok' => 3]), $message);
+        $this->assertStringNotContainsString('atlandı', $message);
+        $this->assertStringNotContainsString(__('ops.bulk.rate_limited'), $message);
+        $this->assertStringNotContainsString('hata', $message);
+    }
+
+    public function test_a_site_the_throttle_never_let_through_is_reported_as_skipped_in_turkish(): void
     {
         $this->app->setLocale('tr');
         config()->set('ops.coolify.bulk.max_site_attempts', 2);
@@ -93,9 +117,55 @@ class BulkThrottleResilienceTest extends TestCase
 
         $message = app(OpsJobRunner::class)->run($this->job('sites.bulk_pin', $sites, ['ref' => 'abc1234']));
 
-        $this->assertStringContainsString('hata', $message);
+        $this->assertStringContainsString('atlandı', $message);
         $this->assertStringContainsString(__('ops.bulk.rate_limited'), $message);
+        $this->assertStringNotContainsString('hata', $message);
         $this->assertStringNotContainsStringIgnoringCase('Too Many Attempts', $message);
+    }
+
+    public function test_a_non_throttle_error_is_a_failure_without_the_skipped_warning(): void
+    {
+        $this->app->setLocale('tr');
+        $sites = $this->sites(1);
+
+        Http::fake(function (Request $request) {
+            if ($request->method() === 'PATCH' && preg_match('#/applications/[^/?]+$#', $request->url()) === 1) {
+                return Http::response(['message' => 'Validation failed.'], 422);
+            }
+
+            return $this->coolifyResponse($request);
+        });
+
+        $message = app(OpsJobRunner::class)->run($this->job('sites.bulk_pin', $sites, ['ref' => 'abc1234']));
+
+        $this->assertStringContainsString('hata', $message);
+        $this->assertStringNotContainsString('atlandı', $message);
+        $this->assertStringNotContainsString(__('ops.bulk.rate_limited'), $message);
+    }
+
+    public function test_mixed_sweep_counts_recovered_sites_as_ok_and_only_leftovers_as_skipped(): void
+    {
+        $this->app->setLocale('tr');
+        config()->set('ops.coolify.bulk.max_site_attempts', 2);
+        $sites = $this->sites(2);
+        $blocked = $sites[1]->coolify_app_uuid;
+
+        Http::fake(function (Request $request) use ($blocked) {
+            if (str_contains($request->url(), (string) $blocked)) {
+                return Http::response(['message' => 'Too Many Attempts.'], 429);
+            }
+
+            return $this->coolifyResponse($request);
+        });
+
+        $message = app(OpsJobRunner::class)->run($this->job('sites.bulk_pin', $sites, ['ref' => 'abc1234']));
+
+        $this->assertSame(
+            __('site_ops.pin.bulk').' '
+            .__('ops.bulk.result_skipped', ['ok' => 1, 'skipped' => 1])
+            .' — '.__('ops.bulk.rate_limited'),
+            $message,
+        );
     }
 
     public function test_bulk_sync_reports_progress_per_site(): void

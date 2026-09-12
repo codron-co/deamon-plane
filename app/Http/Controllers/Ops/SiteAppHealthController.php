@@ -85,12 +85,9 @@ class SiteAppHealthController extends Controller
         }
 
         $result = $fixer->fixMany($targets, $fix, $request->user(), $request->ip());
-        $message = __('sites.app_health.bulk_done', [
-            'ok' => $result['ok'],
-            'failed' => $result['failed'],
-        ]);
+        $unfinished = $result['failed'] > 0 || $result['skipped'] > 0;
 
-        return back()->with($result['failed'] > 0 ? 'error' : 'status', $message);
+        return back()->with($unfinished ? 'error' : 'status', $fixer->summarize($result));
     }
 
     /**
