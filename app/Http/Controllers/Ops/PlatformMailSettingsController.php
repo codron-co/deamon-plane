@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DispatchPlatformMailPushJob;
 use App\Models\AuditLog;
 use App\Models\PlatformMailSetting;
-use App\Services\Mail\PlatformMailConfigurer;
 use App\Services\Mail\PlatformNotificationCatalog;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -77,19 +77,22 @@ class PlatformMailSettingsController extends Controller
             'ip' => $request->ip(),
         ]);
 
+        DispatchPlatformMailPushJob::dispatch();
+
         return redirect()
             ->route('ops.platform-mail.edit')
-            ->with('status', __('platform_mail.flash.saved'));
+            ->with('status', __('platform_mail.flash.saved_push_queued'));
     }
 
-    public function push(Request $request, PlatformMailConfigurer $configurer): RedirectResponse
+    public function push(Request $request): RedirectResponse
     {
         $this->authorize('ops.write');
-        $count = $configurer->syncAllSites();
+
+        DispatchPlatformMailPushJob::dispatch();
 
         return redirect()
             ->route('ops.platform-mail.edit')
-            ->with('status', __('platform_mail.flash.pushed', ['count' => $count]));
+            ->with('status', __('platform_mail.flash.pushed_queued'));
     }
 
     /**

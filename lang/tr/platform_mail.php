@@ -42,6 +42,7 @@ return [
         'saved' => 'Yazılım e-posta ayarları kaydedildi.',
         'saved_push_queued' => 'Yazılım e-posta ayarları kaydedildi. Sitelere aktarım kuyruğa alındı.',
         'pushed' => 'Yazılım e-posta ayarları :count siteye yeniden aktarıldı.',
+        'pushed_queued' => 'Sitelere yeniden aktarım kuyruğa alındı.',
         'site_saved' => 'Site yazılım e-posta override kaydedildi.',
     ],
     'test' => [

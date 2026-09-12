@@ -42,6 +42,7 @@ return [
         'saved' => 'Software mail settings saved.',
         'saved_push_queued' => 'Software mail settings saved. Push to sites queued.',
         'pushed' => 'Software mail settings re-pushed to :count site(s).',
+        'pushed_queued' => 'Re-push to sites queued.',
         'site_saved' => 'Site software-mail overrides saved.',
     ],
     'test' => [

@@ -5,12 +5,14 @@ namespace Tests\Feature\Ops;
 use App\Enums\Channel;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
+use App\Jobs\DispatchPlatformMailPushJob;
 use App\Models\PlatformMailSetting;
 use App\Models\Site;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class PlatformMailSettingsTest extends TestCase
@@ -75,12 +77,35 @@ class PlatformMailSettingsTest extends TestCase
                 'notifications' => [],
             ])
             ->assertRedirect(route('ops.platform-mail.edit'))
-            ->assertSessionHas('status', __('platform_mail.flash.saved'));
+            ->assertSessionHas('status', __('platform_mail.flash.saved_push_queued'));
 
         $this->actingAs($this->operator())
             ->get(route('ops.platform-mail.edit'))
             ->assertOk()
-            ->assertSee(__('platform_mail.flash.saved'), false);
+            ->assertSee(__('platform_mail.flash.saved_push_queued'), false);
+    }
+
+    public function test_save_queues_platform_mail_push_dispatch(): void
+    {
+        Queue::fake();
+
+        $this->actingAs($this->operator())
+            ->put(route('ops.platform-mail.update'), [
+                'enabled' => '1',
+                'host' => 'smtp.example.com',
+                'port' => 465,
+                'encryption' => 'ssl',
+                'username' => 'u@example.com',
+                'password' => 'secret-pass',
+                'from_address' => 'noreply@example.com',
+                'from_name' => 'Test',
+                'default_admin_recipient' => 'ops@example.com',
+                'notifications' => [],
+            ])
+            ->assertRedirect(route('ops.platform-mail.edit'))
+            ->assertSessionHas('status');
+
+        Queue::assertPushed(DispatchPlatformMailPushJob::class);
     }
 
     public function test_invalid_from_address_redirects_back_with_errors(): void
