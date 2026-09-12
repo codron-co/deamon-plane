@@ -5,6 +5,7 @@ namespace App\Services\Themes;
 use App\Enums\ThemeInstallationStatus;
 use App\Jobs\ThemeInstallJob;
 use App\Jobs\ThemeUpdateJob;
+use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
@@ -123,7 +124,10 @@ class ThemeRolloutService
         }
     }
 
-    public function syncNow(SiteThemeInstallation $installation, ?User $actor, ?string $ip): void
+    /**
+     * @return 'ran'|'deferred'
+     */
+    public function syncNow(SiteThemeInstallation $installation, ?User $actor, ?string $ip): string
     {
         $installation->loadMissing(['site', 'theme']);
         $site = $installation->site;
@@ -135,6 +139,10 @@ class ThemeRolloutService
 
         if (! $site->hasAgentSecret()) {
             throw new ThemeRolloutException('Site has no agent secret.');
+        }
+
+        if ($this->deferSyncIfDeployOpen($installation, $site)) {
+            return 'deferred';
         }
 
         $result = $this->syncWithDataRepair($site, $theme, $actor, $ip);
@@ -164,8 +172,11 @@ class ThemeRolloutService
             $installation->status = ThemeInstallationStatus::Active;
         }
 
+        $installation->pending_sync_after_deploy = false;
         $installation->last_error = null;
         $installation->save();
+
+        return 'ran';
     }
 
     public function activate(SiteThemeInstallation $installation, ?User $actor, ?string $ip, bool $confirmed): void
@@ -243,11 +254,16 @@ class ThemeRolloutService
         }
 
         if ($sync) {
-            $syncResult = $this->syncWithDataRepair($site, $theme, $actor, $ip);
-            if (! $syncResult->ok) {
-                $this->markError($installation, $site, $theme, $actor, $ip, 'theme.sync_failed', $syncResult->safeMessage);
+            if (! $this->deferSyncIfDeployOpen($installation, $site)) {
+                $syncResult = $this->syncWithDataRepair($site, $theme, $actor, $ip);
+                if (! $syncResult->ok) {
+                    $this->markError($installation, $site, $theme, $actor, $ip, 'theme.sync_failed', $syncResult->safeMessage);
 
-                return;
+                    return;
+                }
+
+                $installation->pending_sync_after_deploy = false;
+                $installation->save();
             }
         }
 
@@ -322,6 +338,27 @@ class ThemeRolloutService
             'after' => $this->auditSnapshot($installation->fresh() ?? $installation, $theme),
             'ip' => $ip,
         ]);
+    }
+
+    /**
+     * While a Coolify deploy is still open, theme sync must not hit the site agent.
+     * Mark the installation so PollDeploymentJob can fire sync after finish (Task 2).
+     */
+    private function deferSyncIfDeployOpen(SiteThemeInstallation $installation, Site $site): bool
+    {
+        $open = Deployment::query()
+            ->where('site_id', $site->id)
+            ->whereNull('finished_at')
+            ->exists();
+
+        if (! $open) {
+            return false;
+        }
+
+        $installation->pending_sync_after_deploy = true;
+        $installation->save();
+
+        return true;
     }
 
     /**

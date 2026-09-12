@@ -58,12 +58,14 @@ class SiteThemeController extends Controller
         $this->authorize('assign', Theme::class);
 
         try {
-            $rollout->syncNow($installation, $request->user(), $request->ip());
+            $outcome = $rollout->syncNow($installation, $request->user(), $request->ip());
         } catch (ThemeRolloutException $exception) {
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('status', 'Theme sync requested on the CMS instance.');
+        return back()->with('status', $outcome === 'deferred'
+            ? 'Theme sync deferred until the open Coolify deploy finishes.'
+            : 'Theme sync requested on the CMS instance.');
     }
 
     public function activate(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse

@@ -26,6 +26,7 @@ class SiteThemeInstallation extends Model
         'auto_update',
         'status',
         'last_error',
+        'pending_sync_after_deploy',
         'updated_from_webhook_at',
     ];
 
@@ -37,6 +38,7 @@ class SiteThemeInstallation extends Model
         return [
             'is_active' => 'boolean',
             'auto_update' => 'boolean',
+            'pending_sync_after_deploy' => 'boolean',
             'status' => ThemeInstallationStatus::class,
             'updated_from_webhook_at' => 'datetime',
         ];
