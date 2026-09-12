@@ -174,6 +174,7 @@ return [
         'unreachable' => 'Coolify could not be reached (connection error or timeout).',
         'no_base_url' => 'Coolify base URL is not configured.',
         'not_configured' => 'Coolify connection is not configured.',
+        'deploy_busy' => 'Another Coolify build is already running on this server (:count in flight, max :max). Wait for it to finish, then retry.',
     ],
     'flash' => [
         'saved' => 'Coolify connection saved. Sync servers and projects.',

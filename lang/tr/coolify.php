@@ -174,6 +174,7 @@ return [
         'unreachable' => 'Coolify’ye ulaşılamadı (bağlantı hatası veya zaman aşımı).',
         'no_base_url' => 'Coolify base URL ayarlı değil.',
         'not_configured' => 'Coolify bağlantısı ayarlı değil.',
+        'deploy_busy' => 'Bu sunucuda zaten bir Coolify derlemesi sürüyor (:count devam ediyor, üst sınır :max). Bitmesini bekleyip tekrar deneyin.',
     ],
     'flash' => [
         'saved' => 'Coolify bağlantısı kaydedildi. Sunucu ve projeleri senkronlayın.',

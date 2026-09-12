@@ -5,6 +5,7 @@ namespace App\Services\Ops;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyCredentials;
+use App\Services\Coolify\CoolifyDeployBusyException;
 use App\Services\Coolify\CoolifyRateGuard;
 use App\Support\RetryAfter;
 use Illuminate\Http\Client\ConnectionException;
@@ -124,6 +125,10 @@ class PacedFanout
     public function isTransient(Throwable $exception): bool
     {
         for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof CoolifyDeployBusyException && $current->isRetryable()) {
+                return true;
+            }
+
             if ($current instanceof CoolifyApiException) {
                 return $current->isTransient();
             }

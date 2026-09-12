@@ -102,6 +102,15 @@ return [
         'auto_rebind_domains' => filter_var(env('COOLIFY_AUTO_REBIND_DOMAINS', true), FILTER_VALIDATE_BOOLEAN),
 
         /*
+        | Cap concurrent Coolify builds per connection (or server uuid). Plane
+        | counts unfinished Deployment rows for peer sites before starting another
+        | deploy. Default 1 keeps shared VPS memory from parallel compose builds.
+        */
+        'deploy' => [
+            'max_concurrent_per_server' => (int) env('COOLIFY_MAX_CONCURRENT_PER_SERVER', 1),
+        ],
+
+        /*
         | Coolify runs Laravel `throttle` middleware, so fleet-wide bulk ops trip
         | 429 Too Many Attempts. `rate` paces outgoing calls per Coolify host and
         | holds a shared cooldown once one call is throttled; `retry` absorbs the

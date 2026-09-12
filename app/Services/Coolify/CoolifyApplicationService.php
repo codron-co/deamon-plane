@@ -211,6 +211,7 @@ class CoolifyApplicationService
 
     public function deploy(string $uuid, bool $force = false): CoolifyDeployResult
     {
+        $this->assertDeployGate($uuid);
         $this->syncSiteEnv($uuid);
 
         return $this->client->deploy($uuid, $force);
@@ -222,12 +223,29 @@ class CoolifyApplicationService
      */
     private function syncSiteEnv(string $uuid): void
     {
-        $site = Site::query()->where('coolify_app_uuid', $uuid)->first();
+        $site = $this->siteForAppUuid($uuid);
         if (! $site instanceof Site) {
             return;
         }
 
         app(CoolifyAppEnvSync::class)->sync($site, $this);
+    }
+
+    private function assertDeployGate(string $uuid): void
+    {
+        $site = $this->siteForAppUuid($uuid);
+        if (! $site instanceof Site) {
+            return;
+        }
+
+        app(CoolifyDeployGate::class)->assertCanStartDeploy($site);
+    }
+
+    private function siteForAppUuid(string $uuid): ?Site
+    {
+        $site = Site::query()->where('coolify_app_uuid', $uuid)->first();
+
+        return $site instanceof Site ? $site : null;
     }
 
     public function getDeployment(string $deploymentUuid): CoolifyDeployment

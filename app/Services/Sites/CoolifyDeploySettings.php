@@ -11,6 +11,8 @@ use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Coolify\CoolifyDeployBusyException;
+use App\Services\Coolify\CoolifyDeployGate;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployResult;
 use App\Services\Ops\PacedFanout;
@@ -81,6 +83,7 @@ class CoolifyDeploySettings
     public function pin(Site $site, string $ref, ?User $actor = null, ?string $ip = null): CoolifyApplication
     {
         $uuid = $this->requireApp($site);
+        $this->assertCanStartDeploy($site);
         $coolify = CoolifyApplicationService::forSite($site);
 
         try {
@@ -89,6 +92,8 @@ class CoolifyDeploySettings
                 'is_auto_deploy_enabled' => false,
             ]);
             $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip);
+        } catch (CoolifyDeployBusyException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -104,6 +109,7 @@ class CoolifyDeploySettings
     public function followHead(Site $site, ?User $actor = null, ?string $ip = null): CoolifyApplication
     {
         $uuid = $this->requireApp($site);
+        $this->assertCanStartDeploy($site);
         $coolify = CoolifyApplicationService::forSite($site);
 
         try {
@@ -112,6 +118,8 @@ class CoolifyDeploySettings
                 'is_auto_deploy_enabled' => true,
             ]);
             $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip);
+        } catch (CoolifyDeployBusyException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -127,9 +135,12 @@ class CoolifyDeploySettings
     public function redeploy(Site $site, ?User $actor = null, ?string $ip = null): void
     {
         $uuid = $this->requireApp($site);
+        $this->assertCanStartDeploy($site);
 
         try {
             $result = CoolifyApplicationService::forSite($site)->deploy($uuid, true);
+        } catch (CoolifyDeployBusyException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -256,6 +267,15 @@ class CoolifyDeploySettings
         }
 
         return $uuid;
+    }
+
+    private function assertCanStartDeploy(Site $site): void
+    {
+        try {
+            app(CoolifyDeployGate::class)->assertCanStartDeploy($site);
+        } catch (CoolifyDeployBusyException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
+        }
     }
 
     /**
