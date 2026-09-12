@@ -144,7 +144,7 @@ class OpsJobRunner
             (bool) ($job->payload['force'] ?? false),
         ));
 
-        return $this->summaryFor(
+        return $this->triggerSummaryFor(
             __('sites.flash.bulk_channel', ['channel' => $target->value, 'skipped' => 0]),
             $result,
         );
@@ -189,7 +189,7 @@ class OpsJobRunner
 
         $result = $this->fanout($job, $sites, fn (Site $site) => $settings->redeploy($site, $actor, $ip));
 
-        return $this->summaryFor(__('site_ops.redeploy.bulk'), $result);
+        return $this->triggerSummaryFor(__('site_ops.redeploy.bulk'), $result);
     }
 
     private function bulkFollowHead(OpsBackgroundJob $job): string
@@ -201,7 +201,7 @@ class OpsJobRunner
 
         $result = $this->fanout($job, $sites, fn (Site $site) => $settings->followHead($site, $actor, $ip));
 
-        return $this->summaryFor(__('site_ops.pin.bulk_follow'), $result);
+        return $this->triggerSummaryFor(__('site_ops.pin.bulk_follow'), $result);
     }
 
     private function bulkPin(OpsBackgroundJob $job): string
@@ -214,7 +214,7 @@ class OpsJobRunner
 
         $result = $this->fanout($job, $sites, fn (Site $site) => $settings->pin($site, $ref, $actor, $ip));
 
-        return $this->summaryFor(__('site_ops.pin.bulk'), $result);
+        return $this->triggerSummaryFor(__('site_ops.pin.bulk'), $result);
     }
 
     private function bulkPublishStatus(OpsBackgroundJob $job): string
@@ -254,10 +254,18 @@ class OpsJobRunner
         $actor = $this->actor($job);
         $ip = $this->ip($job);
 
-        $targets = $sites->values()->filter(function (Site $site) use ($fixer, $fix): bool {
+        // Only a fix set that ends in a redeploy leaves work running on Coolify;
+        // the summary and the widget status must not claim it otherwise.
+        $deployTriggered = false;
+        $targets = $sites->values()->filter(function (Site $site) use ($fixer, $fix, &$deployTriggered): bool {
             $needed = $fixer->neededFixes($site);
+            $wanted = $fix === 'all' ? $needed !== [] : in_array($fix, $needed, true);
 
-            return $fix === 'all' ? $needed !== [] : in_array($fix, $needed, true);
+            if ($wanted && in_array('redeploy', $fix === 'all' ? $needed : [$fix], true)) {
+                $deployTriggered = true;
+            }
+
+            return $wanted;
         });
 
         $rows = [];
@@ -273,10 +281,10 @@ class OpsJobRunner
             $rows[$site->id] = $report->toView($site->fresh() ?? $site);
         });
 
-        $job->result = ['sites' => array_values($rows)];
+        $job->result = ['sites' => array_values($rows), 'deploy_triggered' => $deployTriggered];
         $job->save();
 
-        return $fixer->summarize($result);
+        return $fixer->summarize($result, $deployTriggered);
     }
 
     /**
@@ -309,6 +317,16 @@ class OpsJobRunner
     private function summaryFor(string $prefix, array $result): string
     {
         return BulkResultSummary::format($prefix, $result);
+    }
+
+    /**
+     * Sweeps that only queue Coolify builds.
+     *
+     * @param  array{ok?: int, failed?: int, skipped?: int}  $result
+     */
+    private function triggerSummaryFor(string $prefix, array $result): string
+    {
+        return BulkResultSummary::formatTriggered($prefix, $result);
     }
 
     /**

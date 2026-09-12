@@ -357,7 +357,7 @@ class SiteCoolifyOpsController extends Controller
             return back()->with('error', __('site_ops.bulk.empty'));
         }
 
-        return back()->with('status', $this->bulkFlash([
+        return back()->with('status', $this->bulkTriggerFlash([
             'ok' => $ok,
             'failed' => $failed,
             'errors' => $errors,
@@ -464,7 +464,7 @@ class SiteCoolifyOpsController extends Controller
             ], $extraPayload));
         }
 
-        return back()->with('status', $this->bulkFlash($run($sites), $flashPrefix));
+        return back()->with('status', $this->bulkTriggerFlash($run($sites), $flashPrefix));
     }
 
     /**
@@ -503,5 +503,15 @@ class SiteCoolifyOpsController extends Controller
     private function bulkFlash(array $result, string $prefix): string
     {
         return BulkResultSummary::format($prefix, $result, errorLimit: 3);
+    }
+
+    /**
+     * Sweeps that hand the build to Coolify: success means "triggered", not "done".
+     *
+     * @param  array{ok: int, failed: int, skipped?: int, errors: list<string>}  $result
+     */
+    private function bulkTriggerFlash(array $result, string $prefix): string
+    {
+        return BulkResultSummary::formatTriggered($prefix, $result, errorLimit: 3);
     }
 }

@@ -328,6 +328,11 @@
                 if (kind === "cancel") {
                     markDismissed(item.id);
                 }
+                // Force start repoints the same row at the instant-started deploy,
+                // so say it started instead of leaving the operator to guess.
+                if (kind === "force_start") {
+                    showMessage(payload.message || copy("force-started", "Deploy force-started."), "info");
+                }
                 upsertJob(payload.deployment);
             } else {
                 await poll();

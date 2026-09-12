@@ -78,7 +78,7 @@ class BulkThrottleResilienceTest extends TestCase
 
         $message = app(OpsJobRunner::class)->run($this->job('sites.bulk_pin', $sites, ['ref' => 'abc1234']));
 
-        $this->assertStringContainsString('tamam', $message);
+        $this->assertStringContainsString('tetiklendi', $message);
         $this->assertStringNotContainsString(' ok', $message);
         $this->assertStringNotContainsString('failed', $message);
     }
@@ -101,7 +101,11 @@ class BulkThrottleResilienceTest extends TestCase
 
         $message = app(OpsJobRunner::class)->run($this->job('sites.bulk_pin', $sites, ['ref' => 'abc1234']));
 
-        $this->assertSame(__('site_ops.pin.bulk').' '.__('ops.bulk.result', ['ok' => 3]), $message);
+        $this->assertSame(
+            __('site_ops.pin.bulk').' '.__('ops.bulk.triggered', ['ok' => 3])
+            .' — '.__('ops.bulk.triggered_note'),
+            $message,
+        );
         $this->assertStringNotContainsString('atlandı', $message);
         $this->assertStringNotContainsString(__('ops.bulk.rate_limited'), $message);
         $this->assertStringNotContainsString('hata', $message);
@@ -162,8 +166,8 @@ class BulkThrottleResilienceTest extends TestCase
 
         $this->assertSame(
             __('site_ops.pin.bulk').' '
-            .__('ops.bulk.result_skipped', ['ok' => 1, 'skipped' => 1])
-            .' — '.__('ops.bulk.rate_limited'),
+            .__('ops.bulk.triggered_skipped', ['ok' => 1, 'skipped' => 1])
+            .' — '.__('ops.bulk.triggered_note').' '.__('ops.bulk.rate_limited'),
             $message,
         );
     }

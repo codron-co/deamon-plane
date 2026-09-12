@@ -150,6 +150,11 @@ return [
         'result_skipped' => ':ok tamam, :skipped atlandı (istek sınırı)',
         'result_failed_skipped' => ':ok tamam, :failed hata, :skipped atlandı (istek sınırı)',
         'rate_limited' => 'Atlanan siteler Coolify istek sınırı yüzünden hiç tetiklenemedi. Birkaç dakika sonra yalnızca bu siteler için tekrar çalıştırın. Tamam yazan siteler tetiklendi.',
+        'triggered' => ':ok deploy tetiklendi',
+        'triggered_failed' => ':ok deploy tetiklendi, :failed hata',
+        'triggered_skipped' => ':ok deploy tetiklendi, :skipped atlandı (istek sınırı)',
+        'triggered_failed_skipped' => ':ok deploy tetiklendi, :failed hata, :skipped atlandı (istek sınırı)',
+        'triggered_note' => 'Coolify derlemesi henüz bitmedi; «Coolify deploy» satırlarından izlenir.',
     ],
     'jobs' => [
         'title' => 'Arka plan işlemleri',
@@ -183,12 +188,20 @@ return [
         'force_start_unavailable' => 'Bu deploy zorla başlatılamaz.',
         'force_start_only_queued' => 'Yalnızca kuyruktaki deploy’lar zorla başlatılabilir.',
         'force_start_failed' => 'Coolify deploy’u zorla başlatamadı.',
+        'force_started' => 'Deploy zorla başlatıldı; Coolify şimdi derliyor.',
+        'force_start_aborted' => 'Zorla başlatma yarıda kaldı: kuyruktaki deploy iptal edildi ama Coolify yenisini başlatamadı. Tekrar deploy edin.',
+        'force_start_replaced' => 'Kuyruktaki deploy zorla başlatılan yeni deploy ile değiştirildi.',
         'status' => [
             'queued' => 'Kuyrukta',
             'running' => 'Çalışıyor',
             'completed' => 'Bitti',
+            'triggered' => 'Tetiklendi',
             'failed' => 'Başarısız',
             'cancelled' => 'İptal',
         ],
+    ],
+    'deploy_failure' => [
+        'cancelled' => 'Coolify deploy’u iptal edildi.',
+        'failed' => 'Coolify deploy’u başarısız oldu.',
     ],
 ];

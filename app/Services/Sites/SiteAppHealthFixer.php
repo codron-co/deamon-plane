@@ -178,12 +178,14 @@ class SiteAppHealthFixer
 
     /**
      * @param  array{ok?: int, failed?: int, skipped?: int}  $result
+     * @param  bool  $deployTriggered  A fix set ending in a redeploy: Coolify is still building.
      */
-    public function summarize(array $result): string
+    public function summarize(array $result, bool $deployTriggered = false): string
     {
         $skipped = BulkResultSummary::skipped($result);
+        $ok = (int) ($result['ok'] ?? 0);
         $counts = [
-            'ok' => (int) ($result['ok'] ?? 0),
+            'ok' => $ok,
             'failed' => (int) ($result['failed'] ?? 0),
             'skipped' => $skipped,
         ];
@@ -192,9 +194,12 @@ class SiteAppHealthFixer
             ? __('sites.app_health.bulk_done_skipped', $counts)
             : __('sites.app_health.bulk_done', $counts);
 
-        $note = BulkResultSummary::throttleNote($result);
+        $notes = array_filter([
+            $deployTriggered && $ok > 0 ? BulkResultSummary::triggeredNote() : '',
+            BulkResultSummary::throttleNote($result),
+        ], static fn (string $note): bool => $note !== '');
 
-        return $note === '' ? $done : $done.' '.$note;
+        return $notes === [] ? $done : $done.' '.implode(' ', $notes);
     }
 
     private function reinspect(Site $site): SiteAppHealthReport

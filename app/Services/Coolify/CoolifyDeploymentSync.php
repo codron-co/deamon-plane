@@ -142,7 +142,12 @@ class CoolifyDeploymentSync
             // Poll timeout / earlier failure text must not stick on a successful Coolify row.
             $deployment->error_message = null;
         } elseif (in_array($effective, [DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
-            $detail = DeploymentFailureText::fromRemote($site, $remote, 'Coolify deployment '.$effective->value.'.');
+            // The fallback is stored on the row and shown in the ops widget, so it
+            // follows the panel locale instead of shipping raw English.
+            $fallback = $effective === DeploymentStatus::Cancelled
+                ? (string) __('ops.deploy_failure.cancelled')
+                : (string) __('ops.deploy_failure.failed');
+            $detail = DeploymentFailureText::fromRemote($site, $remote, $fallback);
             if (filled($remote->message) || filled($remote->logsExcerpt)) {
                 $deployment->error_message = $detail['error_message'];
                 if (filled($detail['log_excerpt'])) {

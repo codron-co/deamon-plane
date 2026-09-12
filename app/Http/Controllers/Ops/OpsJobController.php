@@ -129,10 +129,11 @@ class OpsJobController extends Controller
     {
         $this->authorize('ops.write');
 
-        $updated = $queue->forceStart($deployment);
+        $updated = $queue->forceStart($deployment, $request->user());
 
         return response()->json([
             'ok' => true,
+            'message' => __('ops.jobs.force_started'),
             'deployment' => $updated->toWidget(),
         ]);
     }
@@ -153,10 +154,11 @@ class OpsJobController extends Controller
     {
         $this->authorize('ops.write');
 
-        $updated = $queue->forceStartRemote($uuid);
+        $updated = $queue->forceStartRemote($uuid, $request->user());
 
         return response()->json([
             'ok' => true,
+            'message' => __('ops.jobs.force_started'),
             'deployment' => $updated->toWidget(),
         ]);
     }

@@ -150,6 +150,11 @@ return [
         'result_skipped' => ':ok ok, :skipped skipped (rate limit)',
         'result_failed_skipped' => ':ok ok, :failed failed, :skipped skipped (rate limit)',
         'rate_limited' => 'The skipped sites were never triggered because of the Coolify rate limit. Re-run in a few minutes for those sites only. Every site counted as ok was triggered.',
+        'triggered' => ':ok deploy triggered',
+        'triggered_failed' => ':ok deploy triggered, :failed failed',
+        'triggered_skipped' => ':ok deploy triggered, :skipped skipped (rate limit)',
+        'triggered_failed_skipped' => ':ok deploy triggered, :failed failed, :skipped skipped (rate limit)',
+        'triggered_note' => 'The Coolify build is not finished yet; follow the “Coolify deploy” rows.',
     ],
     'jobs' => [
         'title' => 'Background tasks',
@@ -183,12 +188,20 @@ return [
         'force_start_unavailable' => 'This deploy cannot be force-started.',
         'force_start_only_queued' => 'Only queued deploys can be force-started.',
         'force_start_failed' => 'Coolify could not force-start the deploy.',
+        'force_started' => 'Deploy force-started; Coolify is building it now.',
+        'force_start_aborted' => 'Force start stopped half-way: the queued deploy was cancelled but Coolify could not start a new one. Redeploy the site.',
+        'force_start_replaced' => 'The queued deploy was replaced by the force-started one.',
         'status' => [
             'queued' => 'Queued',
             'running' => 'Running',
             'completed' => 'Done',
+            'triggered' => 'Triggered',
             'failed' => 'Failed',
             'cancelled' => 'Cancelled',
         ],
+    ],
+    'deploy_failure' => [
+        'cancelled' => 'The Coolify deploy was cancelled.',
+        'failed' => 'The Coolify deploy failed.',
     ],
 ];

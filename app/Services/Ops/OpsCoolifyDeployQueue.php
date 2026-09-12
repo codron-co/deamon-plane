@@ -7,6 +7,7 @@ use App\Enums\DeploymentTrigger;
 use App\Models\CoolifyConnection;
 use App\Models\Deployment;
 use App\Models\Site;
+use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyDeploymentSync;
@@ -145,7 +146,7 @@ class OpsCoolifyDeployQueue
             $deployment->forceFill([
                 'status' => DeploymentStatus::Cancelled,
                 'finished_at' => $deployment->finished_at ?? now(),
-                'error_message' => $deployment->error_message ?: __('ops.jobs.status.cancelled'),
+                'error_message' => $deployment->error_message ?: __('ops.deploy_failure.cancelled'),
             ])->save();
         }
 
@@ -153,9 +154,16 @@ class OpsCoolifyDeployQueue
     }
 
     /**
-     * Promote a queued Coolify deploy: cancel the queue row, then instant-start the app.
+     * Promote a queued Coolify deploy: drop it out of the Coolify queue, then
+     * instant-start the app.
+     *
+     * The operator pressed Force on **one** row, so Plane keeps one row: the
+     * same deployment is repointed at the instant-started Coolify deployment
+     * and goes queued -> running. Force must never leave an "iptal" row behind,
+     * because cancelling the queue slot is our mechanics, not the outcome the
+     * operator asked for.
      */
-    public function forceStart(Deployment $deployment): Deployment
+    public function forceStart(Deployment $deployment, ?User $actor = null): Deployment
     {
         $site = $deployment->site;
         $appUuid = trim((string) ($site?->coolify_app_uuid ?? ''));
@@ -182,43 +190,90 @@ class OpsCoolifyDeployQueue
             } catch (CoolifyApiException) {
                 // Queue row may already have advanced; still try instant start.
             }
-
-            $this->sync->applyExisting($deployment, CoolifyDeployment::fromArray([
-                'uuid' => $deployUuid,
-                'status' => 'cancelled_by_user',
-            ]));
         }
 
         try {
             $result = $coolify->startApplication($appUuid, force: true, instantDeploy: true);
         } catch (CoolifyApiException $exception) {
+            $this->failForceStart($deployment);
+
             abort(422, trim($exception->getMessage()) !== '' ? $exception->getMessage() : __('ops.jobs.force_start_failed'));
         }
 
         $newUuid = $result->firstDeploymentUuid();
         if ($newUuid === null || $newUuid === '') {
+            $this->failForceStart($deployment);
+
             abort(422, __('ops.jobs.force_start_failed'));
         }
 
-        $channel = $site->channel;
-        $fresh = $site->deployments()->make([
-            'channel' => $channel,
+        $live = $this->adopt($deployment, $newUuid);
+
+        $live->forceFill([
             'trigger' => DeploymentTrigger::Manual,
             'coolify_deployment_uuid' => $newUuid,
             'status' => DeploymentStatus::InProgress,
             'started_at' => now(),
-            'requested_by' => $deployment->requested_by,
+            'finished_at' => null,
+            'error_message' => null,
+            'requested_by' => $live->requested_by ?? $actor?->id,
+        ])->save();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => 'site.deploy_force_started',
+            'before' => ['coolify_deployment_uuid' => $deployUuid !== '' ? $deployUuid : null, 'status' => DeploymentStatus::Queued->value],
+            'after' => ['coolify_deployment_uuid' => $newUuid, 'status' => DeploymentStatus::InProgress->value],
+            'ip' => null,
         ]);
-        $fresh->save();
 
         try {
             $remote = $coolify->getDeployment($newUuid);
-            $this->sync->applyExisting($fresh, $remote);
+            $this->sync->applyExisting($live, $remote);
         } catch (CoolifyApiException) {
             // Widget will pick it up on the next poll.
         }
 
-        return $fresh->fresh(['site']) ?? $fresh;
+        return $live->fresh(['site']) ?? $live;
+    }
+
+    /**
+     * A webhook can have already written a row for the instant-started deploy.
+     * Then that row is the live one and the forced queue row is retired with
+     * copy that says what happened instead of a bare "cancelled".
+     */
+    private function adopt(Deployment $deployment, string $newUuid): Deployment
+    {
+        $existing = Deployment::query()
+            ->with('site')
+            ->where('coolify_deployment_uuid', $newUuid)
+            ->whereKeyNot($deployment->getKey())
+            ->first();
+
+        if (! $existing instanceof Deployment) {
+            return $deployment;
+        }
+
+        $deployment->forceFill([
+            'status' => DeploymentStatus::Cancelled,
+            'finished_at' => $deployment->finished_at ?? now(),
+            'error_message' => __('ops.jobs.force_start_replaced'),
+        ])->save();
+
+        return $existing;
+    }
+
+    /**
+     * The queue slot is already gone, so the row cannot stay "kuyrukta".
+     * Say that force start stopped half-way rather than blaming Coolify.
+     */
+    private function failForceStart(Deployment $deployment): void
+    {
+        $deployment->forceFill([
+            'status' => DeploymentStatus::Cancelled,
+            'finished_at' => now(),
+            'error_message' => __('ops.jobs.force_start_aborted'),
+        ])->save();
     }
 
     /**
@@ -260,12 +315,12 @@ class OpsCoolifyDeployQueue
         return $created->fresh(['site']) ?? $created;
     }
 
-    public function forceStartRemote(string $deploymentUuid): Deployment
+    public function forceStartRemote(string $deploymentUuid, ?User $actor = null): Deployment
     {
         $deploymentUuid = trim($deploymentUuid);
         $local = Deployment::query()->with('site')->where('coolify_deployment_uuid', $deploymentUuid)->first();
         if ($local instanceof Deployment) {
-            return $this->forceStart($local);
+            return $this->forceStart($local, $actor);
         }
 
         $site = $this->siteForRemoteUuid($deploymentUuid);
