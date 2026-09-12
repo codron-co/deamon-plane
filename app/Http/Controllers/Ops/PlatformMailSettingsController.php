@@ -7,6 +7,7 @@ use App\Jobs\DispatchPlatformMailPushJob;
 use App\Models\AuditLog;
 use App\Models\PlatformMailSetting;
 use App\Services\Mail\PlatformNotificationCatalog;
+use App\Services\Mail\PlatformOpsMailer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,6 +94,44 @@ class PlatformMailSettingsController extends Controller
         return redirect()
             ->route('ops.platform-mail.edit')
             ->with('status', __('platform_mail.flash.pushed_queued'));
+    }
+
+    public function test(Request $request): RedirectResponse
+    {
+        $this->authorize('ops.write');
+
+        $settings = PlatformMailSetting::current();
+        if (! $settings->exists || ! $settings->isReady()) {
+            return redirect()
+                ->route('ops.platform-mail.edit')
+                ->with('error', __('platform_mail.test.not_ready'));
+        }
+
+        $validated = $request->validate([
+            'to' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        $to = trim((string) ($validated['to'] ?? ''));
+        if ($to === '') {
+            $to = (string) ($settings->default_admin_recipient ?? '');
+        }
+        if ($to === '' || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return redirect()
+                ->route('ops.platform-mail.edit')
+                ->with('error', __('platform_mail.test.no_recipient'));
+        }
+
+        try {
+            app(PlatformOpsMailer::class)->sendTest($to);
+        } catch (\Throwable) {
+            return redirect()
+                ->route('ops.platform-mail.edit')
+                ->with('error', __('platform_mail.test.failed'));
+        }
+
+        return redirect()
+            ->route('ops.platform-mail.edit')
+            ->with('status', __('platform_mail.test.sent', ['email' => $to]));
     }
 
     /**

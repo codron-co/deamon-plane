@@ -146,4 +146,19 @@
             <button type="submit" class="btn btn-primary">{{ __('platform_mail.save') }}</button>
         @endif
     </form>
+
+    @if ($canWrite)
+        <form method="POST" action="{{ route('ops.platform-mail.test') }}" class="ops-form ops-form-stack" data-ops-pending style="margin-top: 1.5rem;">
+            @csrf
+            <article class="site-card">
+                <h2>{{ __('platform_mail.test.button') }}</h2>
+                <div class="field">
+                    <label class="field-label" for="pm-test-to">{{ __('platform_mail.test.to') }}</label>
+                    <p class="field-hint">{{ __('platform_mail.test.to_hint') }}</p>
+                    <input id="pm-test-to" class="field-input" type="email" name="to" value="{{ old('to') }}" placeholder="{{ $settings->default_admin_recipient }}">
+                </div>
+                <button type="submit" class="btn btn-ghost" data-pending-label="{{ __('ops.actions.working') }}">{{ __('platform_mail.test.button') }}</button>
+            </article>
+        </form>
+    @endif
 @endsection

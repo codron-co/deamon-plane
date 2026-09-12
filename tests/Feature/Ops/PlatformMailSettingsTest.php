@@ -12,6 +12,7 @@ use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -129,6 +130,43 @@ class PlatformMailSettingsTest extends TestCase
             ->get(route('ops.platform-mail.edit'))
             ->assertOk()
             ->assertSee(__('platform_mail.form_errors'), false);
+    }
+
+    public function test_test_mail_requires_ready_settings(): void
+    {
+        $this->actingAs($this->operator())
+            ->post(route('ops.platform-mail.test'), [])
+            ->assertRedirect(route('ops.platform-mail.edit'))
+            ->assertSessionHas('error');
+    }
+
+    public function test_test_mail_sends_when_ready(): void
+    {
+        Mail::fake();
+
+        PlatformMailSetting::query()->create([
+            'enabled' => true,
+            'host' => 'smtp.example.com',
+            'port' => 465,
+            'encryption' => 'ssl',
+            'username' => 'u@example.com',
+            'password' => 'secret-pass',
+            'from_address' => 'noreply@example.com',
+            'from_name' => 'Test',
+            'default_admin_recipient' => 'ops@example.com',
+            'notifications' => [],
+        ]);
+
+        config(['mail.default' => 'array']);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.platform-mail.test'), ['to' => 'probe@example.com'])
+            ->assertRedirect(route('ops.platform-mail.edit'))
+            ->assertSessionHas('status');
+
+        Mail::assertSent(\App\Mail\PlatformTestMail::class, function (\App\Mail\PlatformTestMail $mail): bool {
+            return $mail->hasTo('probe@example.com');
+        });
     }
 
     public function test_save_does_not_sync_sites_on_update(): void

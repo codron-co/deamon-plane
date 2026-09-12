@@ -2,6 +2,7 @@
 
 namespace App\Services\Mail;
 
+use App\Mail\PlatformTestMail;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Support\Facades\Config;
@@ -14,6 +15,14 @@ final class PlatformOpsMailer
     public function __construct(
         private readonly PlatformMailResolver $resolver,
     ) {}
+
+    public function sendTest(string $to): void
+    {
+        $settings = $this->resolver->settings();
+        $this->applyRuntimeMailer($settings);
+
+        Mail::mailer('platform_ops')->to($to)->send(new PlatformTestMail);
+    }
 
     public function send(Site $site, string $notificationKey, string $subject, string $body): bool
     {

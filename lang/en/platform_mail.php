@@ -49,8 +49,11 @@ return [
         'button' => 'Send test email',
         'to' => 'Test recipient',
         'to_hint' => 'Defaults to the default recipient above.',
+        'subject' => 'Deamon software mail test',
+        'body' => 'If you received this message, Plane SMTP settings are working.',
         'sent' => 'Test email sent to :email.',
         'failed' => 'Test email failed. Check SMTP settings.',
         'not_ready' => 'Enable software mail and fill host, username, password, and from address first.',
+        'no_recipient' => 'Enter a test recipient or set the default recipient above.',
     ],
 ];

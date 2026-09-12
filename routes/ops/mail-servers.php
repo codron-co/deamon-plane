@@ -15,3 +15,4 @@ Route::post('/mail-servers/{mailServer}/test', [MailServerOpsController::class, 
 Route::get('/platform-mail', [PlatformMailSettingsController::class, 'edit'])->name('ops.platform-mail.edit');
 Route::put('/platform-mail', [PlatformMailSettingsController::class, 'update'])->name('ops.platform-mail.update');
 Route::post('/platform-mail/push', [PlatformMailSettingsController::class, 'push'])->name('ops.platform-mail.push');
+Route::post('/platform-mail/test', [PlatformMailSettingsController::class, 'test'])->name('ops.platform-mail.test');

@@ -49,8 +49,11 @@ return [
         'button' => 'Test e-postası gönder',
         'to' => 'Test alıcısı',
         'to_hint' => 'Varsayılan olarak yukarıdaki varsayılan alıcı kullanılır.',
+        'subject' => 'Deamon yazılım e-postası testi',
+        'body' => 'Bu iletiyi aldıysanız Plane SMTP ayarları çalışıyor demektir.',
         'sent' => 'Test e-postası :email adresine gönderildi.',
         'failed' => 'Test e-postası gönderilemedi. SMTP ayarlarını kontrol edin.',
         'not_ready' => 'Önce yazılım e-postasını etkinleştirin; host, kullanıcı, şifre ve gönderen adresini doldurun.',
+        'no_recipient' => 'Test alıcısı girin veya yukarıda varsayılan alıcıyı ayarlayın.',
     ],
 ];
