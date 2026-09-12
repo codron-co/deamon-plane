@@ -21,6 +21,7 @@
     data-copy-dismiss="{{ __('ops.jobs.dismiss') }}"
     data-copy-stop="{{ __('ops.jobs.stop') }}"
     data-copy-force-start="{{ __('ops.jobs.force_start') }}"
+    data-copy-force-started="{{ __('ops.jobs.force_started') }}"
     data-jobs-destroy="{{ url('/jobs') }}"
     data-jobs-deploy-cancel="{{ url('/jobs/deployments') }}"
     data-jobs-deploy-force="{{ url('/jobs/deployments') }}"

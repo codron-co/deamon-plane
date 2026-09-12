@@ -266,7 +266,7 @@ class DeploymentPollWidgetTest extends TestCase
         $this->assertSame(SiteStatus::Active, $site->fresh()->status);
     }
 
-    public function test_force_start_queued_deployment_cancels_then_instant_starts(): void
+    public function test_force_start_promotes_the_same_row_to_the_instant_started_deploy(): void
     {
         $connection = CoolifyConnection::factory()->create([
             'base_url' => 'https://coolify.example',
@@ -304,14 +304,17 @@ class DeploymentPollWidgetTest extends TestCase
             ->postJson(route('ops.jobs.deployments.force-start', $deployment))
             ->assertOk()
             ->assertJsonPath('ok', true)
+            ->assertJsonPath('message', __('ops.jobs.force_started'))
+            ->assertJsonPath('deployment.id', 'dep-'.$deployment->id)
             ->assertJsonPath('deployment.coolify_deployment_uuid', 'dep-new-1')
             ->assertJsonPath('deployment.status', 'running');
 
-        $this->assertSame(DeploymentStatus::Cancelled, $deployment->fresh()->status);
-        $this->assertDatabaseHas('deployments', [
-            'coolify_deployment_uuid' => 'dep-new-1',
-            'site_id' => $site->id,
-        ]);
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::InProgress, $deployment->status);
+        $this->assertSame('dep-new-1', $deployment->coolify_deployment_uuid);
+        $this->assertNull($deployment->error_message);
+        $this->assertSame(1, $site->deployments()->count());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'site.deploy_force_started']);
     }
 
     public function test_destroy_completed_background_job(): void

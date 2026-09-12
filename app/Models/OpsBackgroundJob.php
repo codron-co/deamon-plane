@@ -32,6 +32,27 @@ class OpsBackgroundJob extends Model
     ];
 
     /**
+     * Job types that finish when Coolify *accepts* a deploy, not when the build
+     * ends. Their success is "tetiklendi", and the build is reported by the
+     * per-site `Coolify deploy · <site>` rows in the same widget.
+     *
+     * @var list<string>
+     */
+    private const TRIGGER_ONLY_TYPES = [
+        'sites.bulk_deploy',
+        'sites.bulk_follow_head',
+        'sites.bulk_pin',
+        'sites.bulk_channel',
+    ];
+
+    /**
+     * App-health fixes that end in a Coolify deploy request.
+     *
+     * @var list<string>
+     */
+    private const TRIGGER_ONLY_FIXES = ['all', 'redeploy'];
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
@@ -99,11 +120,42 @@ class OpsBackgroundJob extends Model
         return '';
     }
 
+    /**
+     * True when "completed" only means Coolify took the deploy request.
+     */
+    public function triggersRemoteWork(): bool
+    {
+        if (in_array($this->type, self::TRIGGER_ONLY_TYPES, true)) {
+            return true;
+        }
+
+        if ($this->type !== 'sites.bulk_app_health_fix') {
+            return false;
+        }
+
+        // The runner records whether any target actually needed a redeploy;
+        // before it does, the requested fix is the best available signal.
+        $result = is_array($this->result) ? $this->result : [];
+        if (array_key_exists('deploy_triggered', $result)) {
+            return (bool) $result['deploy_triggered'];
+        }
+
+        $payload = is_array($this->payload) ? $this->payload : [];
+
+        return in_array((string) ($payload['fix'] ?? 'all'), self::TRIGGER_ONLY_FIXES, true);
+    }
+
     public function statusLabel(): string
     {
         $status = in_array($this->status, ['queued', 'running', 'completed', 'failed', 'cancelled'], true)
             ? $this->status
             : 'completed';
+
+        // A sweep that only handed deploys to Coolify must not read "Bitti":
+        // the build is still running in its own widget row.
+        if ($status === 'completed' && $this->triggersRemoteWork()) {
+            return __('ops.jobs.status.triggered');
+        }
 
         return __('ops.jobs.status.'.$status);
     }
