@@ -80,15 +80,26 @@ class Deployment extends Model
             default => 'running',
         };
 
-        $message = filled($this->error_message)
+        // The widget is a queue of mixed work, so the row must name its own kind
+        // first: "Coolify deploy · beyazlar" then "manuel · kuyrukta".
+        $kind = __('ops.jobs.deployment');
+        $subject = trim((string) ($site?->name ?? ''));
+        $statusLabel = $this->status?->label() ?? '';
+        $detail = filled($this->error_message)
             ? trim((string) $this->error_message)
-            : ($this->trigger?->label() ?? '').' · '.($this->status?->label() ?? '');
+            : ($this->trigger?->label() ?? '');
+
+        $message = trim(implode(' · ', array_filter([$detail, $statusLabel], static fn (string $part): bool => $part !== '')));
 
         return [
             'id' => 'dep-'.$this->id,
             'type' => 'coolify.deployment',
-            'title' => $site?->name ?? __('sites.title'),
+            'kind_label' => $kind,
+            'subject' => $subject !== '' ? $subject : null,
+            'title' => $subject !== '' ? $kind.' · '.$subject : $kind,
             'status' => $widgetStatus,
+            'status_label' => $statusLabel,
+            'detail' => $detail !== '' ? $detail : null,
             'progress' => $active ? null : 100,
             // Queued is waiting, not progressing: the widget must not animate it.
             'indeterminate' => $this->status === DeploymentStatus::InProgress,

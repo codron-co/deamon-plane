@@ -2,6 +2,11 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Jobs widget says what it is, and stops rebuilding itself (2026-09-12)
+
+- Status: **code**. Every widget row now names its kind before anything else: `kind_label` / `subject` / `status_label` / `detail` ship in `OpsBackgroundJob::toWidget`, `Deployment::toWidget` and `OpsCoolifyDeployQueue::remoteWidget`, so a deploy reads `Coolify deploy · beyazlar` + `manuel · kuyrukta` instead of a bare site name over `manuel · kuyrukta`. Bulk sweeps carry a site count (`App hatalarını düzelt · 3 site`); single-target jobs carry `payload.subject`. Coolify queue rows Plane did not start say `Coolify kuyruğu`, not a made-up trigger.
+- `ops-jobs.js` patches rows keyed by `data-job-id` instead of `replaceChildren()` on every 1.5s poll, which is what made cancel / force-start / dismiss unclickable: the button was replaced between mousedown and click. Listeners bind once per row and read the current payload from row state; focus is restored if a reorder moves a focused node; the indeterminate bar no longer restarts its animation each tick. Docs: [../modules/ops-sites.md](../modules/ops-sites.md). Tests: `DeploymentPollWidgetTest`, `SiteAppHealthTest`.
+
 ## Coolify deploy-row heal — generic API-failure race (2026-09-12)
 
 - Status: **code**. `ops:heal-throttled-deploys` markers now cover every sentence Plane writes about a *status read* rather than a build: the bare `Coolify API request failed.` a raced read leaves behind (empty body mid cancel/restart, so the row lands `failed` while Coolify reports `cancelled-by-user`) and `Timed out waiting for Coolify deployment.` from an exhausted poll. When Coolify still says `failed` and carries no message or logs, the row's original text and `finished_at` are restored instead of the generic `Coolify deployment failed.`. Runbook: [../runbooks/coolify-rate-limit.md](../runbooks/coolify-rate-limit.md). Tests: `HealThrottledDeploysCommandTest`.

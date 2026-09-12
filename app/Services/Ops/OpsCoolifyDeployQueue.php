@@ -340,15 +340,24 @@ class OpsCoolifyDeployQueue
             default => 'running',
         };
 
+        // Coolify started this one, not Plane, so the row says where it came from
+        // instead of inventing a Plane trigger.
+        $kind = __('ops.jobs.deployment');
+        $detail = __('ops.jobs.source_coolify');
+
         return [
             'id' => 'coolify-'.$uuid,
             'type' => 'coolify.deployment',
-            'title' => $site->name,
+            'kind_label' => $kind,
+            'subject' => $site->name,
+            'title' => $kind.' · '.$site->name,
             'status' => $widgetStatus,
+            'status_label' => $status->label(),
+            'detail' => $detail,
             'progress' => in_array($widgetStatus, ['queued', 'running'], true) ? null : 100,
             // Queued is waiting, not progressing: the widget must not animate it.
             'indeterminate' => $widgetStatus === 'running',
-            'message' => __('ops.jobs.deployment').' · '.($status->label()),
+            'message' => $detail.' · '.$status->label(),
             'url' => route('ops.sites.show', $site),
             'deployment_id' => null,
             'coolify_deployment_uuid' => $uuid,
