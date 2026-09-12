@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Ops;
 
+use App\Enums\Channel;
 use App\Enums\OpsRole;
+use App\Enums\SiteStatus;
 use App\Models\PlatformMailSetting;
+use App\Models\Site;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -72,7 +75,7 @@ class PlatformMailSettingsTest extends TestCase
                 'notifications' => [],
             ])
             ->assertRedirect(route('ops.platform-mail.edit'))
-            ->assertSessionHas('status');
+            ->assertSessionHas('status', __('platform_mail.flash.saved'));
 
         $this->actingAs($this->operator())
             ->get(route('ops.platform-mail.edit'))
@@ -96,6 +99,38 @@ class PlatformMailSettingsTest extends TestCase
             ])
             ->assertRedirect(route('ops.platform-mail.edit'))
             ->assertSessionHasErrors(['from_address']);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.platform-mail.edit'))
+            ->assertOk()
+            ->assertSee(__('platform_mail.form_errors'), false);
+    }
+
+    public function test_save_does_not_sync_sites_on_update(): void
+    {
+        Site::factory()->withSecrets()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Main,
+            'primary_domain' => 'sync-guard.example.test',
+            'agent_base_url' => 'https://sync-guard.example.test',
+        ]);
+
+        $this->actingAs($this->operator())
+            ->put(route('ops.platform-mail.update'), [
+                'enabled' => '1',
+                'host' => 'smtp.example.com',
+                'port' => 465,
+                'encryption' => 'ssl',
+                'username' => 'u@example.com',
+                'password' => 'secret-pass',
+                'from_address' => 'noreply@example.com',
+                'from_name' => 'Test',
+                'default_admin_recipient' => 'ops@example.com',
+                'notifications' => [],
+            ])
+            ->assertRedirect(route('ops.platform-mail.edit'));
+
+        Http::assertNothingSent();
     }
 
     private function operator(): User
