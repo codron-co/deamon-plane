@@ -80,7 +80,7 @@ final class PlatformOpsMailer
             Log::warning('Platform ops mail failed', [
                 'site_id' => $site->id,
                 'notification' => $notificationKey,
-                'message' => $exception->getMessage(),
+                'message' => $this->redactTransportExceptionMessage($settings, $exception),
             ]);
 
             return false;
@@ -120,6 +120,17 @@ final class PlatformOpsMailer
             });
 
         return array_values($out);
+    }
+
+    private function redactTransportExceptionMessage(PlatformMailSetting $settings, Throwable $exception): string
+    {
+        $message = $exception->getMessage();
+        $password = (string) ($settings->password ?? '');
+        if ($password === '') {
+            return $message;
+        }
+
+        return str_replace($password, '[redacted]', $message);
     }
 
     private function applyRuntimeMailer(PlatformMailSetting $settings): void

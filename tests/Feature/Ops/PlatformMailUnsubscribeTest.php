@@ -10,8 +10,10 @@ use App\Services\Mail\PlatformMailUnsubscribe;
 use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\PlatformOpsMailer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
+use RuntimeException;
 use Tests\TestCase;
 
 class PlatformMailUnsubscribeTest extends TestCase
@@ -104,6 +106,45 @@ class PlatformMailUnsubscribeTest extends TestCase
         });
     }
 
+    public function test_ops_mailer_redacts_smtp_password_from_failure_log(): void
+    {
+        Log::spy();
+        $site = Site::factory()->create();
+        User::factory()->create(['email' => 'eligible@example.test']);
+        $password = 'leaked-smtp-secret-xyzzy';
+        $this->readySettings(password: $password);
+
+        $transport = new class($password)
+        {
+            public function __construct(private readonly string $password) {}
+
+            public function to(mixed $users): self
+            {
+                return $this;
+            }
+
+            public function send(mixed $mailable): void
+            {
+                throw new RuntimeException('SMTP auth failed using '.$this->password);
+            }
+        };
+
+        Mail::shouldReceive('mailer')->with('platform_ops')->andReturn($transport);
+
+        $this->assertFalse(app(PlatformOpsMailer::class)->send(
+            $site,
+            PlatformNotificationCatalog::SITE_DOWN,
+            'Site unavailable',
+            'The health check failed.',
+        ));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context) use ($password): bool {
+            return $message === 'Platform ops mail failed'
+                && ($context['message'] ?? '') === 'SMTP auth failed using [redacted]'
+                && ! str_contains((string) ($context['message'] ?? ''), $password);
+        });
+    }
+
     public function test_non_user_primary_recipient_is_still_eligible(): void
     {
         Mail::fake();
@@ -121,7 +162,7 @@ class PlatformMailUnsubscribeTest extends TestCase
         Mail::assertNotSent(PlatformOpsMail::class);
     }
 
-    private function readySettings(?string $primaryRecipient = null): PlatformMailSetting
+    private function readySettings(?string $primaryRecipient = null, string $password = 'test-password'): PlatformMailSetting
     {
         return PlatformMailSetting::query()->create([
             'enabled' => true,
@@ -129,7 +170,7 @@ class PlatformMailUnsubscribeTest extends TestCase
             'port' => 465,
             'encryption' => 'ssl',
             'username' => 'mailer@example.test',
-            'password' => 'test-password',
+            'password' => $password,
             'from_address' => 'noreply@example.test',
             'from_name' => 'Deamon Plane',
             'default_admin_recipient' => $primaryRecipient,
