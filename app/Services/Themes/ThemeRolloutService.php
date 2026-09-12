@@ -342,7 +342,7 @@ class ThemeRolloutService
 
     /**
      * While a Coolify deploy is still open, theme sync must not hit the site agent.
-     * Mark the installation so PollDeploymentJob can fire sync after finish (Task 2).
+     * Mark the installation so ThemeSyncAfterDeployJob can fire sync after finish.
      */
     private function deferSyncIfDeployOpen(SiteThemeInstallation $installation, Site $site): bool
     {

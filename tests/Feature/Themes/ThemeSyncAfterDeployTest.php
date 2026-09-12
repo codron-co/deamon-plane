@@ -3,6 +3,7 @@
 namespace Tests\Feature\Themes;
 
 use App\Enums\DeploymentStatus;
+use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Models\Deployment;
@@ -11,6 +12,8 @@ use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
 use App\Models\User;
 use App\Services\Agent\ControlPlaneAgentContract;
+use App\Services\Coolify\CoolifyDeploymentSync;
+use App\Services\Coolify\Dto\CoolifyDeployment;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -104,6 +107,116 @@ class ThemeSyncAfterDeployTest extends TestCase
             ControlPlaneAgentContract::THEME_SYNC_PATH,
         ));
         $this->assertTrue($site->auditLogs()->where('action', 'theme.sync_succeeded')->exists());
+    }
+
+    public function test_finished_deploy_runs_deferred_sync_once(): void
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create(['theme_id' => 'beyazoglu']);
+        $installation = SiteThemeInstallation::factory()->active()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+            'pending_sync_after_deploy' => true,
+        ]);
+
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::InProgress,
+            'trigger' => DeploymentTrigger::Manual,
+            'coolify_deployment_uuid' => 'dep-sync-finish-1',
+            'started_at' => now()->subMinute(),
+            'finished_at' => null,
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/sync' => Http::response([
+                'ok' => true,
+                'queued' => true,
+                'task_id' => 'task-after-deploy',
+                'type' => 'theme_sync',
+                'status' => 'queued',
+                'active_theme_id' => 'beyazoglu',
+            ], 200),
+        ]);
+
+        $terminal = app(CoolifyDeploymentSync::class)->applyExisting(
+            $deployment,
+            CoolifyDeployment::fromArray([
+                'uuid' => 'dep-sync-finish-1',
+                'status' => 'finished',
+            ]),
+        );
+
+        $this->assertTrue($terminal);
+        $deployment->refresh();
+        $this->assertSame(DeploymentStatus::Finished, $deployment->status);
+        $this->assertNotNull($deployment->finished_at);
+
+        $installation->refresh();
+        $this->assertFalse($installation->pending_sync_after_deploy);
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn (Request $request): bool => str_ends_with(
+            $request->url(),
+            ControlPlaneAgentContract::THEME_SYNC_PATH,
+        ));
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.sync_succeeded')->exists());
+    }
+
+    public function test_failed_deploy_clears_pending_sync_without_agent_call(): void
+    {
+        $this->assertTerminalDeployClearsPendingWithoutSync('failed', DeploymentStatus::Failed);
+    }
+
+    public function test_cancelled_deploy_clears_pending_sync_without_agent_call(): void
+    {
+        $this->assertTerminalDeployClearsPendingWithoutSync('cancelled', DeploymentStatus::Cancelled);
+    }
+
+    private function assertTerminalDeployClearsPendingWithoutSync(string $remoteStatus, DeploymentStatus $expected): void
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create(['theme_id' => 'beyazoglu']);
+        $installation = SiteThemeInstallation::factory()->active()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+            'pending_sync_after_deploy' => true,
+        ]);
+
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::InProgress,
+            'trigger' => DeploymentTrigger::Manual,
+            'coolify_deployment_uuid' => 'dep-sync-'.$remoteStatus,
+            'started_at' => now()->subMinute(),
+            'finished_at' => null,
+        ]);
+
+        Http::fake();
+
+        $terminal = app(CoolifyDeploymentSync::class)->applyExisting(
+            $deployment,
+            CoolifyDeployment::fromArray([
+                'uuid' => 'dep-sync-'.$remoteStatus,
+                'status' => $remoteStatus,
+                'message' => 'Stopped by test',
+            ]),
+        );
+
+        $this->assertTrue($terminal);
+        $deployment->refresh();
+        $this->assertSame($expected, $deployment->status);
+        $this->assertNotNull($deployment->finished_at);
+
+        $installation->refresh();
+        $this->assertFalse($installation->pending_sync_after_deploy);
+
+        Http::assertNothingSent();
+        Http::assertNotSent(fn (Request $request): bool => str_ends_with(
+            $request->url(),
+            ControlPlaneAgentContract::THEME_SYNC_PATH,
+        ));
+        $this->assertFalse($site->auditLogs()->where('action', 'theme.sync_succeeded')->exists());
     }
 
     /**

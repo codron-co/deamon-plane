@@ -5,8 +5,10 @@ namespace App\Services\Coolify;
 use App\Enums\Channel;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
+use App\Jobs\ThemeSyncAfterDeployJob;
 use App\Models\Deployment;
 use App\Models\Site;
+use App\Models\SiteThemeInstallation;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Sites\DeploymentFailureText;
 
@@ -98,6 +100,8 @@ class CoolifyDeploymentSync
         }
         $deployment->finished_at = $deployment->finished_at ?? now();
         $deployment->save();
+
+        ThemeSyncAfterDeployJob::clearPendingForSite((string) $deployment->site_id);
     }
 
     public function mapRemoteStatus(?string $status): DeploymentStatus
@@ -164,10 +168,16 @@ class CoolifyDeploymentSync
 
         $becameFailed = $effective === DeploymentStatus::Failed
             && $deployment->isDirty('status');
+        $becameCancelled = $effective === DeploymentStatus::Cancelled
+            && $deployment->isDirty('status');
         $becameFinished = $effective === DeploymentStatus::Finished
             && $deployment->isDirty('status');
 
         $deployment->save();
+
+        if ($becameFailed || $becameCancelled) {
+            ThemeSyncAfterDeployJob::clearPendingForSite((string) $site->id);
+        }
 
         if ($becameFailed) {
             try {
@@ -185,6 +195,10 @@ class CoolifyDeploymentSync
             } catch (\Throwable) {
                 // Ops mail must not break deploy sync.
             }
+        }
+
+        if ($becameFinished) {
+            $this->dispatchDeferredThemeSync($site);
         }
 
         if ($becameFinished || $effective === DeploymentStatus::Finished) {
@@ -235,5 +249,19 @@ class CoolifyDeploymentSync
                 DeploymentStatus::Queued,
                 DeploymentStatus::InProgress,
             ], true);
+    }
+
+    private function dispatchDeferredThemeSync(Site $site): void
+    {
+        $pending = SiteThemeInstallation::query()
+            ->where('site_id', $site->id)
+            ->where('pending_sync_after_deploy', true)
+            ->exists();
+
+        if (! $pending) {
+            return;
+        }
+
+        ThemeSyncAfterDeployJob::dispatch($site->id);
     }
 }
