@@ -22,6 +22,8 @@ class PlatformMailUnsubscribeTest extends TestCase
 
     public function test_signed_guest_unsubscribe_opts_out_user_for_key(): void
     {
+        config(['ops.access.ip_allowlist' => '192.0.2.10']);
+
         $user = User::factory()->create();
         $url = URL::temporarySignedRoute(
             'ops.platform-mail.unsubscribe',

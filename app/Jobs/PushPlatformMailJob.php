@@ -4,11 +4,13 @@ namespace App\Jobs;
 
 use App\Models\Site;
 use App\Services\Mail\PlatformMailConfigurer;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
-class PushPlatformMailJob implements ShouldBeUnique, ShouldQueue
+class PushPlatformMailJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
 
@@ -31,6 +33,18 @@ class PushPlatformMailJob implements ShouldBeUnique, ShouldQueue
         if ($site === null || ! $site->hasAgentSecret()) {
             return;
         }
-        $configurer->sync($site);
+
+        $result = $configurer->sync($site);
+        if ($result->status !== 'failed') {
+            return;
+        }
+
+        Log::warning('Queued platform mail sync failed', [
+            'site_id' => $site->id,
+            'site_slug' => $site->slug,
+            'http_status' => $result->httpStatus,
+        ]);
+
+        throw new RuntimeException('Platform mail sync failed for site '.$site->id.'.');
     }
 }

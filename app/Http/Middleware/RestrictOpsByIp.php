@@ -10,6 +10,13 @@ class RestrictOpsByIp
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->routeIs([
+            'ops.platform-mail.unsubscribe',
+            'ops.platform-mail.unsubscribe.post',
+        ])) {
+            return $next($request);
+        }
+
         $allowed = $this->allowlist();
         if ($allowed === []) {
             return $next($request);

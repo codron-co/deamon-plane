@@ -6,6 +6,7 @@ use App\Enums\Channel;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Jobs\DispatchPlatformMailPushJob;
+use App\Mail\PlatformTestMail;
 use App\Models\PlatformMailSetting;
 use App\Models\Site;
 use App\Models\User;
@@ -164,7 +165,7 @@ class PlatformMailSettingsTest extends TestCase
             ->assertRedirect(route('ops.platform-mail.edit'))
             ->assertSessionHas('status');
 
-        Mail::assertSent(\App\Mail\PlatformTestMail::class, function (\App\Mail\PlatformTestMail $mail): bool {
+        Mail::assertSent(PlatformTestMail::class, function (PlatformTestMail $mail): bool {
             return $mail->hasTo('probe@example.com')
                 && $mail->hasFrom('noreply@example.com', 'Test');
         });
@@ -172,6 +173,8 @@ class PlatformMailSettingsTest extends TestCase
 
     public function test_save_does_not_sync_sites_on_update(): void
     {
+        Queue::fake();
+
         Site::factory()->withSecrets()->create([
             'status' => SiteStatus::Active,
             'channel' => Channel::Main,
