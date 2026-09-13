@@ -56,14 +56,16 @@ class CoolifyApiException extends RuntimeException
             ? (string) ($json['message'] ?? $json['error'] ?? 'Coolify API request failed.')
             : 'Coolify API request failed.';
 
-        if (is_array($json)) {
-            $message = self::appendValidationErrors($message, $json['errors'] ?? null);
-        }
+        $errors = is_array($json) ? ($json['errors'] ?? null) : null;
 
-        // Laravel's throttle middleware answers "Too Many Attempts." in English.
-        // Keep the raw body in $payload for logs, but never show it to an operator.
+        // Known Coolify English bodies → locale strings (rate limit, compose/domain order).
+        // Keep the raw body in $payload for logs, but never show remote English to an operator.
         if ($response->status() === 429) {
             $message = (string) __('coolify.errors.rate_limited');
+        } elseif (self::isComposeDomainsBeforeRaw($message, $errors)) {
+            $message = (string) __('coolify.errors.compose_domains_before_raw');
+        } elseif (is_array($json)) {
+            $message = self::appendValidationErrors($message, $errors);
         }
 
         $conflicts = [];
@@ -77,6 +79,28 @@ class CoolifyApiException extends RuntimeException
             $conflicts,
             $payload,
         );
+    }
+
+    /**
+     * Coolify refuses docker_compose_domains until a deploy has loaded docker_compose_raw from git.
+     */
+    public static function isComposeDomainsBeforeRaw(string $message, mixed $errors = null): bool
+    {
+        $haystack = strtolower($message);
+        if (
+            str_contains($haystack, 'docker_compose_raw')
+            || str_contains($haystack, 'cannot set docker_compose_domains')
+        ) {
+            return true;
+        }
+
+        if (! is_array($errors) || $errors === []) {
+            return false;
+        }
+
+        $encoded = json_encode($errors, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return is_string($encoded) && str_contains(strtolower($encoded), 'docker_compose_raw');
     }
 
     /**

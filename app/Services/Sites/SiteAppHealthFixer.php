@@ -11,11 +11,15 @@ use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Ops\BulkResultSummary;
 use App\Services\Ops\PacedFanout;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
 class SiteAppHealthFixer
 {
+    private const COUNTS_CACHE_KEY = 'ops.sites.app_health_category_counts';
+
     /**
      * @var list<string>
      */
@@ -66,6 +70,41 @@ class SiteAppHealthFixer
     }
 
     /**
+     * Fleet-wide fix counts, with the moment they were computed.
+     *
+     * The scan behind them walks every site, so the header menu reads a short-lived
+     * cache and says how old the number is instead of rescanning per request.
+     *
+     * @return array{counts: array<string, int>, computed_at: CarbonImmutable}
+     */
+    public function cachedCategoryCounts(): array
+    {
+        $ttl = max(0, (int) config('ops.app_health.counts_ttl', 60));
+        if ($ttl === 0) {
+            return ['counts' => $this->categoryCounts(), 'computed_at' => CarbonImmutable::now()];
+        }
+
+        $cached = Cache::remember(self::COUNTS_CACHE_KEY, $ttl, fn (): array => [
+            'counts' => $this->categoryCounts(),
+            'computed_at' => CarbonImmutable::now()->toIso8601String(),
+        ]);
+
+        return [
+            'counts' => is_array($cached['counts'] ?? null) ? $cached['counts'] : [],
+            'computed_at' => CarbonImmutable::parse((string) ($cached['computed_at'] ?? CarbonImmutable::now())),
+        ];
+    }
+
+    /**
+     * Applying a fix changes what the fleet still needs, so the cached menu must not
+     * keep offering work that is already done.
+     */
+    public function forgetCategoryCounts(): void
+    {
+        Cache::forget(self::COUNTS_CACHE_KEY);
+    }
+
+    /**
      * @return array<string, int>
      */
     public function categoryCounts(): array
@@ -107,6 +146,9 @@ class SiteAppHealthFixer
             };
         } catch (ComposePackException|SiteProvisionException|CoolifyApiException $exception) {
             throw new SiteAppHealthException($exception->getMessage(), (int) $exception->getCode(), $exception);
+        } finally {
+            // Even a failed attempt can have changed the site, so never serve the old counts.
+            $this->forgetCategoryCounts();
         }
 
         return $this->reinspect($site);
@@ -129,7 +171,7 @@ class SiteAppHealthFixer
 
     /**
      * @param  Collection<int, Site>|iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool, sites: list<array<string, mixed>>}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, sites: list<array<string, mixed>>}
      */
     public function fixMany(iterable $sites, string $fix, ?User $actor = null, ?string $ip = null): array
     {
@@ -170,6 +212,7 @@ class SiteAppHealthFixer
             'ok' => $result['ok'],
             'failed' => $result['failed'],
             'skipped' => $result['skipped'],
+            'waiting' => $result['waiting'],
             'errors' => $result['errors'],
             'rate_limited' => $result['rate_limited'],
             'sites' => array_values($rows),
@@ -177,12 +220,13 @@ class SiteAppHealthFixer
     }
 
     /**
-     * @param  array{ok?: int, failed?: int, skipped?: int}  $result
+     * @param  array{ok?: int, failed?: int, skipped?: int, waiting?: int}  $result
      * @param  bool  $deployTriggered  A fix set ending in a redeploy: Coolify is still building.
      */
     public function summarize(array $result, bool $deployTriggered = false): string
     {
         $skipped = BulkResultSummary::skipped($result);
+        $waiting = BulkResultSummary::waiting($result);
         $ok = (int) ($result['ok'] ?? 0);
         $counts = [
             'ok' => $ok,
@@ -194,9 +238,14 @@ class SiteAppHealthFixer
             ? __('sites.app_health.bulk_done_skipped', $counts)
             : __('sites.app_health.bulk_done', $counts);
 
+        if ($waiting > 0) {
+            $done .= ', '.__('ops.bulk.waiting', ['waiting' => $waiting]);
+        }
+
         $notes = array_filter([
             $deployTriggered && $ok > 0 ? BulkResultSummary::triggeredNote() : '',
             BulkResultSummary::throttleNote($result),
+            BulkResultSummary::waitingNote($result),
         ], static fn (string $note): bool => $note !== '');
 
         return $notes === [] ? $done : $done.' '.implode(' ', $notes);

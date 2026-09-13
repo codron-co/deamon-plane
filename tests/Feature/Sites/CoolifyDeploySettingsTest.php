@@ -143,9 +143,9 @@ class CoolifyDeploySettingsTest extends TestCase
             ->assertSee('deadbeef', false)
             ->assertSee(__('site_ops.pin.follow_button'), false)
             ->assertSee(__('site_ops.auto_deploy.status_off'), false)
-            ->assertSee('data-confirm="'.__('site_ops.auto_deploy.confirm_on', ['name' => $site->name]).'"', false)
-            ->assertSee('data-confirm="'.__('site_ops.pin.confirm', ['name' => $site->name]).'"', false)
-            ->assertSee('data-confirm="'.__('site_ops.pin.confirm_follow', ['name' => $site->name]).'"', false)
+            ->assertSee('data-confirm="'.e(__('site_ops.auto_deploy.confirm_on', ['name' => $site->name])).'"', false)
+            ->assertSee('data-confirm="'.e(__('site_ops.pin.confirm', ['name' => $site->name])).'"', false)
+            ->assertSee('data-confirm="'.e(__('site_ops.pin.confirm_follow', ['name' => $site->name])).'"', false)
             ->getContent();
 
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/follow-head"/', $html);

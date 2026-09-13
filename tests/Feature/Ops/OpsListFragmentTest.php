@@ -4,7 +4,11 @@ namespace Tests\Feature\Ops;
 
 use App\Enums\Channel;
 use App\Enums\OpsRole;
+use App\Enums\SiteStatus;
 use App\Enums\ThemeVisibility;
+use App\Models\CoolifyConnection;
+use App\Models\CoolifyServer;
+use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\Theme;
@@ -87,11 +91,20 @@ class OpsListFragmentTest extends TestCase
         $this->assertLessThan(strpos($descending, 'Alpha Site'), strpos($descending, 'Beta Site'));
     }
 
-    public function test_domains_and_themes_answer_the_same_fragment_contract(): void
+    public function test_domains_themes_mail_servers_and_coolify_inventory_answer_the_same_fragment_contract(): void
     {
         $site = Site::factory()->create(['name' => 'Bound Site', 'primary_domain' => 'bound.example.test']);
         SiteDomain::factory()->create(['site_id' => $site->id, 'domain' => 'fragment.example.test']);
         Theme::factory()->create(['theme_id' => 'fragment-theme', 'visibility' => ThemeVisibility::PublicCatalog]);
+        MailServer::factory()->create(['name' => 'Fragment Mail']);
+        $connection = CoolifyConnection::factory()->create(['name' => 'Fragment Coolify']);
+        CoolifyServer::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'uuid' => 'frag-1',
+            'name' => 'Fragment Edge',
+            'ip' => '10.9.8.7',
+            'is_active' => true,
+        ]);
 
         $user = $this->user(OpsRole::Operator);
 
@@ -110,6 +123,39 @@ class OpsListFragmentTest extends TestCase
             ->assertHeader('X-Ops-List-Region', '1')
             ->assertSee('fragment-theme')
             ->assertDontSee('ops-sidebar', false);
+
+        $this->actingAs($user)
+            ->withHeader(ListFragment::HEADER, ListFragment::VALUE)
+            ->get(route('ops.mail-servers.index', ['q' => 'Fragment Mail']))
+            ->assertOk()
+            ->assertHeader('X-Ops-List-Region', '1')
+            ->assertSee('Fragment Mail')
+            ->assertDontSee('ops-sidebar', false)
+            ->assertDontSee('ops-mail-state-row', false);
+
+        $this->actingAs($user)
+            ->withHeader(ListFragment::HEADER, ListFragment::VALUE)
+            ->get(route('ops.coolify.show', [$connection, 'q' => 'Fragment Edge']))
+            ->assertOk()
+            ->assertHeader('X-Ops-List-Region', '1')
+            ->assertSee('Fragment Edge')
+            ->assertDontSee('ops-sidebar', false)
+            ->assertDontSee('coolify-overview-heading', false);
+
+        Site::factory()->create([
+            'name' => 'Fragment Fleet',
+            'status' => SiteStatus::Error,
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader(ListFragment::HEADER, ListFragment::VALUE)
+            ->get(route('ops.fleet', ['q' => 'Fragment Fleet']))
+            ->assertOk()
+            ->assertHeader('X-Ops-List-Region', '1')
+            ->assertSee('Fragment Fleet')
+            ->assertDontSee('ops-sidebar', false)
+            ->assertDontSee('data-ops-list-toolbar', false)
+            ->assertDontSee(__('fleet.kpis.aria'));
     }
 
     public function test_the_clear_filters_link_ships_hidden_so_the_toolbar_can_reveal_it(): void
@@ -133,9 +179,10 @@ class OpsListFragmentTest extends TestCase
         Site::factory()->count(26)->create();
         SiteDomain::factory()->count(51)->create();
         Theme::factory()->count(26)->create();
+        MailServer::factory()->count(26)->create();
         $user = $this->user(OpsRole::Operator);
 
-        foreach (['ops.sites', 'ops.domains', 'ops.themes'] as $route) {
+        foreach (['ops.sites', 'ops.domains', 'ops.themes', 'ops.mail-servers.index'] as $route) {
             $this->actingAs($user)
                 ->withHeader(ListFragment::HEADER, ListFragment::VALUE)
                 ->get(route($route))

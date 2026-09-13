@@ -135,6 +135,26 @@ code {
     flex-shrink: 0;
 }
 
+.ops-nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 6px 0 2px;
+}
+
+.ops-nav-group-label {
+    padding: 0 8px;
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.ops-nav-item.is-sub {
+    padding-left: 12px;
+}
+
 .ops-nav-item:hover {
     background: var(--surface-raised);
     color: var(--text);
@@ -792,7 +812,8 @@ code {
     flex: 1 1 320px;
 }
 
-.ops-list-toolbar-row > .ops-columns-picker {
+.ops-list-toolbar-row > .ops-columns-picker,
+.ops-list-toolbar-row > .ops-saved-view-picker {
     margin-bottom: 16px;
 }
 
@@ -887,6 +908,17 @@ code {
 .site-slug {
     color: var(--text-faint);
     font-size: 12px;
+}
+
+/* Why a row is in a search result when its name and primary domain do not show it. */
+.site-search-match {
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 11px;
+    max-width: 34ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .muted {
@@ -1004,6 +1036,43 @@ button.status-chip {
 .status-error {
     color: var(--danger-text);
     border-color: var(--danger-border);
+}
+
+.status-warning {
+    color: var(--warning-text);
+    border-color: var(--warning-border);
+    background: var(--warning-surface);
+}
+
+.ops-mail-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ops-mail-state-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-overlay);
+}
+
+.ops-mail-state-title {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.ops-mail-state-hint {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 .status-archived {
@@ -1197,12 +1266,65 @@ button.status-chip {
     gap: 8px;
 }
 
+.settings-jump {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin: 0 0 20px;
+}
+
+.settings-jump-search {
+    flex: 1 1 220px;
+    min-width: min(100%, 220px);
+    max-width: 320px;
+}
+
+.settings-jump-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.settings-jump-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.settings-jump-links a:hover,
+.settings-jump-links a:focus-visible {
+    color: var(--text);
+    border-color: var(--border-strong);
+}
+
+.settings-jump-links a[hidden] {
+    display: none;
+}
+
+.settings-jump-empty {
+    flex: 1 1 100%;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
 .settings-panel {
     background: var(--surface-raised);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 16px 18px;
     margin-bottom: 20px;
+}
+
+.settings-panel[hidden] {
+    display: none;
 }
 
 .settings-panel h2 {
@@ -1283,6 +1405,22 @@ button.status-chip {
     .ops-nav {
         flex-direction: row;
         flex-wrap: wrap;
+    }
+
+    /* The two mail entries stay side by side with the rest of the nav; their own
+       labels carry the grouping, so the section heading is redundant here. */
+    .ops-nav-group {
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+
+    .ops-nav-group-label {
+        display: none;
+    }
+
+    .ops-nav-item.is-sub {
+        padding-left: 8px;
     }
 
     .ops-sidebar-foot {
@@ -1379,6 +1517,14 @@ button.status-chip {
 .env-defaults-table-wrap {
     overflow-x: auto;
     margin-bottom: 12px;
+}
+
+.env-defaults-table tr[data-env-row][hidden] {
+    display: none;
+}
+
+.env-defaults-search-empty {
+    margin: 0 0 12px;
 }
 
 .env-defaults-table th:nth-child(1),

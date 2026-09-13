@@ -13,7 +13,16 @@
     <ul class="ops-ns-list" data-domain-list>
         @forelse ($rows as $row)
             <li class="ops-ns-row">
-                <code>{{ $row->domain }}</code>
+                <span class="ops-host-copy">
+                    <code>{{ $row->domain }}</code>
+                    <button
+                        type="button"
+                        class="btn btn-ghost btn-sm"
+                        data-copy-value="{{ $row->domain }}"
+                        data-copied-label="{{ __('sites.detail.copied') }}"
+                        aria-label="{{ __('sites.detail.copy_host', ['host' => $row->domain]) }}"
+                    >{{ __('sites.detail.copy') }}</button>
+                </span>
                 <span>
                     @if ($row->is_primary)
                         {{ __('sites.detail.domain_primary') }}

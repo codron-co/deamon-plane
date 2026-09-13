@@ -6,21 +6,89 @@ use App\Enums\MailProvider;
 use App\Http\Controllers\Controller;
 use App\Models\MailServer;
 use App\Services\Hostinger\HostingerMailException;
+use App\Services\Mail\PlatformMailState;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailOrderBinder;
+use App\Support\Lists\ListFragment;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 
 class MailServerOpsController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): Response
     {
-        return view('ops.mail-servers.index', [
-            'servers' => MailServer::query()->withCount('sites')->orderBy('name')->get(),
-            'canWrite' => request()->user()?->can('ops.write') ?? false,
+        $search = trim((string) $request->query('q', ''));
+        $status = (string) $request->query('status', '');
+        $status = in_array($status, ['enabled', 'disabled'], true) ? $status : '';
+
+        $query = MailServer::query()->withCount('sites')->orderBy('name');
+
+        if ($search !== '') {
+            $term = addcslashes($search, '%_\\');
+            $query->where(function ($builder) use ($term): void {
+                $builder->where('name', 'like', "%{$term}%")
+                    ->orWhere('mail_domain', 'like', "%{$term}%");
+            });
+        }
+
+        if ($status === 'enabled') {
+            $query->where('is_enabled', true);
+        } elseif ($status === 'disabled') {
+            $query->where('is_enabled', false);
+        }
+
+        $servers = $query->paginate(25)->withQueryString();
+        $activeFilters = $this->activeListFilters($search, $status);
+
+        return ListFragment::respond($request, 'ops.mail-servers.index', 'ops.mail-servers._region', [
+            'servers' => $servers,
+            'search' => $search,
+            'status' => $status,
+            'filtersActive' => $activeFilters !== [],
+            'activeFilters' => $activeFilters,
+            'totalServers' => $servers->total() > 0 ? $servers->total() : MailServer::query()->count(),
+            'canWrite' => $request->user()?->can('ops.write') ?? false,
+            'platformMailState' => PlatformMailState::current(),
         ]);
+    }
+
+    /**
+     * @return list<array{key: string, label: string, value: string, url: string}>
+     */
+    private function activeListFilters(string $search, string $status): array
+    {
+        $applied = array_filter([
+            'q' => $search,
+            'status' => $status,
+        ], static fn (string $value): bool => $value !== '');
+
+        $labels = [
+            'q' => __('mail.filter_search'),
+            'status' => __('mail.filter_status'),
+        ];
+        $displayed = [
+            'q' => $search,
+            'status' => match ($status) {
+                'enabled' => __('ops.enabled'),
+                'disabled' => __('ops.disabled'),
+                default => '',
+            },
+        ];
+
+        $chips = [];
+        foreach ($applied as $key => $value) {
+            $chips[] = [
+                'key' => $key,
+                'label' => $labels[$key],
+                'value' => $displayed[$key],
+                'url' => route('ops.mail-servers.index', array_diff_key($applied, [$key => null])),
+            ];
+        }
+
+        return $chips;
     }
 
     public function create(): View

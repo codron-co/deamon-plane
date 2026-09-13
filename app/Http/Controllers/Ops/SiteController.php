@@ -9,6 +9,8 @@ use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
+use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
+use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\StoreSiteRequest;
 use App\Http\Requests\Ops\SwitchSiteChannelRequest;
 use App\Http\Requests\Ops\UpdateSiteRequest;
@@ -31,6 +33,7 @@ use App\Services\Mail\SiteMailOrderBindResult;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\SiteAgentSecretInjector;
+use App\Services\Sites\SiteAgentSecretSweep;
 use App\Services\Sites\SiteAppHealthFixer;
 use App\Services\Sites\SiteAttacher;
 use App\Services\Sites\SiteDomainSync;
@@ -40,7 +43,10 @@ use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
 use App\Support\Lists\ListFragment;
 use App\Support\Lists\SiteListView;
+use App\Support\Lists\SiteSavedViews;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -51,36 +57,78 @@ use Illuminate\Validation\Rule;
 class SiteController extends Controller
 {
     use LoadsSiteOpsContext;
+    use QueuesOpsJob;
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $this->authorize('viewAny', Site::class);
 
-        $search = trim((string) $request->query('q', ''));
-        $channel = (string) $request->query('channel', '');
-        $status = (string) $request->query('status', '');
-        $publish = (string) $request->query('publish', '');
+        $savedViews = SiteSavedViews::resolve($request, $request->user());
+        if ($savedViews->applyDefaultRedirect) {
+            return redirect()->to($savedViews->redirectUrl());
+        }
+        $savedViews->rememberColumns($request->user());
+
+        $search = $savedViews->filters['q'] ?? '';
+        $channel = $savedViews->filters['channel'] ?? '';
+        $status = $savedViews->filters['status'] ?? '';
+        $publish = $savedViews->filters['publish'] ?? '';
+        $deploy = $savedViews->filters['deploy'] ?? '';
+        $agent = $savedViews->filters['agent'] ?? '';
+        $pack = $savedViews->filters['pack'] ?? '';
+        $health = $savedViews->filters['health'] ?? '';
+        $app = $savedViews->filters['app'] ?? '';
 
         $allowedChannels = config('ops.channels', []);
-        $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
-        $status = in_array($status, SiteStatus::values(), true) ? $status : '';
         $publishFilters = [...CmsPublishStatus::values(), 'unknown'];
-        $publish = in_array($publish, $publishFilters, true) ? $publish : '';
+        // The label carries the window, so the option and the chip say the same
+        // thing the fleet card says instead of an open-ended "failed".
+        $deployFilters = [];
+        foreach (Site::DEPLOY_FILTERS as $deployOption) {
+            $deployFilters[$deployOption] = (string) __('sites.deploy_states.'.$deployOption, [
+                'hours' => Deployment::failedWindowHours(),
+            ]);
+        }
+        $agentFilters = [];
+        foreach (Site::AGENT_FILTERS as $agentOption) {
+            $agentFilters[$agentOption] = (string) __('sites.agent_states.'.$agentOption);
+        }
+        $healthFilters = [];
+        foreach (Site::HEALTH_FILTERS as $healthOption) {
+            $healthFilters[$healthOption] = (string) __('sites.health_states.'.$healthOption);
+        }
+        $appFilters = [];
+        foreach (Site::APP_FILTERS as $appOption) {
+            $appFilters[$appOption] = (string) __('sites.app_states.'.$appOption);
+        }
 
-        $listView = SiteListView::resolve($request, $request->user());
+        $listView = SiteListView::resolve($request, $request->user(), $savedViews);
         $listView->rememberSort($request->user());
 
         $query = Site::query()
             ->with(['activeThemeInstallation.theme', 'latestDeployment'])
-            ->matchingListFilters($search, $channel, $status, $publish);
+            ->matchingListFilters($search, $channel, $status, $publish, $deploy, $agent, $pack, $health, $app);
+
+        // A search reaches alias hosts, so a matched row must be able to say which host
+        // matched. Only loaded while searching: one extra query instead of 25.
+        if ($search !== '') {
+            $query->with('domains');
+        }
 
         $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
         $sites = $listView->applySort($query)->paginate(25)->withQueryString();
-        $bulkPinCommits = $sites->getCollection()
-            ->map(fn (Site $site) => $site->latestDeployment)
-            ->filter(fn ($deployment): bool => $deployment instanceof Deployment && filled($deployment->commit_sha))
-            ->unique(fn (Deployment $deployment): string => (string) $deployment->commit_sha)
-            ->values();
+        $activeFilters = $this->activeListFilters($search, $channel, $status, $publish, $deploy, $deployFilters, $agent, $pack, $health, $app);
+        $bulkPinCommits = $this->bulkPinSuggestions($sites);
+
+        /*
+         * Fleet-wide fix counts only feed the page header menu, and the toolbar
+         * re-requests this URL on every keystroke, filter, sort and page. A region
+         * response never renders that menu, so the fleet scan must not run for one.
+         */
+        $appHealthCounts = ['counts' => [], 'computed_at' => null];
+        if (! ListFragment::wanted($request) && ($request->user()?->canWriteOps() ?? false)) {
+            $appHealthCounts = app(SiteAppHealthFixer::class)->cachedCategoryCounts();
+        }
 
         return ListFragment::respond($request, 'ops.sites.index', 'ops.sites._region', [
             'sites' => $sites,
@@ -88,19 +136,109 @@ class SiteController extends Controller
             'channel' => $channel,
             'status' => $status,
             'publish' => $publish,
+            'deploy' => $deploy,
+            'agent' => $agent,
+            'pack' => $pack,
+            'health' => $health,
+            'app' => $app,
+            'savedViews' => $savedViews,
             'channels' => $allowedChannels,
             'statuses' => SiteStatus::values(),
             'publishFilters' => $publishFilters,
+            'deployFilters' => $deployFilters,
+            'agentFilters' => $agentFilters,
+            'healthFilters' => $healthFilters,
+            'appFilters' => $appFilters,
             'listView' => $listView,
-            'filtersActive' => $search !== '' || $channel !== '' || $status !== '' || $publish !== '',
+            'filtersActive' => $activeFilters !== [],
+            'activeFilters' => $activeFilters,
+            // Distinguishes "no sites yet" from "no sites match" without a second filtered query.
+            'totalSites' => $sites->total() > 0 ? $sites->total() : Site::query()->count(),
             'hasDockerfileSites' => $hasDockerfileSites,
             'bulkPinCommits' => $bulkPinCommits,
             'canCreate' => $request->user()?->can('create', Site::class) ?? false,
             'canWrite' => $request->user()?->canWriteOps() ?? false,
-            'appHealthFixCounts' => $request->user()?->canWriteOps()
-                ? app(SiteAppHealthFixer::class)->categoryCounts()
-                : [],
+            'appHealthFixCounts' => $appHealthCounts['counts'],
+            'appHealthCountsAt' => $appHealthCounts['computed_at'],
         ]);
+    }
+
+    /**
+     * The filters currently narrowing the list, each with the URL that drops only
+     * that one. Empty when the operator is looking at the whole fleet.
+     *
+     * @param  array<string, string>  $deployFilters  Deploy filter key => operator-facing label.
+     * @return list<array{key: string, label: string, value: string, url: string}>
+     */
+    private function activeListFilters(string $search, string $channel, string $status, string $publish, string $deploy = '', array $deployFilters = [], string $agent = '', string $pack = '', string $health = '', string $app = ''): array
+    {
+        $applied = array_filter([
+            'q' => $search,
+            'channel' => $channel,
+            'status' => $status,
+            'publish' => $publish,
+            'deploy' => $deploy,
+            'agent' => $agent,
+            'pack' => $pack,
+            'health' => $health,
+            'app' => $app,
+        ], static fn (string $value): bool => $value !== '');
+
+        $labels = [
+            'q' => __('sites.filter_search'),
+            'channel' => __('sites.filter_branch'),
+            'status' => __('sites.filter_status'),
+            'publish' => __('sites.filter_publish'),
+            'deploy' => __('sites.filter_deploy'),
+            'agent' => __('sites.filter_agent'),
+            'pack' => __('sites.filter_pack'),
+            'health' => __('sites.filter_health'),
+            'app' => __('sites.filter_app'),
+        ];
+
+        $displayed = [
+            'q' => $search,
+            'channel' => $channel,
+            'status' => $status === '' ? '' : __('ops.site_status.'.$status),
+            'publish' => $publish === '' ? '' : __('sites.publish.states.'.$publish),
+            'deploy' => $deployFilters[$deploy] ?? '',
+            'agent' => $agent === '' ? '' : __('sites.agent_states.'.$agent),
+            'pack' => $pack === '' ? '' : __('sites.pack_states.'.$pack),
+            'health' => $health === '' ? '' : __('sites.health_states.'.$health),
+            'app' => $app === '' ? '' : __('sites.app_states.'.$app),
+        ];
+
+        $chips = [];
+        foreach ($applied as $key => $value) {
+            $chips[] = [
+                'key' => $key,
+                'label' => $labels[$key],
+                'value' => $displayed[$key],
+                'url' => SiteSavedViews::withoutFilter($applied, $key),
+            ];
+        }
+
+        return $chips;
+    }
+
+    /**
+     * Commits offered as pin shortcuts. Empty when the filtered set spills past
+     * this page — a dropdown built from 25 of 200 sites would silently omit the rest.
+     *
+     * @param  LengthAwarePaginator<int, Site>  $sites
+     * @return Collection<int, Deployment>
+     */
+    private function bulkPinSuggestions($sites): Collection
+    {
+        if ($sites->hasMorePages()) {
+            return collect();
+        }
+
+        return $sites->getCollection()
+            ->map(fn (Site $site) => $site->latestDeployment)
+            ->filter(fn ($deployment): bool => $deployment instanceof Deployment && filled($deployment->commit_sha))
+            ->unique(fn (Deployment $deployment): string => (string) $deployment->commit_sha)
+            ->values();
     }
 
     public function create(Request $request): View
@@ -355,6 +493,61 @@ class SiteController extends Controller
         return redirect()
             ->route('ops.sites.show', $site)
             ->with('status', $flash.$this->mailFlashSuffix($binder->bind($site), $configurer->sync($site)));
+    }
+
+    public function bulkInjectAgentSecret(BulkSiteIdsRequest $request, SiteAgentSecretSweep $sweep): JsonResponse|RedirectResponse
+    {
+        $sites = $this->sitesFromBulk($request);
+
+        foreach ($sites as $site) {
+            $this->authorize('update', $site);
+        }
+
+        $targets = $sites->filter(static fn (Site $site): bool => ! $site->hasAgentSecret())->values();
+
+        if ($targets->isEmpty()) {
+            return back()->with('error', __('sites.agent.bulk_empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.bulk_inject_agent_secret', __('ops.jobs.bulk_inject_agent_secret'), [
+                'site_ids' => $targets->pluck('id')->all(),
+                'ip' => $request->ip(),
+            ]);
+        }
+
+        $result = $sweep->run($targets, $request->user(), $request->ip());
+        $unfinished = ($result['failed'] ?? 0) > 0 || ($result['waiting'] ?? 0) > 0;
+
+        return back()->with($unfinished ? 'error' : 'status', $sweep->summarize($result));
+    }
+
+    /**
+     * @return Collection<int, Site>
+     */
+    private function sitesFromBulk(BulkSiteIdsRequest $request): Collection
+    {
+        if ($request->boolean('all')) {
+            return Site::query()
+                ->matchingListFilters(
+                    trim((string) $request->input('filter_q', '')),
+                    (string) $request->input('filter_channel', ''),
+                    (string) $request->input('filter_status', ''),
+                    (string) $request->input('filter_publish', ''),
+                    (string) $request->input('filter_deploy', ''),
+                    (string) $request->input('filter_agent', ''),
+                    (string) $request->input('filter_pack', ''),
+                    (string) $request->input('filter_health', ''),
+                    (string) $request->input('filter_app', ''),
+                )
+                ->orderBy('name')
+                ->get();
+        }
+
+        return Site::query()
+            ->whereIn('id', $request->validated('site_ids') ?? [])
+            ->orderBy('name')
+            ->get();
     }
 
     public function refreshMailOrder(Request $request, Site $site, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse

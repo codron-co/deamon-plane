@@ -1,6 +1,7 @@
 (function () {
     "use strict";
 
+    const contracts = window.PlaneOpsContracts;
     const THEME_KEY = "plane-theme";
     const THEMES = ["light", "semidark", "dark"];
     let openSelect = null;
@@ -667,18 +668,22 @@
 
     function setupCopyButtons() {
         document.addEventListener("click", function (event) {
-            const button = event.target.closest("[data-copy-target]");
+            const button = event.target.closest("[data-copy-target], [data-copy-value]");
             if (!button) {
                 return;
             }
 
-            const selector = button.getAttribute("data-copy-target");
-            const target = selector ? document.querySelector(selector) : null;
-            if (!target) {
-                return;
+            let text = "";
+            if (button.hasAttribute("data-copy-value")) {
+                text = (button.getAttribute("data-copy-value") || "").trim();
+            } else {
+                const selector = button.getAttribute("data-copy-target");
+                const target = selector ? document.querySelector(selector) : null;
+                if (!target) {
+                    return;
+                }
+                text = (target.innerText || target.textContent || "").trim();
             }
-
-            const text = (target.innerText || target.textContent || "").trim();
             if (!text) {
                 return;
             }
@@ -701,6 +706,110 @@
 
             window.prompt("Copy", text);
         });
+    }
+
+    function setupSettingsSearch() {
+        const root = document.querySelector("[data-ops-settings-jump]");
+        const input = document.querySelector("[data-ops-settings-search]");
+        if (!root || !input || !contracts || typeof contracts.textMatches !== "function") {
+            return;
+        }
+
+        const rowHaystack = function (row) {
+            const parts = [row.getAttribute("data-env-search-text") || ""];
+            row.querySelectorAll('input[type="text"], select').forEach(function (el) {
+                parts.push(el.value || "");
+            });
+
+            return parts.join(" ");
+        };
+
+        const applyEnvRows = function (q) {
+            const rows = Array.prototype.slice.call(document.querySelectorAll("[data-env-row]"));
+            if (!rows.length || typeof contracts.envRowVisible !== "function") {
+                return;
+            }
+
+            let anyRowHit = false;
+            const haystacks = rows.map(function (row) {
+                const keyInput = row.querySelector('input[name$="[key]"]');
+                const composing = keyInput && String(keyInput.value || "").trim() === "";
+                const hay = rowHaystack(row);
+                const hit = composing || contracts.textMatches(q, hay);
+                if (hit && String(q || "").trim() !== "") {
+                    anyRowHit = anyRowHit || contracts.textMatches(q, hay);
+                }
+
+                return { row: row, hay: hay, composing: composing };
+            });
+
+            haystacks.forEach(function (item) {
+                item.row.hidden = !contracts.envRowVisible(q, item.hay, anyRowHit) && !item.composing;
+            });
+
+            document.querySelectorAll(".env-defaults-pack").forEach(function (pack) {
+                const empty = pack.querySelector("[data-env-search-empty]");
+                if (!empty) {
+                    return;
+                }
+                const total = pack.querySelectorAll("[data-env-row]").length;
+                const shown = pack.querySelectorAll("[data-env-row]:not([hidden])").length;
+                empty.hidden = !(String(q || "").trim() !== "" && anyRowHit && total > 0 && shown === 0);
+            });
+
+            const packs = Array.prototype.slice.call(document.querySelectorAll(".env-defaults-pack"));
+            const current = packs.find(function (pack) {
+                return !pack.hidden;
+            });
+            const currentHasHit = current
+                ? current.querySelector("[data-env-row]:not([hidden])") !== null
+                : false;
+            if (currentHasHit || String(q || "").trim() === "") {
+                return;
+            }
+
+            const next = packs.find(function (pack) {
+                return pack.querySelector("[data-env-row]:not([hidden])") !== null;
+            });
+            if (!next) {
+                return;
+            }
+
+            const tab = document.querySelector('.env-defaults-tabs [aria-controls="' + next.id + '"]');
+            if (tab) {
+                tab.click();
+            }
+        };
+
+        const apply = function () {
+            const q = input.value;
+            let visible = 0;
+
+            root.querySelectorAll("[data-settings-jump]").forEach(function (link) {
+                const hit = contracts.textMatches(q, link.getAttribute("data-settings-haystack") || link.textContent);
+                link.hidden = !hit;
+                if (hit) {
+                    visible += 1;
+                }
+            });
+
+            document.querySelectorAll("[data-settings-section]").forEach(function (panel) {
+                panel.hidden = !contracts.textMatches(q, panel.getAttribute("data-settings-haystack") || "");
+            });
+
+            applyEnvRows(q);
+
+            const empty = root.querySelector("[data-settings-empty]");
+            if (empty) {
+                empty.hidden = visible > 0 || String(q || "").trim() === "";
+            }
+        };
+
+        input.addEventListener("input", apply);
+        document.querySelectorAll("[data-env-defaults]").forEach(function (form) {
+            form.addEventListener("input", apply);
+        });
+        apply();
     }
 
     function setupPendingForms() {
@@ -961,26 +1070,89 @@
 
             const actions = form.querySelector("[data-ops-bulk-actions]");
             const all = form.querySelector("[data-ops-bulk-all]");
-            const rows = Array.prototype.slice.call(form.querySelectorAll('input[name="site_ids[]"]'));
+            // Sites use site_ids[]; Domains use domain_ids[]. The server still
+            // reads `all=1` as the filtered total, so the bar works for both.
+            const rows = Array.prototype.slice.call(form.querySelectorAll('input[type="checkbox"][name$="_ids[]"]'));
             if (!actions) {
                 return;
             }
 
-            const sync = function () {
-                const anyRow = rows.some(function (box) {
-                    return box instanceof HTMLInputElement && box.checked;
-                });
+            const channel = form.querySelector("[data-ops-bulk-channel]");
+            const summaryText = form.querySelector("[data-ops-bulk-summary-text]");
+            const selectAllBtn = form.querySelector("[data-ops-bulk-select-all]");
+            const selectPageBtn = form.querySelector("[data-ops-bulk-select-page]");
+            const confirmTargets = Array.prototype.slice.call(form.querySelectorAll("[data-confirm-template]"));
+
+            // The server reads `all=1` as every site matching the current filters, so the
+            // scope of that checkbox is the filtered total, never the rows on this page.
+            const filteredTotal = Number(actions.dataset.bulkTotal || rows.length);
+
+            /**
+             * @returns {{all: boolean, count: number}} what the next submit would touch.
+             */
+            const scope = function () {
                 const hasAll = all instanceof HTMLInputElement && all.checked;
-                actions.hidden = !hasAll && !anyRow;
+                const checked = rows.filter(function (box) {
+                    return box instanceof HTMLInputElement && box.checked;
+                }).length;
+
+                return contracts.bulkScope(hasAll, checked, filteredTotal);
+            };
+
+            /** Every confirm body names the same number the summary shows. */
+            const syncConfirm = function (count) {
+                const target = channel instanceof HTMLSelectElement ? channel.value : "";
+                confirmTargets.forEach(function (node) {
+                    const template = node.dataset.confirmTemplate;
+                    if (!template) {
+                        return;
+                    }
+                    node.dataset.confirm = contracts.interpolateConfirm(template, count, target);
+                });
+            };
+
+            const syncSummary = function (state) {
+                if (!(summaryText instanceof HTMLElement)) {
+                    return;
+                }
+
+                const template = state.all
+                    ? (actions.dataset.copyAll || "")
+                    : (actions.dataset.copySelected || "");
+                summaryText.textContent = contracts.interpolateConfirm(template, state.count, "");
+
+                // Switching scope only means something when the filter reaches past this page.
+                const pageIsEverything = filteredTotal <= rows.length;
+                if (selectAllBtn instanceof HTMLElement) {
+                    selectAllBtn.hidden = pageIsEverything || state.all;
+                }
+                if (selectPageBtn instanceof HTMLElement) {
+                    selectPageBtn.hidden = pageIsEverything || !state.all;
+                }
+            };
+
+            const sync = function () {
+                const state = scope();
+                actions.hidden = state.count === 0;
+                if (all instanceof HTMLInputElement) {
+                    // Rows ticked one by one are a partial selection, not an `all=1` sweep.
+                    all.indeterminate = !all.checked && state.count > 0;
+                }
+                syncSummary(state);
+                syncConfirm(state.count);
+            };
+
+            const setRows = function (checked) {
+                rows.forEach(function (box) {
+                    if (box instanceof HTMLInputElement) {
+                        box.checked = checked;
+                    }
+                });
             };
 
             if (all instanceof HTMLInputElement) {
                 all.addEventListener("change", function () {
-                    rows.forEach(function (box) {
-                        if (box instanceof HTMLInputElement) {
-                            box.checked = all.checked;
-                        }
-                    });
+                    setRows(all.checked);
                     sync();
                 });
             }
@@ -994,17 +1166,26 @@
                 });
             });
 
-            const channel = form.querySelector("[data-ops-bulk-channel]");
-            const branchBtn = form.querySelector("[data-confirm-template]");
-            const syncConfirm = function () {
-                if (!(channel instanceof HTMLSelectElement) || !(branchBtn instanceof HTMLElement) || !branchBtn.dataset.confirmTemplate) {
-                    return;
-                }
-                branchBtn.dataset.confirm = branchBtn.dataset.confirmTemplate.replace(/__TARGET__/g, channel.value);
-            };
+            if (selectAllBtn instanceof HTMLElement && all instanceof HTMLInputElement) {
+                selectAllBtn.addEventListener("click", function () {
+                    all.checked = true;
+                    setRows(true);
+                    sync();
+                });
+            }
+
+            if (selectPageBtn instanceof HTMLElement && all instanceof HTMLInputElement) {
+                selectPageBtn.addEventListener("click", function () {
+                    all.checked = false;
+                    setRows(true);
+                    sync();
+                });
+            }
+
             if (channel) {
-                channel.addEventListener("change", syncConfirm);
-                syncConfirm();
+                channel.addEventListener("change", function () {
+                    syncConfirm(scope().count);
+                });
             }
 
             sync();
@@ -1129,6 +1310,7 @@
     setupClickableRows();
     setupSelects();
     setupCopyButtons();
+    setupSettingsSearch();
     setupPendingForms();
     setupOpsTabs();
     setupListToolbars();

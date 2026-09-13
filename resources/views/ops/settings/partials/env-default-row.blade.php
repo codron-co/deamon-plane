@@ -6,8 +6,16 @@
     $isSecret = (bool) old('rows.'.$rowIndex.'.is_secret', $row?->is_secret ?? false);
     $notes = old('rows.'.$rowIndex.'.notes', $row?->notes);
     $kindEnum = \App\Enums\CoolifyEnvKind::tryFrom((string) $kindValue) ?? \App\Enums\CoolifyEnvKind::Static;
+    $searchHaystack = mb_strtolower(trim(implode(' ', array_filter([
+        (string) $key,
+        $kindEnum->label(),
+        (string) $kindValue,
+        (string) $value,
+        $isSecret ? (string) __('settings.env.columns.secret') : '',
+        (string) $notes,
+    ], static fn (string $part): bool => $part !== ''))));
 @endphp
-<tr data-env-row>
+<tr data-env-row data-env-search-text="{{ $searchHaystack }}">
     <td>
         <label class="visually-hidden" for="env-key-{{ $rowIndex }}">{{ __('settings.env.columns.key') }}</label>
         <input

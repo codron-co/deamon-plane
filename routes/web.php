@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Ops\AccountController;
+use App\Http\Controllers\Ops\ActivityController;
 use App\Http\Controllers\Ops\FleetController;
 use App\Http\Controllers\Ops\GithubSettingsController;
 use App\Http\Controllers\Ops\OpsJobController;
+use App\Http\Controllers\Ops\OpsPaletteController;
 use App\Http\Controllers\Ops\PlatformMailUnsubscribeController;
 use App\Http\Controllers\Ops\PreferencesController;
 use App\Http\Controllers\Ops\SettingsController;
@@ -18,6 +20,11 @@ Route::post('/platform-mail/unsubscribe', [PlatformMailUnsubscribeController::cl
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');
+    Route::get('/activity', [ActivityController::class, 'index'])->name('ops.activity');
+    Route::get('/activity/export', [ActivityController::class, 'export'])->name('ops.activity.export');
+    Route::get('/activity/jobs/{job}', [ActivityController::class, 'showJob'])->name('ops.activity.jobs.show');
+    Route::get('/activity/audits/{audit}', [ActivityController::class, 'showAudit'])->name('ops.activity.audits.show');
+    Route::get('/palette', [OpsPaletteController::class, 'search'])->name('ops.palette');
     Route::get('/jobs', [OpsJobController::class, 'index'])->name('ops.jobs');
     Route::get('/jobs/{job}', [OpsJobController::class, 'show'])->name('ops.jobs.show');
     Route::delete('/jobs/{job}', [OpsJobController::class, 'destroy'])->name('ops.jobs.destroy');

@@ -35,6 +35,7 @@ class ProcessOpsBackgroundJob implements ShouldQueue
         'sites.bulk_follow_head',
         'sites.bulk_pin',
         'sites.bulk_app_health_fix',
+        'sites.bulk_inject_agent_secret',
     ];
 
     public function handle(OpsJobRunner $runner): void

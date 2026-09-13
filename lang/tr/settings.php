@@ -3,6 +3,11 @@
 return [
     'title' => 'Sistem',
     'lede' => 'Bu Plane’in sistem yapılandırması. Token asla gösterilmez. Ad, e-posta ve parola Hesap sayfasındadır.',
+    'jump' => [
+        'label' => 'Sistem bölümleri',
+        'search' => 'Bölüm veya env anahtarına atla',
+        'empty' => 'Bu aramaya uyan sistem bölümü yok.',
+    ],
     'defaults' => 'Müşteri site varsayılanları',
     'defaults_hint' => 'Ortamdan. Provision işleri git + Docker Compose app oluşturur — Nixpacks yok, ham POST /applications/dockercompose yok.',
     'repository' => 'Müşteri git deposu',
@@ -24,6 +29,8 @@ return [
     'env' => [
         'title' => 'Coolify env varsayılanları',
         'lede' => 'Her Plane deploy’unda ve Dockerfile uygulaması Compose’a geçirildiğinde uygulanır. Eksik veya örnek sırlar doldurulur; mevcut MySQL parolaları döndürülmez. Coolify’ın enjekte ettiği anahtarlar listelenir, yazılmaz.',
+        'search_hint' => 'Üstteki arama anahtarları da süzer. Kaydet hâlâ tüm katalogu yazar; eşleşmeyen satırlar yalnızca gizlenir.',
+        'search_empty' => 'Bu pack’te eşleşen anahtar yok.',
         'tabs' => 'Build pack',
         'developer' => 'Geliştirici görünümü',
         'developer_hint' => 'Ham katalog KEY=value. Yer tutucular şablon; canlı site sırları değil.',

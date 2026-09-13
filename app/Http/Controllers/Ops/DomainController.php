@@ -3,21 +3,29 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
+use App\Http\Requests\Ops\BulkDomainIdsRequest;
 use App\Http\Requests\Ops\StoreFleetDomainRequest;
 use App\Http\Requests\Ops\UpdateFleetDomainRequest;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Cloudflare\CloudflareHostname;
+use App\Services\Domains\DomainBindSweep;
+use App\Services\Domains\DomainClearSweep;
 use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteProvisionException;
 use App\Support\Lists\ListFragment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 
 class DomainController extends Controller
 {
+    use QueuesOpsJob;
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Site::class);
@@ -25,21 +33,27 @@ class DomainController extends Controller
         $search = trim((string) $request->query('q', ''));
         $unbound = $request->boolean('unbound');
 
-        $query = SiteDomain::query()->with('site')->orderBy('domain');
+        $query = SiteDomain::query()
+            ->with('site')
+            ->matchingListFilters($search, $unbound)
+            ->orderBy('domain');
 
-        if ($search !== '') {
-            $query->where('domain', 'like', '%'.$search.'%');
-        }
-        if ($unbound) {
-            $query->whereNull('verified_at')->where('is_temporary', false);
-        }
+        $domains = $query->paginate(50)->withQueryString();
+        $activeFilters = $this->activeListFilters($search, $unbound);
+        $unboundInFilter = $unbound
+            ? $domains->total()
+            : SiteDomain::query()->matchingListFilters($search, true)->count();
 
         return ListFragment::respond($request, 'ops.domains.index', 'ops.domains._region', [
-            'domains' => $query->paginate(50)->withQueryString(),
+            'domains' => $domains,
             'search' => $search,
             'unbound' => $unbound,
+            'unboundInFilter' => $unboundInFilter,
             'sites' => Site::query()->orderBy('name')->get(['id', 'name', 'primary_domain']),
             'canWrite' => $request->user()?->canWriteOps() ?? false,
+            'filtersActive' => $activeFilters !== [],
+            'activeFilters' => $activeFilters,
+            'totalDomains' => $domains->total() > 0 ? $domains->total() : SiteDomain::query()->count(),
         ]);
     }
 
@@ -126,5 +140,133 @@ class DomainController extends Controller
         }
 
         return back()->with('status', __('domains.flash.bound'));
+    }
+
+    public function bindBulk(BulkDomainIdsRequest $request, DomainBindSweep $sweep): RedirectResponse|JsonResponse
+    {
+        $domains = $this->domainsFromBulk($request);
+
+        foreach ($domains as $domain) {
+            if ($domain->site instanceof Site) {
+                $this->authorize('update', $domain->site);
+            }
+        }
+
+        if ($domains->isEmpty()) {
+            return back()->with('error', __('domains.bulk.empty'));
+        }
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'domains.bulk_bind', __('ops.jobs.bulk_bind'), [
+                'domain_ids' => $domains->pluck('id')->all(),
+                'ip' => $request->ip(),
+            ]);
+        }
+
+        return back()->with('status', $sweep->summarize($sweep->run($domains)));
+    }
+
+    public function clearBulk(BulkDomainIdsRequest $request, DomainClearSweep $sweep): RedirectResponse|JsonResponse
+    {
+        $domains = $this->domainsFromBulk($request);
+
+        foreach ($domains as $domain) {
+            if ($domain->site instanceof Site) {
+                $this->authorize('update', $domain->site);
+            }
+        }
+
+        if ($domains->isEmpty()) {
+            return $this->clearBulkEmpty($request);
+        }
+
+        $result = $sweep->run($domains);
+        if ((int) ($result['ok'] ?? 0) === 0) {
+            return $this->clearBulkEmpty($request);
+        }
+
+        $summary = $sweep->summarize($result);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $summary,
+                'type' => 'status',
+                'refresh_list' => true,
+            ]);
+        }
+
+        return back()->with('status', $summary);
+    }
+
+    private function clearBulkEmpty(BulkDomainIdsRequest $request): RedirectResponse|JsonResponse
+    {
+        $message = __('domains.bulk.empty_clear');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => false,
+                'message' => $message,
+                'type' => 'error',
+            ], 422);
+        }
+
+        return back()->with('error', $message);
+    }
+
+    /**
+     * @return Collection<int, SiteDomain>
+     */
+    private function domainsFromBulk(BulkDomainIdsRequest $request): Collection
+    {
+        if ($request->boolean('all')) {
+            return SiteDomain::query()
+                ->with('site')
+                ->matchingListFilters(
+                    trim((string) $request->input('filter_q', '')),
+                    $request->boolean('filter_unbound'),
+                )
+                ->orderBy('domain')
+                ->get();
+        }
+
+        $ids = $request->validated('domain_ids') ?? [];
+
+        return SiteDomain::query()->with('site')->whereIn('id', $ids)->orderBy('domain')->get();
+    }
+
+    /**
+     * @return list<array{key: string, label: string, value: string, url: string}>
+     */
+    private function activeListFilters(string $search, bool $unbound): array
+    {
+        $applied = [];
+        if ($search !== '') {
+            $applied['q'] = $search;
+        }
+        if ($unbound) {
+            $applied['unbound'] = '1';
+        }
+
+        $labels = [
+            'q' => __('domains.filter_search'),
+            'unbound' => __('domains.filter_unbound'),
+        ];
+        $displayed = [
+            'q' => $search,
+            'unbound' => __('domains.coolify.unbound'),
+        ];
+
+        $chips = [];
+        foreach ($applied as $key => $value) {
+            $chips[] = [
+                'key' => $key,
+                'label' => $labels[$key],
+                'value' => $displayed[$key],
+                'url' => route('ops.domains', array_diff_key($applied, [$key => null])),
+            ];
+        }
+
+        return $chips;
     }
 }

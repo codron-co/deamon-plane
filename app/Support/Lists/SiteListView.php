@@ -25,7 +25,7 @@ final class SiteListView
         private readonly bool $sortFromQuery,
     ) {}
 
-    public static function resolve(Request $request, ?User $user): self
+    public static function resolve(Request $request, ?User $user, ?SiteSavedViews $views = null): self
     {
         $stored = $user?->listPreference(SiteListColumns::LIST_KEY) ?? [];
         $columns = SiteListColumns::sanitize($stored['columns'] ?? SiteListColumns::defaults());
@@ -37,6 +37,10 @@ final class SiteListView
         if ($fromQuery) {
             $key = $queryKey;
             $direction = self::direction($queryDirection);
+        } elseif ($views?->sort !== null && self::isUsable($views->sort['key'], $columns)) {
+            // A default view applied on a fragment has no `sort=` in the URL.
+            $key = $views->sort['key'];
+            $direction = self::direction($views->sort['dir']);
         } else {
             $storedSort = is_array($stored['sort'] ?? null) ? $stored['sort'] : [];
             $storedKey = (string) ($storedSort['key'] ?? '');

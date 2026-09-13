@@ -3,7 +3,7 @@
 
     const STORAGE_KEY = "planeOpsJobs";
     const DISMISS_KEY = "planeOpsJobsDismissed";
-    const POLL_MS = 1500;
+    const FAILED_KEY = "planeOpsJobsFailedOnly";
     const DISMISS_MS = 30000;
 
     const root = document.querySelector("[data-ops-jobs]");
@@ -15,10 +15,12 @@
     const listEl = root.querySelector("[data-ops-jobs-list]");
     const bodyEl = root.querySelector("[data-ops-jobs-body]");
     const summaryEl = root.querySelector("[data-ops-jobs-summary]");
+    const queueEl = root.querySelector("[data-ops-jobs-queue]");
     const countEl = root.querySelector("[data-ops-jobs-count]");
     const toggleBtn = root.querySelector("[data-ops-jobs-toggle]");
     const minimizeBtn = root.querySelector("[data-ops-jobs-minimize]");
     const closeBtn = root.querySelector("[data-ops-jobs-close]");
+    const failedBtn = root.querySelector("[data-ops-jobs-failed]");
     const canWrite = root.getAttribute("data-can-write") === "1";
     const indexUrl = root.getAttribute("data-jobs-index") || "/jobs";
     const showBase = (root.getAttribute("data-jobs-show") || "/jobs").replace(/\/$/, "");
@@ -28,16 +30,42 @@
     const coolifyCancelBase = (root.getAttribute("data-jobs-coolify-cancel") || "/jobs/coolify-deployments").replace(/\/$/, "");
     const coolifyForceBase = (root.getAttribute("data-jobs-coolify-force") || "/jobs/coolify-deployments").replace(/\/$/, "");
 
+    const readInt = function (attr, fallback) {
+        const parsed = parseInt(root.getAttribute(attr) || "", 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    };
+
+    /*
+     * Every /jobs poll costs a Coolify read per connection, so a forgotten tab on a
+     * 10-minute build used to be hundreds of requests — the same pressure behind the
+     * "Too Many Attempts." incident. The interval therefore grows while nothing
+     * changes, and drops back to the fast tier the moment a row moves.
+     */
+    const contracts = window.PlaneOpsContracts;
+
+    const POLL_FAST_MS = readInt("data-poll-fast-ms", 1500);
+    const POLL_SLOW_MS = Math.max(POLL_FAST_MS, readInt("data-poll-slow-ms", 5000));
+    const POLL_MAX_MS = Math.max(POLL_SLOW_MS, readInt("data-poll-max-ms", 10000));
+    const POLL_TIERS = [POLL_FAST_MS, POLL_SLOW_MS, POLL_MAX_MS];
+    const POLL_SLOW_AFTER = readInt("data-poll-slow-after", 8);
+
     let trackedIds = new Set();
     let jobsById = new Map();
     let dismissedIds = new Set();
     let dismissTimers = new Map();
     let messages = [];
     let pollTimer = null;
+    let pollTier = 0;
+    let unchangedPolls = 0;
+    let lastSignature = null;
+    let polling = false;
     let collapsed = false;
     let dismissed = false;
+    let failedOnly = false;
     let messageSeq = 0;
     let actionBusy = new Set();
+    /* Fleet queue line from the last payload: "1 derleniyor · 22 kuyrukta". */
+    let queueLabel = "";
     /* Rendered rows keyed by job id, so a poll can patch instead of rebuild. */
     const rowStates = new Map();
 
@@ -219,7 +247,11 @@
 
     const visibleItems = function () {
         const jobs = Array.from(jobsById.values()).filter(function (item) {
-            return !dismissedIds.has(item.id);
+            if (dismissedIds.has(item.id)) {
+                return false;
+            }
+
+            return !failedOnly || contracts.isFailedStatus(item.status);
         });
         return jobs.concat(messages);
     };
@@ -324,6 +356,8 @@
             }
 
             const payload = await fetchJson(url, { method: "POST", body: "{}" });
+            // Cancelling or promoting a row reorders the line for everyone behind it.
+            applyQueuePayload(payload);
             if (payload && payload.deployment) {
                 if (kind === "cancel") {
                     markDismissed(item.id);
@@ -353,8 +387,9 @@
         return copy("title", "Background tasks");
     };
 
-    // "manuel · kuyrukta": what the work is doing, then where it stands. The kind
-    // of work ("Coolify deploy · beyazlar") lives in the title.
+    // "manuel · kuyrukta · sırada 4 / 22": what the work is doing, where it stands,
+    // and how long the line ahead of it is. The kind of work ("Coolify deploy ·
+    // beyazlar") lives in the title. Every part arrives already translated.
     const metaTextFor = function (item) {
         const parts = [];
         const detail = typeof item.detail === "string" && item.detail !== ""
@@ -374,13 +409,17 @@
             }
         }
 
+        if (typeof item.queue_label === "string" && item.queue_label !== "") {
+            parts.push(item.queue_label);
+        }
+
         return parts.join(" · ");
     };
 
     const createRow = function (item) {
         const li = document.createElement("li");
         li.className = "ops-jobs-item";
-        li.setAttribute("data-job-id", String(item.id));
+        li.setAttribute("data-job-id", contracts.jobRowKey(item));
 
         const head = document.createElement("div");
         head.className = "ops-jobs-item-head";
@@ -596,13 +635,15 @@
             return isActive(item.status);
         }).length;
 
-        if (items.length === 0) {
+        // Failed-only with nothing to show must keep the panel: hiding it
+        // would also hide the toggle that turns the filter off.
+        if (items.length === 0 && !failedOnly) {
             clearRows();
             root.hidden = true;
             return;
         }
 
-        if (dismissed && active === 0 && messages.length === 0) {
+        if (dismissed && active === 0 && messages.length === 0 && !failedOnly) {
             clearRows();
             root.hidden = true;
             return;
@@ -617,9 +658,20 @@
         if (summaryEl) {
             summaryEl.textContent = copy("title", "Background tasks");
         }
+        if (queueEl) {
+            // One build per server means the header has to say how deep the line is,
+            // otherwise a 23-site bulk deploy looks like one slow deploy.
+            queueEl.hidden = queueLabel === "";
+            queueEl.textContent = queueLabel;
+        }
         if (countEl) {
-            countEl.hidden = active === 0;
-            countEl.textContent = String(active);
+            const badge = failedOnly
+                ? items.filter(function (item) {
+                    return contracts.isFailedStatus(item.status);
+                }).length
+                : active;
+            countEl.hidden = badge === 0;
+            countEl.textContent = String(badge);
         }
         if (bodyEl) {
             bodyEl.hidden = collapsed;
@@ -634,16 +686,14 @@
         const focused = document.activeElement;
         const hadFocus = focused !== null && listEl.contains(focused);
 
-        const seen = new Set();
+        const plan = contracts.diffJobRows(Array.from(rowStates.keys()), items);
         let index = 0;
 
         items.forEach(function (item) {
-            if (!item || item.id === undefined || item.id === null) {
+            const id = contracts.jobRowKey(item);
+            if (id === null) {
                 return;
             }
-
-            const id = String(item.id);
-            seen.add(id);
 
             let state = rowStates.get(id);
             if (!state) {
@@ -660,13 +710,7 @@
             index += 1;
         });
 
-        const stale = [];
-        rowStates.forEach(function (state, id) {
-            if (!seen.has(id)) {
-                stale.push(id);
-            }
-        });
-        stale.forEach(function (id) {
+        plan.remove.forEach(function (id) {
             const state = rowStates.get(id);
             if (state) {
                 state.el.remove();
@@ -711,6 +755,15 @@
         render();
     };
 
+    // The server counts the queue and translates the line; the widget only shows it.
+    const applyQueuePayload = function (payload) {
+        if (!payload || !payload.queue || typeof payload.queue !== "object") {
+            return;
+        }
+
+        queueLabel = typeof payload.queue.label === "string" ? payload.queue.label : "";
+    };
+
     const pruneAbsentDeployments = function (payloadDeployments) {
         const seen = new Set();
         (payloadDeployments || []).forEach(function (job) {
@@ -741,7 +794,8 @@
         }
 
         try {
-            const payload = await fetchJson(indexUrl);
+            const payload = await fetchJson(contracts.jobsIndexUrl(indexUrl, failedOnly));
+            applyQueuePayload(payload);
             if (payload && Array.isArray(payload.jobs)) {
                 payload.jobs.forEach(upsertJob);
             }
@@ -770,14 +824,82 @@
         stopIfIdle();
     };
 
-    const startPoll = function () {
-        if (!canWrite || pollTimer) {
+    /* What the operator would notice changing. Anything else is not worth a request. */
+    const stateSignature = function () {
+        return contracts.jobStateSignature(jobsById);
+    };
+
+    const resetBackoff = function () {
+        pollTier = 0;
+        unchangedPolls = 0;
+    };
+
+    const advanceBackoff = function () {
+        const next = contracts.advanceBackoff(
+            {
+                lastSignature: lastSignature,
+                pollTier: pollTier,
+                unchangedPolls: unchangedPolls,
+            },
+            stateSignature(),
+            {
+                slowAfter: POLL_SLOW_AFTER,
+                tierCount: POLL_TIERS.length,
+            }
+        );
+        lastSignature = next.lastSignature;
+        pollTier = next.pollTier;
+        unchangedPolls = next.unchangedPolls;
+    };
+
+    const clearPollTimer = function () {
+        if (pollTimer) {
+            window.clearTimeout(pollTimer);
+            pollTimer = null;
+        }
+    };
+
+    /* A chained timeout, not setInterval: the gap has to be able to change. */
+    const schedulePoll = function () {
+        clearPollTimer();
+        if (!contracts.shouldSchedulePoll(canWrite, document)) {
             return;
         }
-        pollTimer = window.setInterval(function () {
-            poll();
-        }, POLL_MS);
-        poll();
+
+        pollTimer = window.setTimeout(function () {
+            pollTimer = null;
+            runPoll();
+        }, POLL_TIERS[pollTier]);
+    };
+
+    const runPoll = async function () {
+        if (!canWrite || polling) {
+            return;
+        }
+
+        polling = true;
+        try {
+            await poll();
+            advanceBackoff();
+        } finally {
+            polling = false;
+            schedulePoll();
+        }
+    };
+
+    const startPoll = function () {
+        if (!canWrite) {
+            return;
+        }
+
+        // Whatever brought us here is news, so read now and read often again.
+        resetBackoff();
+        clearPollTimer();
+        if (contracts.pageIsHidden(document)) {
+            return;
+        }
+
+        runPoll();
     };
 
     const track = function (job) {
@@ -835,6 +957,36 @@
         });
     }
 
+    const syncFailedButton = function () {
+        if (!failedBtn) {
+            return;
+        }
+
+        failedBtn.setAttribute("aria-pressed", failedOnly ? "true" : "false");
+        failedBtn.classList.toggle("is-on", failedOnly);
+    };
+
+    if (failedBtn) {
+        failedBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            failedOnly = !failedOnly;
+            try {
+                if (failedOnly) {
+                    sessionStorage.setItem(FAILED_KEY, "1");
+                } else {
+                    sessionStorage.removeItem(FAILED_KEY);
+                }
+            } catch (error) {
+                /* sessionStorage can be unavailable */
+            }
+            dismissed = false;
+            syncFailedButton();
+            render();
+            startPoll();
+        });
+    }
+
     if (closeBtn) {
         closeBtn.addEventListener("click", function () {
             dismissed = true;
@@ -856,12 +1008,29 @@
         });
     }
 
+    // A background tab must cost Coolify nothing; coming back is worth exactly one
+    // catch-up read, then the interval the wait had already earned.
+    document.addEventListener("visibilitychange", function () {
+        clearPollTimer();
+        if (contracts.pageIsHidden(document)) {
+            return;
+        }
+
+        runPoll();
+    });
+
     readStorage().forEach(function (id) {
         trackedIds.add(id);
     });
     readDismissed().forEach(function (id) {
         dismissedIds.add(id);
     });
+    try {
+        failedOnly = sessionStorage.getItem(FAILED_KEY) === "1";
+    } catch (error) {
+        failedOnly = false;
+    }
+    syncFailedButton();
     if (canWrite) {
         startPoll();
     }

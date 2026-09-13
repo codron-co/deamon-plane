@@ -319,6 +319,31 @@ class SiteListPreferencesTest extends TestCase
         $this->assertStringNotContainsString('page=1', $html);
     }
 
+    public function test_resetting_columns_does_not_wipe_saved_views(): void
+    {
+        $user = $this->user(OpsRole::Operator);
+        $user->saveListPreference(SiteListColumns::LIST_KEY, [
+            'columns' => ['site'],
+            'views' => [[
+                'id' => 'keepview00001',
+                'name' => 'Korunan',
+                'filters' => ['status' => 'error'],
+                'columns' => ['site', 'updated'],
+                'sort' => ['key' => 'updated', 'dir' => 'desc'],
+            ]],
+            'default_view' => 'keepview00001',
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('ops.sites.list-preferences.reset'))
+            ->assertRedirect();
+
+        $stored = $user->fresh()->listPreference(SiteListColumns::LIST_KEY);
+        $this->assertSame(SiteListColumns::defaults(), $stored['columns']);
+        $this->assertSame('Korunan', $stored['views'][0]['name']);
+        $this->assertSame('keepview00001', $stored['default_view']);
+    }
+
     private function user(OpsRole $role): User
     {
         $user = User::factory()->create();

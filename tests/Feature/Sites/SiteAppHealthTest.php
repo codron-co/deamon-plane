@@ -10,6 +10,7 @@ use App\Models\CoolifyConnection;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Sites\SiteAppHealthInspector;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -259,6 +260,64 @@ class SiteAppHealthTest extends TestCase
             ->assertOk()
             ->assertSee(__('sites.app_health.title'), false)
             ->assertSee(route('ops.sites.app-health', $site), false);
+    }
+
+    public function test_draft_and_failed_provision_do_not_surface_deploy_or_agent_noise(): void
+    {
+        $draft = Site::factory()->create([
+            'status' => SiteStatus::Draft,
+            'coolify_app_uuid' => null,
+            'agent_secret_encrypted' => null,
+        ]);
+
+        $this->assertSame([], app(SiteAppHealthInspector::class)->localIssues($draft));
+
+        $failed = Site::factory()->create([
+            'status' => SiteStatus::Error,
+            'coolify_app_uuid' => self::APP,
+            'agent_secret_encrypted' => 'plane-agent-secret',
+            'last_health_payload' => [
+                'ok' => false,
+                'status' => 'unhealthy',
+                'reason' => 'http_error',
+                'http_status' => 404,
+            ],
+            'last_health_at' => now(),
+        ]);
+        Deployment::factory()->create([
+            'site_id' => $failed->id,
+            'trigger' => DeploymentTrigger::Create,
+            'status' => DeploymentStatus::Failed,
+            'started_at' => now()->subMinute(),
+            'finished_at' => now(),
+            'error_message' => 'compose raw missing',
+        ]);
+
+        $codes = collect(app(SiteAppHealthInspector::class)->localIssues($failed))
+            ->map(fn ($issue) => $issue->code)
+            ->all();
+
+        $this->assertSame([], $codes);
+        $this->assertFalse($failed->canBindCoolifyDomains());
+    }
+
+    public function test_error_without_app_only_reports_missing_app(): void
+    {
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Error,
+            'coolify_app_uuid' => null,
+        ]);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Failed,
+            'started_at' => now(),
+        ]);
+
+        $codes = collect(app(SiteAppHealthInspector::class)->localIssues($site))
+            ->map(fn ($issue) => $issue->code)
+            ->all();
+
+        $this->assertSame(['missing_app'], $codes);
     }
 
     public function test_display_clears_stale_deploy_failed_when_latest_finished(): void

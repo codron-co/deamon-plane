@@ -6,6 +6,7 @@ use App\Enums\CoolifyEnvKind;
 use App\Enums\CoolifyEnvPack;
 use App\Http\Controllers\Controller;
 use App\Models\CoolifyEnvDefault;
+use App\Support\Ops\SettingsJump;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,12 @@ class SettingsController extends Controller
             ->get()
             ->groupBy(static fn (CoolifyEnvDefault $row): string => $row->pack->value);
 
+        $envKeyHaystack = $envDefaults
+            ->flatten()
+            ->pluck('key')
+            ->filter()
+            ->implode(' ');
+
         return view('ops.settings.index', [
             'composeFile' => config('ops.deamon.compose_file'),
             'repository' => config('ops.deamon.repository'),
@@ -31,6 +38,8 @@ class SettingsController extends Controller
             'envPacks' => CoolifyEnvPack::cases(),
             'envKinds' => CoolifyEnvKind::cases(),
             'envDefaults' => $envDefaults,
+            'settingsJump' => SettingsJump::sections(),
+            'envKeyHaystack' => $envKeyHaystack,
         ]);
     }
 

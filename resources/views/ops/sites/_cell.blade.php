@@ -26,6 +26,9 @@
                         @endif
                     </div>
                     <div class="site-slug">{{ $site->slug }}</div>
+                    @if (($searchMatch ?? null) !== null)
+                        <div class="site-search-match">{{ __('sites.search_match.'.$searchMatch['type'], ['value' => $searchMatch['value']]) }}</div>
+                    @endif
                 </div>
             </div>
         </td>
@@ -58,15 +61,20 @@
 
     @case ('publish')
         <td>
-            <span
-                class="status-chip status-{{ $site->publishTone() }}"
-                data-publish-chip
+            <div class="ops-fresh-cell">
+                <span
+                    class="status-chip status-{{ $site->publishTone() }}"
+                    data-publish-chip
+                    @if ($site->publishStatus() === null)
+                        title="{{ __('sites.publish.unknown_hint') }}"
+                    @endif
+                >{{ $site->publishLabel() }}</span>
                 @if ($site->publishStatus() === null)
-                    title="{{ __('sites.publish.unknown_hint') }}"
-                @elseif ($site->cms_site_status_at)
-                    title="{{ __('sites.publish.last_confirmed') }}: {{ $site->cms_site_status_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}"
+                    <x-ops.freshness :at="null" :missing="__('ops.unknown')" />
+                @else
+                    <x-ops.freshness :at="$site->cms_site_status_at" :missing="__('ops.unknown')" />
                 @endif
-            >{{ $site->publishLabel() }}</span>
+            </div>
         </td>
         @break
 
@@ -92,7 +100,10 @@
 
     @case ('live')
         <td>
-            <span class="status-chip status-{{ $site->liveHttpTone() }}" data-live-chip @if ($site->last_live_checked_at) title="{{ $site->last_live_checked_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}" @endif>{{ $site->liveHttpLabel() }}</span>
+            <div class="ops-fresh-cell">
+                <span class="status-chip status-{{ $site->liveHttpTone() }}" data-live-chip>{{ $site->liveHttpLabel() }}</span>
+                <x-ops.freshness :at="$site->last_live_checked_at" />
+            </div>
         </td>
         @break
 
@@ -101,10 +112,10 @@
         @break
 
     @case ('health')
-        <td class="muted">{{ $site->last_health_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.never') }}</td>
+        <td><x-ops.freshness :at="$site->last_health_at" /></td>
         @break
 
     @case ('updated')
-        <td class="muted">{{ $site->updated_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.none') }}</td>
+        <td><x-ops.freshness :at="$site->updated_at" :missing="__('ops.none')" :mark-stale="false" /></td>
         @break
 @endswitch

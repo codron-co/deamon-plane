@@ -7,14 +7,17 @@ use App\Enums\CmsPublishStatus;
 use App\Models\CoolifyConnection;
 use App\Models\OpsBackgroundJob;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Models\User;
 use App\Services\Coolify\CoolifyInventorySync;
 use App\Services\Coolify\CoolifySiteSync;
+use App\Services\Domains\DomainBindSweep;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
+use App\Services\Sites\SiteAgentSecretSweep;
 use App\Services\Sites\SiteAppHealthFixer;
 use App\Services\Sites\SiteAppHealthReport;
 use App\Services\Sites\SiteLiveProbe;
@@ -39,7 +42,9 @@ class OpsJobRunner
             'sites.bulk_follow_head' => $this->bulkFollowHead($job),
             'sites.bulk_pin' => $this->bulkPin($job),
             'sites.bulk_app_health_fix' => $this->bulkAppHealthFix($job),
+            'sites.bulk_inject_agent_secret' => $this->bulkInjectAgentSecret($job),
             'sites.bulk_publish_status' => $this->bulkPublishStatus($job),
+            'domains.bulk_bind' => $this->bulkBindDomains($job),
             default => throw new RuntimeException('Unknown ops job type.'),
         };
     }
@@ -166,9 +171,10 @@ class OpsJobRunner
     {
         $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
         $settings = app(CoolifyDeploySettings::class);
-        $enabled = array_key_exists('enabled', $job->payload)
-            ? (bool) $job->payload['enabled']
-            : $settings->toggleEnabledFor($sites);
+        if (! array_key_exists('enabled', $job->payload)) {
+            throw new \InvalidArgumentException('sites.bulk_auto_deploy requires payload.enabled');
+        }
+        $enabled = (bool) $job->payload['enabled'];
         $actor = $this->actor($job);
         $ip = $this->ip($job);
 
@@ -246,6 +252,41 @@ class OpsJobRunner
         );
     }
 
+    private function bulkBindDomains(OpsBackgroundJob $job): string
+    {
+        $ids = $job->payload['domain_ids'] ?? [];
+        $domains = SiteDomain::query()->with('site')->whereIn('id', $ids)->orderBy('domain')->get();
+        $sweep = app(DomainBindSweep::class);
+
+        $result = $sweep->run(
+            $domains,
+            function (Site $site, int $completed, int $total) use ($job): void {
+                $job->updateProgress((int) (($completed / max(1, $total)) * 100), $site->name);
+            },
+        );
+
+        return $sweep->summarize($result);
+    }
+
+    private function bulkInjectAgentSecret(OpsBackgroundJob $job): string
+    {
+        $sites = $this->sites($job);
+        $sweep = app(SiteAgentSecretSweep::class);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
+
+        $result = $sweep->run(
+            $sites,
+            $actor,
+            $ip,
+            function (Site $site, int $completed, int $total) use ($job): void {
+                $job->updateProgress((int) (($completed / max(1, $total)) * 100), $site->name);
+            },
+        );
+
+        return $sweep->summarize($result);
+    }
+
     private function bulkAppHealthFix(OpsBackgroundJob $job): string
     {
         $fix = (string) ($job->payload['fix'] ?? 'all');
@@ -293,7 +334,7 @@ class OpsJobRunner
      *
      * @param  Collection<int, Site>  $sites
      * @param  callable(Site): void  $action
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool, throttled: bool, deferrals: int, deferred: int, sites: list<Site>}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, waiting_sites: list<string>, rate_limited: bool, deploy_busy: bool, throttled: bool, deferrals: int, deferred: int, sites: list<Site>}
      */
     private function fanout(OpsBackgroundJob $job, $sites, callable $action): array
     {

@@ -17,6 +17,14 @@ final class DeploymentFailureText
     public static function fromRemote(Site $site, CoolifyDeployment $remote, string $fallback): array
     {
         $message = trim((string) ($remote->message ?: $fallback));
+
+        if (CoolifyApiException::isComposeDomainsBeforeRaw($message, $remote->errors)) {
+            return [
+                'error_message' => self::redact($site, (string) __('coolify.errors.compose_domains_before_raw')),
+                'log_excerpt' => self::redactNullable($site, $remote->logsExcerpt),
+            ];
+        }
+
         $error = self::withErrorsJson($message, $remote->errors);
 
         return [
@@ -30,6 +38,18 @@ final class DeploymentFailureText
      */
     public static function fromException(Site $site, Throwable $exception, string $fallback): array
     {
+        if ($exception instanceof CoolifyApiException
+            && CoolifyApiException::isComposeDomainsBeforeRaw(
+                $exception->getMessage(),
+                $exception->payload['errors'] ?? null,
+            )
+        ) {
+            return [
+                'error_message' => self::redact($site, (string) __('coolify.errors.compose_domains_before_raw')),
+                'log_excerpt' => null,
+            ];
+        }
+
         $message = $exception instanceof CoolifyApiException
             ? $exception->getMessage()
             : $fallback;
@@ -99,7 +119,7 @@ final class DeploymentFailureText
             return $message;
         }
 
-        return trim($message."\n\nCoolify errors:\n".$json);
+        return trim($message."\n\n".__('coolify.errors.errors_heading')."\n".$json);
     }
 
     /**

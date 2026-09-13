@@ -29,6 +29,11 @@ class BulkSiteIdsRequest extends FormRequest
             'filter_channel' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_status' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_publish' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_deploy' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_agent' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_pack' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_health' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_app' => ['sometimes', 'nullable', 'string', 'max:32'],
         ];
     }
 }

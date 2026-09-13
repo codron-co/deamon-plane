@@ -27,7 +27,14 @@ Site detail **Infrastructure** is the operator picker: mail server select + one 
 
 ## Ops UI
 
-`/mail-servers` — table rows open **show**, not edit. Token field matches Cloudflare: password input, never rendered after save, blank on update keeps the existing value. Test connection = list orders and re-match assigned sites. The orders table is a catalog, not a global picker.
+`/mail-servers` — table rows open **show**, not edit. The list uses the same toolbar +
+`[data-ops-list-region]` pair as Sites: search (`q` on name / `mail_domain`) and a status
+filter (`enabled` / `disabled`). Filtered-empty and registry-empty are different panels
+(`ops.partials.filter-chips`, **Filtreleri temizle** vs **Yeni posta sunucusu**). Token
+field matches Cloudflare: password input, never rendered after save, blank on update keeps
+the existing value. Test connection = list orders and re-match assigned sites. The orders
+table is a catalog, not a global picker. Tests: `MailListEmptyStatesTest`,
+`OpsListFragmentTest`.
 
 Site create/edit: mail server select (credentials). Site detail **Infrastructure**: mail server + mailbox-domain selects (pre-filled) + mailbox request queue. Saving POSTs CMS configure when at least one domain is bound.
 

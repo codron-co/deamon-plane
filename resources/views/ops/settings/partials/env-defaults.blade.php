@@ -1,6 +1,12 @@
-<section class="settings-panel env-defaults" aria-labelledby="env-defaults-heading">
+<section
+    class="settings-panel env-defaults"
+    aria-labelledby="env-defaults-heading"
+    data-settings-section
+    data-settings-haystack="{{ \App\Support\Ops\SettingsJump::haystackFor('env', $envKeyHaystack ?? '') }}"
+>
     <h2 id="env-defaults-heading">{{ __('settings.env.title') }}</h2>
     <p class="field-hint">{{ __('settings.env.lede') }}</p>
+    <p class="field-hint">{{ __('settings.env.search_hint') }}</p>
 
     <nav class="env-defaults-tabs" aria-label="{{ __('settings.env.tabs') }}" role="tablist" data-ops-tabs>
         @foreach ($envPacks as $pack)
@@ -74,6 +80,7 @@
                         </tbody>
                     </table>
                 </div>
+                <p class="field-hint env-defaults-search-empty" data-env-search-empty hidden>{{ __('settings.env.search_empty') }}</p>
 
                 @if ($canWrite)
                     <template data-env-row-template>

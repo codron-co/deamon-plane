@@ -25,7 +25,7 @@ Themes → **Connect GitHub** (GitHub App Manifest, Coolify-style) creates the P
 
 Per connection the operator includes **all** accessible repos or a **selected** subset. Optional repo-name prefix. A connection migrated from the old Settings paste keeps prefix `deamon-theme-` so existing orgs do not suddenly ingest every repo. New connections default prefix to empty.
 
-Settings no longer hosts PAT/PEM/org paste. It shows a one-line pointer back to Themes. Leftover `POST /settings/github` redirects here.
+Settings no longer hosts PAT/PEM/org paste. It shows a one-line pointer back to Themes; the Settings jump / palette `webhook` needle lands on that panel (`#github-connection-heading`). Leftover `POST /settings/github` redirects here.
 
 ## Sync
 
@@ -39,6 +39,18 @@ Themes → **Sync catalog**, per-connection Sync, or `php artisan ops:sync-theme
 Reads `theme.json` then `theme/theme.json`, stores `minimum_deamon_version`. First sync defaults visibility to **private**. Existing visibility is not reset. `theme_id` collision across different `repo_full_name` skips (does not steal the row).
 
 Live GitHub credentials are optional for development. Tests use `Http::fake` only.
+
+## Empty states
+
+Catalog-empty and filter-empty are different problems, same pattern as Sites.
+
+- Nothing in the catalog yet → `themes.empty.title` plus **Katalogu senkronla** for writers (`can('sync', Theme)`), or `ops.viewer_readonly` for a Viewer. The hint is operator copy only — it does not mention the test suite.
+- Filters excluded everything → `themes.empty.filtered_title`, the catalog size (`themes.empty.filtered_hint`), one removable chip per active filter (`ops.partials.filter-chips`; search and visibility), and **Filtreleri temizle** as the primary action.
+
+`ThemeController::activeListFilters()` builds the chips. The async region ships the same states. Tests: `ThemeListEmptyStatesTest`.
+
+The Ctrl/⌘+K palette searches this catalog through `Theme::matchingListFilters` — the same
+predicate the toolbar posts — and jumps to `ops.themes.show`. Tests: `PaletteSearchTest`.
 
 ## Agent install
 

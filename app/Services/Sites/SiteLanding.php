@@ -141,7 +141,7 @@ class SiteLanding
 
     public function syncCoolifyDomains(Site $site): void
     {
-        if (blank($site->coolify_app_uuid)) {
+        if (! $site->canBindCoolifyDomains()) {
             return;
         }
 

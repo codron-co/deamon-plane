@@ -43,7 +43,7 @@
             'name', 'base_url', 'api_token', 'webhook_secret', 'is_enabled', 'is_default',
             'default_server_uuid', 'default_project_uuid', 'default_environment_uuid', 'default_git_source',
         ]);
-        $initialTab = $configErrors ? 'configuration' : '';
+        $initialTab = $configErrors ? 'configuration' : (($filtersActive ?? false) ? 'inventory' : '');
     @endphp
 
     <header class="site-hero">
@@ -215,48 +215,31 @@
             </div>
         </div>
 
-        @include('ops.coolify._allowlist', [
-            'title' => __('coolify.allowlist.servers'),
-            'hint' => __('coolify.allowlist.servers_hint'),
-            'rows' => $connection->servers,
-            'toggleRoute' => 'ops.coolify.servers.toggle',
-            'param' => 'server',
-            'extra' => 'ip',
-            'canWrite' => $canWrite,
-            'connection' => $connection,
-        ])
+        <div data-ops-list>
+            <form method="GET" action="{{ route('ops.coolify.show', $connection) }}" class="ops-list-toolbar" data-ops-list-toolbar>
+                <label class="ops-search">
+                    <span class="visually-hidden">{{ __('coolify.search') }}</span>
+                    <input type="search" name="q" value="{{ $inventorySearch ?? '' }}" placeholder="{{ __('coolify.search_placeholder') }}" autocomplete="off">
+                </label>
+                <select name="kind" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('coolify.filter_kind') }}">
+                    <option value="">{{ __('coolify.all_kinds') }}</option>
+                    <option value="servers" @selected(($inventoryKind ?? '') === 'servers')>{{ __('coolify.allowlist.servers') }}</option>
+                    <option value="projects" @selected(($inventoryKind ?? '') === 'projects')>{{ __('coolify.allowlist.projects') }}</option>
+                    <option value="environments" @selected(($inventoryKind ?? '') === 'environments')>{{ __('coolify.allowlist.environments') }}</option>
+                    <option value="git" @selected(($inventoryKind ?? '') === 'git')>{{ __('coolify.allowlist.git') }}</option>
+                </select>
+                <select name="status" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('coolify.filter_status') }}">
+                    <option value="">{{ __('coolify.all_statuses') }}</option>
+                    <option value="active" @selected(($inventoryStatus ?? '') === 'active')>{{ __('ops.active') }}</option>
+                    <option value="inactive" @selected(($inventoryStatus ?? '') === 'inactive')>{{ __('ops.inactive') }}</option>
+                </select>
+                <a class="btn btn-ghost btn-sm" href="{{ route('ops.coolify.show', $connection) }}" data-ops-list-clear{{ ($filtersActive ?? false) ? '' : ' hidden' }}>{{ __('ops.actions.clear') }}</a>
+            </form>
 
-        @include('ops.coolify._allowlist', [
-            'title' => __('coolify.allowlist.projects'),
-            'hint' => __('coolify.allowlist.projects_hint'),
-            'rows' => $connection->projects,
-            'toggleRoute' => 'ops.coolify.projects.toggle',
-            'param' => 'project',
-            'canWrite' => $canWrite,
-            'connection' => $connection,
-        ])
-
-        @include('ops.coolify._allowlist', [
-            'title' => __('coolify.allowlist.environments'),
-            'hint' => __('coolify.allowlist.environments_hint'),
-            'rows' => $connection->environments,
-            'toggleRoute' => 'ops.coolify.environments.toggle',
-            'param' => 'environment',
-            'extra' => 'project_uuid',
-            'canWrite' => $canWrite,
-            'connection' => $connection,
-        ])
-
-        @include('ops.coolify._allowlist', [
-            'title' => __('coolify.allowlist.git'),
-            'hint' => __('coolify.allowlist.git_hint'),
-            'rows' => $connection->gitSources,
-            'toggleRoute' => 'ops.coolify.git-sources.toggle',
-            'param' => 'source',
-            'extra' => 'kind',
-            'canWrite' => $canWrite,
-            'connection' => $connection,
-        ])
+            <div class="ops-list-region" data-ops-list-region>
+                @include('ops.coolify._inventory-region')
+            </div>
+        </div>
     </section>
 
     <section id="configuration" class="site-section" role="tabpanel" data-site-panel aria-labelledby="coolify-configuration-heading">
@@ -411,6 +394,7 @@
                     data-confirm="{{ __('coolify.danger.confirm', ['name' => $connection->name]) }}"
                     data-confirm-title="{{ __('coolify.danger.confirm_title') }}"
                     data-confirm-label="{{ __('coolify.danger.label') }}"
+                    data-confirm-danger="true"
                 >
                     @csrf
                     @method('DELETE')

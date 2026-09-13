@@ -83,7 +83,7 @@
                                                     <button type="submit" class="btn btn-secondary btn-sm">{{ __('ops.actions.save') }}</button>
                                                 </div>
                                             </form>
-                                            <form method="POST" action="{{ route('ops.cloudflare.defaults.destroy', $record) }}" data-confirm="{{ __('cloudflare.dns.delete_confirm', ['name' => $record->name, 'type' => $record->type]) }}" data-confirm-title="{{ __('cloudflare.dns.delete_title') }}" data-confirm-label="{{ __('ops.actions.delete') }}">
+                                            <form method="POST" action="{{ route('ops.cloudflare.defaults.destroy', $record) }}" data-confirm="{{ __('cloudflare.dns.delete_confirm', ['name' => $record->name, 'type' => $record->type]) }}" data-confirm-title="{{ __('cloudflare.dns.delete_title') }}" data-confirm-label="{{ __('ops.actions.delete') }}" data-confirm-danger="true">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-ghost btn-sm">{{ __('ops.actions.delete') }}</button>

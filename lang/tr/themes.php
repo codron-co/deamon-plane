@@ -9,13 +9,15 @@ return [
     'lede' => 'Katalog yalnızca git. GitHub App veya PAT bağlayın, sonra katalogu yenileyin. Plane ZIP kabul etmez — acil ZIP CMS Super Admin import’ta kalır. Otomatik güncelleme varsayılanı kapalı.',
     'search' => 'Temaları ara',
     'search_placeholder' => 'id, ad, repo ara',
+    'filter_search' => 'Arama',
     'filter_visibility' => 'Görünürlük',
     'all_visibilities' => 'Tüm görünürlükler',
     'empty' => [
         'title' => 'Henüz katalog teması yok',
-        'hint' => 'Temalar altında bir GitHub kaynağı ekleyin, sonra katalogu yenileyin. Canlı GitHub kimlik bilgisi yerel testler için isteğe bağlıdır — suite Http::fake kullanır.',
+        'hint' => 'Temalar altında bir GitHub kaynağı ekleyin, sonra katalogu yenileyin.',
         'filtered_title' => 'Bu filtrelere uyan tema yok',
-        'filtered_hint' => 'Tüm kataloğu görmek için aramayı veya görünürlüğü temizleyin.',
+        'filtered_hint' => 'Katalogda :total tema var; hiçbiri bu filtrelere uymuyor.',
+        'filters_label' => 'Etkin filtreler',
     ],
     'pagination' => 'Temalar sayfalama',
     'columns' => [

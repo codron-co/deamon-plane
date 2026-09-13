@@ -138,13 +138,9 @@
                     <div>
                         <dt>{{ __('cloudflare.facts.probe') }}</dt>
                         <dd>
-                            @if ($account->last_probe_at)
-                                <time datetime="{{ $account->last_probe_at->toIso8601String() }}">{{ $account->last_probe_at->toDateTimeString() }}</time>
-                                @if ($probeState === 'ok')
-                                    — {{ __('cloudflare.probe.ok') }}
-                                @endif
-                            @else
-                                {{ __('cloudflare.probe.never') }}
+                            <x-ops.freshness :at="$account->last_probe_at" :missing="__('cloudflare.probe.never')" />
+                            @if ($account->last_probe_at && $probeState === 'ok')
+                                — {{ __('cloudflare.probe.ok') }}
                             @endif
                         </dd>
                     </div>
@@ -239,43 +235,63 @@
                 <h2>{{ __('cloudflare.zones.empty') }}</h2>
             </div>
         @else
-            <div class="sites-table-wrap">
-                <table class="ops-table">
-                    <thead>
-                        <tr>
-                            <th>{{ __('cloudflare.zones.domain') }}</th>
-                            <th>{{ __('cloudflare.zones.status') }}</th>
-                            <th>{{ __('cloudflare.zones.ns') }}</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($zones as $zone)
-                            @php
-                                $zoneId = (string) ($zone['id'] ?? '');
-                                $zoneName = (string) ($zone['name'] ?? $zoneId);
-                                $href = $zoneId !== '' ? route('ops.cloudflare.zones.show', ['account' => $account, 'zone' => $zoneId]) : null;
-                                $ns = is_array($zone['name_servers'] ?? null) ? implode(', ', $zone['name_servers']) : '';
-                            @endphp
-                            <tr @if ($href) data-href="{{ $href }}" tabindex="0" @endif>
-                                <td>
-                                    @if ($href)
-                                        <a class="site-name" href="{{ $href }}">{{ $zoneName }}</a>
-                                    @else
-                                        <span class="site-name">{{ $zoneName }}</span>
-                                    @endif
-                                </td>
-                                <td class="muted">{{ $zone['status'] ?? __('ops.unknown') }}</td>
-                                <td class="muted">{{ $ns !== '' ? $ns : __('ops.none') }}</td>
-                                <td class="ops-row-actions">
-                                    @if ($href)
-                                        <a class="btn btn-ghost btn-sm" href="{{ $href }}">{{ __('ops.actions.open') }}</a>
-                                    @endif
-                                </td>
+            {{-- Live Cloudflare list: filter in place. A GET q would re-hit /zones per keystroke. --}}
+            <div data-ops-text-filter>
+                <div class="ops-list-toolbar">
+                    <label class="ops-search">
+                        <span class="visually-hidden">{{ __('cloudflare.zones.search') }}</span>
+                        <input
+                            type="search"
+                            data-ops-text-filter-input
+                            placeholder="{{ __('cloudflare.zones.search_placeholder') }}"
+                            autocomplete="off"
+                        >
+                    </label>
+                </div>
+                <p class="empty-panel-note" data-ops-text-filter-empty hidden>{{ __('cloudflare.zones.filter_empty') }}</p>
+                <div class="sites-table-wrap">
+                    <table class="ops-table">
+                        <thead>
+                            <tr>
+                                <th>{{ __('cloudflare.zones.domain') }}</th>
+                                <th>{{ __('cloudflare.zones.status') }}</th>
+                                <th>{{ __('cloudflare.zones.ns') }}</th>
+                                <th></th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($zones as $zone)
+                                @php
+                                    $zoneId = (string) ($zone['id'] ?? '');
+                                    $zoneName = (string) ($zone['name'] ?? $zoneId);
+                                    $href = $zoneId !== '' ? route('ops.cloudflare.zones.show', ['account' => $account, 'zone' => $zoneId]) : null;
+                                    $ns = is_array($zone['name_servers'] ?? null) ? implode(', ', $zone['name_servers']) : '';
+                                    $status = (string) ($zone['status'] ?? '');
+                                @endphp
+                                <tr
+                                    data-ops-text-filter-row
+                                    data-search-text="{{ $zoneName }} {{ $status }} {{ $ns }} {{ $zoneId }}"
+                                    @if ($href) data-href="{{ $href }}" tabindex="0" @endif
+                                >
+                                    <td>
+                                        @if ($href)
+                                            <a class="site-name" href="{{ $href }}">{{ $zoneName }}</a>
+                                        @else
+                                            <span class="site-name">{{ $zoneName }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="muted">{{ $status !== '' ? $status : __('ops.unknown') }}</td>
+                                    <td class="muted">{{ $ns !== '' ? $ns : __('ops.none') }}</td>
+                                    <td class="ops-row-actions">
+                                        @if ($href)
+                                            <a class="btn btn-ghost btn-sm" href="{{ $href }}">{{ __('ops.actions.open') }}</a>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
         @endif
     </section>
@@ -356,7 +372,7 @@
                     <h2>{{ __('cloudflare.danger.title') }}</h2>
                     <p>{{ __('cloudflare.danger.lede') }}</p>
                 </div>
-                <form method="POST" action="{{ route('ops.cloudflare.destroy', $account) }}" data-confirm="{{ __('cloudflare.danger.confirm', ['name' => $account->name]) }}" data-confirm-title="{{ __('cloudflare.danger.confirm_title') }}" data-confirm-label="{{ __('cloudflare.danger.label') }}">
+                <form method="POST" action="{{ route('ops.cloudflare.destroy', $account) }}" data-confirm="{{ __('cloudflare.danger.confirm', ['name' => $account->name]) }}" data-confirm-title="{{ __('cloudflare.danger.confirm_title') }}" data-confirm-label="{{ __('cloudflare.danger.label') }}" data-confirm-danger="true">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">{{ __('cloudflare.danger.button') }}</button>

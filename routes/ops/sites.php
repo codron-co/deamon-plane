@@ -18,6 +18,8 @@ Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
 Route::post('/sites/list-preferences', [SiteListPreferencesController::class, 'update'])->name('ops.sites.list-preferences');
 Route::delete('/sites/list-preferences', [SiteListPreferencesController::class, 'destroy'])->name('ops.sites.list-preferences.reset');
+Route::post('/sites/list-views', [SiteListPreferencesController::class, 'storeView'])->name('ops.sites.list-views.store');
+Route::delete('/sites/list-views/{view}', [SiteListPreferencesController::class, 'destroyView'])->name('ops.sites.list-views.destroy');
 Route::post('/sites/bulk/publish-status', [SitePublishStatusController::class, 'bulkUpdate'])->name('ops.sites.bulk.publish-status');
 Route::post('/sites/bulk/compose', [SiteCoolifyOpsController::class, 'bulkMigrateCompose'])->name('ops.sites.bulk.compose');
 Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAutoDeploy'])->name('ops.sites.bulk.auto-deploy');
@@ -31,6 +33,7 @@ Route::get('/sites/bulk/sync', [SiteCoolifyOpsController::class, 'redirectGetBul
 Route::post('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'liveSync'])->name('ops.sites.live-sync');
 Route::get('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'redirectGetLiveSync'])->name('ops.sites.live-sync.get');
 Route::post('/sites/bulk/app-health-fix', [SiteAppHealthController::class, 'bulkFix'])->name('ops.sites.bulk.app-health-fix');
+Route::post('/sites/bulk/agent-secret', [SiteController::class, 'bulkInjectAgentSecret'])->name('ops.sites.bulk.agent-secret');
 Route::post('/sites/bulk/purge', [SiteCoolifyOpsController::class, 'bulkPurge'])->name('ops.sites.bulk.purge');
 Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateCompose'])->name('ops.sites.compose');
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');

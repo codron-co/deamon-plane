@@ -100,7 +100,7 @@ class FleetDashboardTest extends TestCase
 
         $this->assertSame(1, substr_count($html, 'kpi-label">Unhealthy'));
         $this->assertMatchesRegularExpression('/kpi-label">Unhealthy[\s\S]{0,400}?kpi-value[^>]*>2<\/p>/', $html);
-        $this->assertSame(5, preg_match_all('/class="kpi-card(?:\s|")/', $html));
+        $this->assertSame(6, preg_match_all('/class="kpi-card(?:\s|")/', $html));
         $this->assertStringNotContainsString(__('fleet.attention.dockerfile_title'), $html);
         $this->assertStringNotContainsString(__('fleet.attention.dockerfile_lede'), $html);
     }
@@ -111,10 +111,16 @@ class FleetDashboardTest extends TestCase
             'name' => 'Legacy Dockerfile Site',
             'primary_domain' => 'legacy.example.test',
         ]);
-        Site::factory()->create([
+        Site::factory()->withSecrets()->create([
             'name' => 'Compose Site',
             'primary_domain' => 'compose.example.test',
             'notes' => null,
+            'last_health_at' => now(),
+            'last_health_payload' => [
+                'ok' => true,
+                'status' => 'ok',
+                'http_status' => 200,
+            ],
         ]);
 
         $operator = User::factory()->create();
@@ -132,7 +138,7 @@ class FleetDashboardTest extends TestCase
             ->assertDontSee('Compose Site', false)
             ->getContent();
 
-        $this->assertSame(5, preg_match_all('/class="kpi-card(?:\s|")/', $html));
+        $this->assertSame(6, preg_match_all('/class="kpi-card(?:\s|")/', $html));
         $this->assertSame(1, substr_count($html, 'id="fleet-attention-heading"'));
         $this->assertStringNotContainsString('eski sürüm', $html);
         $this->assertStringContainsString('class="site-hint"', $html);

@@ -102,6 +102,7 @@
                 data-confirm="{{ __('site_ops.pack.confirm', ['name' => $site->name]) }}"
                 data-confirm-title="{{ __('site_ops.pack.confirm_title') }}"
                 data-confirm-label="{{ __('site_ops.pack.confirm_label') }}"
+                data-confirm-danger="false"
             >
                 @csrf
                 <div class="form-actions">
@@ -126,6 +127,7 @@
                         data-confirm="{{ __('site_ops.auto_deploy.confirm_off', ['name' => $site->name]) }}"
                         data-confirm-title="{{ __('site_ops.auto_deploy.confirm_off_title') }}"
                         data-confirm-label="{{ __('site_ops.auto_deploy.off_button') }}"
+                        data-confirm-danger="false"
                     >
                         @csrf
                         <input type="hidden" name="enabled" value="0">
@@ -166,6 +168,7 @@
                     data-confirm="{{ __('site_ops.pin.confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
                     data-confirm-label="{{ __('site_ops.pin.pin_selected') }}"
+                    data-confirm-danger="false"
                 >
                     @csrf
                     <div class="site-operation-line">
@@ -206,6 +209,7 @@
                             data-confirm="{{ __('site_ops.pin.confirm', ['name' => $site->name]) }}"
                             data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
                             data-confirm-label="{{ __('site_ops.pin.update_latest') }}"
+                            data-confirm-danger="false"
                         >
                             @csrf
                             <input type="hidden" name="ref" value="{{ $latestSha }}">

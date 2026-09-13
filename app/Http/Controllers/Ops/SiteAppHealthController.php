@@ -85,7 +85,9 @@ class SiteAppHealthController extends Controller
         }
 
         $result = $fixer->fixMany($targets, $fix, $request->user(), $request->ip());
-        $unfinished = $result['failed'] > 0 || $result['skipped'] > 0;
+        // A waiting site is not broken, but it is still work the operator has to
+        // come back to, so the flash stays in the attention lane.
+        $unfinished = $result['failed'] > 0 || $result['skipped'] > 0 || $result['waiting'] > 0;
 
         return back()->with($unfinished ? 'error' : 'status', $fixer->summarize($result));
     }
@@ -120,6 +122,11 @@ class SiteAppHealthController extends Controller
                     (string) $request->input('filter_channel', ''),
                     (string) $request->input('filter_status', ''),
                     (string) $request->input('filter_publish', ''),
+                    (string) $request->input('filter_deploy', ''),
+                    (string) $request->input('filter_agent', ''),
+                    (string) $request->input('filter_pack', ''),
+                    (string) $request->input('filter_health', ''),
+                    (string) $request->input('filter_app', ''),
                 )
                 ->orderBy('name')
                 ->get();

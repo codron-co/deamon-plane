@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ThemeVisibility;
 use Database\Factories\ThemeFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -86,6 +87,32 @@ class Theme extends Model
         $name = trim((string) ($this->name ?? ''));
 
         return $name !== '' ? $name : $this->theme_id;
+    }
+
+    /**
+     * The same search and visibility filters the Themes toolbar posts.
+     *
+     * @param  Builder<Theme>  $query
+     * @return Builder<Theme>
+     */
+    public function scopeMatchingListFilters(Builder $query, string $search = '', string $visibility = ''): Builder
+    {
+        $visibility = in_array($visibility, ThemeVisibility::values(), true) ? $visibility : '';
+
+        if ($search !== '') {
+            $term = addcslashes($search, '%_\\');
+            $query->where(function (Builder $builder) use ($term): void {
+                $builder->where('theme_id', 'like', "%{$term}%")
+                    ->orWhere('name', 'like', "%{$term}%")
+                    ->orWhere('repo_full_name', 'like', "%{$term}%");
+            });
+        }
+
+        if ($visibility !== '') {
+            $query->where('visibility', $visibility);
+        }
+
+        return $query;
     }
 
     public function githubHttpsUrl(): string

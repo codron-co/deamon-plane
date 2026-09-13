@@ -87,7 +87,7 @@
                                             </form>
 
                                             @if ($canToggleAdminActive && $isActive)
-                                                <form method="POST" action="{{ route('ops.sites.admins.deactivate', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.deactivate_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.deactivate_title') }}" data-confirm-label="{{ __('sites.admins.deactivate') }}">
+                                                <form method="POST" action="{{ route('ops.sites.admins.deactivate', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.deactivate_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.deactivate_title') }}" data-confirm-label="{{ __('sites.admins.deactivate') }}" data-confirm-danger="true">
                                                     @csrf
                                                     <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}" {{ $isLastActive ? 'disabled' : '' }}>{{ __('sites.admins.deactivate') }}</button>
                                                 </form>
@@ -99,7 +99,7 @@
                                             @endif
 
                                             @if ($canDestroyAdmin)
-                                                <form method="POST" action="{{ route('ops.sites.admins.destroy', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.delete_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.delete_title') }}" data-confirm-label="{{ __('sites.admins.delete') }}">
+                                                <form method="POST" action="{{ route('ops.sites.admins.destroy', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.delete_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.delete_title') }}" data-confirm-label="{{ __('sites.admins.delete') }}" data-confirm-danger="true">
                                                     @csrf
                                                     @method('DELETE')
                                                     <input type="hidden" name="admin_email" value="{{ $adminEmail }}">

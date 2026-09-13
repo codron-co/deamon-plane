@@ -4,6 +4,11 @@
     hidden
     data-jobs-index="{{ route('ops.jobs') }}"
     data-jobs-show="{{ url('/jobs') }}"
+    {{-- A poll is a Coolify read, so a long wait must cost less than a short one. --}}
+    data-poll-fast-ms="{{ (int) config('ops.jobs.poll.fast_ms', 1500) }}"
+    data-poll-slow-ms="{{ (int) config('ops.jobs.poll.slow_ms', 5000) }}"
+    data-poll-max-ms="{{ (int) config('ops.jobs.poll.max_ms', 10000) }}"
+    data-poll-slow-after="{{ (int) config('ops.jobs.poll.slow_after', 8) }}"
     data-can-write="{{ auth()->user()?->canWriteOps() ? '1' : '0' }}"
     data-copy-title="{{ __('ops.jobs.title') }}"
     data-copy-minimize="{{ __('ops.jobs.minimize') }}"
@@ -22,6 +27,7 @@
     data-copy-stop="{{ __('ops.jobs.stop') }}"
     data-copy-force-start="{{ __('ops.jobs.force_start') }}"
     data-copy-force-started="{{ __('ops.jobs.force_started') }}"
+    data-copy-failed-only="{{ __('ops.jobs.failed_only') }}"
     data-jobs-destroy="{{ url('/jobs') }}"
     data-jobs-deploy-cancel="{{ url('/jobs/deployments') }}"
     data-jobs-deploy-force="{{ url('/jobs/deployments') }}"
@@ -31,10 +37,19 @@
     <div class="ops-jobs-panel">
         <div class="ops-jobs-header">
             <button type="button" class="ops-jobs-summary" data-ops-jobs-toggle aria-expanded="true">
-                <span data-ops-jobs-summary>{{ __('ops.jobs.title') }}</span>
+                <span class="ops-jobs-summary-text" data-ops-jobs-summary>{{ __('ops.jobs.title') }}</span>
+                {{-- One build per Coolify server, so the header says how deep the line is. --}}
+                <span class="ops-jobs-queue" data-ops-jobs-queue hidden></span>
                 <span class="ops-jobs-count" data-ops-jobs-count hidden></span>
             </button>
             <div class="ops-jobs-header-actions">
+                <a class="ops-jobs-filter ops-jobs-history" href="{{ route('ops.activity') }}">{{ __('ops.jobs.history') }}</a>
+                <button
+                    type="button"
+                    class="ops-jobs-filter"
+                    data-ops-jobs-failed
+                    aria-pressed="false"
+                >{{ __('ops.jobs.failed_only') }}</button>
                 <button type="button" class="ops-icon-btn" data-ops-jobs-minimize aria-label="{{ __('ops.jobs.minimize') }}">
                     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 8h9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                 </button>

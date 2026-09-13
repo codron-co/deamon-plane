@@ -11,6 +11,7 @@ use App\Policies\CoolifyConnectionPolicy;
 use App\Policies\SitePolicy;
 use App\Policies\ThemeGitConnectionPolicy;
 use App\Policies\ThemePolicy;
+use App\Services\Coolify\CoolifyDeployGate;
 use App\Services\Coolify\CoolifyRateGuard;
 use App\Support\OpsAppearance;
 use App\Support\ProductionDebugGuard;
@@ -24,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // One guard per process so a bulk sweep shares the Coolify cooldown.
         $this->app->singleton(CoolifyRateGuard::class);
+        // Same reason: the gate has to recognise the sweep that opened it, and
+        // the deploy paths resolve it from the container one site at a time.
+        $this->app->singleton(CoolifyDeployGate::class);
     }
 
     public function boot(): void

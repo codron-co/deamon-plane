@@ -48,18 +48,27 @@
                                     <span class="ops-chip">{{ __('ops.default') }}</span>
                                 @endif
                             </td>
-                            <td class="muted">{{ $account->account_id ?: __('ops.none') }}</td>
+                            <td class="muted">
+                                @if (filled($account->account_id))
+                                    <code>{{ $account->account_id }}</code>
+                                    <button
+                                        type="button"
+                                        class="btn btn-ghost btn-sm"
+                                        data-copy-value="{{ $account->account_id }}"
+                                        data-copied-label="{{ __('ops.actions.copied') }}"
+                                        aria-label="{{ __('cloudflare.copy_account_id') }}"
+                                    >{{ __('ops.actions.copy') }}</button>
+                                @else
+                                    {{ __('ops.none') }}
+                                @endif
+                            </td>
                             <td>
                                 <span class="status-chip status-{{ $account->is_enabled ? 'active' : 'error' }}">
                                     {{ $account->is_enabled ? __('ops.enabled') : __('ops.disabled') }}
                                 </span>
                             </td>
-                            <td class="muted">
-                                @if ($account->last_probe_at)
-                                    <time datetime="{{ $account->last_probe_at->toIso8601String() }}">{{ $account->last_probe_at->toDateTimeString() }}</time>
-                                @else
-                                    {{ __('ops.never') }}
-                                @endif
+                            <td>
+                                <x-ops.freshness :at="$account->last_probe_at" />
                             </td>
                             <td class="ops-row-actions">
                                 <a class="btn btn-ghost btn-sm" href="{{ route('ops.cloudflare.show', $account) }}">{{ __('ops.actions.open') }}</a>

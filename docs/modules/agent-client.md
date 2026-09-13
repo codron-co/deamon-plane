@@ -55,13 +55,15 @@ Health checks never change `sites.status` (Plane's Coolify lifecycle). A timeout
 
 ## Fleet unhealthy KPI
 
-Still **5** cards. **Unhealthy** is the union of:
+Still **6** cards (the sixth is **Agent gizli anahtarı** — missing / unverified / ok; see [ops-sites.md](ops-sites.md#agent-secret-across-the-fleet)). **Unhealthy** is the union of:
 
 - `sites.status = error` (Task 6, unchanged)
 - Agent fail: timeout, bad signature (HTTP 401/403), `queue_ok=false`, HTTP/parse error
 - Stale: last successful-or-failed poll older than `CONTROL_PLANE_AGENT_STALE_MINUTES` (default 30) **and** the site has a secret
 
 `needs_secret` and `unknown` do **not** increment unhealthy (import leftovers).
+
+The card and `/sites?health=unhealthy` share `Site::scopeUnhealthy()` (persisted `health_unhealthy`, status=error, stored agent-fail JSON, or the stale window). Verdicts are written on the health / inspect save — [ADR-10](../decisions/adr-10-health-app-filter-verdict.md). The list path does not walk payloads in PHP.
 
 ## Version gate (Task 5)
 

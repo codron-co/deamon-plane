@@ -17,11 +17,12 @@
 ## Referans
 
 - [Architecture](architecture.md)
-- [Decisions (ADR)](decisions/README.md)
+- [Decisions (ADR)](decisions/README.md) — [ADR-10](decisions/adr-10-health-app-filter-verdict.md): `health` / `app` filters are SQL over a persisted verdict · [ADR-11](decisions/adr-11-dom-test-harness.md): skip Playwright; `node --test tests/js/*.js` covers toolbar URL, poll backoff, bulk interpolate, `isTyping` / `confirmOpen`, `pageIsHidden` / `shouldSchedulePoll`, Settings `textMatches`, list `fetch` / `replaceState` (no jsdom — duck-typed `{ hidden: true }` and `{ origin, pathname }`)
 - [Security](security.md)
 - [Related infra (Mailcow vb.)](related-infra.md) — Mailcow **coming soon**; Hostinger mail **in scope**
 - [Ops Sites CRUD](modules/ops-sites.md) — draft desired state + provision POST + channel switch
 - [Async list regions](modules/ops-list-async.md) — search / filter / sort / paging / column prefs without a page reload
+- [Activity](modules/ops-activity.md) — jobs + deploys + audit rows; fleet history the widget is not
 - [Mail servers](modules/mail-servers.md) — Hostinger token in Plane; CMS HMAC proxy
 - [Software mail](modules/platform-mail.md) — Deamon product SMTP + notification toggles (global + per-site)
 - [Deployment (Coolify Compose)](modules/deployment.md)

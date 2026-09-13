@@ -81,7 +81,7 @@ class TruthfulJobCompletionTest extends TestCase
 
     public function test_work_plane_finishes_itself_still_reads_as_done(): void
     {
-        foreach (['sites.live_sync', 'themes.catalog_sync', 'sites.bulk_publish_status', 'sites.bulk_auto_deploy'] as $type) {
+        foreach (['sites.live_sync', 'themes.catalog_sync', 'sites.bulk_publish_status', 'sites.bulk_auto_deploy', 'domains.bulk_bind', 'sites.bulk_inject_agent_secret'] as $type) {
             $job = $this->job($type, []);
             $job->markCompleted('x');
 

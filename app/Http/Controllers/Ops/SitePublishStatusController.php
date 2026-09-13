@@ -99,6 +99,11 @@ class SitePublishStatusController extends Controller
                     (string) $request->input('filter_channel', ''),
                     (string) $request->input('filter_status', ''),
                     (string) $request->input('filter_publish', ''),
+                    (string) $request->input('filter_deploy', ''),
+                    (string) $request->input('filter_agent', ''),
+                    (string) $request->input('filter_pack', ''),
+                    (string) $request->input('filter_health', ''),
+                    (string) $request->input('filter_app', ''),
                 )
                 ->orderBy('name')
                 ->get();

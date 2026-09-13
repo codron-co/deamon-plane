@@ -305,6 +305,7 @@
                                                     data-confirm="{{ __('themes.show.revoke_confirm', ['name' => $allowed->name]) }}"
                                                     data-confirm-title="{{ __('themes.show.revoke_title') }}"
                                                     data-confirm-label="{{ __('themes.show.remove') }}"
+                                                    data-confirm-danger="true"
                                                 >
                                                     @csrf
                                                     @method('DELETE')

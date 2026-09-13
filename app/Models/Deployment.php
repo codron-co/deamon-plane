@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Enums\Channel;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
+use Carbon\CarbonImmutable;
 use Database\Factories\DeploymentFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,6 +56,35 @@ class Deployment extends Model
     public function requestedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /**
+     * Deploys that failed recently enough to still be "now".
+     *
+     * The fleet card, the attention list and the `deploy=failed` site filter all
+     * read this one predicate. A drill-down that resolves a different set from
+     * the number it was clicked on is worse than no drill-down at all.
+     *
+     * @param  Builder<Deployment>  $query
+     * @return Builder<Deployment>
+     */
+    public function scopeFailedInWindow(Builder $query, ?int $hours = null): Builder
+    {
+        $hours ??= self::failedWindowHours();
+        $since = CarbonImmutable::now()->subHours($hours);
+
+        return $query
+            ->where('status', DeploymentStatus::Failed)
+            // A deploy row can be created long before it fails, so judge it by when it ended.
+            ->whereRaw('COALESCE(finished_at, started_at, created_at) >= ?', [$since->toDateTimeString()]);
+    }
+
+    /**
+     * How far back a failed deploy still counts as "now".
+     */
+    public static function failedWindowHours(): int
+    {
+        return max(1, (int) config('ops.fleet.failed_deploy_window_hours', 24));
     }
 
     public function shortSha(): string

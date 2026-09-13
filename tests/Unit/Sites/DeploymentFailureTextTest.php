@@ -56,8 +56,34 @@ class DeploymentFailureTextTest extends TestCase
         $detail = DeploymentFailureText::fromException($site, $exception, 'Provisioning failed.');
 
         $this->assertStringContainsString('Validation failed.', $detail['error_message']);
-        $this->assertStringContainsString('Coolify errors:', $detail['error_message']);
+        $this->assertStringContainsString(__('coolify.errors.errors_heading'), $detail['error_message']);
         $this->assertStringContainsString('This field is not allowed.', $detail['error_message']);
+    }
+
+    public function test_compose_domains_before_raw_is_localized_without_english_dump(): void
+    {
+        $this->app->setLocale('tr');
+
+        $site = Site::factory()->create();
+        $exception = new CoolifyApiException(
+            'Validation failed. docker_compose_domains: Cannot set docker_compose_domains without docker_compose_raw.',
+            422,
+            [],
+            [
+                'message' => 'Validation failed.',
+                'errors' => [
+                    'docker_compose_domains' => [
+                        'Cannot set docker_compose_domains without docker_compose_raw. Reload the compose file from the git repository first.',
+                    ],
+                ],
+            ],
+        );
+
+        $detail = DeploymentFailureText::fromException($site, $exception, 'Provisioning failed.');
+
+        $this->assertSame(__('coolify.errors.compose_domains_before_raw'), $detail['error_message']);
+        $this->assertStringNotContainsString('Validation failed', $detail['error_message']);
+        $this->assertStringNotContainsString('docker_compose_raw', $detail['error_message']);
     }
 
     public function test_pasteable_report_includes_status_and_error(): void

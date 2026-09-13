@@ -24,6 +24,7 @@
         $primaryDomain = $site->primary_domain;
         $siteUrl = filled($primaryDomain) ? 'https://'.$primaryDomain : null;
         $healthDisplay = $agentHealth->displayStatus($site);
+        $coolifyAppUrl = $coolifyAppUrl ?? $site->coolifyUiUrl();
     @endphp
 
     <header class="site-hero">
@@ -57,6 +58,33 @@
                     @endif
                     <span aria-hidden="true">·</span>
                     <span>{{ $site->slug }}</span>
+                </div>
+                <div class="site-id-pills" aria-label="{{ __('sites.detail.ids') }}">
+                    <button
+                        type="button"
+                        class="btn btn-ghost btn-sm"
+                        data-copy-value="{{ $site->id }}"
+                        data-copied-label="{{ __('sites.detail.copied') }}"
+                        title="{{ $site->id }}"
+                    >{{ __('sites.detail.copy_site_id') }}</button>
+                    @if (filled($site->coolify_app_uuid))
+                        <button
+                            type="button"
+                            class="btn btn-ghost btn-sm"
+                            data-copy-value="{{ $site->coolify_app_uuid }}"
+                            data-copied-label="{{ __('sites.detail.copied') }}"
+                            title="{{ $site->coolify_app_uuid }}"
+                        >{{ __('sites.detail.copy_app_uuid') }}</button>
+                    @endif
+                    @if (filled($coolifyAppUrl))
+                        <button
+                            type="button"
+                            class="btn btn-ghost btn-sm"
+                            data-copy-value="{{ $coolifyAppUrl }}"
+                            data-copied-label="{{ __('sites.detail.copied') }}"
+                            title="{{ $coolifyAppUrl }}"
+                        >{{ __('sites.detail.copy_coolify_url') }}</button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -162,7 +190,7 @@
                 @if ($site->status === \App\Enums\SiteStatus::Error)
                     <a class="btn btn-secondary btn-sm" href="#deployments">{{ __('sites.detail.inspect_deployments') }}</a>
                 @elseif ($canProvision ?? false)
-                    <form method="POST" action="{{ route('ops.sites.provision', $site) }}" data-ops-pending data-confirm="{{ __('sites.provision.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.provision.confirm_title') }}" data-confirm-label="{{ __('sites.provision.button') }}">@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button></form>
+                    <form method="POST" action="{{ route('ops.sites.provision', $site) }}" data-ops-pending data-confirm="{{ __('sites.provision.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.provision.confirm_title') }}" data-confirm-label="{{ __('sites.provision.button') }}" data-confirm-danger="false">@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button></form>
                 @elseif ($site->isWaitingOnDns() && ($canEdit ?? false))
                     <form method="POST" action="{{ route('ops.sites.cloudflare.dns', $site) }}" data-ops-pending data-landing-confirm>@csrf<button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.landing.confirm_dns') }}</button></form>
                 @else
@@ -202,6 +230,7 @@
                                 data-confirm="{{ __('sites.agent.inject_confirm', ['name' => $site->name]) }}"
                                 data-confirm-title="{{ __('sites.agent.inject_title') }}"
                                 data-confirm-label="{{ __('sites.agent.inject') }}"
+                                data-confirm-danger="true"
                             >@csrf<button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.agent.inject') }}</button></form>
                         </div>
                     </article>
@@ -211,11 +240,13 @@
                 <details class="site-technical-card">
                     <summary><span><strong>{{ __('sites.detail.technical_details') }}</strong> @include('ops.dashboard._hint', ['text' => __('sites.detail.technical_details_hint')])</span><span class="site-disclosure-icon" aria-hidden="true"></span></summary>
                     <dl class="site-technical-list">
+                        <x-ops.copy-id :label="__('sites.detail.site_id')" :value="$site->id" />
                         <div><dt>{{ __('sites.detail.git') }}</dt><dd><code>{{ $site->git_repository ?: __('ops.none') }}</code></dd></div>
-                        <div><dt>{{ __('sites.detail.app_uuid') }}</dt><dd><code>{{ $site->coolify_app_uuid ?: __('ops.none') }}</code></dd></div>
-                        <div><dt>{{ __('sites.detail.server') }}</dt><dd><code>{{ $site->coolify_server_uuid ?: __('ops.none') }}</code></dd></div>
-                        <div><dt>{{ __('sites.detail.project') }}</dt><dd><code>{{ $site->coolify_project_uuid ?: __('ops.none') }}</code></dd></div>
-                        <div><dt>{{ __('sites.detail.environment') }}</dt><dd><code>{{ $site->coolify_environment_uuid ?: __('ops.none') }}</code></dd></div>
+                        <x-ops.copy-id :label="__('sites.detail.app_uuid')" :value="$site->coolify_app_uuid" />
+                        <x-ops.copy-id :label="__('sites.detail.coolify_url')" :value="$coolifyAppUrl" />
+                        <x-ops.copy-id :label="__('sites.detail.server')" :value="$site->coolify_server_uuid" />
+                        <x-ops.copy-id :label="__('sites.detail.project')" :value="$site->coolify_project_uuid" />
+                        <x-ops.copy-id :label="__('sites.detail.environment')" :value="$site->coolify_environment_uuid" />
                     </dl>
                 </details>
                 @if (filled($site->notes))<article class="site-card"><h3>{{ __('sites.detail.notes') }}</h3><p class="site-note">{{ $site->notes }}</p></article>@endif
@@ -231,10 +262,10 @@
                 </div>
                 <div class="danger-zone-actions">
                     @if ($canDelete ?? false)
-                        <form method="POST" action="{{ route('ops.sites.destroy', $site) }}" data-confirm="{{ __('sites.danger.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.confirm_title') }}" data-confirm-label="{{ __('sites.menu.soft_delete') }}">@csrf @method('DELETE')<button type="submit" class="btn btn-secondary">{{ __('sites.menu.soft_delete') }}</button></form>
+                        <form method="POST" action="{{ route('ops.sites.destroy', $site) }}" data-confirm="{{ __('sites.danger.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.confirm_title') }}" data-confirm-label="{{ __('sites.menu.soft_delete') }}" data-confirm-danger="true">@csrf @method('DELETE')<button type="submit" class="btn btn-secondary">{{ __('sites.menu.soft_delete') }}</button></form>
                     @endif
                     @if ($canForceDelete ?? false)
-                        <form method="POST" action="{{ route('ops.sites.purge', $site) }}" data-confirm="{{ __('sites.danger.hard_confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.hard_confirm_title') }}" data-confirm-label="{{ __('sites.menu.hard_delete') }}">@csrf @method('DELETE')<button type="submit" class="btn btn-danger">{{ __('sites.menu.hard_delete') }}</button></form>
+                        <form method="POST" action="{{ route('ops.sites.purge', $site) }}" data-confirm="{{ __('sites.danger.hard_confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.hard_confirm_title') }}" data-confirm-label="{{ __('sites.menu.hard_delete') }}" data-confirm-danger="true">@csrf @method('DELETE')<button type="submit" class="btn btn-danger">{{ __('sites.menu.hard_delete') }}</button></form>
                     @endif
                 </div>
             </article>

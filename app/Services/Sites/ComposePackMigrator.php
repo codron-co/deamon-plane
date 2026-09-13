@@ -87,7 +87,7 @@ class ComposePackMigrator
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, deploy_busy: bool}
      */
     public function migrateMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {

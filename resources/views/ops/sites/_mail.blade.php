@@ -145,7 +145,7 @@
                                                 @csrf
                                                 <button type="submit" class="btn btn-secondary btn-sm">{{ __('mail.requests.fulfill') }}</button>
                                             </form>
-                                            <form method="POST" action="{{ route('ops.sites.mailbox-requests.reject', [$site, $mailboxRequest]) }}" data-ops-pending data-confirm="{{ __('mail.requests.reject_confirm', ['email' => $mailboxRequest->email()]) }}" data-confirm-title="{{ __('mail.requests.reject_title') }}">
+                                            <form method="POST" action="{{ route('ops.sites.mailbox-requests.reject', [$site, $mailboxRequest]) }}" data-ops-pending data-confirm="{{ __('mail.requests.reject_confirm', ['email' => $mailboxRequest->email()]) }}" data-confirm-title="{{ __('mail.requests.reject_title') }}" data-confirm-label="{{ __('mail.requests.reject') }}" data-confirm-danger="true">
                                                 @csrf
                                                 <button type="submit" class="btn btn-ghost btn-sm">{{ __('mail.requests.reject') }}</button>
                                             </form>

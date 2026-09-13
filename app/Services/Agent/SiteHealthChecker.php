@@ -5,6 +5,7 @@ namespace App\Services\Agent;
 use App\Enums\CmsPublishStatus;
 use App\Models\Site;
 use App\Services\Mail\SiteHealthMailNotifier;
+use App\Services\Sites\SiteFilterVerdict;
 
 class SiteHealthChecker
 {
@@ -31,6 +32,7 @@ class SiteHealthChecker
             $site->cms_site_status_at = $reported === null ? null : now();
         }
 
+        SiteFilterVerdict::apply($site);
         $site->save();
 
         $this->mailNotifier->afterHealthCheck($site->fresh() ?? $site, $result);

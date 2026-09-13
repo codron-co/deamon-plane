@@ -20,6 +20,14 @@
 @section('content')
     <p class="page-lede">{{ __('platform_mail.lede') }}</p>
 
+    <div class="ops-mail-state-row">
+        <span class="ops-mail-state-title">{{ __('platform_mail.state_label') }}</span>
+        @include('ops.partials.platform-mail-chip', ['platformMailHint' => true])
+        @if ($platformMailState->lastPushedAt)
+            <span class="ops-mail-state-hint">{{ __('platform_mail.state_pushed_at', ['time' => $platformMailState->lastPushedAt->toDateTimeString()]) }}</span>
+        @endif
+    </div>
+
     <div class="ops-tabs" style="margin-bottom: 1rem;">
         <a class="btn btn-ghost btn-sm" href="{{ route('ops.mail-servers.index') }}">{{ __('mail.title') }}</a>
         <a class="btn btn-primary btn-sm" href="{{ route('ops.platform-mail.edit') }}">{{ __('platform_mail.title') }}</a>

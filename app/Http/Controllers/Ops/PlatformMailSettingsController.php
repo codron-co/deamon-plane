@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\DispatchPlatformMailPushJob;
 use App\Models\AuditLog;
 use App\Models\PlatformMailSetting;
+use App\Services\Mail\PlatformMailState;
 use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\PlatformOpsMailer;
 use Illuminate\Contracts\View\View;
@@ -23,6 +24,7 @@ class PlatformMailSettingsController extends Controller
             'definitions' => PlatformNotificationCatalog::definitions(),
             'notifications' => $this->mergedNotifications($settings),
             'canWrite' => request()->user()?->can('ops.write') ?? false,
+            'platformMailState' => PlatformMailState::current($settings),
         ]);
     }
 

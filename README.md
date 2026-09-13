@@ -67,4 +67,4 @@ Roles: `super_admin`, `operator`, `viewer` (viewer is read-only).
 
 1. Starter: [.cursor/prompts/000_START-Plane-Orkestrasyon.md](.cursor/prompts/000_START-Plane-Orkestrasyon.md)
 2. SoT: [docs/plans/2026-08-13-deamon-plane.md](docs/plans/2026-08-13-deamon-plane.md)
-3. Tests: `php artisan test`
+3. Tests: `php artisan test` · JS helpers: `node --test tests/js/*.js` (ADR-11; no Playwright)

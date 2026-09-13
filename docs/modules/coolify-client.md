@@ -27,7 +27,7 @@ Existing Coolify app is **PATCH** only for pack migrate, auto-deploy, pin, follo
 | Action | HTTP | Notes |
 |--------|------|--------|
 | Dockerfile → compose | `PATCH /applications/{uuid}` `{ build_pack: dockercompose, docker_compose_location: /docker-compose.coolify.yml, docker_compose_domains }` | Snapshot domains from live `docker_compose_domains`, else `fqdn`, else `sites.primary_domain`. Always send `docker_compose_domains` on the pack PATCH (never `fqdn`) — Coolify clears the proxy if the field is omitted. Snapshot `APP_KEY` / `APP_URL` / `DEAMON_*` via `listEnvs` (never log values). Restore those keys with `POST`/`PATCH /applications/{uuid}/envs` `{ key, value, is_literal: true }` (Coolify 4.3 rejects `is_literally`, `available_in_services`, env `uuid`). Application envs apply to compose service **`app`**. Do **not** copy Dockerfile `DB_HOST` / `DB_PASSWORD` as compose defaults. After restore, `CoolifyAppEnvSync` applies the compose catalog: `DB_HOST=mysql` (overwrite leftover IPs), generate empty `MYSQL_ROOT_PASSWORD` / `DB_PASSWORD` / `DEAMON_DEFAULT_ADMIN_PASSWORD`, keep a filled `DB_PASSWORD`. If Coolify says recreate is required, **abort**. Env restore 422 becomes a flash, not 500. |
-| Env sync (every deploy) | `GET /applications/{uuid}/envs` then `PATCH .../envs/bulk` | `CoolifyAppEnvSync` vs Settings catalogs (`coolify_env_defaults`). Dockerfile leftover notes → dockerfile pack; otherwise compose. Kinds: static (correct if different), required (fill if empty), generated (fill empty/placeholders, never rotate), site (from site row), skip (`SERVICE_*`, `APP_URL`). Never log values. |
+| Env sync (every deploy) | `GET /applications/{uuid}/envs` then `PATCH .../envs/bulk` | `CoolifyAppEnvSync` vs Settings catalogs (`coolify_env_defaults`). Dockerfile leftover notes → dockerfile pack; otherwise compose. Kinds: static (correct if different), required (fill if empty), generated (fill empty/placeholders, never rotate), site (from site row), skip (`SERVICE_*`, `APP_URL`). Never log values. Settings jump search filters those catalog rows in place (not a ListFragment — Save still writes the whole pack). |
 | Auto-deploy | `PATCH` `{ is_auto_deploy_enabled }` | Coolify rejects `is_auto_deploy`. Single + selected + all-Dockerfile bulk. Confirm on on/off (including bulk). GET reads `settings.is_auto_deploy_enabled`, then `settings.is_auto_deploy`, then top-level aliases. Missing flag is **unknown**, not off. |
 | Pin | `PATCH` `{ git_commit_sha, is_auto_deploy_enabled: false }` then `POST /deploy` | SHA or release tag. Single + selected bulk (`ref`). |
 | Follow HEAD | `PATCH` `{ git_commit_sha: "HEAD", is_auto_deploy_enabled: true }` then `POST /deploy` | Coolify rejects empty SHA (`format is invalid`). Live GET shows `HEAD` for an unpinned app. |
@@ -57,7 +57,7 @@ Existing `coolify_settings` row is copied into the first connection on migrate (
 
 **Default connection:** `is_default` — new sites pre-select it. After sync (and on the connection show page) a **single** active server / project / environment / git source is persisted as the matching default.
 
-**Disconnect:** confirm modal. Deletes the Plane connection + allowlists. Does **not** DELETE Coolify apps. No SSH.
+**Disconnect:** confirm modal (`data-confirm-danger="true"`). Deletes the Plane connection + allowlists. Does **not** DELETE Coolify apps. No SSH. Sync / make-default confirms stay `danger=false`. See [ops-sites.md](ops-sites.md#confirm-matrix).
 
 ## Inventory API
 
@@ -105,23 +105,23 @@ Coolify **422** `message` + `errors{field: []}` is appended on `CoolifyApiExcept
 
 Live GET `docker_compose_domains` is often a **JSON string** object (`{"app":{"domain":"https://…"}}`); `Application.fqdn` is often null on older compose apps. Coolify **generate-domain** (create without a domain) writes `{uuid}.demo.codron.co` or `{uuid}.random.codron.co` on **`fqdn`** and does **not** clear it when Plane PATCHes only compose domains.
 
-Create and `setDomains` send **only** `docker_compose_domains: [{ "name": "app", "domain": "https://{operator-host}" }]`. **Do not send `fqdn`** — Coolify compose create/PATCH returns `Validation failed. fqdn: This field is not allowed.` `force_domain_override` defaults false. If Coolify still writes a generate-domain, Plane does **not** make it the `site_domains` primary. Do not PATCH live generate-domains off existing apps without operator OK — they may still be on the proxy.
+Create and `setDomains` send **only** `docker_compose_domains: [{ "name": "app", "domain": "https://{operator-host}" }]`. Create itself omits domains — Coolify rejects `docker_compose_domains` until a deploy has loaded `docker_compose_raw` from git; Plane binds after the first deploy finishes. **Do not send `fqdn`** — Coolify compose create/PATCH returns `Validation failed. fqdn: This field is not allowed.` `force_domain_override` defaults false. If Coolify still writes a generate-domain, Plane does **not** make it the `site_domains` primary. Do not PATCH live generate-domains off existing apps without operator OK — they may still be on the proxy.
 
 ## Coolify menu (not Settings)
 
-Ops **Coolify** menu (`/coolify`): connections, API token, test, sync, aktif/pasif, defaults, deploy webhook URL. Encrypted `webhook_secret` per connection; env fallback `COOLIFY_WEBHOOK_SECRET`. Settings is customer / Coolify env defaults; theme GitHub connect lives under **Themes** (Manifest). Leftover `POST /settings` and `POST /settings/coolify/test` redirect here. Deploy webhooks: [coolify-webhooks.md](coolify-webhooks.md).
+Ops **Coolify** menu (`/coolify`): connections, API token, test, sync, aktif/pasif, defaults, deploy webhook URL. Encrypted `webhook_secret` per connection; env fallback `COOLIFY_WEBHOOK_SECRET`. Settings is customer / Coolify env defaults; theme GitHub connect lives under **Themes** (Manifest). `/settings` has an in-page jump nav (plain hashes) plus a filter box for section titles and env keys (`SettingsJump`, `PlaneOpsContracts.textMatches`). Ctrl/⌘+K `webhook` / `ortam` opens the matching hash. Leftover `POST /settings` and `POST /settings/coolify/test` redirect here. Deploy webhooks: [coolify-webhooks.md](coolify-webhooks.md). Tests: `SettingsJumpTest`.
 
 ### Connection routes
 
 | Method | Path | Name | Notes |
 |--------|------|------|-------|
-| GET | `/coolify/{connection}` | `ops.coolify.show` | Connection page. Inventory table rows open show/detail, never edit |
+| GET | `/coolify/{connection}` | `ops.coolify.show` | Connection page. Inventory table rows open show/detail, never edit. The inventory tab is a ListFragment list: `q` (name / uuid / IP), `kind=servers\|projects\|environments\|git`, `status=active\|inactive`. `Vary: X-Ops-List-Fragment`. Empty never-synced offers **Sync**; a filtered miss names the inventory size and clears via chips. A single empty allowlist (other kinds have rows) says `coolify.allowlist.empty` — sync to pull that kind — not a dead «Liste boş». Unknown `kind` / `status` values are dropped, not applied. |
 | GET | `/coolify/{connection}/servers/{server}` | `ops.coolify.servers.show` | Server detail |
 | GET | `/coolify/{connection}/projects/{project}` | `ops.coolify.projects.show` | Project detail + environments |
 | GET | `/coolify/{connection}/environments/{environment}` | `ops.coolify.environments.show` | Environment detail |
 | GET | `/coolify/{connection}/git-sources/{source}` | `ops.coolify.git-sources.show` | Git source detail. Linked sites match `coolify_git_source_uuid` on this connection (or `coolify_connection_id` null when this connection is default). |
 | POST | `/coolify/{connection}/sync` | `ops.coolify.sync` | Inventory sync (`CoolifyInventorySync`). CSRF. Operator / Super Admin |
 | GET | `/coolify/{connection}/sync` | `ops.coolify.sync.get` | **Does not sync.** 302 to show + flash “use the Sync button” |
-| POST | `/coolify/{connection}/test` | `ops.coolify.test` | `listServers` only |
+| POST | `/coolify/{connection}/test` | `ops.coolify.test` | `listServers` only. Operator hints name that as the server list — they do not leak the method name. |
 
 **Sync UI:** dedicated `<form method="POST">` + CSRF + **Sync** button (topbar and Bağlantı panel). Never `<a href="…/sync">` and never `formaction` on the PUT Kaydet form (`_method=PUT` would 405). Browser GET `/coolify/1/sync` is a redirect, not a 405.

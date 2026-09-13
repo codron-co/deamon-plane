@@ -14,6 +14,7 @@ use App\Services\Coolify\CoolifyDeploymentSync;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class OpsCoolifyDeployQueue
 {
@@ -47,7 +48,7 @@ class OpsCoolifyDeployQueue
 
         foreach ($this->connectionsFor($sites) as $connection) {
             try {
-                $remoteRows = CoolifyApplicationService::forConnection($connection)->listRunningDeployments();
+                $remoteRows = $this->runningDeployments($connection);
             } catch (CoolifyApiException) {
                 continue;
             }
@@ -81,6 +82,200 @@ class OpsCoolifyDeployQueue
         }
 
         return $rows;
+    }
+
+    /**
+     * `GET /deployments` for one connection, shared across concurrent pollers.
+     *
+     * Every open ops tab polls `/jobs`, and each poll used to mean one Coolify read
+     * per connection — two tabs on a ten-minute build was hundreds of requests, the
+     * pressure that produced the `Too Many Attempts.` incident. Inside the cache
+     * window N pollers cost one read. Failures are not cached: a connection that
+     * was unreachable must be retried, and `CoolifyRateGuard` owns the cooldown.
+     *
+     * @return Collection<int, CoolifyDeployment>
+     */
+    private function runningDeployments(CoolifyConnection $connection): Collection
+    {
+        $ttl = max(0, (int) config('ops.coolify.deploy.queue_cache_seconds', 5));
+        $read = static fn (): Collection => CoolifyApplicationService::forConnection($connection)->listRunningDeployments();
+
+        if ($ttl === 0) {
+            return $read();
+        }
+
+        $cached = Cache::get($this->queueCacheKey($connection->getKey()));
+        if (is_array($cached)) {
+            return collect($cached)->map(
+                static fn (array $raw): CoolifyDeployment => CoolifyDeployment::fromArray($raw),
+            )->values();
+        }
+
+        $rows = $read();
+
+        Cache::put(
+            $this->queueCacheKey($connection->getKey()),
+            $rows->map(static fn (CoolifyDeployment $row): array => $row->raw)->values()->all(),
+            now()->addSeconds($ttl),
+        );
+
+        return $rows;
+    }
+
+    /**
+     * A cancel or a force start makes the cached queue a lie, so it is dropped
+     * rather than left to expire under the operator who just acted.
+     */
+    private function forgetRunningDeployments(?Site $site): void
+    {
+        $connectionId = $site?->coolify_connection_id;
+        if ($connectionId === null) {
+            $connectionId = CoolifyConnection::default()?->getKey();
+        }
+
+        if ($connectionId !== null) {
+            Cache::forget($this->queueCacheKey($connectionId));
+        }
+    }
+
+    private function queueCacheKey(mixed $connectionId): string
+    {
+        return 'ops.deploy.queue.'.$connectionId;
+    }
+
+    /**
+     * Where every open deploy stands in line on its own Coolify host.
+     *
+     * `max_concurrent_per_server` is 1 by default, so a 23-site bulk deploy is one
+     * build plus 22 waits. A row that only says "kuyrukta" cannot tell the operator
+     * whether that means two minutes or an hour, so the widget needs the position
+     * inside the host queue and the depth of that queue.
+     *
+     * The set is deliberately not the widget's own page of rows: depth must count
+     * the whole queue, not the 30 newest deployments the widget happens to list.
+     *
+     * @return array{running: int, queued: int, positions: array<int, array{position: int, depth: int}>}
+     */
+    public function queueStanding(): array
+    {
+        $open = DB::table('deployments')
+            ->join('sites', 'sites.id', '=', 'deployments.site_id')
+            ->whereIn('deployments.status', [
+                DeploymentStatus::Queued->value,
+                DeploymentStatus::InProgress->value,
+            ])
+            ->orderBy('deployments.created_at')
+            ->orderBy('deployments.id')
+            ->get([
+                'deployments.id as id',
+                'deployments.status as status',
+                'deployments.site_id as site_id',
+                'sites.coolify_connection_id as coolify_connection_id',
+                'sites.coolify_server_uuid as coolify_server_uuid',
+            ]);
+
+        $positions = [];
+        $depths = [];
+        $running = 0;
+        $queued = 0;
+
+        foreach ($open as $row) {
+            if ($row->status === DeploymentStatus::InProgress->value) {
+                $running++;
+
+                continue;
+            }
+
+            $queued++;
+            $host = $this->hostKey($row);
+            $depths[$host] = ($depths[$host] ?? 0) + 1;
+            $positions[(int) $row->id] = ['position' => $depths[$host], 'depth' => 0];
+        }
+
+        foreach ($open as $row) {
+            $id = (int) $row->id;
+            if (! isset($positions[$id])) {
+                continue;
+            }
+
+            $positions[$id]['depth'] = $depths[$this->hostKey($row)];
+        }
+
+        return ['running' => $running, 'queued' => $queued, 'positions' => $positions];
+    }
+
+    /**
+     * Stamp a widget row with its place in the queue. Only a waiting row gets a
+     * label; a running build already has its elapsed timer.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array{running: int, queued: int, positions: array<int, array{position: int, depth: int}>}  $standing
+     * @return array<string, mixed>
+     */
+    public function applyQueueStanding(array $row, array $standing): array
+    {
+        $row['queue_position'] = null;
+        $row['queue_depth'] = null;
+        $row['queue_label'] = null;
+
+        $id = $row['deployment_id'] ?? null;
+        if ($id === null || ($row['status'] ?? null) !== 'queued') {
+            return $row;
+        }
+
+        $place = $standing['positions'][(int) $id] ?? null;
+        if ($place === null) {
+            return $row;
+        }
+
+        $row['queue_position'] = $place['position'];
+        $row['queue_depth'] = $place['depth'];
+        // Localised here, not in the widget: ops-jobs.js must never assemble copy.
+        $row['queue_label'] = __('ops.jobs.queue_position', [
+            'position' => $place['position'],
+            'depth' => $place['depth'],
+        ]);
+
+        return $row;
+    }
+
+    /**
+     * Fleet-wide header line: "1 derleniyor · 22 kuyrukta".
+     *
+     * @param  array{running: int, queued: int, positions: array<int, array{position: int, depth: int}>}  $standing
+     */
+    public function queueSummaryLabel(array $standing): ?string
+    {
+        if ($standing['queued'] < 1) {
+            return null;
+        }
+
+        $parts = [];
+        if ($standing['running'] > 0) {
+            $parts[] = __('ops.jobs.queue_building', ['count' => $standing['running']]);
+        }
+        $parts[] = __('ops.jobs.queue_waiting', ['count' => $standing['queued']]);
+
+        return implode(' · ', $parts);
+    }
+
+    /**
+     * Same host grouping the deploy gate counts against: connection first, then
+     * server uuid, then the site alone. A queue the gate does not share is not
+     * a queue the operator is waiting behind.
+     */
+    private function hostKey(object $row): string
+    {
+        if ($row->coolify_connection_id !== null) {
+            return 'conn:'.$row->coolify_connection_id;
+        }
+
+        $serverUuid = trim((string) $row->coolify_server_uuid);
+        if ($serverUuid !== '') {
+            return 'server:'.$serverUuid;
+        }
+
+        return 'site:'.$row->site_id;
     }
 
     /**
@@ -138,6 +333,8 @@ class OpsCoolifyDeployQueue
         } catch (CoolifyApiException $exception) {
             abort(422, trim($exception->getMessage()) !== '' ? $exception->getMessage() : __('ops.jobs.cancel_failed'));
         }
+
+        $this->forgetRunningDeployments($deployment->site);
 
         try {
             $remote = CoolifyApplicationService::forSite($deployment->site)->getDeployment($uuid);
@@ -199,6 +396,8 @@ class OpsCoolifyDeployQueue
 
             abort(422, trim($exception->getMessage()) !== '' ? $exception->getMessage() : __('ops.jobs.force_start_failed'));
         }
+
+        $this->forgetRunningDeployments($site);
 
         $newUuid = $result->firstDeploymentUuid();
         if ($newUuid === null || $newUuid === '') {

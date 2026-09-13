@@ -29,6 +29,11 @@
                             <input type="hidden" name="filter_channel" value="{{ $channel }}">
                             <input type="hidden" name="filter_status" value="{{ $status }}">
                             <input type="hidden" name="filter_publish" value="{{ $publish }}">
+                            <input type="hidden" name="filter_deploy" value="{{ $deploy ?? '' }}">
+                            <input type="hidden" name="filter_agent" value="{{ $agent ?? '' }}">
+                            <input type="hidden" name="filter_pack" value="{{ $pack ?? '' }}">
+                            <input type="hidden" name="filter_health" value="{{ $health ?? '' }}">
+                            <input type="hidden" name="filter_app" value="{{ $app ?? '' }}">
                             <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
                                 {{ __('sites.app_health.fix_category', ['label' => __('sites.app_health.fixes.'.$fixKey), 'count' => $fixCount]) }}
                             </button>
@@ -36,7 +41,12 @@
                     @empty
                         <span class="ops-menu-label">{{ __('sites.app_health.no_issues') }}</span>
                     @endforelse
+                    <a class="ops-menu-button" role="menuitem" href="{{ route('ops.sites', ['app' => 'issues']) }}">{{ __('sites.app_health.see_issues') }}</a>
                     @if ($appHealthFixCounts !== [])
+                        {{-- These counts come from a cached fleet scan, so say how old they are. --}}
+                        @if (($appHealthCountsAt ?? null) !== null)
+                            <span class="ops-menu-note">{{ __('sites.app_health.counts_age', ['ago' => $appHealthCountsAt->diffForHumans()]) }}</span>
+                        @endif
                         <div class="ops-action-sep" role="separator"></div>
                         <form
                             method="POST"
@@ -54,6 +64,11 @@
                             <input type="hidden" name="filter_channel" value="{{ $channel }}">
                             <input type="hidden" name="filter_status" value="{{ $status }}">
                             <input type="hidden" name="filter_publish" value="{{ $publish }}">
+                            <input type="hidden" name="filter_deploy" value="{{ $deploy ?? '' }}">
+                            <input type="hidden" name="filter_agent" value="{{ $agent ?? '' }}">
+                            <input type="hidden" name="filter_pack" value="{{ $pack ?? '' }}">
+                            <input type="hidden" name="filter_health" value="{{ $health ?? '' }}">
+                            <input type="hidden" name="filter_app" value="{{ $app ?? '' }}">
                             <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">
                                 {{ __('sites.app_health.fix_all_sites') }}
                             </button>
@@ -120,10 +135,39 @@
                     <option value="{{ $publishOption }}" @selected($publish === $publishOption)>{{ __('sites.publish.states.'.$publishOption) }}</option>
                 @endforeach
             </select>
+            <select name="deploy" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('sites.filter_deploy') }}">
+                <option value="">{{ __('sites.all_deploys') }}</option>
+                @foreach ($deployFilters as $deployOption => $deployLabel)
+                    <option value="{{ $deployOption }}" @selected(($deploy ?? '') === $deployOption)>{{ $deployLabel }}</option>
+                @endforeach
+            </select>
+            <select name="agent" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('sites.filter_agent') }}">
+                <option value="">{{ __('sites.all_agent_secrets') }}</option>
+                @foreach (\App\Models\Site::AGENT_FILTERS as $agentOption)
+                    <option value="{{ $agentOption }}" @selected(($agent ?? '') === $agentOption)>{{ __('sites.agent_states.'.$agentOption) }}</option>
+                @endforeach
+            </select>
+            <select name="health" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('sites.filter_health') }}">
+                <option value="">{{ __('sites.all_health') }}</option>
+                @foreach ($healthFilters ?? [] as $healthOption => $healthLabel)
+                    <option value="{{ $healthOption }}" @selected(($health ?? '') === $healthOption)>{{ $healthLabel }}</option>
+                @endforeach
+            </select>
+            <select name="app" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('sites.filter_app') }}">
+                <option value="">{{ __('sites.all_app') }}</option>
+                @foreach ($appFilters ?? [] as $appOption => $appLabel)
+                    <option value="{{ $appOption }}" @selected(($app ?? '') === $appOption)>{{ $appLabel }}</option>
+                @endforeach
+            </select>
             {{-- Rendered even when idle so the async toolbar can reveal it without a round trip. --}}
-            <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites') }}" data-ops-list-clear{{ $filtersActive ? '' : ' hidden' }}>{{ __('ops.actions.clear') }}</a>
+            <input type="hidden" name="pack" value="{{ $pack ?? '' }}">
+            <a class="btn btn-secondary btn-sm ops-clear-filters" href="{{ \App\Support\Lists\SiteSavedViews::clearUrl() }}" data-ops-list-clear{{ $filtersActive ? '' : ' hidden' }}>
+                <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                {{ __('ops.actions.clear_filters') }}
+            </a>
         </form>
             @include('ops.sites._columns-picker')
+            @include('ops.sites._saved-views-form')
         </div>
 
         <div class="ops-list-region" data-ops-list-region>

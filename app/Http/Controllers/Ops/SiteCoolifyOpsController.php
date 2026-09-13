@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ops;
 use App\Enums\Channel;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
+use App\Http\Requests\Ops\BulkAutoDeploySiteRequest;
 use App\Http\Requests\Ops\BulkPinSiteRequest;
 use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\PinSiteRequest;
@@ -84,7 +85,7 @@ class SiteCoolifyOpsController extends Controller
             : __('site_ops.auto_deploy.off', ['name' => $site->name]));
     }
 
-    public function bulkAutoDeploy(BulkSiteIdsRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
+    public function bulkAutoDeploy(BulkAutoDeploySiteRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
     {
         $sites = $this->sitesFromBulk($request);
 
@@ -96,21 +97,16 @@ class SiteCoolifyOpsController extends Controller
             return back()->with('error', __('site_ops.bulk.empty'));
         }
 
+        $enabled = $request->boolean('enabled');
+
         if ($request->expectsJson()) {
-            $payload = [
+            return $this->queueOpsJob($request, 'sites.bulk_auto_deploy', __('ops.jobs.bulk_auto_deploy'), [
                 'site_ids' => $sites->pluck('id')->all(),
                 'ip' => $request->ip(),
-            ];
-            if ($request->exists('enabled')) {
-                $payload['enabled'] = $request->boolean('enabled');
-            }
-
-            return $this->queueOpsJob($request, 'sites.bulk_auto_deploy', __('ops.jobs.bulk_auto_deploy'), $payload);
+                'enabled' => $enabled,
+            ]);
         }
 
-        $enabled = $request->exists('enabled')
-            ? $request->boolean('enabled')
-            : $settings->toggleEnabledFor($sites);
         $result = $settings->setAutoDeployMany($sites, $enabled, $request->user(), $request->ip());
 
         return back()->with('status', $this->bulkFlash(
@@ -487,6 +483,11 @@ class SiteCoolifyOpsController extends Controller
                     (string) $request->input('filter_channel', ''),
                     (string) $request->input('filter_status', ''),
                     (string) $request->input('filter_publish', ''),
+                    (string) $request->input('filter_deploy', ''),
+                    (string) $request->input('filter_agent', ''),
+                    (string) $request->input('filter_pack', ''),
+                    (string) $request->input('filter_health', ''),
+                    (string) $request->input('filter_app', ''),
                 )
                 ->orderBy('name')
                 ->get();

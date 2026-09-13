@@ -79,6 +79,32 @@ class CoolifyClientRateLimitTest extends TestCase
         }
     }
 
+    public function test_compose_domains_before_raw_is_localized(): void
+    {
+        $this->app->setLocale('tr');
+
+        Http::fake([
+            'https://coolify.test/api/v1/applications/app-1' => Http::response([
+                'message' => 'Validation failed.',
+                'errors' => [
+                    'docker_compose_domains' => [
+                        'Cannot set docker_compose_domains without docker_compose_raw. Reload the compose file from the git repository first.',
+                    ],
+                ],
+            ], 422),
+        ]);
+
+        try {
+            $this->client()->setDomains('app-1', 'https://avolife.codron.co');
+            $this->fail('Expected CoolifyApiException.');
+        } catch (CoolifyApiException $exception) {
+            $this->assertSame(422, $exception->status);
+            $this->assertSame(__('coolify.errors.compose_domains_before_raw'), $exception->getMessage());
+            $this->assertStringNotContainsString('Validation failed', $exception->getMessage());
+            $this->assertStringNotContainsString('docker_compose_raw', $exception->getMessage());
+        }
+    }
+
     public function test_a_throttled_deploy_post_is_retried_because_nothing_ran_remotely(): void
     {
         Http::fake([

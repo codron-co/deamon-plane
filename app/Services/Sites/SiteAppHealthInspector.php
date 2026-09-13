@@ -3,6 +3,8 @@
 namespace App\Services\Sites;
 
 use App\Enums\DeploymentStatus;
+use App\Enums\SiteStatus;
+use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Agent\SiteHealthEvaluator;
 use App\Services\Coolify\CoolifyApiException;
@@ -49,7 +51,9 @@ class SiteAppHealthInspector
                     $issues = $this->mergeIssues($issues, $this->liveEnvIssues($site, $envs));
                 }
 
-                $issues = $this->mergeIssues($issues, $this->liveDomainIssues($site, $app));
+                if ($site->canBindCoolifyDomains()) {
+                    $issues = $this->mergeIssues($issues, $this->liveDomainIssues($site, $app));
+                }
             } catch (CoolifyApiException) {
                 $issues = $this->mergeIssues($issues, [
                     new SiteAppHealthIssue('coolify_unreachable'),
@@ -69,6 +73,7 @@ class SiteAppHealthInspector
 
         $site->last_app_health_at = $report->checkedAt;
         $site->last_app_health_payload = $report->toArray();
+        SiteFilterVerdict::applyApp($site);
         $site->save();
 
         return $report;
@@ -93,6 +98,28 @@ class SiteAppHealthInspector
      */
     public function localIssues(Site $site): array
     {
+        $status = $site->status instanceof SiteStatus
+            ? $site->status
+            : SiteStatus::tryFrom((string) $site->status);
+
+        // Not running yet — do not invent "failed deploy" / "agent down" noise.
+        if (in_array($status, [SiteStatus::Draft, SiteStatus::Provisioning], true)) {
+            return [];
+        }
+
+        // Failed provision: only "no Coolify app". Redeploy / agent check are the wrong CTA.
+        if ($status === SiteStatus::Error) {
+            $issues = [];
+            if (blank($site->coolify_app_uuid)) {
+                $issues[] = new SiteAppHealthIssue('missing_app');
+            }
+            if ($site->hasDockerfileBuildPackWarning()) {
+                $issues[] = new SiteAppHealthIssue('dockerfile_pack', 'migrate_compose');
+            }
+
+            return $issues;
+        }
+
         $issues = [];
 
         if (blank($site->coolify_app_uuid)) {
@@ -138,6 +165,7 @@ class SiteAppHealthInspector
 
         $site->last_app_health_at = now();
         $site->last_app_health_payload = $merged->toArray();
+        SiteFilterVerdict::applyApp($site);
         $site->save();
 
         return $merged;
@@ -146,7 +174,7 @@ class SiteAppHealthInspector
     /**
      * Latest deployment by Coolify/started clock, then id.
      */
-    public function latestDeployment(Site $site): ?\App\Models\Deployment
+    public function latestDeployment(Site $site): ?Deployment
     {
         if ($site->relationLoaded('deployments')) {
             return $site->deployments

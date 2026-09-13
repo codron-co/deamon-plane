@@ -160,10 +160,9 @@ class SiteProvisioner
             $site->save();
         }
 
-        $binding = $site->coolifyDomainBinding();
-        if ($binding !== '') {
-            $coolify->setDomains($appUuid, $binding);
-        }
+        // Coolify refuses docker_compose_domains until a deploy has loaded
+        // docker_compose_raw from git. Bind domains only after deploy finishes
+        // (see markSucceeded). Do not setDomains here.
 
         try {
             $this->agentSecrets->inject($site);
@@ -271,6 +270,27 @@ class SiteProvisioner
         }
 
         $site->save();
+
+        // Compose domains need docker_compose_raw from the finished deploy.
+        try {
+            $this->landing->syncCoolifyDomains($site);
+        } catch (Throwable $exception) {
+            Log::warning('site.domain_bind_after_deploy_failed', [
+                'site_id' => $site->id,
+                'site_slug' => $site->slug,
+                'error' => $this->redactSecrets($site, $exception->getMessage()),
+            ]);
+            $site->auditLogs()->create([
+                'actor_user_id' => $actorUserId,
+                'action' => 'site.domain_bind_failed',
+                'after' => [
+                    'slug' => $site->slug,
+                    'primary_domain' => $site->primary_domain,
+                    'error' => $this->redactSecrets($site, $exception->getMessage()),
+                ],
+                'ip' => $ip,
+            ]);
+        }
 
         $site->auditLogs()->create([
             'actor_user_id' => $actorUserId,
@@ -463,7 +483,7 @@ class SiteProvisioner
             privateKeyUuid: $privateKey,
             name: 'deamon-'.$site->slug,
             instantDeploy: false,
-            dockerComposeDomains: ($binding = $site->coolifyDomainBinding()) !== '' ? $binding : null,
+            dockerComposeDomains: null,
             dockerComposeLocation: CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
         );
     }

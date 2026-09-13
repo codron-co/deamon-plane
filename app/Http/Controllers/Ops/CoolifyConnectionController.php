@@ -15,10 +15,13 @@ use App\Services\Coolify\CoolifyClient;
 use App\Services\Coolify\CoolifyCredentials;
 use App\Services\Coolify\CoolifyInventorySync;
 use App\Services\Sites\SiteAttacher;
+use App\Support\Lists\CoolifyInventoryQuery;
+use App\Support\Lists\ListFragment;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class CoolifyConnectionController extends Controller
 {
@@ -75,21 +78,39 @@ class CoolifyConnectionController extends Controller
             ->with('status', 'Coolify bağlantısı kaydedildi. Sunucu ve proje listesini senkronlayın.');
     }
 
-    public function show(CoolifyConnection $connection): View
+    public function show(Request $request, CoolifyConnection $connection): Response
     {
         $this->authorize('view', $connection);
 
         $connection->load(['servers', 'projects', 'environments', 'gitSources']);
-        $connection->applyUnambiguousDefaults();
-        $connection->load(['servers', 'projects', 'environments', 'gitSources']);
+        // A keystroke on the inventory toolbar re-requests this URL. Defaults
+        // persist; writing them on every fragment would be P0-2 for Coolify.
+        if (! ListFragment::wanted($request)) {
+            $connection->applyUnambiguousDefaults();
+            $connection->load(['servers', 'projects', 'environments', 'gitSources']);
+        }
 
-        return view('ops.coolify.show', [
+        $inventory = CoolifyInventoryQuery::from($request, $connection);
+        $activeFilters = $inventory->chips($connection);
+
+        return ListFragment::respond($request, 'ops.coolify.show', 'ops.coolify._inventory-region', [
             'connection' => $connection,
-            'canWrite' => request()->user()?->can('update', $connection) ?? false,
+            'canWrite' => $request->user()?->can('update', $connection) ?? false,
             'webhookUrl' => url('/webhooks/coolify'),
             'hasToken' => $connection->hasToken(),
             'hasWebhookSecret' => $connection->hasWebhookSecret(),
             'environmentOptions' => $this->environmentOptions($connection),
+            'inventorySearch' => $inventory->search,
+            'inventoryKind' => $inventory->kind,
+            'inventoryStatus' => $inventory->status,
+            'inventoryServers' => $inventory->servers,
+            'inventoryProjects' => $inventory->projects,
+            'inventoryEnvironments' => $inventory->environments,
+            'inventoryGitSources' => $inventory->gitSources,
+            'filtersActive' => $inventory->filtersActive(),
+            'activeFilters' => $activeFilters,
+            'totalInventory' => $inventory->totalInventory,
+            'inventoryEmpty' => $inventory->isEmpty(),
         ]);
     }
 

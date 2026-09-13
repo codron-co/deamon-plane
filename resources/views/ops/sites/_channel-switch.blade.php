@@ -47,6 +47,7 @@
             data-confirm="{{ $channelConfirm }}"
             data-confirm-title="{{ $channelConfirmTitle }}"
             data-confirm-label="{{ __('sites.channel_switch.confirm_label') }}"
+            data-confirm-danger="true"
         >
             @csrf
             <input type="hidden" name="confirmed" value="0">

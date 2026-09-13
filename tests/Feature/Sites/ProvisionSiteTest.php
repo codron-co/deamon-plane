@@ -102,9 +102,7 @@ class ProvisionSiteTest extends TestCase
                 && ($body['name'] ?? null) === 'deamon-izyem'
                 && ($body['environment_name'] ?? null) === 'main'
                 && ! array_key_exists('fqdn', $body)
-                && ($body['docker_compose_domains'] ?? null) === [
-                    ['name' => 'app', 'domain' => 'https://shop.izyem.example.test,https://www.shop.izyem.example.test'],
-                ]
+                && ! array_key_exists('docker_compose_domains', $body)
                 && empty($body['instant_deploy'])
                 && ! array_key_exists('docker_compose_raw', $body);
         });
@@ -135,6 +133,12 @@ class ProvisionSiteTest extends TestCase
         });
 
         Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && str_starts_with($request->url(), 'https://coolify.test/api/v1/deploy')
+                && str_contains($request->url(), 'uuid=coolify-app-1');
+        });
+
+        Http::assertSent(function (Request $request): bool {
             $body = $request->data();
 
             return $request->method() === 'PATCH'
@@ -144,12 +148,6 @@ class ProvisionSiteTest extends TestCase
                 ]
                 && ! array_key_exists('fqdn', $body)
                 && ($body['force_domain_override'] ?? null) === false;
-        });
-
-        Http::assertSent(function (Request $request): bool {
-            return $request->method() === 'POST'
-                && str_starts_with($request->url(), 'https://coolify.test/api/v1/deploy')
-                && str_contains($request->url(), 'uuid=coolify-app-1');
         });
 
         Http::assertNotSent(function (Request $request): bool {
@@ -202,7 +200,7 @@ class ProvisionSiteTest extends TestCase
         $this->assertSame(DeploymentStatus::Failed, $deployment->status);
         $this->assertStringContainsString('Validation failed.', (string) $deployment->error_message);
         $this->assertStringContainsString('server_uuid', (string) $deployment->error_message);
-        $this->assertStringContainsString('Coolify errors:', (string) $deployment->error_message);
+        $this->assertStringContainsString(__('coolify.errors.errors_heading'), (string) $deployment->error_message);
 
         $this->actingAs($this->user(OpsRole::Operator))
             ->get(route('ops.sites.show', $site))

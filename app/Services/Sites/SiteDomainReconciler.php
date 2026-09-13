@@ -55,7 +55,7 @@ class SiteDomainReconciler
         $missing = $this->missingOnCoolify($site, $coolifyHosts);
         $rebound = false;
 
-        if ($autoRebind && $missing !== [] && filled($site->coolify_app_uuid)) {
+        if ($autoRebind && $missing !== [] && $site->canBindCoolifyDomains()) {
             app(SiteLanding::class)->syncCoolifyDomains($site);
             $rebound = true;
             foreach ($site->domains()->where('is_temporary', false)->get() as $row) {

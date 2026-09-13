@@ -6,6 +6,20 @@ return [
     'save' => 'Save',
     'push' => 'Re-push to sites',
     'form_errors' => 'Fix the highlighted fields and try again.',
+    'state_label' => 'Status',
+    'state_pushed_at' => 'Last push: :time',
+    'state' => [
+        'unconfigured' => 'Not configured',
+        'push_failed' => 'Last push failed · :count sites',
+        'not_pushed' => 'Enabled · not pushed to sites',
+        'active' => 'Enabled',
+    ],
+    'state_hint' => [
+        'unconfigured' => 'Software mail is off or the SMTP fields are incomplete. Sites cannot send password resets or notifications.',
+        'push_failed' => ':count sites did not accept the last settings push, so they are still running on the previous configuration.',
+        'not_pushed' => 'Settings are saved but have never been pushed to a site. Use "Re-push to sites".',
+        'active' => 'SMTP is ready and every site accepted the last push.',
+    ],
     'smtp' => [
         'title' => 'SMTP',
         'hint' => 'CMS admin software mail and Plane ops alerts use this SMTP. Storefront customer/contact mail stays on the site mail module.',

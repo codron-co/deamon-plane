@@ -2,6 +2,8 @@
 
 @section('title', __('mail.title'))
 
+@section('content_class', 'ops-content-wide')
+
 @section('actions')
     <a class="btn btn-ghost btn-sm" href="{{ route('ops.platform-mail.edit') }}">{{ __('platform_mail.title') }}</a>
     @if ($canWrite)
@@ -12,51 +14,29 @@
 @section('content')
     <p class="page-lede">{{ __('mail.lede') }}</p>
 
-    @if ($servers->isEmpty())
-        <div class="empty-panel">
-            <h2>{{ __('mail.empty') }}</h2>
-            <p>{{ __('mail.empty_hint') }}</p>
+    <div class="ops-mail-state-row">
+        <span class="ops-mail-state-title">{{ __('platform_mail.title') }}</span>
+        @include('ops.partials.platform-mail-chip', ['platformMailHint' => true])
+        <a class="btn btn-ghost btn-sm" href="{{ route('ops.platform-mail.edit') }}">{{ __('ops.actions.open') }}</a>
+    </div>
+
+    <div data-ops-list>
+        <form method="GET" action="{{ route('ops.mail-servers.index') }}" class="ops-list-toolbar" data-ops-list-toolbar>
+            <label class="ops-search">
+                <span class="visually-hidden">{{ __('mail.search') }}</span>
+                <input type="search" name="q" value="{{ $search }}" placeholder="{{ __('mail.search_placeholder') }}" autocomplete="off">
+            </label>
+            <select name="status" class="field-input ops-filter" data-ops-list-filter aria-label="{{ __('mail.filter_status') }}">
+                <option value="">{{ __('mail.all_statuses') }}</option>
+                <option value="enabled" @selected($status === 'enabled')>{{ __('ops.enabled') }}</option>
+                <option value="disabled" @selected($status === 'disabled')>{{ __('ops.disabled') }}</option>
+            </select>
+            {{-- Rendered even when idle so the async toolbar can reveal it without a round trip. --}}
+            <a class="btn btn-ghost btn-sm" href="{{ route('ops.mail-servers.index') }}" data-ops-list-clear{{ $filtersActive ? '' : ' hidden' }}>{{ __('ops.actions.clear') }}</a>
+        </form>
+
+        <div class="ops-list-region" data-ops-list-region>
+            @include('ops.mail-servers._region')
         </div>
-    @else
-        <div class="sites-table-wrap">
-            <table class="ops-table">
-                <thead>
-                    <tr>
-                        <th>{{ __('mail.columns.name') }}</th>
-                        <th>{{ __('mail.columns.provider') }}</th>
-                        <th>{{ __('mail.columns.sites') }}</th>
-                        <th>{{ __('mail.columns.status') }}</th>
-                        <th>{{ __('mail.columns.probe') }}</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($servers as $server)
-                        <tr data-href="{{ route('ops.mail-servers.show', $server) }}" tabindex="0">
-                            <td>
-                                <a class="site-name" href="{{ route('ops.mail-servers.show', $server) }}">{{ $server->name }}</a>
-                            </td>
-                            <td>{{ $server->provider?->label() }}</td>
-                            <td class="muted">{{ $server->sites_count }}</td>
-                            <td>
-                                <span class="status-chip status-{{ $server->is_enabled ? 'active' : 'error' }}">
-                                    {{ $server->is_enabled ? __('ops.enabled') : __('ops.disabled') }}
-                                </span>
-                            </td>
-                            <td class="muted">
-                                @if ($server->last_probe_at)
-                                    <time datetime="{{ $server->last_probe_at->toIso8601String() }}">{{ $server->last_probe_at->toDateTimeString() }}</time>
-                                @else
-                                    {{ __('ops.never') }}
-                                @endif
-                            </td>
-                            <td class="ops-row-actions">
-                                <a class="btn btn-ghost btn-sm" href="{{ route('ops.mail-servers.show', $server) }}">{{ __('ops.actions.open') }}</a>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    @endif
+    </div>
 @endsection

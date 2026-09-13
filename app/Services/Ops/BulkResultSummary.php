@@ -13,6 +13,10 @@ namespace App\Services\Ops;
  * `formatTriggered()` for work that only handed a deploy to Coolify
  * ("3 deploy tetiklendi"). A sweep that merely enqueued builds must never
  * borrow the finished vocabulary.
+ *
+ * `waiting` is appended as its own segment rather than folded into the
+ * ok/failed/skipped phrases: it is orthogonal to both — it can accompany any of
+ * them, and unlike a failure it resolves on its own once the build slot frees.
  */
 class BulkResultSummary
 {
@@ -63,6 +67,17 @@ class BulkResultSummary
     }
 
     /**
+     * Why "sıra bekliyor" is not "hata": the site was never sent to Coolify,
+     * and re-running it after the open build finishes is all it needs.
+     *
+     * @param  array{waiting?: int}  $result
+     */
+    public static function waitingNote(array $result): string
+    {
+        return self::waiting($result) > 0 ? (string) __('ops.bulk.deploy_busy') : '';
+    }
+
+    /**
      * The sentence that keeps a trigger-only sweep honest about Coolify.
      */
     public static function triggeredNote(): string
@@ -76,6 +91,14 @@ class BulkResultSummary
     public static function skipped(array $result): int
     {
         return max(0, (int) ($result['skipped'] ?? 0));
+    }
+
+    /**
+     * @param  array{waiting?: int}  $result
+     */
+    public static function waiting(array $result): int
+    {
+        return max(0, (int) ($result['waiting'] ?? 0));
     }
 
     /**
@@ -101,21 +124,23 @@ class BulkResultSummary
         }
 
         $notes[] = self::throttleNote($result);
+        $notes[] = self::waitingNote($result);
         $notes = array_values(array_filter($notes, static fn (string $note): bool => $note !== ''));
 
         return $notes === [] ? $text : $text.' — '.implode(' ', $notes);
     }
 
     /**
-     * @param  array{ok?: int, failed?: int, skipped?: int}  $result
+     * @param  array{ok?: int, failed?: int, skipped?: int, waiting?: int}  $result
      */
     private static function countsFrom(array $result, string $group): string
     {
         $ok = (int) ($result['ok'] ?? 0);
         $failed = (int) ($result['failed'] ?? 0);
         $skipped = self::skipped($result);
+        $waiting = self::waiting($result);
 
-        return match (true) {
+        $counts = match (true) {
             $failed > 0 && $skipped > 0 => __('ops.bulk.'.$group.'_failed_skipped', [
                 'ok' => $ok,
                 'failed' => $failed,
@@ -125,5 +150,11 @@ class BulkResultSummary
             $failed > 0 => __('ops.bulk.'.$group.'_failed', ['ok' => $ok, 'failed' => $failed]),
             default => __('ops.bulk.'.$group, ['ok' => $ok]),
         };
+
+        if ($waiting > 0) {
+            $counts .= ', '.__('ops.bulk.waiting', ['waiting' => $waiting]);
+        }
+
+        return (string) $counts;
     }
 }

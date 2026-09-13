@@ -9,13 +9,15 @@ return [
     'lede' => 'Catalog is git-only. Connect a GitHub App or PAT, then refresh the catalog. Plane does not accept ZIP uploads — emergency ZIP stays on the CMS Super Admin import. Auto-update defaults off.',
     'search' => 'Search themes',
     'search_placeholder' => 'Search id, name, repo',
+    'filter_search' => 'Search',
     'filter_visibility' => 'Visibility',
     'all_visibilities' => 'All visibilities',
     'empty' => [
         'title' => 'No catalog themes yet',
-        'hint' => 'Add a GitHub source under Themes, then refresh the catalog. Live GitHub credentials are optional for local tests — the suite uses Http::fake.',
+        'hint' => 'Add a GitHub source under Themes, then refresh the catalog.',
         'filtered_title' => 'No themes match these filters',
-        'filtered_hint' => 'Clear search or visibility to see the full catalog.',
+        'filtered_hint' => 'The catalog has :total themes; none match these filters.',
+        'filters_label' => 'Active filters',
     ],
     'pagination' => 'Themes pagination',
     'columns' => [

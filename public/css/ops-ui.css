@@ -278,6 +278,14 @@ html[data-theme="light"] {
     text-transform: uppercase;
 }
 
+/* A quiet footnote inside a menu: freshness, scope, why an item is missing. */
+.ops-menu-note {
+    display: block;
+    padding: 4px 2px 2px;
+    color: var(--text-faint);
+    font-size: 11px;
+}
+
 .ops-action-menu {
     position: relative;
 }
@@ -966,6 +974,12 @@ html[data-theme="semidark"] .fleet-attention-list li {
 .site-domain-row { gap: 7px; margin-top: 4px; color: var(--text-faint); font-size: 12px; }
 .site-domain-row a { color: var(--text-muted); text-decoration: none; }
 .site-domain-row a:hover { color: var(--accent); }
+.site-id-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
 .site-open-links {
     display: flex;
     flex-wrap: wrap;
@@ -1267,6 +1281,13 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
     background: var(--surface);
 }
 .ops-ns-row code { font-size: 12px; overflow-wrap: anywhere; }
+.ops-host-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.ops-host-copy code { min-width: 0; }
 .ops-ns-all { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 .ops-alias-list { display: grid; gap: 8px; }
 .ops-alias-row { display: grid; }
@@ -1309,6 +1330,7 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
 .site-technical-list div { min-width: 0; }
 .site-technical-list dt { margin-bottom: 3px; color: var(--text-faint); font-size: 10px; }
 .site-technical-list dd { min-width: 0; margin: 0; color: var(--text); font-size: 11px; overflow-wrap: anywhere; }
+.ops-copy-id dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .site-note { margin: 7px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
 #danger .danger-zone,
 .ops-danger {
@@ -1407,6 +1429,22 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
     outline-offset: 2px;
 }
 
+/* The queue depth outranks the panel title, so the title truncates first. */
+.ops-jobs-summary-text {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ops-jobs-queue {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
 .ops-jobs-count {
     display: inline-flex;
     align-items: center;
@@ -1425,6 +1463,34 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
     display: flex;
     align-items: center;
     gap: 2px;
+}
+
+.ops-jobs-filter {
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.ops-jobs-filter:focus-visible {
+    outline: 2px solid var(--focus, var(--accent));
+    outline-offset: 2px;
+}
+
+.ops-jobs-filter.is-on,
+.ops-jobs-filter[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--danger, var(--accent)) 45%, var(--border));
+    background: color-mix(in srgb, var(--danger, var(--accent)) 16%, var(--surface-overlay));
+    color: var(--text);
 }
 
 .ops-jobs-body {
@@ -1604,4 +1670,581 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
         left: 12px;
         width: auto;
     }
+}
+
+/* An attention list is capped; this line accounts for what it left out. */
+.fleet-attention-more {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.fleet-attention-more a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.fleet-attention-more a:hover,
+.kpi-link:hover {
+    color: var(--text);
+}
+
+/* Drill-down out of a KPI card into the list that resolves the same number. */
+.kpi-link {
+    display: inline-block;
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.kpi-value-sm .kpi-link {
+    margin-top: 0;
+    font-size: inherit;
+}
+
+.fleet-attention-actions {
+    margin-top: 10px;
+}
+
+/* ---------- Bulk selection bar ---------- */
+
+.sites-bulk-bar {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--surface-raised);
+}
+
+.sites-bulk-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+}
+
+.sites-bulk-summary strong {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.sites-bulk-skip {
+    margin: 6px 0 0;
+    color: var(--text-faint);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+/* The bar owns the outer spacing now that it wraps the action row. */
+.sites-bulk-bar .sites-bulk-actions {
+    margin-top: 10px;
+}
+
+.sites-bulk-pin {
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 28rem;
+}
+
+.sites-bulk-pin-hint {
+    flex: 1 1 12rem;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+/* Unpublish and hard delete sit behind a menu, pushed away from the routine buttons. */
+.sites-bulk-danger {
+    margin-left: auto;
+}
+
+.sites-bulk-danger > summary.is-danger {
+    color: var(--danger-text, var(--danger));
+    border-color: var(--danger-border);
+}
+
+.sites-bulk-danger > summary.is-danger:hover {
+    background: var(--danger-surface);
+    color: var(--danger-text-strong, var(--danger));
+}
+
+/* The bulk bar is the last thing on the page, so its menu opens upward. */
+.sites-bulk-danger .ops-action-popover {
+    top: auto;
+    bottom: calc(100% + 6px);
+}
+
+/* ---------- Empty states + filter chips ---------- */
+
+.empty-panel-note {
+    margin: 10px 0 0;
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.empty-panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+/* .empty-panel .btn carries a legacy top margin; the actions row owns spacing now. */
+.empty-panel-actions .btn {
+    margin-top: 0;
+}
+
+.empty-panel-filtered {
+    border-color: var(--border-strong);
+}
+
+.empty-panel-form {
+    display: grid;
+    gap: 12px;
+    max-width: 28rem;
+    margin-top: 14px;
+}
+
+.empty-panel-form .empty-panel-actions {
+    margin-top: 2px;
+}
+
+.ops-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ops-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+    padding: 0 4px 0 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-overlay);
+    font-size: 11px;
+    line-height: 1;
+}
+
+.ops-filter-chip-label {
+    color: var(--text-faint);
+}
+
+.ops-filter-chip-value {
+    max-width: 26ch;
+    overflow: hidden;
+    color: var(--text);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ops-filter-chip-remove {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    color: var(--text-muted);
+}
+
+.ops-filter-chip-remove:hover {
+    background: var(--surface-raised);
+    color: var(--text);
+}
+
+.ops-filter-chip-remove:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
+.ops-saved-views {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.ops-saved-view-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ops-saved-view-item {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.ops-saved-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-overlay);
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.ops-saved-view:hover {
+    background: var(--surface-raised);
+}
+
+.ops-saved-view.is-active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface-overlay));
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.ops-saved-view:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.ops-saved-view-default {
+    color: var(--text-faint);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.ops-saved-view-item:has(.ops-saved-view-delete) .ops-saved-view {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    padding-right: 8px;
+}
+
+.ops-saved-view-delete {
+    display: flex;
+    margin: 0;
+}
+
+.ops-saved-view-delete-btn {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    min-height: 28px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-left: 0;
+    border-radius: 0 999px 999px 0;
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+}
+
+.ops-saved-view-delete-btn:hover {
+    background: var(--surface-raised);
+    color: var(--text);
+}
+
+.ops-saved-view-delete-btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.ops-saved-view-name {
+    display: block;
+    margin: 8px 12px 6px;
+}
+
+.ops-saved-view-name input {
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-overlay);
+    color: var(--text);
+}
+
+.ops-saved-view-default-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 12px 8px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+/* Clearing a filter is the way out of an empty result, so it reads as an action, not a hint. */
+.ops-clear-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ops-clear-filters svg {
+    color: var(--text-faint);
+}
+
+.ops-clear-filters:hover svg {
+    color: var(--text);
+}
+
+/* Keyboard shortcut overlay: the one place the shortcuts are written down. */
+.ops-shortcuts[hidden] {
+    display: none;
+}
+
+.ops-shortcuts {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.ops-shortcuts-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.ops-shortcuts-panel {
+    position: relative;
+    width: min(420px, 100%);
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 18px 20px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--surface-raised);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+}
+
+.ops-shortcuts-panel:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.ops-shortcuts-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ops-shortcuts-head h2 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.ops-shortcuts-hint,
+.ops-shortcuts-foot {
+    margin: 6px 0 0;
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.ops-shortcuts-list {
+    display: grid;
+    gap: 2px;
+    margin: 14px 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.ops-shortcuts-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 7px 8px;
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 13px;
+}
+
+.ops-shortcuts-list li:nth-child(odd) {
+    background: var(--surface-overlay);
+}
+
+.ops-shortcuts-keys {
+    display: inline-flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ops-shortcuts-keys kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.ops-shortcuts-trigger svg {
+    width: 16px;
+    height: 16px;
+}
+
+.ops-palette[hidden] {
+    display: none;
+}
+
+.ops-palette {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: grid;
+    place-items: start center;
+    padding: 12vh 24px 24px;
+}
+
+.ops-palette-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.ops-palette-panel {
+    position: relative;
+    width: min(560px, 100%);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--surface-raised);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+}
+
+.ops-palette-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+}
+
+.ops-palette-input:focus {
+    outline: none;
+}
+
+.ops-palette-input:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--focus);
+}
+
+.ops-palette-results {
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.ops-palette-group {
+    margin: 8px 8px 4px;
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ops-palette-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.ops-palette-item:hover,
+.ops-palette-item.is-active {
+    background: var(--surface-overlay);
+}
+
+.ops-palette-item:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
+.ops-palette-item-label {
+    font-size: 13px;
+}
+
+.ops-palette-item-hint {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.ops-palette-empty,
+.ops-palette-foot {
+    margin: 0;
+    padding: 10px 16px 12px;
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.ops-palette-empty[hidden] {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ops-palette-item {
+        scroll-margin: 0;
+    }
+}
+
+/* Relative age + stale word. Stale is a label, not a colour-only signal. */
+.ops-fresh-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.ops-freshness {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ops-freshness.is-stale {
+    color: var(--danger-text);
+}
+
+.ops-freshness-flag {
+    font-weight: 600;
 }

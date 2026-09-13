@@ -152,43 +152,8 @@ class CoolifyDeploySettings
     }
 
     /**
-     * All on → off. All off → on. Mixed or unknown → off.
-     *
      * @param  iterable<int, Site>  $sites
-     */
-    public function toggleEnabledFor(iterable $sites): bool
-    {
-        $known = [];
-
-        foreach ($sites as $site) {
-            if (! $site instanceof Site || blank($site->coolify_app_uuid)) {
-                continue;
-            }
-
-            $state = $this->snapshot($site)['is_auto_deploy'];
-            if (is_bool($state)) {
-                $known[] = $state;
-            }
-        }
-
-        if ($known === []) {
-            return false;
-        }
-
-        if (! in_array(false, $known, true)) {
-            return false;
-        }
-
-        if (! in_array(true, $known, true)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, deploy_busy: bool}
      */
     public function setAutoDeployMany(iterable $sites, bool $enabled, ?User $actor = null, ?string $ip = null): array
     {
@@ -197,7 +162,7 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, deploy_busy: bool}
      */
     public function redeployMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {
@@ -206,7 +171,7 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, deploy_busy: bool}
      */
     public function followHeadMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {
@@ -215,7 +180,7 @@ class CoolifyDeploySettings
 
     /**
      * @param  iterable<int, Site>  $sites
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, deploy_busy: bool}
      */
     public function pinMany(iterable $sites, string $ref, ?User $actor = null, ?string $ip = null): array
     {
@@ -225,7 +190,7 @@ class CoolifyDeploySettings
     /**
      * @param  iterable<int, Site>  $sites
      * @param  callable(Site): void  $action
-     * @return array{ok: int, failed: int, skipped: int, errors: list<string>, rate_limited: bool}
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, deploy_busy: bool}
      */
     private function applyMany(iterable $sites, callable $action): array
     {

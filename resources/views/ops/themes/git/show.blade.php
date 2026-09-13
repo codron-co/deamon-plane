@@ -165,7 +165,7 @@
         <section class="danger-zone" aria-labelledby="theme-git-disconnect-heading">
             <h2 id="theme-git-disconnect-heading">{{ __('themes.git.disconnect.title') }}</h2>
             <p>{{ __('themes.git.disconnect.hint') }}</p>
-            <form method="POST" action="{{ route('ops.themes.git.destroy', $connection) }}" data-confirm="{{ __('themes.git.disconnect.confirm', ['account' => $connection->displayName()]) }}" data-confirm-title="{{ __('themes.git.disconnect.title') }}" data-confirm-label="{{ __('themes.git.disconnect.action') }}">
+            <form method="POST" action="{{ route('ops.themes.git.destroy', $connection) }}" data-confirm="{{ __('themes.git.disconnect.confirm', ['account' => $connection->displayName()]) }}" data-confirm-title="{{ __('themes.git.disconnect.title') }}" data-confirm-label="{{ __('themes.git.disconnect.action') }}" data-confirm-danger="true">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="btn btn-danger">{{ __('themes.git.disconnect.action') }}</button>

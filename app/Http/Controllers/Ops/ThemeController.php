@@ -34,20 +34,9 @@ class ThemeController extends Controller
         $visibility = (string) $request->query('visibility', '');
         $visibility = in_array($visibility, ThemeVisibility::values(), true) ? $visibility : '';
 
-        $query = Theme::query()->orderBy('theme_id');
-
-        if ($search !== '') {
-            $term = addcslashes($search, '%_\\');
-            $query->where(function ($builder) use ($term): void {
-                $builder->where('theme_id', 'like', "%{$term}%")
-                    ->orWhere('name', 'like', "%{$term}%")
-                    ->orWhere('repo_full_name', 'like', "%{$term}%");
-            });
-        }
-
-        if ($visibility !== '') {
-            $query->where('visibility', $visibility);
-        }
+        $query = Theme::query()
+            ->matchingListFilters($search, $visibility)
+            ->orderBy('theme_id');
 
         $connections = ThemeGitConnection::query()
             ->withCount([
@@ -58,12 +47,17 @@ class ThemeController extends Controller
             ->orderBy('account_login')
             ->get();
 
+        $themes = $query->withCount(['installations', 'accessEntries'])->paginate(25)->withQueryString();
+        $activeFilters = $this->activeListFilters($search, $visibility);
+
         return ListFragment::respond($request, 'ops.themes.index', 'ops.themes._region', [
-            'themes' => $query->withCount(['installations', 'accessEntries'])->paginate(25)->withQueryString(),
+            'themes' => $themes,
             'search' => $search,
             'visibility' => $visibility,
             'visibilities' => ThemeVisibility::cases(),
-            'filtersActive' => $search !== '' || $visibility !== '',
+            'filtersActive' => $activeFilters !== [],
+            'activeFilters' => $activeFilters,
+            'totalThemes' => $themes->total() > 0 ? $themes->total() : Theme::query()->count(),
             'connections' => $connections,
             'hasGithubApp' => GithubSetting::current()->hasManifestApp(),
             'appUrlIsPublic' => PublicAppUrl::isPublic(),
@@ -72,6 +66,38 @@ class ThemeController extends Controller
             'canSync' => $request->user()?->can('sync', Theme::class) ?? false,
             'canWriteGit' => $request->user()?->can('create', ThemeGitConnection::class) ?? false,
         ]);
+    }
+
+    /**
+     * @return list<array{key: string, label: string, value: string, url: string}>
+     */
+    private function activeListFilters(string $search, string $visibility): array
+    {
+        $applied = array_filter([
+            'q' => $search,
+            'visibility' => $visibility,
+        ], static fn (string $value): bool => $value !== '');
+
+        $labels = [
+            'q' => __('themes.filter_search'),
+            'visibility' => __('themes.filter_visibility'),
+        ];
+        $displayed = [
+            'q' => $search,
+            'visibility' => $visibility === '' ? '' : ThemeVisibility::from($visibility)->label(),
+        ];
+
+        $chips = [];
+        foreach ($applied as $key => $value) {
+            $chips[] = [
+                'key' => $key,
+                'label' => $labels[$key],
+                'value' => $displayed[$key],
+                'url' => route('ops.themes', array_diff_key($applied, [$key => null])),
+            ];
+        }
+
+        return $chips;
     }
 
     public function show(Request $request, Theme $theme): View

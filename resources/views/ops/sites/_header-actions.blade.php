@@ -48,6 +48,22 @@
                     <div class="ops-action-sep" role="separator"></div>
                 @endif
                 <a class="ops-menu-link" role="menuitem" href="{{ $coolifyAppUrl }}" target="_blank" rel="noopener noreferrer">{{ __('sites.menu.open_coolify') }}</a>
+                <button
+                    type="button"
+                    class="ops-menu-button"
+                    role="menuitem"
+                    data-copy-value="{{ $coolifyAppUrl }}"
+                    data-copied-label="{{ __('sites.detail.copied') }}"
+                >{{ __('sites.detail.copy_coolify_url') }}</button>
+                @if (filled($site->coolify_app_uuid))
+                    <button
+                        type="button"
+                        class="ops-menu-button"
+                        role="menuitem"
+                        data-copy-value="{{ $site->coolify_app_uuid }}"
+                        data-copied-label="{{ __('sites.detail.copied') }}"
+                    >{{ __('sites.detail.copy_app_uuid') }}</button>
+                @endif
             @endif
         </div>
     </details>
@@ -134,7 +150,7 @@
                     data-confirm="{{ __('sites.lifecycle.deactivate_confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('sites.lifecycle.deactivate_confirm_title') }}"
                     data-confirm-label="{{ __('sites.menu.deactivate') }}"
-                    data-confirm-danger="false"
+                    data-confirm-danger="true"
                 >
                     @csrf
                     <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.deactivate') }}</button>
@@ -150,6 +166,7 @@
                     data-confirm="{{ __('sites.danger.confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('sites.danger.confirm_title') }}"
                     data-confirm-label="{{ __('sites.menu.soft_delete') }}"
+                    data-confirm-danger="true"
                 >
                     @csrf
                     @method('DELETE')
@@ -163,6 +180,7 @@
                     data-confirm="{{ __('sites.danger.hard_confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('sites.danger.hard_confirm_title') }}"
                     data-confirm-label="{{ __('sites.menu.hard_delete') }}"
+                    data-confirm-danger="true"
                 >
                     @csrf
                     @method('DELETE')
@@ -181,6 +199,7 @@
         data-confirm="{{ __('sites.provision.confirm', ['name' => $site->name]) }}"
         data-confirm-title="{{ __('sites.provision.confirm_title') }}"
         data-confirm-label="{{ __('sites.provision.button') }}"
+        data-confirm-danger="false"
     >
         @csrf
         <button type="submit" class="btn btn-primary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.provision.button') }}</button>

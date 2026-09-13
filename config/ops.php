@@ -57,6 +57,49 @@ return [
         'ip_allowlist' => env('OPS_IP_ALLOWLIST'),
     ],
 
+    /*
+    | Fleet-wide app-health fix counts walk every site, so the Sites header menu
+    | reads them from a short-lived cache and shows how old the number is. Applying
+    | a fix clears the entry. Set to 0 to scan on every page render.
+    */
+    'app_health' => [
+        'counts_ttl' => (int) env('OPS_APP_HEALTH_COUNTS_TTL', 60),
+    ],
+
+    /*
+    | Fleet dashboard. `failed_deploy_window_hours` keeps the failed-deploy KPI a
+    | statement about now instead of a total that only grows; `attention_limit` caps
+    | how many rows an attention card renders before it summarises the rest.
+    */
+    'fleet' => [
+        'failed_deploy_window_hours' => (int) env('OPS_FLEET_FAILED_DEPLOY_WINDOW_HOURS', 24),
+        'attention_limit' => (int) env('OPS_FLEET_ATTENTION_LIMIT', 8),
+    ],
+
+    /*
+    | Jobs widget poll pacing. The widget reads the fast tier while rows move and
+    | steps down to `slow_ms` then `max_ms` after `slow_after` polls that changed
+    | nothing; a hidden tab polls not at all. Long waits must cost less, because a
+    | poll is a Coolify read (docs/superpowers/specs/2026-09-11-coolify-throttle-cure-design.md).
+    */
+    'jobs' => [
+        'poll' => [
+            'fast_ms' => (int) env('OPS_JOBS_POLL_FAST_MS', 1500),
+            'slow_ms' => (int) env('OPS_JOBS_POLL_SLOW_MS', 5000),
+            'max_ms' => (int) env('OPS_JOBS_POLL_MAX_MS', 10000),
+            'slow_after' => (int) env('OPS_JOBS_POLL_SLOW_AFTER', 8),
+        ],
+    ],
+
+    /*
+    | Activity CSV is the same filtered UNION as the page, capped so a download
+    | cannot walk the whole audit table. Raise only if an operator needs more
+    | than a morning's worth of rows.
+    */
+    'activity' => [
+        'export_limit' => (int) env('OPS_ACTIVITY_EXPORT_LIMIT', 1000),
+    ],
+
     'agent' => [
         'skew_seconds' => (int) env('CONTROL_PLANE_AGENT_SKEW_SECONDS', 60),
         'timeout_seconds' => (int) env('CONTROL_PLANE_AGENT_TIMEOUT', 10),
@@ -108,6 +151,13 @@ return [
         */
         'deploy' => [
             'max_concurrent_per_server' => (int) env('COOLIFY_MAX_CONCURRENT_PER_SERVER', 1),
+
+            /*
+            | Every open ops tab polls `/jobs`, and each poll reads the Coolify queue
+            | once per connection. Inside this window all pollers share one read, so
+            | N tabs cost what one tab costs. 0 disables the cache.
+            */
+            'queue_cache_seconds' => (int) env('COOLIFY_DEPLOY_QUEUE_CACHE_SECONDS', 5),
         ],
 
         /*

@@ -75,7 +75,7 @@ class AgentSecretInjectTest extends TestCase
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee(__('sites.agent.rotate'), false)
-            ->assertSee('data-confirm="'.__('sites.agent.rotate_confirm', ['name' => $site->name]).'"', false)
+            ->assertSee('data-confirm="'.e(__('sites.agent.rotate_confirm', ['name' => $site->name])).'"', false)
             ->assertDontSee(__('sites.agent.inject'), false)
             ->getContent();
 

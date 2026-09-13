@@ -2,6 +2,245 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Overnight morning finalize (2026-09-14 ~01:00 Istanbul)
+
+- Status: **report only, uncommitted**. Operator handoff filled in [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md). `php artisan test` **847 passed** / 0 failed (4619 assertions). `node --test` **18 passed**. Pint `--dirty --test` fails on `PaletteFilters.php` `line_ending` only. No commit, no PR, no push. Do not re-dispatch closed P0/P1/P2 items.
+
+## ADR-11 fifth slice: list fetch / replaceState (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:40; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `PlaneOpsContracts` now also exports `isSameList`, `listQueryChanged`, `shouldPatchListRegion`, `listFetchHeaders`, `listHistoryMode` / `listHistoryWrite`, `isListRequeryLink` / `shouldInterceptListHref`. `ops-list.js` calls those instead of closed-over copies. Tests pass header / `{ origin, pathname }` ducks — still no jsdom, no `package.json`.
+- `PlaneUI.refresh()` after a region swap still waits for a fixture.
+- Docs: [../decisions/adr-11-dom-test-harness.md](../decisions/adr-11-dom-test-harness.md), [../modules/ops-list-async.md](../modules/ops-list-async.md). Tests: `node --test tests/js/*.js`.
+
+## Coolify deep-link copy, domain leftover clear, env-row filter (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:15; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- Extends the sibling UUID-copy slice: site detail also copies the Coolify UI deep link (hero, Technical identifiers, Deploy menu). Open in Coolify stays.
+- `/domains` **Kayıttan sil** clears leftover unbound aliases only. Primaries, temporary hosts, and Coolify-bound rows are skipped. No Coolify HTTP. Danger confirm names the P0-1 count. Fetch refreshes the list.
+- Extends Settings jump: the same box filters env-default **rows** in place. Not a ListFragment — Save still posts the whole catalog. `PlaneOpsContracts.envRowVisible` keeps a section-only needle from emptying the table.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md), [../modules/ops-list-async.md](../modules/ops-list-async.md), [../modules/coolify-client.md](../modules/coolify-client.md). Tests: `SiteDetailTest` (deep-link copy), new `DomainBulkClearTest` (7), `SettingsEnvDefaultsTest` (row haystack), `ConfirmMatrixTest` (domains danger), `node --test` `textMatches` / `envRowVisible`.
+- Full suite after this tick: first run **1 failed / 844** (`AgentSecretInjectTest` apostrophe vs Blade `e()`); after the assert fix **845 passed**, 0 failed (4611 assertions). `node --test` **13**. No product change for the flake.
+
+## Copy site ID and Coolify UUIDs on detail (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:30; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- Site detail hero has **Site ID kopyala** and **Uygulama UUID kopyala** (when attached). Technical identifiers list the ULID plus Coolify app / server / project / environment UUIDs with the same `data-copy-value` primitive. Missing Coolify UUIDs stay `—` and have no copy control.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md). Tests: `SiteDetailTest` (copy present / absent / Turkish).
+
+## Settings jump / search (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:30; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `/settings` has a hash jump nav (env / GitHub / customer defaults / Coolify) and a filter box over section titles plus env keys. A key substring also hides other env rows (`envRowVisible`); a section needle does not blank the catalog. No-JS still uses the hashes. Ctrl/⌘+K `webhook` / `ortam` opens `/settings#…` (`SettingsJump`); empty palette query still lists only pages.
+- `PlaneOpsContracts.textMatches` — empty query keeps every section. Tests: new `SettingsJumpTest`. Neighbours: `PaletteSearchTest`, `SettingsEnvDefaultsTest`.
+
+## Domains unbound bulk copy (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:30; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- Unbound-only confirm names unbound hosts. A mixed list confirm + bar hint say already-bound hosts are skipped and how many in the current filter are still unbound. Sweep behavior unchanged (bound = no-op).
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md). Tests: `DomainBulkBindTest` (unbound confirm + mixed skip copy).
+
+## ADR-11 fourth slice: hidden-tab poll skip (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:30; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `PlaneOpsContracts.pageIsHidden` / `shouldSchedulePoll` are what `ops-jobs.js` uses instead of a closed-over `document.hidden`. Tests pass `{ hidden: true }` — still no jsdom, no `package.json`.
+- Docs: [../decisions/adr-11-dom-test-harness.md](../decisions/adr-11-dom-test-harness.md). Tests: `node --test tests/js/*.js`.
+
+## Jobs widget failed-only filter (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:15; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **Sadece hatalılar** on the jobs widget polls `GET /jobs?failed=1`: this operator's failed jobs and deploys in the two-hour window. Unknown `failed` values widen. The live Coolify queue is not merged (no `GET /deployments` on that lane). Toggle persists in `sessionStorage`; an empty failed-only list keeps the panel so the toggle stays reachable.
+- `PlaneOpsContracts.jobsIndexUrl` / `isFailedStatus` — ADR-11 third slice. Tests still `require` the production file.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md), [../decisions/adr-11-dom-test-harness.md](../decisions/adr-11-dom-test-harness.md). Tests: new `JobsFailedFilterTest` (5). Neighbours: `JobsPollPressureTest`, `DeploymentPollWidgetTest`.
+
+## Activity CSV export (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~03:15; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **CSV indir** on `/activity` downloads the current filters (`GET /activity/export`). Same `ActivityFilters` as the page. UTF-8 BOM, redacted title/detail, no payloads. Capped at `ops.activity.export_limit` (1000). Viewer can export; guest goes to sign-in.
+- Docs: [../modules/ops-activity.md](../modules/ops-activity.md). Tests: `ActivityFeedTest` now 14.
+
+## Coolify test hints name the server list (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~02:55; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- Operator Coolify show copy no longer says `listServers`. The overview hint and the next-action test hint say **sunucu listesini sorgular** / “queries the server list”. The test route is still `listServers` only.
+- Docs: [../modules/coolify-client.md](../modules/coolify-client.md). Tests: `CoolifyConnectionsTest` (connection show under `locale=tr` must not contain `listServers`).
+
+## DOM harness second slice: bulk interpolate + typing guards (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~02:55; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **ADR-11 second slice.** `PlaneOpsContracts` now also exports `bulkScope`, `interpolateConfirm`, `isTyping`, `confirmOpen`. `ops-ui.js` substitutes `__COUNT__` / `__TARGET__`; `ops-shortcuts.js` and `ops-palette.js` call the guards (they were never in `ops-list.js`). Tests still `require` the production file — no algorithm copy, no Playwright, no jsdom, no `package.json`.
+- Still later: `document.hidden`, list `fetch` / `replaceState`. ADR-10 `health=` / `app=` stays closed.
+- Docs: [../decisions/adr-11-dom-test-harness.md](../decisions/adr-11-dom-test-harness.md), [../modules/ops-sites.md](../modules/ops-sites.md), [../modules/ops-list-async.md](../modules/ops-list-async.md).
+
+## Health and app-issue list filters are SQL (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~02:50; worktree left dirty on purpose). Backlog **P1-7 leftovers** / [ADR-10](../decisions/adr-10-health-app-filter-verdict.md). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **`health=unhealthy` and `app=issues`** are Sites list filters. Verdicts live on `sites.health_unhealthy` / `health_verdict_at` and `app_has_issues` / `app_health_issue_count` / `app_health_verdict_at`, stamped by `SiteFilterVerdict` on the same save as the health / inspect payload (and status, secret, dockerfile notes, Coolify uuid). The list path does not walk the fleet.
+- **One predicate for unhealthy.** `Site::scopeUnhealthy()` is the card and the filter: persisted flag, or `status=error`, or stored agent-fail JSON, or the stale window. A site that goes stale after a healthy write still matches without a second job. `needs_secret` / `unknown` stay out.
+- **`app=issues`** is sites with at least one needed fix. The header **Fix App issues** menu links **Sorunlu siteleri gör**. Category counts stay the 60s P0-2 cache.
+- Fleet **Tümünü gör** and `+N site daha` on the unhealthy card link the way failed deploys already do. `filter_health` / `filter_app` ride with bulk `all=1`. Unknown values widen. Saved views persist both keys.
+- `InspectSiteAppHealthJob` is not inspect-only: `inspect()` / `refreshLocalCached()` and `SiteHealthChecker::check()` call `SiteFilterVerdict` on the same save as the payload.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Drill down from the unhealthy card"), [../modules/agent-client.md](../modules/agent-client.md), [../modules/ops-list-async.md](../modules/ops-list-async.md). Tests: new `HealthAppFilterTest` (18). Neighbours: `FailedDeployFilterTest`, `FleetDashboardTest`, `FleetFailedDeployWindowTest`, `SiteListAppHealthCountCostTest`, `SiteHealthEvaluatorTest`.
+
+## Empty-state copy stops leaking test jargon (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~02:45; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- Operator empty hints no longer say `Http::fake`, «Liste boş», or «kutu açabilmesi». Themes catalog-empty, Coolify per-kind allowlist empty, Coolify connections empty (Jeton / Ayarlar), and mail-servers registry-empty are operator Turkish. Platform-mail state stays on the two mail pages — not in the nav (P2-19 cost).
+- **Left alone then; now landed.** ADR-10 verdict columns + `health=` / `app=` are in the tree (see the Health and app-issue section above). [ADR-11](../decisions/adr-11-dom-test-harness.md) already decided skip Playwright / `node --test` later.
+- Docs: [../modules/theme-catalog.md](../modules/theme-catalog.md), [../modules/coolify-client.md](../modules/coolify-client.md). Tests: `ThemeListEmptyStatesTest` (no `Http::fake` in the hint); `MailListEmptyStatesTest` Turkish `posta kutusu`.
+
+## DOM harness first slice: `node --test tests/js/*.js` (2026-09-13)
+
+- Status: **code, uncommitted** (overnight ~02:50; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **ADR-11 first slice.** `public/js/ops-contracts.js` is the shared UMD (`PlaneOpsContracts` / `module.exports`). `ops-list.js` uses `toolbarUrl`; `ops-jobs.js` uses `jobStateSignature`, `advanceBackoff`, `jobRowKey`, `diffJobRows`. Tests require that file — no algorithm copy in `tests/js/`. Run: `node --test tests/js/*.js`. No `package.json`, no jsdom, no Playwright.
+- Second slice (~02:55) added interpolate + typing / confirm guards — see the entry above. Still later: `document.hidden`. ADR-10 `health=` / `app=` landed separately (`HealthAppFilterTest` 18).
+- Docs: [../decisions/adr-11-dom-test-harness.md](../decisions/adr-11-dom-test-harness.md), [../modules/ops-sites.md](../modules/ops-sites.md), [../modules/ops-list-async.md](../modules/ops-list-async.md).
+
+## DOM harness is decided: Node tests, not Playwright (2026-09-13)
+
+- Status: **decision, uncommitted** (overnight tick 5 / ~02:40; worktree left dirty on purpose). Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **ADR-11.** Pest keeps walking the server-rendered `data-*` / fragment / locale contract. Browser-only behavior (`ops-jobs` backoff, `__COUNT__` interpolate, `ops-list` fetch, palette/shortcuts) lands under `node --test` in `tests/js/`, with jsdom only when a test needs `document`. Playwright, Dusk, Cypress, and Pest Browser are rejected for Plane v1. Do not add a JS bundler. Do not duplicate the algorithms inside the test tree.
+- First slice landed later the same night (~02:50) — see the entry above. ADR-10 `health=` / `app=` landed separately (see the Health and app-issue section above).
+- **Also:** `SiteListAppHealthCountCostTest` counts-age was a `diffForHumans()` clock race; the test now freezes `Carbon` / `CarbonImmutable`. No product change.
+- Docs: [../decisions/adr-11-dom-test-harness.md](../decisions/adr-11-dom-test-harness.md), [../decisions/README.md](../decisions/README.md).
+
+## Fleet attention is searchable; Cloudflare deletes are danger (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 4 leftover; worktree left dirty on purpose). Backlog items **P1-14 leftover (fleet dashboard)** and **P2-17 leftover (Cloudflare confirms)**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **P1-14 fleet.** `/` was the last page with no list controls. It is still not a second Sites list. The attention cards now have the Sites toolbar: `q` on name / domain / slug / failed-deploy error, `kind=unhealthy|failed|agent|dockerfile`, async region (`Vary: X-Ops-List-Fragment`). KPIs stay the unfiltered snapshot and are skipped on a fragment request. Search runs before the attention cap so a site in `+N` is findable. Clean-fleet and filtered-miss are different empty states. Pagination is omitted — the cards are already capped. Unknown `kind` is dropped. Agent-secret bulk inject stays on the unfiltered card only (fleet-wide `filter_agent=missing`), so a search cannot shrink that confirm.
+- **P2-17 Cloudflare.** Account / zone / live DNS / Deamon-DNS-default deletes now set `data-confirm-danger="true"`. Apply-defaults and reset-to-builtin stay `false`. `ConfirmMatrixTest` walks those pages.
+- **ADR-10.** `health=unhealthy` and `app=issues` landed after this tick (persisted verdict + SQL). Do not reintroduce a fleet scan. [adr-10-health-app-filter-verdict.md](../decisions/adr-10-health-app-filter-verdict.md).
+- Docs: [../modules/ops-list-async.md](../modules/ops-list-async.md), [../modules/ops-sites.md](../modules/ops-sites.md), [../modules/cloudflare-client.md](../modules/cloudflare-client.md). Tests: new `FleetDashboardListTest` (6); `ConfirmMatrixTest` (7); `OpsListFragmentTest` (7) now covers `/`. Neighbours `FleetDashboardTest` 4, `FleetFailedDeployWindowTest` 6, `AgentSecretFleetTest` 11 green.
+
+## Saved site views restore a triage set without F5 (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 4 / tick ~02:15; worktree left dirty on purpose). Backlog item **P1-6**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- A chip row under the Sites toolbar offers built-in views (`Tümü`, `Sorunlu`, `Yayında değil`, `Dockerfile kalanları`) plus up to five operator-named presets. Saving captures filters + columns + sort in `users.list_preferences` (DB). One saved view can be the default: bare `/sites` 302s to it; a region request applies it in place.
+- **`?view=all` is how you leave a default.** Filtreleri temizle uses that sentinel so clearing does not immediately re-apply the default. A saved view naming a removed channel drops that key. `pack=dockerfile` is the leftover-pack predicate; `filter_pack` rides with bulk `all=1`.
+- Chips are plain GET links (`ops-list.js` swaps the region). The save form stays in the toolbar so a search keystroke does not wipe the name. Views are per user; a Viewer may save their own.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Saved views"), [../modules/ops-list-async.md](../modules/ops-list-async.md). Tests: new `SiteSavedViewsTest` (14); `SiteListPreferencesTest` (16, reset does not wipe views); `SiteListEmptyStatesTest` clear URL is `view=all`.
+
+## Confirm matrix covers Coolify, mail and Themes (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 4 leftover; worktree left dirty on purpose). Backlog item **P2-17 leftover**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- Sites already had title / label / explicit danger. The leftover pages did not: Coolify disconnect, mail-server delete, theme-allowlist revoke and theme-git disconnect now set `data-confirm-danger="true"`. Coolify sync / make-default stay `false`.
+- `ConfirmMatrixTest` walks those four surfaces the same way it walks Sites. Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Confirm matrix"), [../modules/coolify-client.md](../modules/coolify-client.md).
+
+## Agent secret is a fleet answer, not a per-site scavenger hunt (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 4; worktree left dirty on purpose). Backlog item **P1-12**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- The fleet had no answer to "which sites have no `CONTROL_PLANE_AGENT_SECRET`, and which have one the CMS has never accepted?" — that fact lived only inside each site's App health card. The dashboard now has an **Agent gizli anahtarı** KPI and attention card splitting `yok` / `doğrulanmamış` / `tamam`.
+- **One predicate, not two.** `Site::missingAgentSecret` / `unverifiedAgentSecret` / `verifiedAgentSecret` are SQL. Verified means a stored secret plus a CMS 200 (`http_status = 200` or payload `status = ok`). A secret with no 200 is `doğrulanmamış`, never `tamam`. `FleetDashboardKpis` and `/sites?agent=` share those scopes.
+- **Bulk inject never rotates.** `POST /sites/bulk/agent-secret` (job `sites.bulk_inject_agent_secret`) writes Coolify env only when the site has none. Existing secrets are `atlandı`. The value is never in the response, widget, audit `after`, or flash. Plane-finished (PATCH env, not a deploy) → **Bitti**. Confirm is danger (P2-17: inject is danger).
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Agent secret across the fleet"), [../modules/agent-client.md](../modules/agent-client.md) (sixth KPI card), [../runbooks/agent-secret-inject.md](../runbooks/agent-secret-inject.md). Tests: `AgentSecretFleetTest` (11); neighbours `FailedDeployFilterTest` (10), `FleetFailedDeployWindowTest` (6), `FleetDashboardTest` (4), `ConfirmMatrixTest`, `SiteBulkDangerMenuTest`, `SiteBulkSelectionScopeTest` green.
+
+## Activity is the fleet log the jobs widget is not (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 4 / tick 4; worktree left dirty on purpose). Backlog item **P1-13**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `GET /jobs` stays JSON-only, `actor = me`, last two hours, 20 rows. `/activity` is a reverse-chronological table merging ops jobs, deployments and audit rows — filterable by search / kind / outcome / actor / site, async region, shared pager. Row click opens the existing deployment show page, a job detail, or a read-only audit detail.
+- **Visibility rule.** Every ops role that can see Sites can read the feed, including another operator's jobs. A Viewer still cannot call `GET /jobs`. Payloads are redacted (`SecretRedactor` plus secret/password/token keys) before they leave the server.
+- The merge is a SQL `UNION ALL` paginated at 25, not an unpaginated `->get()`. Unknown filter values are dropped. `%`/`_` stay literal.
+- Docs: [../modules/ops-activity.md](../modules/ops-activity.md), [../modules/ops-list-async.md](../modules/ops-list-async.md). Tests: new `ActivityFeedTest` (11); `PaletteSearchTest`, `KeyboardShortcutsTest`, `NavPagesTest`, `AuditLogTest` unchanged and green.
+
+## Bulk pin and auto-deploy stop guessing; confirms name danger (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 4; worktree left dirty on purpose). Backlog items **P1-15** and **P2-17**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **P1-15.** The bulk pin dropdown was built from the current page of latest deployments, so `all=1` over a multi-page filter offered SHAs that did not cover the selection. Pin is now always a typed SHA/tag; page commits are a `<datalist>` only when the filtered set fits on this page. Auto-deploy is no longer one toggle that resolved mixed → off (and GETs Coolify to decide). **Aç** and **Kapat** are explicit, `enabled` is required, and `toggleEnabledFor()` is gone.
+- **P2-17.** Sites list and site detail confirms all carry title, label, and an explicit danger flag. Row App-health confirms are `sites.app_health.confirm_fix` (`:name` / `:label`), not Blade concatenation. Danger is delete / unpublish / stop / secret rotate-or-inject / bulk build.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Bulk defaults match the selection", "Confirm matrix"). Tests: `SiteBulkActionsTest` (12), `ConfirmMatrixTest` (3); `SiteBulkSelectionScopeTest`, `SiteBulkDangerMenuTest`, `SiteDetailTest` updated and green.
+
+## Coolify inventory is searchable; Güncellendi is a relative age (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 4; worktree left dirty on purpose). Backlog items **P1-14 leftover (Coolify inventory)**, **P2-18 leftover (Coolify)**, and the **P1-10 leftover `updated` column**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **P1-14 / P2-18 Coolify.** The connection show inventory tab was four bare allowlists. Finding one server among many was Ctrl+F, and an empty tab reused a muted "Liste boş" with no next action. The tab now has the Sites toolbar: `q` on name / uuid / IP, `kind` and `status` allowlists, async region (`Vary: X-Ops-List-Fragment`). Defaults still load the unfiltered collections. A fragment request does not persist `applyUnambiguousDefaults()`. Registry-empty offers **Sync** (or `ops.viewer_readonly`); filter-empty names the inventory size, reuses `ops.partials.filter-chips`, and leads with **Filtreleri temizle**. Pagination is omitted — four collections cannot share one pager without becoming a different page. Inventory-show with no linked sites now offers Sync + back, not a title alone.
+- **P1-10 leftover.** The optional Sites `updated` column printed `Y-m-d H:i`. It now uses `<x-ops.freshness>` with `markStale=false`: relative age, absolute time in the tooltip, never **Eski**, because `updated_at` is not a poll.
+- Docs: [../modules/ops-list-async.md](../modules/ops-list-async.md), [../modules/coolify-client.md](../modules/coolify-client.md), [../modules/ops-sites.md](../modules/ops-sites.md). Tests: new `CoolifyInventoryListTest` (10); `OpsListFragmentTest` now covers `/coolify/{connection}`; `OpsFreshnessTest` / `SiteFreshnessBadgeTest` extended; `CoolifyConnectionsTest` / `CoolifyInventoryDetailTest` unchanged.
+
+## Ctrl/⌘+K jumps the fleet without leaving the keyboard (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 3; worktree left dirty on purpose). Backlog item **P1-9**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `/` already focused the list search and `g` then `s`/`d`/`t`/`f` already jumped the four list pages. The missing half was a palette: `Ctrl/⌘+K` now opens a labelled dialog that searches top-level pages plus sites, domains and themes.
+- **One search definition, not a second.** `GET /palette?q=` (`ops.palette`) reuses `Site::matchingListFilters`, `SiteDomain::matchingListFilters` and `Theme::matchingListFilters` (Themes list search is now that scope too). An empty query returns only nav pages a Viewer can already open — never `/sites/create` or `/jobs`. Bound domains jump to the site; an unbound host opens `/domains?q=`. Limit 8 per group. `%`/`_` stay literal.
+- The script never builds a URL: `g` targets stay on the overlay markup; palette hits come from the JSON. Confirm modal still owns the keyboard; `/` and `g` stay off while typing; `Ctrl/⌘+K` still opens from a field.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Keyboard shortcuts and the quick-jump palette"), [../modules/theme-catalog.md](../modules/theme-catalog.md). Tests: `PaletteSearchTest` (9), `KeyboardShortcutsTest` (6); `ThemeCatalogPageTest`, `ThemeListEmptyStatesTest`, `SiteFleetSearchTest`, `OpsListFragmentTest`, `NavPagesTest`, `SiteCrudTest` unchanged and green.
+
+## Mail servers get list controls and two-cause empty states (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 3; worktree left dirty on purpose). Backlog items **P1-14 (mail servers)** and **P2-18 (mail servers)**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `/mail-servers` was a bare table. Finding one Hostinger account among many was Ctrl+F, and a filtered miss reused the empty-registry hint. The page now has the Sites toolbar: `q` on name / `mail_domain`, `status=enabled|disabled`, async region (`Vary: X-Ops-List-Fragment`), shared pager. The platform-mail chip stays in the shell so a fragment swap cannot drop P2-19's state.
+- Registry-empty offers **Yeni posta sunucusu** (or `ops.viewer_readonly`); filter-empty names the registry size, reuses `ops.partials.filter-chips`, and leads with **Filtreleri temizle**. Coolify inventory still has no list controls — that half of P1-14 is open.
+- Docs: [../modules/mail-servers.md](../modules/mail-servers.md), [../modules/ops-list-async.md](../modules/ops-list-async.md). Tests: new `MailListEmptyStatesTest` (7); `OpsListFragmentTest` now covers `/mail-servers`; `MailServerOpsTest` (8) unchanged and green.
+
+## Stale timestamps become a word; Themes empty states name their cause (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 3; worktree left dirty on purpose). Backlog items **P1-10** and **P2-18 (Themes)**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **P1-10.** Agent health, live and publish hid freshness in a `title` or printed `Y-m-d H:i`, so a four-hour-old poll looked like a healthy site. `OpsFreshness` + `<x-ops.freshness>` now show a relative age (`4 sa önce`) with the absolute time in the tooltip, and a visible **Eski** word when the age is older than 2× the clamped agent poll window. `null` is `Hiç` / `Bilinmiyor` and never stale. The unhealthy KPI still uses `ops.agent.stale_after_minutes` — that is a different, stronger verdict.
+- **P2-18 Themes.** Catalog-empty offers **Katalogu senkronla** (or `ops.viewer_readonly`); filter-empty names the catalog size, reuses `ops.partials.filter-chips`, and leads with **Filtreleri temizle**. Domains empty states were already landed with P1-11.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Stale-data badges"), [../modules/theme-catalog.md](../modules/theme-catalog.md) ("Empty states"). Tests: `OpsFreshnessTest` (4), `SiteFreshnessBadgeTest` (4), `ThemeListEmptyStatesTest` (5); `SiteDetailTest`, `SiteListPreferencesTest`, `SitePublishStateTest`, `ThemeCatalogPageTest`, `SiteHealthEvaluatorTest` unchanged and green.
+
+## Domains bulk-bind the unbound, and an empty registry is not a filtered miss (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 3; worktree left dirty on purpose). Backlog items **P1-11** and **P2-18 for Domains**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `/domains` had a per-row **Coolify’e bağla** and nothing else, so clearing 30 unbound hosts after a Cloudflare change was 30 clicks. The list now has the Sites bulk bar: checkbox column, `all=1` meaning every host matching the current `q` / `unbound` filters (`SiteDomain::matchingListFilters`), a summary that publishes `$domains->total()`, and a confirm that names the count.
+- The sweep (`DomainBindSweep`, job `domains.bulk_bind`) talks to Coolify **once per site**. `SiteLanding::syncCoolifyDomains` writes the whole host list, so two aliases of one site are one PATCH. Already-bound selected hosts are a no-op and never touch Coolify. A 429 is `atlandı (istek sınırı)`, not `hata`; a host with no Coolify app is counted as `unready`, not a throttle skip. `setDomains` is a PATCH, not a rebuild, so the widget reports **Bitti**, not **Tetiklendi**.
+- **P2-18 (Domains).** An empty registry and a filtered miss are different states, reusing `ops.partials.filter-chips`. Nothing in the table → inline **Domain ekle** plus **Coolify’dan içe aktar**; a viewer sees `ops.viewer_readonly`. Filters excluded everything → registry size, one removable chip per active filter, **Filtreleri temizle** as the primary action.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Fleet domains: empty states and bulk bind"), [../modules/ops-list-async.md](../modules/ops-list-async.md). Tests: new `DomainBulkBindTest` (10), new `DomainListEmptyStatesTest` (6); `TruthfulJobCompletionTest` now pins `domains.bulk_bind` as Plane-finished work; `SiteDomainReconcileTest`, `OpsListFragmentTest`, `SiteBulkSelectionScopeTest` unchanged and green.
+
+## Platform mail is in the nav and says whether it works (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 3; worktree left dirty on purpose). Backlog item **P2-19**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- The sidebar `Mail` item linked to `/mail-servers` while matching `ops.platform-mail*` for its active state, so the Deamon product SMTP — the sender behind every password reset, site-down and deploy-failed mail — was reachable only through a `btn-ghost` link on another page, and the nav highlighted the wrong entry once you were there. The nav now has a **Posta** group with **Posta sunucuları** and **Yazılım maili** as separate always-visible links; each owns its own active state. No JS, no disclosure to open.
+- Both mail pages render one state chip from `PlatformMailState::current()`: `Yapılandırılmadı` / `Etkin · sitelere aktarılmadı` / `Son gönderim başarısız · N site` / `Etkin`, each with a visible sentence beside it rather than a `title` tooltip. The two pages cannot drift because they read the same value object.
+- **The failed state needed a fact that did not exist.** A push failure only ever reached `Log::warning`, so "son gönderim başarısız" would have been unprovable. `PlatformMailConfigurer::sync()` — the single choke point for the queued push and the site-detail sync — now stamps `sites.platform_mail_pushed_at` / `platform_mail_push_failed_at` / `platform_mail_push_error`. A success clears the failure, so the chip reports the **last** attempt, not history; sites with no agent secret are never stamped and are not counted. Reasons are short codes (`timeout`, `http_500`, `no_base_url`), never a response body.
+- The nav deliberately carries **no** state: the chip costs a settings read plus one `count()`, and paying that on every page render in the layout is the class of cost P0-2 removed from the Sites list.
+- Docs: [../modules/platform-mail.md](../modules/platform-mail.md) ("Where it lives in the nav", "State chip"). Tests: new `PlatformMailStateTest` (8); `PlatformMailSettingsTest`, `PlatformMailPushJobTest`, `MailServerOpsTest`, `NavPagesTest` unchanged and green.
+
+## The failed-deploy number is a place you can go (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 2; worktree left dirty on purpose). Backlog item **P1-7**, and it closes the two gaps **P0-5** deliberately left open. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- P0-5 made the failed-deploy card honest but dead: it could not become a link and the `+22 site daha` line had to stay plain text, because no list filter resolved that set. `?status=error` is a **different** set, so linking to it would have been a plausible-looking lie.
+- **`deploy=failed`** is now a Sites list filter, alongside `q` / `channel` / `status` / `publish`. The card and the `+N` line link to it, the toolbar offers it as a select, and it produces a removable chip like every other filter.
+- **One predicate, not two.** `Deployment::scopeFailedInWindow()` is the single definition of "failed recently" — status `failed` and `COALESCE(finished_at, started_at, created_at)` inside `ops.fleet.failed_deploy_window_hours`. `FleetDashboardKpis` and `Site::matchingListFilters()` both call it, so the card and the page it opens cannot drift apart. The filter uses `whereHas`, not a join, so a site that failed five times is one row — the same per-site counting the card does.
+- The option and the chip name the window (`Dağıtımı başarısız · son 24 sa`), because "failed" with no timeframe is the ambiguity P0-5 removed from the card. `filter_deploy` rides along in every bulk form, so `all=1` under this filter stays inside it. Unknown values fall back to the unfiltered list rather than emptying it.
+- The unhealthy list's `+N` line stays plain text on purpose: the unhealthy verdict is a PHP evaluation over agent payloads (`SiteHealthEvaluator`), not a SQL predicate, so there is nothing to link to yet without a fleet scan in the filter path — which P0-2 just removed.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Drill down from the failed-deploy card"). Tests: new `FailedDeployFilterTest` (10), `FleetFailedDeployWindowTest` (6) unchanged and green.
+
+## A site waiting for the build slot is not a failure (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 2; worktree left dirty on purpose). This is the **NEW P0** the wave-1 report escalated. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `ops.coolify.deploy.max_concurrent_per_server` is 1, and the gate from `2ccf2ae` counted a bulk sweep's own builds against it: site 1 deployed, its open build then refused site 2, `PacedFanout` retried for `max_site_attempts` short waits and — because a busy gate is not a 429 — counted every remaining site as **`hata`**. A 23-site bulk deploy reported `1 deploy tetiklendi, 22 hata` for sites that were never asked to deploy. The gate's own plan says "bulk path already serial; gate still protects overlapping single-site redeploys", so this was never the intent.
+- **The sweep is the queue.** `PacedFanout::run()` wraps the sweep in `CoolifyDeployGate::duringSweep()`, which snapshots the highest `deployments.id` at open; only builds at or below that watermark block a deploy while the sweep runs. What the gate was written for is intact: a foreign build still refuses the whole sweep, and after the sweep closes an unrelated redeploy queues behind the builds it left open. The gate is now a container singleton, like `CoolifyRateGuard`, because the deploy paths resolve it one site at a time.
+- **Third outcome bucket.** `waiting` joins `failed` and `skipped`: the site was never sent to Coolify and is unchanged, so it is kept out of `errors` as well as out of `failed`. Copy is its own (`ops.bulk.waiting` → `3 sıra bekliyor`, note `ops.bulk.deploy_busy`), distinct from `hata` and from the rate-limit `atlandı`, and appended as a separate segment because waiting is orthogonal to the other three and clears itself. `deploy_busy` mirrors `rate_limited`; `SiteAppHealthFixer::summarize()` and the app-health flash tone follow.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Bulk counting: ok / hata / atlandı / sıra bekliyor", "A sweep does not queue behind its own builds"). Tests: the 4 long-standing `BulkThrottleResilienceTest` failures now pass **unmodified** (8/8), new `BulkDeployWaitingBucketTest` (6), `CoolifyDeployGateTest` (6) unchanged and green.
+
+## Fleet search finds aliases and Coolify uuids; destructive bulk moves behind a menu (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 2; worktree left dirty on purpose). Backlog items **P1-8** and **P2-16**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **P1-8.** `Site::scopeMatchingListFilters` searched `name`, `slug`, `primary_domain` only, so pasting a `www.` host, an alias, the temporary preview host or the Coolify app uuid returned "no results" for a site that exists. The search group now also reaches every `site_domains` host through `whereHas('domains')` — an **exists** subquery, so three matching aliases are still one row and the pagination total stays honest — plus an **exact** match on `coolify_app_uuid` (a prefix would drag in every app sharing an id fragment). `addcslashes($search, '%_\\')` still guards the `like` legs; a `%` term stays literal.
+- A row matched by something invisible explains itself under the site name: `sites.search_match.alias` (`Aramayla eşleşen adres: www.x.com`) or `.uuid`, from `Site::searchMatchReason()`, which returns `null` when the term is already in the name, slug or primary domain so an ordinary search adds no noise. `domains` is eager-loaded **only** while a search term is present: one extra query when searching, zero when browsing. The placeholder now names the wider reach instead of leaving it undiscoverable.
+- **P2-16.** The bulk row was ten flat buttons ending in `btn-danger` **Hard Delete** immediately after **Commite geç**, which with `all=1` put a fleet-wide purge one mis-click from a routine action. **Yayından kaldır** and **Hard Delete** now sit in a separated `Tehlikeli işlemler` disclosure built on the existing `ops-action-menu` primitive (Escape / outside click, `<summary>` works with no JS), inside the bulk form so the buttons stay plain submits with `formaction` and `setupBulkSelection` still finds their `__COUNT__` confirm templates. Nothing was removed and no confirm was weakened; the popover opens upward because the bar ends the page.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Search reaches aliases and Coolify uuids", "Destructive bulk actions sit behind a menu"). Tests: new `SiteFleetSearchTest` (10), new `SiteBulkDangerMenuTest` (5); `SiteBulkActionsTest`, `SiteBulkSelectionScopeTest`, `SiteListEmptyStatesTest`, `SiteListAppHealthCountCostTest`, `OpsListFragmentTest`, `SiteCrudTest` unchanged and green.
+
+## A queued deploy says where in line it is, and a forgotten tab stops paying for it (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 1; worktree left dirty on purpose). Backlog items **P0-3** and **P0-4**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- `ops.coolify.deploy.max_concurrent_per_server` is 1, so a 23-site bulk deploy is one build plus 22 waits — and the widget said only `manuel · kuyrukta` for all 22. The queue state was already known to `OpsCoolifyDeployQueue` and thrown away.
+- `queueStanding()` now ranks unfinished deployments per Coolify host (connection, else server uuid, else the site alone — the same grouping `CoolifyDeployGate` counts against) by `created_at` then `id`. Depth is the **whole** host queue, not the widget's 30-row page, so a 200-site sweep cannot report `sırada 4 / 30`. Running builds count toward `running` but never get a position; they already have an elapsed timer.
+- Waiting rows read `manuel · kuyrukta · sırada 4 / 22` and the widget header adds `1 derleniyor · 22 kuyrukta`. `GET /jobs` and every cancel / force-start response carry `queue { running, queued, label }`, so promoting or cancelling a row re-ranks everything behind it with no page reload. Copy is translated server-side (`ops.jobs.queue_position` / `queue_building` / `queue_waiting`); `ops-jobs.js` prints the payload and assembles nothing, and it still patches rows rather than rebuilding them.
+- **P0-4.** `ops-jobs.js` polled `/jobs` on a flat 1.5s with no `visibilitychange` handling, and every poll is a `GET /deployments` per Coolify connection: one forgotten tab on a ten-minute build was ~400 Coolify requests. Now a hidden tab polls not at all (returning spends exactly one catch-up read), the interval walks `ops.jobs.poll` tiers 1.5s → 5s → 10s after 8 polls that changed nothing, and any real change — status, progress, queue position, or an operator action through `PlaneJobs.track()` — snaps back to the fast tier. `setInterval` is gone; a chained `setTimeout` is what lets the gap move.
+- **P0-4 server side.** `OpsCoolifyDeployQueue::runningDeployments()` caches the raw queue payload per connection for `ops.coolify.deploy.queue_cache_seconds` (5), so N tabs and N operators cost one Coolify read per window. Failures are deliberately not cached (`CoolifyRateGuard` owns the cooldown); cancel and force start forget the connection's entry so nobody is handed back the queue they just changed.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("A queued row says where in line it is", "A poll is a Coolify read, so long waits cost less"). Tests: `DeployQueueStandingTest` (12, includes a Turkish-locale copy check and a 35-deep queue), `JobsPollPressureTest` (5), `DeploymentPollWidgetTest` unchanged and green.
+- **Found, not fixed:** the `max_concurrent_per_server` gate from `2ccf2ae` makes `PacedFanout` report every queued site as **`hata`**. See the risk section of the morning report — this is the next P0.
+
+## Bulk bar states its scope, search stops scanning the fleet, KPIs stop counting history (2026-09-13)
+
+- Status: **code, uncommitted** (overnight wave 1; worktree left dirty on purpose). Backlog: [../superpowers/plans/2026-09-12-overnight-plane-backlog.md](../superpowers/plans/2026-09-12-overnight-plane-backlog.md) items **P0-1**, **P0-2**, **P0-5**, plus the Sites half of **P2-18**. Report: [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md).
+- **P0-1.** The header checkbox posts `all=1`, which every bulk endpoint resolves to *every site matching the current filters* — and nothing on screen said so, including **Hard delete**, whose confirm read a flat `Seçili siteler`. The bulk bar now publishes `$sites->total()` (`3 site seçildi` / `Filtreye uyan 214 sitenin tümü seçildi`, with scope-switch links), leaves the header box `indeterminate` for partial selections, and interpolates the same count into **every** bulk confirm through `data-confirm-template` / `__COUNT__`. The server-rendered fallback uses the filtered total so a broken `ops-ui.js` over-warns instead of under-warning.
+- **P0-2.** `SiteController@index` ran `SiteAppHealthFixer::categoryCounts()` — a `chunkById` walk of the whole `sites` table — on every request, including the region responses `ops-list.js` fires per keystroke, which never render the menu those counts feed. Region requests and non-writers now skip it entirely; page renders read a 60s cache (`ops.app_health.counts_ttl`) and print how old the number is (`sites.app_health.counts_age`); any `fix()` attempt clears the entry.
+- **P2-18 (Sites only).** Filtered-empty is now a different state from fleet-empty: fleet size, one removable chip per active filter (`ops.partials.filter-chips`, reusable for Domains / Coolify / Themes), and **Filtreleri temizle** promoted to the primary action. Domains, Coolify, mail servers and Themes still need the same pass.
+- **P0-5.** The `failed_deploys` KPI was a lifetime `count()` with no window, so it only ever grew and still counted the throttle storm — while the list under it capped at 8, meaning the number and the list openly disagreed. It is now sites with a failure inside `ops.fleet.failed_deploy_window_hours` (default 24, stated in the label), judged by `COALESCE(finished_at, started_at, created_at)`, counted `distinct site_id`, and the attention list shows the latest failure **per site**. Both attention lists cap at `ops.fleet.attention_limit` (default 8) with `+22 site daha`, the chips keep reporting real totals, and `unhealthySites()` stopped `->get()`ing every column of every row (now memoised, narrow-column). A 60-site / 30-failure fixture renders the dashboard in under 25 queries.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md), [../modules/coolify-webhooks.md](../modules/coolify-webhooks.md). Tests: `SiteBulkSelectionScopeTest`, `SiteListAppHealthCountCostTest`, `SiteListEmptyStatesTest`, `FleetFailedDeployWindowTest`; `SiteBulkActionsTest` / `SiteDetailTest` updated for the counted confirms. Pre-existing `BulkThrottleResilienceTest` failures (4) are unrelated and reproduce on a clean `HEAD`.
+
 ## List controls stop needing F5 (2026-09-12)
 
 - Status: **code**. Saving the Sites column layout wrote `users.list_preferences` and then showed the operator the *old* table: the picker posts over fetch, the controller answered with a `back()` redirect to the page it was already on, and `ops-async.js` had nothing to patch. Both preference routes now answer `{ ok, message, list, columns, refresh_list }` for fetch (plain POST still redirects with a flash), and the table re-renders in place.

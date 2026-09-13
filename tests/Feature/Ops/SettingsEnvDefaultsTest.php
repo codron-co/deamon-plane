@@ -77,6 +77,23 @@ class SettingsEnvDefaultsTest extends TestCase
         );
     }
 
+    public function test_env_rows_publish_a_client_search_haystack_and_settings_is_not_a_list_fragment(): void
+    {
+        $response = $this->actingAs($this->user(OpsRole::Operator, 'tr'))
+            ->get(route('ops.settings'))
+            ->assertOk()
+            ->assertSee('data-ops-settings-search', false)
+            ->assertSee('data-env-search-text=', false)
+            ->assertSee('MYSQL_ROOT_PASSWORD', false)
+            ->assertSee(trans('settings.env.search_hint', [], 'tr'), false)
+            ->assertSee(trans('settings.jump.search', [], 'tr'), false)
+            ->assertDontSee(trans('settings.env.search_hint', [], 'en'), false)
+            ->assertDontSee('data-ops-list-toolbar', false);
+
+        $this->assertFalse($response->headers->has('X-Ops-List-Region'));
+        $this->assertStringContainsString('mysql_root_password', mb_strtolower($response->getContent()));
+    }
+
     public function test_viewer_cannot_save_env_defaults(): void
     {
         $this->actingAs($this->user(OpsRole::Viewer))
@@ -97,9 +114,9 @@ class SettingsEnvDefaultsTest extends TestCase
             ->assertDontSee(__('settings.env.save'), false);
     }
 
-    private function user(OpsRole $role): User
+    private function user(OpsRole $role, ?string $locale = null): User
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create($locale === null ? [] : ['locale' => $locale]);
         $user->assignRole($role->value);
 
         return $user;

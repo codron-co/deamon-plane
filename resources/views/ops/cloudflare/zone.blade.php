@@ -202,7 +202,7 @@
                                                     <button type="submit" class="btn btn-secondary btn-sm">{{ __('ops.actions.save') }}</button>
                                                 </div>
                                             </form>
-                                            <form method="POST" action="{{ route('ops.cloudflare.zones.dns.destroy', ['account' => $account, 'zone' => $zone['id'], 'record' => $row['id']]) }}" data-confirm="{{ __('cloudflare.dns.delete_confirm', ['name' => $row['name'], 'type' => $row['type']]) }}" data-confirm-title="{{ __('cloudflare.dns.delete_title') }}" data-confirm-label="{{ __('ops.actions.delete') }}">
+                                            <form method="POST" action="{{ route('ops.cloudflare.zones.dns.destroy', ['account' => $account, 'zone' => $zone['id'], 'record' => $row['id']]) }}" data-confirm="{{ __('cloudflare.dns.delete_confirm', ['name' => $row['name'], 'type' => $row['type']]) }}" data-confirm-title="{{ __('cloudflare.dns.delete_title') }}" data-confirm-label="{{ __('ops.actions.delete') }}" data-confirm-danger="true">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-ghost btn-sm">{{ __('ops.actions.delete') }}</button>
@@ -231,7 +231,7 @@
                     <h2>{{ __('cloudflare.zone.danger_title') }}</h2>
                     <p>{{ __('cloudflare.zone.danger_lede') }}</p>
                 </div>
-                <form method="POST" action="{{ route('ops.cloudflare.zones.destroy', ['account' => $account, 'zone' => $zone['id']]) }}" data-confirm="{{ __('cloudflare.zone.danger_confirm', ['domain' => $zoneName]) }}" data-confirm-title="{{ __('cloudflare.zone.danger_title') }}" data-confirm-label="{{ __('cloudflare.zone.danger_label') }}">
+                <form method="POST" action="{{ route('ops.cloudflare.zones.destroy', ['account' => $account, 'zone' => $zone['id']]) }}" data-confirm="{{ __('cloudflare.zone.danger_confirm', ['domain' => $zoneName]) }}" data-confirm-title="{{ __('cloudflare.zone.danger_title') }}" data-confirm-label="{{ __('cloudflare.zone.danger_label') }}" data-confirm-danger="true">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">{{ __('cloudflare.zone.danger_button') }}</button>

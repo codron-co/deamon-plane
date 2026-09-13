@@ -34,6 +34,9 @@ class InspectSiteAppHealthJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // inspect() writes last_app_health_* and stamps app_has_issues
+        // (ADR-10) on the same save. The job must not return after a Coolify
+        // read without that column — the Sites `app=` filter is SQL on it.
         $inspector->inspect($site, live: true);
     }
 }

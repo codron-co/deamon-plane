@@ -166,6 +166,7 @@
                                             data-confirm="{{ __('sites.themes.activate_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
                                             data-confirm-title="{{ __('sites.themes.activate_title') }}"
                                             data-confirm-label="{{ __('sites.themes.activate') }}"
+                                            data-confirm-danger="false"
                                         >
                                             @csrf
                                             <input type="hidden" name="confirmed" value="0">

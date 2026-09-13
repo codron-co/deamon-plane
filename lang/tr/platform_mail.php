@@ -6,6 +6,20 @@ return [
     'save' => 'Kaydet',
     'push' => 'Sitelere yeniden aktar',
     'form_errors' => 'İşaretli alanları düzeltip tekrar deneyin.',
+    'state_label' => 'Durum',
+    'state_pushed_at' => 'Son aktarım: :time',
+    'state' => [
+        'unconfigured' => 'Yapılandırılmadı',
+        'push_failed' => 'Son gönderim başarısız · :count site',
+        'not_pushed' => 'Etkin · sitelere aktarılmadı',
+        'active' => 'Etkin',
+    ],
+    'state_hint' => [
+        'unconfigured' => 'Yazılım maili kapalı veya SMTP alanları eksik. Sitelerden şifre sıfırlama ve bildirim maili çıkmaz.',
+        'push_failed' => ':count sitenin agent’ı son ayar gönderimini kabul etmedi. Bu sitelerde yazılım maili hâlâ eski ayarla çalışıyor.',
+        'not_pushed' => 'Ayarlar kayıtlı ama henüz hiçbir siteye aktarılmadı. “Sitelere yeniden aktar” ile gönderin.',
+        'active' => 'SMTP hazır ve son gönderimi tüm siteler kabul etti.',
+    ],
     'smtp' => [
         'title' => 'SMTP',
         'hint' => 'CMS admin yazılım mailleri ve Plane ops bildirimleri bu SMTP üzerinden gider. Site üye/iletişim mailleri site mail modülünde kalır.',

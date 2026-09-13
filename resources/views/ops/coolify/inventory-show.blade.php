@@ -199,7 +199,17 @@
         </div>
         @if ($sites->isEmpty())
             <div class="empty-panel">
-                <h2>{{ __('coolify.detail.no_sites') }}</h2>
+                <h2>{{ __('coolify.detail.no_sites_title') }}</h2>
+                <p>{{ __('coolify.detail.no_sites') }}</p>
+                <div class="empty-panel-actions">
+                    @if ($canWrite)
+                        <form method="POST" action="{{ route('ops.coolify.sync', $connection) }}" data-ops-pending data-confirm="{{ __('coolify.show.sync_confirm', ['name' => $connection->name]) }}" data-confirm-title="{{ __('coolify.show.sync_confirm_title') }}" data-confirm-label="{{ __('coolify.show.sync') }}" data-confirm-danger="false">
+                            @csrf
+                            <button type="submit" class="btn btn-primary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('coolify.show.sync') }}</button>
+                        </form>
+                    @endif
+                    <a class="btn btn-ghost" href="{{ route('ops.coolify.show', $connection) }}">{{ __('coolify.detail.back_to_connection') }}</a>
+                </div>
             </div>
         @else
             <div class="sites-table-wrap">

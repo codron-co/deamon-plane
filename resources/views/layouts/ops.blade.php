@@ -72,6 +72,10 @@
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h5v4h-5v-4Zm6 0h5v6h-5v-6Zm-6 5h5v4h-5v-4Zm6 7v-5h5v5h-5Z" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
                     {{ __('ops.nav.fleet') }}
                 </a>
+                <a class="ops-nav-item {{ request()->routeIs('ops.activity*') ? 'is-active' : '' }}" href="{{ route('ops.activity') }}">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v4.6l2.6 1.6M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12Z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+                    {{ __('ops.nav.activity') }}
+                </a>
                 <a class="ops-nav-item {{ request()->routeIs('ops.sites*') ? 'is-active' : '' }}" href="{{ route('ops.sites') }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 13.5V5.2L8 2.5l5.5 2.7v8.3H2.5Zm3-0.5v-4h5v4" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
                     {{ __('ops.nav.sites') }}
@@ -88,10 +92,17 @@
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.2 11.5h8.1c1.2 0 2.2-1 2.2-2.2 0-1.1-.8-2-1.9-2.2.1-.3.2-.6.2-.9A2.7 2.7 0 0 0 10.1 3.5c-1.1 0-2.1.7-2.5 1.7A3.1 3.1 0 0 0 2.2 8.4c0 1.7 1.4 3.1 3.1 3.1Z" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
                     {{ __('ops.nav.cloudflare') }}
                 </a>
-                <a class="ops-nav-item {{ request()->routeIs('ops.mail-servers*', 'ops.platform-mail*') ? 'is-active' : '' }}" href="{{ route('ops.mail-servers.index') }}">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11v7h-11v-7Zm0 0 5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
-                    {{ __('ops.nav.mail') }}
-                </a>
+                <div class="ops-nav-group" role="group" aria-labelledby="ops-nav-mail-label">
+                    <span class="ops-nav-group-label" id="ops-nav-mail-label">{{ __('ops.nav.mail') }}</span>
+                    <a class="ops-nav-item is-sub {{ request()->routeIs('ops.mail-servers*') ? 'is-active' : '' }}" href="{{ route('ops.mail-servers.index') }}">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11v7h-11v-7Zm0 0 5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+                        {{ __('ops.nav.mail_servers') }}
+                    </a>
+                    <a class="ops-nav-item is-sub {{ request()->routeIs('ops.platform-mail*') ? 'is-active' : '' }}" href="{{ route('ops.platform-mail.edit') }}">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 2.5 2.5 7l4.3 1.7L8.5 13l5-10.5Zm0 0L6.8 8.7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+                        {{ __('ops.nav.platform_mail') }}
+                    </a>
+                </div>
                 <a class="ops-nav-item {{ request()->routeIs('ops.themes*') ? 'is-active' : '' }}" href="{{ route('ops.themes') }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10v9H3v-9Zm2 3h6M5 9h4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
                     {{ __('ops.nav.themes') }}
@@ -124,6 +135,7 @@
                         </div>
 
                         <a class="ops-menu-link {{ request()->routeIs('ops.account.show') ? 'is-active' : '' }}" href="{{ route('ops.account.show') }}">{{ __('ops.user_menu.account') }}</a>
+
 
                         <div class="ops-menu-section">
                             <span class="ops-menu-label">{{ __('ops.user_menu.preferences') }}</span>
@@ -206,6 +218,9 @@
                     @hasSection('actions')
                         <div class="ops-topbar-actions">@yield('actions')</div>
                     @endif
+                    <button type="button" class="ops-icon-btn ops-shortcuts-trigger" data-ops-shortcuts-open aria-label="{{ __('ops.shortcuts.open') }}" title="{{ __('ops.shortcuts.title') }}">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="4" width="13" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M4.2 6.6h.01M6.6 6.6h.01M9 6.6h.01M11.4 6.6h.01M5 9.4h6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    </button>
                 </div>
             </header>
             <div class="ops-content @yield('content_class')">
@@ -224,12 +239,17 @@
     </div>
     @include('ops.partials.confirm-modal')
     @include('ops.partials.jobs-widget')
+    @include('ops.partials.shortcuts-overlay')
+    @include('ops.partials.palette')
+    <script src="{{ asset('js/ops-contracts.js') }}?v={{ filemtime(public_path('js/ops-contracts.js')) }}" defer></script>
     <script src="{{ asset('js/ops-confirm.js') }}" defer></script>
     <script src="{{ asset('js/ops-ui.js') }}?v={{ filemtime(public_path('js/ops-ui.js')) }}" defer></script>
     <script src="{{ asset('js/ops-jobs.js') }}?v={{ filemtime(public_path('js/ops-jobs.js')) }}" defer></script>
     <script src="{{ asset('js/ops-async.js') }}?v={{ filemtime(public_path('js/ops-async.js')) }}" defer></script>
     <script src="{{ asset('js/ops-list.js') }}?v={{ filemtime(public_path('js/ops-list.js')) }}" defer></script>
     <script src="{{ asset('js/ops-app-health.js') }}?v={{ filemtime(public_path('js/ops-app-health.js')) }}" defer></script>
+    <script src="{{ asset('js/ops-shortcuts.js') }}?v={{ filemtime(public_path('js/ops-shortcuts.js')) }}" defer></script>
+    <script src="{{ asset('js/ops-palette.js') }}?v={{ filemtime(public_path('js/ops-palette.js')) }}" defer></script>
     @yield('scripts')
 </body>
 </html>

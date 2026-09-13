@@ -19,7 +19,7 @@
     <dl class="site-fact-list is-compact">
         <div>
             <dt>{{ __('sites.publish.last_confirmed') }}</dt>
-            <dd>{{ $site->cms_site_status_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.never') }}</dd>
+            <dd><x-ops.freshness :at="$site->cms_site_status_at" :missing="__('ops.unknown')" /></dd>
         </div>
     </dl>
 

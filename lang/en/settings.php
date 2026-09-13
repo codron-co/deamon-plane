@@ -3,6 +3,11 @@
 return [
     'title' => 'Settings',
     'lede' => 'System configuration for this Plane. Tokens are never shown. Personal name, email and password live in Account.',
+    'jump' => [
+        'label' => 'Settings sections',
+        'search' => 'Jump to a section or env key',
+        'empty' => 'No settings section matches that search.',
+    ],
     'defaults' => 'Customer site defaults',
     'defaults_hint' => 'From environment. Provision jobs create git + Docker Compose apps — never Nixpacks, never raw POST /applications/dockercompose.',
     'repository' => 'Customer git repository',
@@ -24,6 +29,8 @@ return [
     'env' => [
         'title' => 'Coolify env defaults',
         'lede' => 'Applied on every Plane deploy and when a Dockerfile app is switched to Compose. Missing or placeholder secrets are filled; existing MySQL passwords are not rotated. Coolify-injected keys are listed but never written.',
+        'search_hint' => 'The search above also filters keys. Save still writes the whole catalog; unmatched rows are only hidden.',
+        'search_empty' => 'No keys in this pack match that search.',
         'tabs' => 'Build pack',
         'developer' => 'Developer view',
         'developer_hint' => 'Raw catalog as KEY=value. Placeholders are templates, not live site secrets.',

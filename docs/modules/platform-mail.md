@@ -15,6 +15,36 @@ Plane holds the **software / ops SMTP** used for Deamon admin and fleet emails. 
 
 `/platform-mail` — SMTP + notification toggles.
 
+### Where it lives in the nav
+
+The sidebar has a **Posta** group with two entries: **Posta sunucuları** (`/mail-servers`) and
+**Yazılım maili** (`/platform-mail`). Both are plain links, always rendered, so platform mail is one
+click from any page. Before this, the single `Mail` item linked to `/mail-servers` while also
+matching `ops.platform-mail*` for its active state, so the product SMTP was reachable only through a
+ghost link on the mail servers page and the nav highlighted the wrong entry once you got there.
+
+### State chip
+
+`PlatformMailState::current()` is the one answer both mail pages render, so they cannot disagree:
+
+| Key | Chip (tr) | When |
+|-----|-----------|------|
+| `unconfigured` | `Yapılandırılmadı` | no row, or `isReady()` false (disabled or missing host / user / password / from) |
+| `push_failed` | `Son gönderim başarısız · :count site` | at least one site whose **last** push attempt failed |
+| `not_pushed` | `Etkin · sitelere aktarılmadı` | ready, but `last_pushed_at` is null |
+| `active` | `Etkin` | ready, pushed, and no site is in a failed state |
+
+Every chip carries a visible sentence next to it, not a `title` tooltip, and the tone is never the
+only signal. The chip never renders SMTP credentials; `platform_mail.fields.password_saved`
+behaviour on the form is untouched.
+
+`sites.platform_mail_pushed_at` / `platform_mail_push_failed_at` / `platform_mail_push_error` are
+written by `PlatformMailConfigurer::sync()` — the single choke point for both the queued push and the
+site-detail sync. A success **clears** the failure columns, so "failed" always means "the last
+attempt failed", not "it failed once in the past". Sites that were never pushed (no agent secret) stay
+null and are not counted as failures. Reasons are short codes (`timeout`, `http_500`, `no_base_url`),
+never a response body, so nothing leaks into the panel.
+
 ### Save vs push to sites
 
 - **Save** (`PUT`) persists `PlatformMailSetting`, writes an audit log, and flashes success immediately (`platform_mail.flash.saved_push_queued`). Validation errors stay on the form; no success flash on failed validation.
@@ -58,5 +88,6 @@ CMS-sent platform mail uses the customer site unsubscribe host (companion CMS pl
 ## Tests
 
 - `tests/Feature/Ops/PlatformMailSettingsTest.php` — save flash, validation, push job dispatch, test mail
+- `tests/Feature/Ops/PlatformMailStateTest.php` — nav reachability from any page, the four chip states, per-site push outcome recording
 - `tests/Feature/Ops/PlatformMailUnsubscribeTest.php` — signed unsubscribe, opt-out storage, mail headers
 - CMS: `ControlPlanePlatformMailConfigureTest`

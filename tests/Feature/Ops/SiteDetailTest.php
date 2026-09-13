@@ -7,6 +7,7 @@ use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
+use App\Models\CoolifyConnection;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\Theme;
@@ -122,7 +123,9 @@ class SiteDetailTest extends TestCase
             ->assertSee('aria-label="'.__('sites.columns.open_live', ['domain' => $site->primary_domain]).'"', false)
             ->assertSee(route('ops.sites.edit', $site), false)
             ->assertDontSee('data-href="'.route('ops.sites.edit', $site).'"', false)
-            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_toggle').'"', false)
+            // Bulk confirms name the selection scope, so the rendered body carries a count.
+            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_on', ['count' => 2]).'"', false)
+            ->assertSee('data-confirm="'.__('site_ops.bulk.confirm_auto_off', ['count' => 2]).'"', false)
             ->assertSee(__('sites.columns.app'), false)
             ->assertSee(__('sites.columns.live'), false)
             ->assertSee(__('sites.live.sync'), false)
@@ -200,6 +203,84 @@ class SiteDetailTest extends TestCase
         $this->assertSame(SiteStatus::Active, $site->fresh()->status);
     }
 
+    public function test_detail_offers_copy_for_site_id_and_coolify_uuids(): void
+    {
+        $site = Site::factory()->create([
+            'name' => 'Copy Ids',
+            'coolify_app_uuid' => 'app-copy-uuid-123456',
+            'coolify_server_uuid' => 'srv-copy-uuid',
+            'coolify_project_uuid' => 'prj-copy-uuid',
+            'coolify_environment_uuid' => 'env-copy-uuid',
+        ]);
+
+        $html = $this->actingAs($this->user(OpsRole::Operator, 'tr'))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('data-copy-value="'.$site->id.'"', $html);
+        $this->assertStringContainsString('data-copy-value="app-copy-uuid-123456"', $html);
+        $this->assertStringContainsString('data-copy-value="srv-copy-uuid"', $html);
+        $this->assertStringContainsString('data-copy-value="prj-copy-uuid"', $html);
+        $this->assertStringContainsString('data-copy-value="env-copy-uuid"', $html);
+        $this->assertStringContainsString(trans('sites.detail.copy_site_id', [], 'tr'), $html);
+        $this->assertStringContainsString(trans('sites.detail.copy_app_uuid', [], 'tr'), $html);
+        $this->assertStringContainsString(trans('sites.detail.site_id', [], 'tr'), $html);
+        $this->assertStringNotContainsString(trans('sites.detail.copy_site_id', [], 'en'), $html);
+    }
+
+    public function test_detail_offers_copy_for_the_coolify_deep_link(): void
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://dev.codron.cloud',
+            'is_default' => true,
+            'default_project_uuid' => 'z8ocg8k04ww8osssccc088c0',
+            'default_environment_uuid' => 'sns276euzsz2fprqg3xgfz17',
+        ]);
+        $site = Site::factory()->create([
+            'name' => 'Copy Link',
+            'coolify_app_uuid' => 'a3p6sgysfwjqhv4yntth1n85',
+            'coolify_connection_id' => $connection->id,
+            'coolify_project_uuid' => 'z8ocg8k04ww8osssccc088c0',
+            'coolify_environment_uuid' => 'i0sw4kk0cogg4o08oscwcssk',
+        ]);
+        $url = $site->coolifyUiUrl();
+
+        $html = $this->actingAs($this->user(OpsRole::Operator, 'tr'))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertNotNull($url);
+        $this->assertStringContainsString('data-copy-value="'.$url.'"', $html);
+        $this->assertStringContainsString(trans('sites.detail.copy_coolify_url', [], 'tr'), $html);
+        $this->assertStringContainsString(trans('sites.detail.coolify_url', [], 'tr'), $html);
+        $this->assertStringNotContainsString(trans('sites.detail.copy_coolify_url', [], 'en'), $html);
+        $this->assertStringContainsString('href="'.$url.'"', $html);
+    }
+
+    public function test_detail_does_not_offer_copy_for_missing_coolify_uuids(): void
+    {
+        $site = Site::factory()->create([
+            'name' => 'No Uuid',
+            'coolify_app_uuid' => null,
+            'coolify_server_uuid' => null,
+            'coolify_project_uuid' => null,
+            'coolify_environment_uuid' => null,
+        ]);
+
+        $html = $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee(__('sites.detail.copy_site_id'), false)
+            ->getContent();
+
+        $this->assertStringContainsString('data-copy-value="'.$site->id.'"', $html);
+        $this->assertStringNotContainsString('data-copy-value=""', $html);
+        $this->assertStringNotContainsString(__('sites.detail.copy_app_uuid'), $html);
+        $this->assertStringNotContainsString(__('sites.detail.copy_coolify_url'), $html);
+    }
+
     public function test_viewer_can_open_detail_but_does_not_get_edit_or_danger_tab(): void
     {
         $site = Site::factory()->create([
@@ -222,9 +303,9 @@ class SiteDetailTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/data-site-panel[^>]*\bhidden\b/', $html);
     }
 
-    private function user(OpsRole $role): User
+    private function user(OpsRole $role, ?string $locale = null): User
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create($locale === null ? [] : ['locale' => $locale]);
         $user->assignRole($role->value);
 
         return $user;

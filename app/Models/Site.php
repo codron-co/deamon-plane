@@ -7,8 +7,10 @@ use App\Enums\CmsPublishStatus;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
+use App\Services\Agent\AgentHealthStatus;
 use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Sites\SiteAppHealthReport;
+use App\Services\Sites\SiteFilterVerdict;
 use App\Support\IdentityMark;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -71,6 +73,9 @@ class Site extends Model
         'mail_domain',
         'platform_notification_overrides',
         'platform_mail_recipient',
+        'platform_mail_pushed_at',
+        'platform_mail_push_failed_at',
+        'platform_mail_push_error',
         'last_notified_deamon_version',
         'last_health_notify_status',
         'last_health_notify_at',
@@ -103,13 +108,20 @@ class Site extends Model
             'agent_secret_encrypted' => 'encrypted',
             'last_health_at' => 'datetime',
             'last_health_payload' => 'array',
+            'health_unhealthy' => 'boolean',
+            'health_verdict_at' => 'datetime',
             'last_live_http_status' => 'integer',
             'last_live_checked_at' => 'datetime',
             'last_app_health_at' => 'datetime',
             'last_app_health_payload' => 'array',
+            'app_has_issues' => 'boolean',
+            'app_health_issue_count' => 'integer',
+            'app_health_verdict_at' => 'datetime',
             'cloudflare_nameservers' => 'array',
             'dns_applied_at' => 'datetime',
             'platform_notification_overrides' => 'array',
+            'platform_mail_pushed_at' => 'datetime',
+            'platform_mail_push_failed_at' => 'datetime',
             'last_health_notify_at' => 'datetime',
         ];
     }
@@ -134,6 +146,24 @@ class Site extends Model
 
             if ($site->desired_channel instanceof Channel) {
                 Channel::assertAllowed($site->desired_channel);
+            }
+
+            // ADR-10: stamp the list-filter columns on the same save as the
+            // payload / status they are derived from. Never walk the fleet.
+            if ($site->isDirty(['status', 'last_health_at', 'last_health_payload', 'agent_secret_encrypted'])) {
+                SiteFilterVerdict::applyHealth($site);
+            }
+
+            if ($site->isDirty([
+                'last_app_health_payload',
+                'last_app_health_at',
+                'last_health_payload',
+                'last_health_at',
+                'agent_secret_encrypted',
+                'notes',
+                'coolify_app_uuid',
+            ])) {
+                SiteFilterVerdict::applyApp($site);
             }
         });
     }
@@ -397,6 +427,27 @@ class Site extends Model
         return filled($this->coolify_app_uuid) && $this->status === SiteStatus::Active;
     }
 
+    /**
+     * Coolify accepts docker_compose_domains only after compose is loaded from a
+     * real deploy. Draft / provisioning / failed-provision sites must not PATCH.
+     */
+    public function canBindCoolifyDomains(): bool
+    {
+        if (blank($this->coolify_app_uuid)) {
+            return false;
+        }
+
+        $status = $this->status instanceof SiteStatus
+            ? $this->status
+            : SiteStatus::tryFrom((string) $this->status);
+
+        return in_array($status, [
+            SiteStatus::Active,
+            SiteStatus::Deploying,
+            SiteStatus::Stopped,
+        ], true);
+    }
+
     public function hasAgentSecret(): bool
     {
         $raw = $this->getRawOriginal('agent_secret_encrypted');
@@ -585,6 +636,47 @@ class Site extends Model
     public const DOCKERFILE_BUILD_PACK_MARKER = 'dockerfile_build_pack';
 
     /**
+     * Deploy-state list filters. `failed` is the set the fleet failed-deploy card
+     * counts, so «Tümünü gör» lands on exactly the sites behind that number.
+     *
+     * @var list<string>
+     */
+    public const DEPLOY_FILTERS = ['failed'];
+
+    /**
+     * Agent-secret list filters. `missing` / `unverified` / `ok` are the three
+     * buckets the fleet card counts, so «Tümünü gör» lands on exactly those sites.
+     *
+     * @var list<string>
+     */
+    public const AGENT_FILTERS = ['missing', 'unverified', 'ok'];
+
+    /**
+     * Build-pack list filters. `dockerfile` is the leftover set the fleet
+     * attention card lists, so the built-in «Dockerfile kalanları» view lands
+     * on exactly those sites.
+     *
+     * @var list<string>
+     */
+    public const PACK_FILTERS = ['dockerfile'];
+
+    /**
+     * Agent-health list filters. `unhealthy` is the set the fleet unhealthy
+     * card counts, so «Tümünü gör» lands on exactly those sites.
+     *
+     * @var list<string>
+     */
+    public const HEALTH_FILTERS = ['unhealthy'];
+
+    /**
+     * App-health list filters. `issues` is the set the header Fix App issues
+     * menu can drill into — sites with at least one needed fix.
+     *
+     * @var list<string>
+     */
+    public const APP_FILTERS = ['issues'];
+
+    /**
      * Coolify fleet import writes this marker into notes when build_pack is dockerfile.
      */
     public function hasDockerfileBuildPackWarning(): bool
@@ -605,19 +697,34 @@ class Site extends Model
      * @param  Builder<Site>  $query
      * @return Builder<Site>
      */
-    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = '', string $publish = ''): Builder
+    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = '', string $publish = '', string $deploy = '', string $agent = '', string $pack = '', string $health = '', string $app = ''): Builder
     {
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
         $status = in_array($status, SiteStatus::values(), true) ? $status : '';
         $publish = in_array($publish, [...CmsPublishStatus::values(), 'unknown'], true) ? $publish : '';
+        $deploy = in_array($deploy, self::DEPLOY_FILTERS, true) ? $deploy : '';
+        $agent = in_array($agent, self::AGENT_FILTERS, true) ? $agent : '';
+        $pack = in_array($pack, self::PACK_FILTERS, true) ? $pack : '';
+        $health = in_array($health, self::HEALTH_FILTERS, true) ? $health : '';
+        $app = in_array($app, self::APP_FILTERS, true) ? $app : '';
 
         if ($search !== '') {
             $term = addcslashes($search, '%_\\');
-            $query->where(function (Builder $builder) use ($term): void {
+            /*
+             * The operator pastes whatever they have in hand: a www host, an alias, the
+             * temporary preview host, or the Coolify app uuid. `site_domains` carries every
+             * host, so it is reached with an exists subquery — a join would return the same
+             * site once per matching alias.
+             */
+            $query->where(function (Builder $builder) use ($term, $search): void {
                 $builder->where('name', 'like', "%{$term}%")
                     ->orWhere('slug', 'like', "%{$term}%")
-                    ->orWhere('primary_domain', 'like', "%{$term}%");
+                    ->orWhere('primary_domain', 'like', "%{$term}%")
+                    ->orWhereHas('domains', function (Builder $domains) use ($term): void {
+                        $domains->where('domain', 'like', "%{$term}%");
+                    })
+                    ->orWhere('coolify_app_uuid', $search);
             });
         }
 
@@ -635,7 +742,167 @@ class Site extends Model
             $query->where('cms_site_status', $publish);
         }
 
+        if ($deploy === 'failed') {
+            // `whereHas`, not a join: a site with five failed retries is one row.
+            $query->whereHas('deployments', static fn (Builder $deployments): Builder => $deployments->failedInWindow());
+        }
+
+        if ($agent === 'missing') {
+            $query->missingAgentSecret();
+        } elseif ($agent === 'unverified') {
+            $query->unverifiedAgentSecret();
+        } elseif ($agent === 'ok') {
+            $query->verifiedAgentSecret();
+        }
+
+        if ($pack === 'dockerfile') {
+            $query->withDockerfileBuildPackWarning();
+        }
+
+        if ($health === 'unhealthy') {
+            $query->unhealthy();
+        }
+
+        if ($app === 'issues') {
+            $query->withAppIssues();
+        }
+
         return $query;
+    }
+
+    /**
+     * Fleet unhealthy KPI and `/sites?health=unhealthy`. One SQL predicate:
+     * persisted verdict, status=error, stored agent-fail signals, or stale.
+     *
+     * @param  Builder<Site>  $query
+     * @return Builder<Site>
+     */
+    public function scopeUnhealthy(Builder $query): Builder
+    {
+        return SiteFilterVerdict::constrainUnhealthy($query);
+    }
+
+    /**
+     * Sites whose last inspect/health write left at least one needed App fix.
+     *
+     * @param  Builder<Site>  $query
+     * @return Builder<Site>
+     */
+    public function scopeWithAppIssues(Builder $query): Builder
+    {
+        return $query->where('app_has_issues', true);
+    }
+
+    /**
+     * Plane has no CONTROL_PLANE_AGENT_SECRET stored for this site.
+     *
+     * @param  Builder<Site>  $query
+     * @return Builder<Site>
+     */
+    public function scopeMissingAgentSecret(Builder $query): Builder
+    {
+        // Encrypted column: a stored secret is ciphertext, never ''. Null is the
+        // only "no secret" row import and draft-create leave behind.
+        return $query->whereNull('agent_secret_encrypted');
+    }
+
+    /**
+     * A stored secret the CMS has accepted with HTTP 200 (or status=ok).
+     *
+     * @param  Builder<Site>  $query
+     * @return Builder<Site>
+     */
+    public function scopeVerifiedAgentSecret(Builder $query): Builder
+    {
+        return $query->whereNotNull('agent_secret_encrypted')
+            ->where(function (Builder $verified): void {
+                $verified->where('last_health_payload->http_status', 200)
+                    ->orWhere('last_health_payload->status', AgentHealthStatus::Ok);
+            });
+    }
+
+    /**
+     * A stored secret the CMS has never answered 200 for.
+     *
+     * @param  Builder<Site>  $query
+     * @return Builder<Site>
+     */
+    public function scopeUnverifiedAgentSecret(Builder $query): Builder
+    {
+        return $query->whereNotNull('agent_secret_encrypted')
+            ->where(function (Builder $unverified): void {
+                $unverified->where(function (Builder $http): void {
+                    $http->whereNull('last_health_payload->http_status')
+                        ->orWhere('last_health_payload->http_status', '!=', 200);
+                })->where(function (Builder $status): void {
+                    $status->whereNull('last_health_payload->status')
+                        ->orWhere('last_health_payload->status', '!=', AgentHealthStatus::Ok);
+                });
+            });
+    }
+
+    /**
+     * @return 'missing'|'unverified'|'ok'
+     */
+    public function agentSecretFleetState(): string
+    {
+        if (! $this->hasAgentSecret()) {
+            return 'missing';
+        }
+
+        return $this->agentSecretIsVerified() ? 'ok' : 'unverified';
+    }
+
+    /**
+     * CMS answered 200 for this secret (or stored status=ok from that path).
+     */
+    public function agentSecretIsVerified(): bool
+    {
+        if (! $this->hasAgentSecret()) {
+            return false;
+        }
+
+        $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
+        if (($payload['status'] ?? null) === AgentHealthStatus::Ok) {
+            return true;
+        }
+
+        return (int) ($payload['http_status'] ?? 0) === 200;
+    }
+
+    /**
+     * Why this row is in a search result when its visible identity does not contain
+     * the term: an alias host, or the Coolify app uuid that was pasted. Returns
+     * `null` when the match is already on screen, so the row stays quiet.
+     *
+     * @return array{type: 'alias'|'uuid', value: string}|null
+     */
+    public function searchMatchReason(string $search): ?array
+    {
+        $term = mb_strtolower(trim($search));
+        if ($term === '') {
+            return null;
+        }
+
+        foreach ([$this->name, $this->slug, $this->primary_domain] as $visible) {
+            if (str_contains(mb_strtolower((string) $visible), $term)) {
+                return null;
+            }
+        }
+
+        if (filled($this->coolify_app_uuid) && mb_strtolower((string) $this->coolify_app_uuid) === $term) {
+            return ['type' => 'uuid', 'value' => (string) $this->coolify_app_uuid];
+        }
+
+        $rows = $this->relationLoaded('domains') ? $this->domains : $this->domains()->get();
+        foreach ($rows as $row) {
+            $host = (string) $row->domain;
+            if ($host !== '' && str_contains(mb_strtolower($host), $term)) {
+                return ['type' => 'alias', 'value' => $host];
+            }
+        }
+
+        return null;
     }
 
     public function clearDockerfileBuildPackWarning(): void

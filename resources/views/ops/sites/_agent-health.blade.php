@@ -29,6 +29,7 @@
                     data-confirm="{{ __('sites.agent.rotate_confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('sites.agent.rotate_title') }}"
                     data-confirm-label="{{ __('sites.agent.rotate') }}"
+                    data-confirm-danger="true"
                 >
                     @csrf
                     <button type="submit" class="ops-icon-btn is-lg" aria-label="{{ __('sites.agent.rotate') }}" title="{{ __('sites.agent.rotate') }}" data-pending-label="{{ __('ops.actions.working') }}">
@@ -51,7 +52,7 @@
     <dl class="site-fact-list is-compact">
         <div>
             <dt>{{ __('sites.agent.last_check') }}</dt>
-            <dd>{{ $site->last_health_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? __('ops.never') }}</dd>
+            <dd><x-ops.freshness :at="$site->last_health_at" /></dd>
         </div>
         <div>
             <dt>{{ __('sites.agent.version') }}</dt>

@@ -2,12 +2,28 @@
     <div class="empty-panel">
         <h2>{{ __('themes.empty.title') }}</h2>
         <p>{{ __('themes.empty.hint') }}</p>
+        @if ($canSync ?? false)
+            <div class="empty-panel-actions">
+                <form method="POST" action="{{ route('ops.themes.sync') }}" data-ops-pending>
+                    @csrf
+                    <button type="submit" class="btn btn-primary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('themes.sync') }}</button>
+                </form>
+            </div>
+        @else
+            <p class="empty-panel-note">{{ __('ops.viewer_readonly') }}</p>
+        @endif
     </div>
 @elseif ($themes->isEmpty())
-    <div class="empty-panel">
+    <div class="empty-panel empty-panel-filtered">
         <h2>{{ __('themes.empty.filtered_title') }}</h2>
-        <p>{{ __('themes.empty.filtered_hint') }}</p>
-        <a class="btn btn-ghost" href="{{ route('ops.themes') }}">{{ __('ops.actions.clear_filters') }}</a>
+        <p>{{ __('themes.empty.filtered_hint', ['total' => $totalThemes ?? 0]) }}</p>
+        @include('ops.partials.filter-chips', [
+            'chips' => $activeFilters ?? [],
+            'label' => __('themes.empty.filters_label'),
+        ])
+        <div class="empty-panel-actions">
+            <a class="btn btn-primary" href="{{ route('ops.themes') }}">{{ __('ops.actions.clear_filters') }}</a>
+        </div>
     </div>
 @else
     <div class="sites-table-wrap">

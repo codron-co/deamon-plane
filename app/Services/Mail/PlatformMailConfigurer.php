@@ -25,6 +25,8 @@ final class PlatformMailConfigurer
 
         $baseUrl = $site->resolvedAgentBaseUrl();
         if ($baseUrl === null) {
+            $this->recordPushOutcome($site, 'no_base_url');
+
             return SiteMailConfigureResult::failure('Site has no agent base URL or primary domain.');
         }
 
@@ -53,6 +55,8 @@ final class PlatformMailConfigurer
 
         $body = ControlPlaneAgentContract::encodeJson($payload);
         if ($body === '') {
+            $this->recordPushOutcome($site, 'encode_failed');
+
             return SiteMailConfigureResult::failure('Platform mail payload could not be encoded.');
         }
 
@@ -69,22 +73,27 @@ final class PlatformMailConfigurer
                 ->post($url);
         } catch (ConnectionException) {
             $this->logFailure($site, 'timeout');
+            $this->recordPushOutcome($site, 'timeout');
 
             return SiteMailConfigureResult::failure('Platform mail configure timed out.');
         } catch (Throwable) {
             $this->logFailure($site, 'http_error');
+            $this->recordPushOutcome($site, 'http_error');
 
             return SiteMailConfigureResult::failure('Platform mail configure request failed.');
         }
 
         if ($response->failed()) {
             $this->logFailure($site, 'http_error', $response->status());
+            $this->recordPushOutcome($site, 'http_'.$response->status());
 
             return SiteMailConfigureResult::failure(
                 'Platform mail configure returned HTTP '.$response->status().'.',
                 $response->status(),
             );
         }
+
+        $this->recordPushOutcome($site, null);
 
         return SiteMailConfigureResult::ok($enabled, $response->status());
     }
@@ -109,6 +118,28 @@ final class PlatformMailConfigurer
         }
 
         return $count;
+    }
+
+    /**
+     * Remember whether this site accepted the last push, so the panel can say
+     * "son gönderim başarısız" instead of leaving the failure in the log only.
+     * A success clears the failure: the chip reports the latest attempt, not history.
+     */
+    private function recordPushOutcome(Site $site, ?string $reason): void
+    {
+        $attributes = $reason === null
+            ? [
+                'platform_mail_pushed_at' => now(),
+                'platform_mail_push_failed_at' => null,
+                'platform_mail_push_error' => null,
+            ]
+            : [
+                'platform_mail_push_failed_at' => now(),
+                'platform_mail_push_error' => $reason,
+            ];
+
+        $site->forceFill($attributes);
+        Site::query()->whereKey($site->getKey())->update($attributes);
     }
 
     private function logFailure(Site $site, string $reason, ?int $httpStatus = null): void

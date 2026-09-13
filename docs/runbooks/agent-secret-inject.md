@@ -14,7 +14,7 @@ Plane **Generate & inject secret** (only when the site has no secret) calls Cool
 
 ## Steps
 
-1. Plane → site detail → Infrastructure: **Generate & inject secret** if missing, or the rotate icon if the secret is already configured.
+1. Fleet: **Filo → Agent gizli anahtarı** (or Sites `?agent=missing`) → **Gizli anahtar üret ve gönder**. That path only writes sites with no secret; it never rotates. Or one site: detail → Infrastructure → **Generate & inject secret** if missing, or the rotate icon if the secret is already configured.
 2. If Coolify env write fails, use Coolify UI on the **app** service only (not MySQL/Redis). Redeploy; do not DELETE the application. Do not paste the secret into tickets.
 3. Plane → site edit → **Check health**. Expect status `ok` and a `deamon_version`.
 4. CMS Task 8 (`/internal/control/v1/health`) must be deployed. Headers: `X-Deamon-Timestamp`, `X-Deamon-Nonce`, `X-Deamon-Signature`.

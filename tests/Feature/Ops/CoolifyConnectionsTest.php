@@ -395,7 +395,7 @@ class CoolifyConnectionsTest extends TestCase
             ->assertSee('type="password"', false)
             ->assertSee('class="site-hint"', false)
             ->assertSee('class="site-technical-card"', false)
-            ->assertSee('data-confirm="'.__('coolify.show.sync_confirm', ['name' => $connection->name]).'"', false)
+            ->assertSee('data-confirm="'.e(__('coolify.show.sync_confirm', ['name' => $connection->name])).'"', false)
             ->assertDontSee(self::TOKEN, false)
             ->getContent();
 
@@ -416,9 +416,26 @@ class CoolifyConnectionsTest extends TestCase
         $this->assertTrue($second->fresh()->is_default);
     }
 
-    private function operator(): User
+    public function test_connection_hints_name_the_server_list_not_the_api_method(): void
     {
-        $operator = User::factory()->create();
+        $connection = CoolifyConnection::factory()->create([
+            'api_token' => self::TOKEN,
+            'name' => 'Prod Coolify',
+            'last_synced_at' => now(),
+        ]);
+
+        $this->actingAs($this->operator('tr'))
+            ->get(route('ops.coolify.show', $connection))
+            ->assertOk()
+            ->assertSee(trans('coolify.show.lede', [], 'tr'), false)
+            ->assertSee(trans('coolify.next.test_hint', [], 'tr'), false)
+            ->assertSee('sunucu listesini', false)
+            ->assertDontSee('listServers', false);
+    }
+
+    private function operator(?string $locale = null): User
+    {
+        $operator = User::factory()->create($locale === null ? [] : ['locale' => $locale]);
         $operator->assignRole(OpsRole::Operator->value);
 
         return $operator;

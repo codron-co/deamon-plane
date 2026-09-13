@@ -134,11 +134,17 @@ class SiteLandingFlowTest extends TestCase
             $body = $request->data();
             $domain = data_get($body, 'docker_compose_domains.0.domain');
 
-            return $request->method() === 'POST'
-                && str_contains($request->url(), '/applications/public')
+            return $request->method() === 'PATCH'
+                && $request->url() === 'https://coolify.test/api/v1/applications/coolify-app-1'
                 && is_string($domain)
                 && str_contains($domain, (string) $site->temporary_domain)
                 && ! str_contains($domain, 'izyem.test');
+        });
+
+        Http::assertNotSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && str_contains($request->url(), '/applications/')
+                && array_key_exists('docker_compose_domains', $request->data());
         });
     }
 

@@ -1,4 +1,9 @@
-<section class="settings-panel" aria-labelledby="github-connection-heading">
+<section
+    class="settings-panel"
+    aria-labelledby="github-connection-heading"
+    data-settings-section
+    data-settings-haystack="{{ \App\Support\Ops\SettingsJump::haystackFor('github') }}"
+>
     <h2 id="github-connection-heading">{{ __('settings.github.title') }}</h2>
     <p class="field-hint">{{ __('settings.github.pointer') }}</p>
 

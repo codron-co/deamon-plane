@@ -9,10 +9,6 @@
      * the server answers with anything other than a region — the browser simply
      * navigates and the page still works.
      */
-    const FRAGMENT_HEADER = "X-Ops-List-Fragment";
-    const FRAGMENT_VALUE = "region";
-    const REGION_HEADER = "X-Ops-List-Region";
-
     const roots = Array.prototype.slice.call(document.querySelectorAll("[data-ops-list]"));
     if (!roots.length) {
         return;
@@ -28,31 +24,18 @@
         return root.querySelector("[data-ops-list-toolbar]");
     };
 
-    const isSameList = function (url) {
-        return url.origin === window.location.origin && url.pathname === window.location.pathname;
-    };
+    const contracts = window.PlaneOpsContracts;
 
     /**
      * The toolbar submits like a normal GET form: empty controls are dropped and a
      * new query always starts on page one.
      */
     const toolbarUrl = function (form) {
-        const url = new URL(form.getAttribute("action") || form.action || window.location.href, window.location.origin);
-        const params = new URLSearchParams();
-
-        new FormData(form).forEach(function (value, key) {
-            if (typeof value !== "string" || key === "page") {
-                return;
-            }
-            const trimmed = value.trim();
-            if (trimmed !== "") {
-                params.append(key, trimmed);
-            }
-        });
-
-        url.search = params.toString();
-
-        return url;
+        return contracts.toolbarUrl(
+            form.getAttribute("action") || form.action || window.location.href,
+            window.location.origin,
+            new FormData(form)
+        );
     };
 
     const syncToolbar = function (root, url) {
@@ -104,6 +87,60 @@
      * Bulk actions that target "everything matching the current filter" carry that
      * filter in hidden inputs outside the region, including the page header.
      */
+    const syncLayoutFromRegion = function (root, region, url) {
+        const marker = region.querySelector("[data-ops-list-columns]");
+        const columns = marker && marker.getAttribute("data-ops-list-columns")
+            ? marker.getAttribute("data-ops-list-columns").split(",").filter(Boolean)
+            : [];
+        const sort = marker ? String(marker.getAttribute("data-ops-list-sort") || "") : "";
+        const sortParts = sort.split(":");
+        const sortKey = sortParts[0] || "";
+        const sortDir = sortParts[1] || "";
+
+        if (columns.length) {
+            root.querySelectorAll("[data-ops-columns-picker] input[name='columns[]']").forEach(function (input) {
+                if (input.type === "checkbox" && !input.disabled) {
+                    input.checked = columns.indexOf(input.value) !== -1;
+                }
+            });
+        }
+
+        const form = root.querySelector("[data-ops-saved-view-form]");
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        const params = url.searchParams;
+        ["q", "channel", "status", "publish", "deploy", "agent", "pack"].forEach(function (name) {
+            const input = form.querySelector("input[name='" + name + "']");
+            if (input) {
+                input.value = params.get(name) || "";
+            }
+        });
+
+        const sortKeyInput = form.querySelector("input[name='sort_key']");
+        const sortDirInput = form.querySelector("input[name='sort_dir']");
+        if (sortKeyInput && sortKey) {
+            sortKeyInput.value = sortKey;
+        }
+        if (sortDirInput && sortDir) {
+            sortDirInput.value = sortDir;
+        }
+
+        if (columns.length) {
+            form.querySelectorAll("input[name='columns[]']").forEach(function (input) {
+                input.remove();
+            });
+            columns.forEach(function (key) {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "columns[]";
+                input.value = key;
+                form.appendChild(input);
+            });
+        }
+    };
+
     const syncFilterInputs = function (url) {
         document.querySelectorAll("input[name^='filter_']").forEach(function (input) {
             const key = input.name.slice("filter_".length);
@@ -158,18 +195,17 @@
 
         try {
             const response = await fetch(url.href, {
-                headers: {
-                    Accept: "text/html",
-                    "X-Requested-With": "XMLHttpRequest",
-                    [FRAGMENT_HEADER]: FRAGMENT_VALUE,
-                },
+                headers: contracts.listFetchHeaders(),
                 credentials: "same-origin",
                 signal: controller.signal,
             });
 
             // A sign-in redirect, an error page or an older deployment answers with
             // something that is not a region; hand the URL to the browser.
-            if (!response.ok || response.headers.get(REGION_HEADER) !== "1") {
+            if (!contracts.shouldPatchListRegion(
+                response.ok,
+                response.headers.get(contracts.LIST_REGION_HEADER)
+            )) {
                 window.location.assign(url.href);
                 return;
             }
@@ -182,15 +218,15 @@
             region.innerHTML = html;
             syncToolbar(root, url);
             syncFilterInputs(url);
+            syncLayoutFromRegion(root, region, url);
 
             if (window.PlaneUI && typeof window.PlaneUI.refresh === "function") {
                 window.PlaneUI.refresh(region);
             }
 
-            if (settings.history === "push") {
-                window.history.pushState({ opsList: true }, "", url.href);
-            } else if (settings.history === "replace") {
-                window.history.replaceState({ opsList: true }, "", url.href);
+            const write = contracts.listHistoryWrite(settings.history);
+            if (write) {
+                window.history[write](contracts.LIST_HISTORY_STATE, "", url.href);
             }
 
             root.dataset.opsListQuery = url.search;
@@ -231,7 +267,7 @@
 
         // Typing and flipping filters replaces the entry: back should leave the
         // list, not walk through every keystroke.
-        update(root, toolbarUrl(form), { history: "replace" });
+        update(root, toolbarUrl(form), { history: contracts.listHistoryMode("toolbar") });
     });
 
     document.addEventListener("click", function (event) {
@@ -251,18 +287,20 @@
 
         // Sort headers, pagination and "clear filters": links that re-query this
         // very list. Anything pointing elsewhere — a row, a detail page — navigates.
-        const requeries = link.closest("[data-ops-list-region]") !== null || link.hasAttribute("data-ops-list-clear");
-        if (!requeries) {
-            return;
-        }
-
         const url = new URL(link.href, window.location.origin);
-        if (!isSameList(url)) {
+        if (!contracts.shouldInterceptListHref(url, window.location, {
+            inRegion: link.closest("[data-ops-list-region]") !== null,
+            clear: link.hasAttribute("data-ops-list-clear"),
+            view: link.hasAttribute("data-ops-list-view"),
+        })) {
             return;
         }
 
         event.preventDefault();
-        update(root, url, { history: "push", focus: link.getAttribute("data-ops-list-focus") });
+        update(root, url, {
+            history: contracts.listHistoryMode("requery"),
+            focus: link.getAttribute("data-ops-list-focus"),
+        });
     });
 
     /**
@@ -303,17 +341,26 @@
             }
         }
 
-        update(root, new URL(window.location.href), { history: "keep" });
+        const next = payload.redirect
+            ? new URL(payload.redirect, window.location.origin)
+            : new URL(window.location.href);
+        if (!contracts.isSameList(next, window.location)) {
+            return;
+        }
+
+        update(root, next, {
+            history: contracts.listHistoryMode("refresh", { redirect: Boolean(payload.redirect) }),
+        });
     });
 
     window.addEventListener("popstate", function () {
         const url = new URL(window.location.href);
 
         roots.forEach(function (root) {
-            if (!regionOf(root) || root.dataset.opsListQuery === url.search) {
+            if (!regionOf(root) || !contracts.listQueryChanged(root.dataset.opsListQuery, url.search)) {
                 return;
             }
-            update(root, url, { history: "keep" });
+            update(root, url, { history: contracts.listHistoryMode("pop") });
         });
     });
 })();

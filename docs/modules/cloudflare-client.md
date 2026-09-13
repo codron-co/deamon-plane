@@ -21,6 +21,8 @@ Do not call Cloudflare from tests with a live token. Use `Http::fake`. Never sen
 
 Left nav **Cloudflare**. `ops.write` to save/test; `ops.view` can read the form with token blank. Blank token on save keeps the existing value.
 
+**Deletes** (account from Plane, zone from Cloudflare, live DNS row, Deamon DNS default row) use the confirm matrix: title, label, `data-confirm-danger="true"`. Apply Deamon defaults and reset-to-builtin stay `false`. Tests: `ConfirmMatrixTest`.
+
 Required token resource: **all zones including future**. Required groups: **DNS & Zones → DNS** Read+Edit and **DNS & Zones → Zone** Read+Edit. The ready-made “DNS Write” template is not enough (no Zone Edit).
 
 ## Provision order

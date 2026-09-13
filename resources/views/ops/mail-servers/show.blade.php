@@ -103,7 +103,7 @@
     </section>
 
     @if ($canWrite)
-        <form method="POST" action="{{ route('ops.mail-servers.destroy', $server) }}" data-confirm="{{ __('mail.danger.confirm', ['name' => $server->name]) }}" data-confirm-title="{{ __('mail.danger.confirm_title') }}" data-confirm-label="{{ __('mail.danger.label') }}">
+        <form method="POST" action="{{ route('ops.mail-servers.destroy', $server) }}" data-confirm="{{ __('mail.danger.confirm', ['name' => $server->name]) }}" data-confirm-title="{{ __('mail.danger.confirm_title') }}" data-confirm-label="{{ __('mail.danger.label') }}" data-confirm-danger="true">
             @csrf
             @method('DELETE')
             <button type="submit" class="btn btn-danger">{{ __('ops.actions.delete') }}</button>

@@ -201,7 +201,7 @@ class CoolifySiteSyncTest extends TestCase
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee(__('sites.menu.coolify'), false)
-            ->assertSee('data-confirm="'.__('sites.detail.sync_confirm', ['name' => $site->name]).'"', false)
+            ->assertSee('data-confirm="'.e(__('sites.detail.sync_confirm', ['name' => $site->name])).'"', false)
             ->getContent();
 
         $this->assertStringContainsString('action="'.route('ops.sites.sync', $site).'"', $html);
