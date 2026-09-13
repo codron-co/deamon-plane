@@ -361,10 +361,17 @@
 
         select.dataset.opsSelectEnhanced = "true";
 
+        const searchable = select.hasAttribute("data-ops-select-search");
+        const searchPlaceholder = select.getAttribute("data-ops-select-search-placeholder") || "";
+        const emptyLabel = select.getAttribute("data-ops-select-empty") || "—";
+
         const wrapper = document.createElement("div");
         wrapper.className = "ops-select";
         if (select.classList.contains("ops-filter")) {
             wrapper.classList.add("ops-select-filter");
+        }
+        if (searchable) {
+            wrapper.classList.add("ops-select-searchable");
         }
 
         const trigger = document.createElement("button");
@@ -389,11 +396,43 @@
 
         const menu = document.createElement("div");
         menu.className = "ops-select-menu";
-        menu.setAttribute("role", "listbox");
         menu.hidden = true;
 
+        let searchInput = null;
+        let optionsHost = menu;
+        let emptyNode = null;
+
+        if (searchable) {
+            const searchWrap = document.createElement("div");
+            searchWrap.className = "ops-select-search";
+
+            searchInput = document.createElement("input");
+            searchInput.type = "search";
+            searchInput.className = "ops-select-search-input";
+            searchInput.setAttribute("autocomplete", "off");
+            searchInput.setAttribute("autocapitalize", "off");
+            searchInput.setAttribute("spellcheck", "false");
+            searchInput.setAttribute("aria-label", searchPlaceholder || "Search");
+            searchInput.placeholder = searchPlaceholder;
+            searchWrap.appendChild(searchInput);
+            menu.appendChild(searchWrap);
+
+            optionsHost = document.createElement("div");
+            optionsHost.className = "ops-select-options";
+            optionsHost.setAttribute("role", "listbox");
+            menu.appendChild(optionsHost);
+
+            emptyNode = document.createElement("div");
+            emptyNode.className = "ops-select-empty";
+            emptyNode.hidden = true;
+            emptyNode.textContent = emptyLabel;
+            menu.appendChild(emptyNode);
+        } else {
+            menu.setAttribute("role", "listbox");
+        }
+
         const menuId = uniqueId("ops-select-list");
-        menu.id = menuId;
+        (searchable ? optionsHost : menu).id = menuId;
         trigger.setAttribute("aria-controls", menuId);
 
         const selectId = select.id;
@@ -421,15 +460,22 @@
         select.tabIndex = -1;
 
         let highlightedIndex = -1;
-
-        function enabledOptions() {
-            return Array.prototype.slice.call(select.options).filter(function (option) {
-                return !option.disabled;
-            });
-        }
+        let filterQuery = "";
 
         function selectedOption() {
             return select.options[select.selectedIndex] || null;
+        }
+
+        function optionMatches(option) {
+            if (!filterQuery) {
+                return true;
+            }
+            const haystack = (optionLabel(option) + " " + (option.value || "")).toLowerCase();
+            return haystack.indexOf(filterQuery) !== -1;
+        }
+
+        function visibleOptionButtons() {
+            return Array.prototype.slice.call(optionsHost.querySelectorAll(".ops-select-option:not(:disabled):not([hidden])"));
         }
 
         function syncTrigger() {
@@ -438,7 +484,7 @@
             value.title = selected ? (selected.title || optionLabel(selected)) : "";
             trigger.disabled = select.disabled;
             trigger.setAttribute("aria-disabled", select.disabled ? "true" : "false");
-            menu.querySelectorAll("[data-option-index]").forEach(function (item) {
+            optionsHost.querySelectorAll("[data-option-index]").forEach(function (item) {
                 const index = Number(item.getAttribute("data-option-index"));
                 const active = index === select.selectedIndex;
                 item.setAttribute("aria-selected", active ? "true" : "false");
@@ -446,7 +492,7 @@
         }
 
         function setHighlighted(index) {
-            const items = Array.prototype.slice.call(menu.querySelectorAll(".ops-select-option:not(:disabled)"));
+            const items = visibleOptionButtons();
             if (!items.length) {
                 highlightedIndex = -1;
                 return;
@@ -459,8 +505,35 @@
             items[bounded].scrollIntoView({ block: "nearest" });
         }
 
+        function applyFilter() {
+            if (!searchable) {
+                return;
+            }
+            filterQuery = ((searchInput && searchInput.value) || "").trim().toLowerCase();
+            let visibleCount = 0;
+            optionsHost.querySelectorAll(".ops-select-option").forEach(function (item) {
+                const index = Number(item.getAttribute("data-option-index"));
+                const option = select.options[index];
+                const match = option && !option.disabled && optionMatches(option);
+                item.hidden = !match;
+                if (match) {
+                    visibleCount += 1;
+                }
+            });
+            if (emptyNode) {
+                emptyNode.hidden = visibleCount > 0;
+            }
+            optionsHost.hidden = visibleCount === 0;
+            highlightedIndex = -1;
+            if (visibleCount > 0) {
+                setHighlighted(0);
+            }
+        }
+
         function rebuildMenu() {
-            menu.innerHTML = "";
+            optionsHost.querySelectorAll(".ops-select-option").forEach(function (item) {
+                item.remove();
+            });
             Array.prototype.slice.call(select.options).forEach(function (option, index) {
                 const item = document.createElement("button");
                 item.type = "button";
@@ -495,17 +568,28 @@
                     syncTrigger();
                 });
 
-                menu.appendChild(item);
+                optionsHost.appendChild(item);
             });
             highlightedIndex = -1;
+            if (searchable) {
+                applyFilter();
+            }
             syncTrigger();
         }
 
         function preferredHighlightIndex() {
-            const options = enabledOptions();
+            const items = visibleOptionButtons();
+            if (!items.length) {
+                return 0;
+            }
             const selected = selectedOption();
-            const index = options.indexOf(selected);
-            return index >= 0 ? index : 0;
+            if (!selected) {
+                return 0;
+            }
+            const match = items.findIndex(function (item) {
+                return Number(item.getAttribute("data-option-index")) === select.selectedIndex;
+            });
+            return match >= 0 ? match : 0;
         }
 
         function choosePlacement() {
@@ -531,6 +615,10 @@
             trigger.setAttribute("aria-expanded", "true");
             openSelect = wrapper;
             window.requestAnimationFrame(function () {
+                if (searchable && searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
                 setHighlighted(index === undefined ? preferredHighlightIndex() : index);
             });
         }
@@ -543,6 +631,11 @@
             wrapper.classList.remove("is-open", "is-dropup");
             trigger.setAttribute("aria-expanded", "false");
             highlightedIndex = -1;
+            if (searchable && searchInput) {
+                searchInput.value = "";
+                filterQuery = "";
+                applyFilter();
+            }
             if (openSelect === wrapper) {
                 openSelect = null;
             }
@@ -561,39 +654,39 @@
             }
         });
 
-        trigger.addEventListener("keydown", function (event) {
+        function handleListKeydown(event) {
             const keys = ["ArrowDown", "ArrowUp", "Home", "End", "Enter", " ", "Escape"];
             if (keys.indexOf(event.key) === -1) {
-                return;
+                return false;
             }
 
             if (event.key === "Escape") {
                 if (!menu.hidden) {
                     event.preventDefault();
-                    closeMenu(false);
+                    closeMenu(searchable ? true : false);
                 }
-                return;
+                return true;
             }
 
             if (menu.hidden) {
                 if (["ArrowDown", "ArrowUp", "Enter", " ", "Home", "End"].indexOf(event.key) !== -1) {
                     event.preventDefault();
-                    const options = enabledOptions();
                     let start = preferredHighlightIndex();
+                    const items = visibleOptionButtons();
                     if (event.key === "End") {
-                        start = Math.max(0, options.length - 1);
+                        start = Math.max(0, items.length - 1);
                     } else if (event.key === "Home") {
                         start = 0;
                     }
                     openMenuAt(start);
                 }
-                return;
+                return true;
             }
 
             event.preventDefault();
-            const items = Array.prototype.slice.call(menu.querySelectorAll(".ops-select-option:not(:disabled)"));
+            const items = visibleOptionButtons();
             if (!items.length) {
-                return;
+                return true;
             }
 
             if (event.key === "ArrowDown") {
@@ -607,7 +700,34 @@
             } else if ((event.key === "Enter" || event.key === " ") && highlightedIndex >= 0) {
                 items[highlightedIndex].click();
             }
+            return true;
+        }
+
+        trigger.addEventListener("keydown", function (event) {
+            handleListKeydown(event);
         });
+
+        if (searchInput) {
+            searchInput.addEventListener("input", function () {
+                applyFilter();
+            });
+            searchInput.addEventListener("keydown", function (event) {
+                if (event.key === " " || (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey)) {
+                    event.stopPropagation();
+                    if (event.key === " ") {
+                        return;
+                    }
+                }
+                if (event.key === "Tab") {
+                    closeMenu(false);
+                    return;
+                }
+                handleListKeydown(event);
+            });
+            searchInput.addEventListener("click", function (event) {
+                event.stopPropagation();
+            });
+        }
 
         select.addEventListener("change", syncTrigger);
 

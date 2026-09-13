@@ -177,6 +177,10 @@ return [
         'active' => 'Active filters',
         'remove' => 'Remove the :label filter',
     ],
+    'select' => [
+        'search' => 'Search',
+        'no_matches' => 'No matches',
+    ],
     'viewer_readonly' => 'Viewer role is read-only.',
     'dockerfile_chip' => 'Dockerfile (legacy pack)',
     'bulk' => [

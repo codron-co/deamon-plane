@@ -34,6 +34,7 @@ trait LoadsSiteOpsContext
             ->orderBy('theme_id')
             ->get()
             ->filter(static fn (Theme $theme): bool => $gate->canAssign($theme, $site))
+            ->sortBy(static fn (Theme $theme): string => mb_strtolower($theme->displayName()), SORT_NATURAL)
             ->values();
     }
 }

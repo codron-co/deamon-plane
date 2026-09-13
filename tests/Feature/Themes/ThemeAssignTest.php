@@ -413,6 +413,39 @@ class ThemeAssignTest extends TestCase
         $this->assertStringNotContainsString('accept=".zip"', $html);
     }
 
+    public function test_assignable_themes_are_searchable_and_sorted_a_to_z(): void
+    {
+        $site = $this->readySite();
+        Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'zebra-theme',
+            'name' => 'Zebra',
+        ]);
+        Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'alpha-theme',
+            'name' => 'Alpha',
+        ]);
+        Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'middle-theme',
+            'name' => 'Middle',
+        ]);
+
+        $html = $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-ops-select-search', false)
+            ->assertSee('data-ops-select-search-placeholder="'.__('sites.themes.search_placeholder').'"', false)
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/id="site-theme-id"[^>]*>.*Alpha.*Middle.*Zebra/s',
+            $html,
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/id="site-theme-id"[^>]*>.*Zebra.*Alpha/s',
+            $html,
+        );
+    }
+
     public function test_themes_tab_shows_health_theme_and_confirms_mutations(): void
     {
         $site = $this->readySite([

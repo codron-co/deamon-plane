@@ -582,6 +582,7 @@ return [
         'disable_auto' => 'Otomatik güncellemeyi kapat',
         'catalog' => 'Katalog teması',
         'select' => 'Tema seç',
+        'search_placeholder' => 'Tema ara',
         'ref' => 'Ref',
         'ref_hint' => 'Dal veya etiket. Boşsa katalog default_ref kullanılır.',
         'activate_after' => 'Kurulumdan sonra aktifleştir',

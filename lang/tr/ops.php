@@ -177,6 +177,10 @@ return [
         'active' => 'Etkin filtreler',
         'remove' => ':label filtresini kaldır',
     ],
+    'select' => [
+        'search' => 'Ara',
+        'no_matches' => 'Eşleşme yok',
+    ],
     'viewer_readonly' => 'İzleyici rolü salt okunur.',
     'dockerfile_chip' => 'Dockerfile (eski pack)',
     'bulk' => [

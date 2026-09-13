@@ -67,7 +67,15 @@
                     <input type="hidden" name="confirmed" value="0">
                     <div class="field">
                         <label class="field-label" for="site-theme-id">{{ __('sites.themes.catalog') }}</label>
-                        <select id="site-theme-id" class="field-input" name="theme_id" required>
+                        <select
+                            id="site-theme-id"
+                            class="field-input"
+                            name="theme_id"
+                            required
+                            data-ops-select-search
+                            data-ops-select-search-placeholder="{{ __('sites.themes.search_placeholder') }}"
+                            data-ops-select-empty="{{ __('ops.select.no_matches') }}"
+                        >
                             <option value="">{{ __('sites.themes.select') }}</option>
                             @foreach ($assignableThemes as $theme)
                                 <option value="{{ $theme->theme_id }}">{{ $theme->displayName() }} ({{ $theme->visibility?->label() }})</option>

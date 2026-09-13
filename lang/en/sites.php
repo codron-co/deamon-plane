@@ -581,6 +581,7 @@ return [
         'disable_auto' => 'Disable auto-update',
         'catalog' => 'Catalog theme',
         'select' => 'Select a theme',
+        'search_placeholder' => 'Search themes',
         'ref' => 'Ref',
         'ref_hint' => 'Branch or tag. Empty uses the catalog default_ref.',
         'activate_after' => 'Activate after install',
