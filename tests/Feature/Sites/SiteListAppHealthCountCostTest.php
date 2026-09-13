@@ -3,6 +3,7 @@
 namespace Tests\Feature\Sites;
 
 use App\Enums\OpsRole;
+use App\Enums\SiteStatus;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Sites\SiteAppHealthFixer;
@@ -145,6 +146,7 @@ class SiteListAppHealthCountCostTest extends TestCase
         // A Dockerfile-pack leftover is resolved from stored notes, so no Coolify call.
         return Site::factory()->create([
             'name' => 'Legacy Pack',
+            'status' => SiteStatus::Active,
             'notes' => "[import] dockerfile_build_pack: leftover\n",
         ]);
     }
