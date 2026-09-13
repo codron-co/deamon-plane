@@ -115,7 +115,7 @@ return [
         'no_error' => 'No recorded error',
         'failures_empty' => 'No failed installations for this theme.',
         'catalog_sync' => 'Catalog sync',
-        'catalog_sync_hint' => 'Re-reads connected GitHub repos and theme.json. Does not install or activate on sites.',
+        'catalog_sync_hint' => 'Re-reads connected GitHub repos and theme.json. Removes catalog themes left after a git disconnect. Does not install or activate on sites.',
         'technical' => 'Technical identifiers',
         'technical_hint' => 'Internal Plane id and GitHub URL',
         'record_id' => 'Catalog record id',
@@ -126,7 +126,7 @@ return [
         'operations_heading' => 'Operations',
     ],
     'flash' => [
-        'sync' => 'Catalog sync finished — :created created, :updated updated, :skipped skipped.',
+        'sync' => 'Catalog sync finished — :created created, :updated updated, :skipped skipped, :deleted removed.',
     ],
     'git' => [
         'title' => 'Git connections',
@@ -209,9 +209,9 @@ return [
         ],
         'disconnect' => [
             'title' => 'Disconnect',
-            'hint' => 'Removes this installation from Plane. The GitHub App itself stays registered so other accounts can stay connected.',
+            'hint' => 'Removes this installation from Plane. The GitHub App itself stays registered so other accounts can stay connected. The next catalog sync removes themes from this source.',
             'action' => 'Disconnect',
-            'confirm' => 'Disconnect :account from Themes? Catalog themes from this source stay, but lose the connection link.',
+            'confirm' => 'Disconnect :account from Themes? The next catalog sync will remove catalog themes from this source.',
         ],
     ],
 ];

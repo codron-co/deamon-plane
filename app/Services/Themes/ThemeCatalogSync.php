@@ -16,7 +16,7 @@ use Illuminate\Support\Carbon;
 class ThemeCatalogSync
 {
     /**
-     * @return array{synced: int, skipped: int, created: int, updated: int}
+     * @return array{synced: int, skipped: int, created: int, updated: int, deleted: int}
      */
     public function sync(): array
     {
@@ -43,6 +43,8 @@ class ThemeCatalogSync
             }
         }
 
+        $deleted = $this->pruneOrphanThemes();
+
         if ($errors !== [] && $created === 0 && $updated === 0) {
             throw $errors[0];
         }
@@ -52,7 +54,24 @@ class ThemeCatalogSync
             'skipped' => $skipped,
             'created' => $created,
             'updated' => $updated,
+            'deleted' => $deleted,
         ];
+    }
+
+    /**
+     * Catalog rows left behind when a git connection was disconnected (FK nullOnDelete).
+     * Site installations and allowlist rows cascade with the theme.
+     */
+    private function pruneOrphanThemes(): int
+    {
+        $orphans = Theme::query()->whereNull('theme_git_connection_id')->get();
+        $count = $orphans->count();
+
+        foreach ($orphans as $theme) {
+            $theme->delete();
+        }
+
+        return $count;
     }
 
     /**

@@ -36,6 +36,8 @@ Themes → **Sync catalog**, per-connection Sync, or `php artisan ops:sync-theme
 - `all`: every matching repo → upsert `themes`
 - `selected`: only `included` repos → upsert `themes`
 
+After those upserts, sync **deletes** catalog rows whose `theme_git_connection_id` is null (left behind when a connection was disconnected). Site installations and allowlist rows for those themes cascade. Connected themes are not pruned just because a repo was deselected.
+
 Reads `theme.json` then `theme/theme.json`, stores `minimum_deamon_version`. First sync defaults visibility to **private**. Existing visibility is not reset. `theme_id` collision across different `repo_full_name` skips (does not steal the row).
 
 Live GitHub credentials are optional for development. Tests use `Http::fake` only.

@@ -139,6 +139,7 @@ class ThemeController extends Controller
                 'created' => $result['created'],
                 'updated' => $result['updated'],
                 'skipped' => $result['skipped'],
+                'deleted' => $result['deleted'],
             ]),
         );
     }

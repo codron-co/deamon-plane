@@ -24,10 +24,11 @@ class SyncThemeCatalogCommand extends Command
         }
 
         $this->info(sprintf(
-            'Catalog sync: %d created, %d updated, %d skipped.',
+            'Catalog sync: %d created, %d updated, %d skipped, %d deleted.',
             $result['created'],
             $result['updated'],
             $result['skipped'],
+            $result['deleted'],
         ));
 
         return self::SUCCESS;

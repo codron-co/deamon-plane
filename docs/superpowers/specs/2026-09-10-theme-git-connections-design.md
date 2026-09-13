@@ -122,7 +122,7 @@ A repo may appear on two connections’ picker lists. `themes.repo_full_name` st
 
 Add nullable `theme_git_connection_id` FK (`nullOnDelete`). Existing columns unchanged: `theme_id` unique, `repo_full_name` unique, visibility default `private`.
 
-Disconnect or connection delete **nulls** the FK. Catalog rows and `site_theme_installations` stay. Sync simply stops updating those rows until they belong to a connection again.
+Disconnect or connection delete **nulls** the FK. Catalog rows stay until the next **Sync catalog** / `ops:sync-theme-catalog`, which deletes themes with a null `theme_git_connection_id` (and cascades `site_theme_installations` / allowlist). Sync does not prune themes that still belong to a connected source.
 
 ## Manifest / install flows
 
@@ -194,9 +194,10 @@ Manifest requires a **public** Plane URL GitHub can redirect to (`APP_URL` https
 ### Flow D — disconnect
 
 1. Confirm (`PlaneConfirm`). `DELETE` connection + picker rows.
-2. `themes.theme_git_connection_id` set null. Installations stay.
-3. Do **not** delete the GitHub App. Do **not** call GitHub uninstall (other connections share the App). Uninstall on GitHub is operator work; `installation.deleted` marks `status=error`.
-4. Audit `theme.git_connection_disconnected` (login + kind only).
+2. `themes.theme_git_connection_id` set null. Installations stay until the next catalog sync.
+3. Next **Sync catalog** deletes themes with null `theme_git_connection_id` (cascades Plane installation / allowlist rows; CMS site files are untouched).
+4. Do **not** delete the GitHub App. Do **not** call GitHub uninstall (other connections share the App). Uninstall on GitHub is operator work; `installation.deleted` marks `status=error`.
+5. Audit `theme.git_connection_disconnected` (login + kind only).
 
 ### Legacy slug
 
@@ -224,6 +225,8 @@ Per connection:
    - New row: `visibility=private`. Existing visibility is never overwritten (today’s `applyRepo` rule).
    - Set `theme_git_connection_id` on **new** rows to this connection.
 7. Fallback `theme_id`: `theme.json` `id`, else repo name with this connection’s prefix stripped when the name starts with that prefix, else the raw repo name. Do not invent a new prefix globally.
+
+After every connection pass (including when there are zero connected sources), delete catalog `themes` with `theme_git_connection_id` null. Those are leftovers from disconnect. Cascades Plane `site_theme_installations` and allowlist. Do not delete themes that still point at a connection.
 
 `GITHUB_ORG` / `config('ops.themes.org')` / `github_settings.org` are **not** consulted during list or upsert. `config('ops.themes.repo_prefix')` is the **migration default** for the legacy connection only, not a global filter for new connections.
 

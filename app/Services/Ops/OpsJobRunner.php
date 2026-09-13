@@ -123,6 +123,7 @@ class OpsJobRunner
             'created' => $result['created'],
             'updated' => $result['updated'],
             'skipped' => $result['skipped'],
+            'deleted' => $result['deleted'],
         ]);
     }
 

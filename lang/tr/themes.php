@@ -115,7 +115,7 @@ return [
         'no_error' => 'Kayıtlı hata yok',
         'failures_empty' => 'Bu tema için başarısız kurulum yok.',
         'catalog_sync' => 'Katalog senkronu',
-        'catalog_sync_hint' => 'Bağlı GitHub repolarını ve theme.json dosyasını yeniden okur. Sitelerde kurulum veya etkinleştirme yapmaz.',
+        'catalog_sync_hint' => 'Bağlı GitHub repolarını ve theme.json dosyasını yeniden okur. Bağlantısı kopmuş katalog temalarını siler. Sitelerde kurulum veya etkinleştirme yapmaz.',
         'technical' => 'Teknik kimlikler',
         'technical_hint' => 'Dahili Plane id ve GitHub URL',
         'record_id' => 'Katalog kayıt id',
@@ -126,7 +126,7 @@ return [
         'operations_heading' => 'İşlemler',
     ],
     'flash' => [
-        'sync' => 'Katalog senkronu bitti — :created oluşturuldu, :updated güncellendi, :skipped atlandı.',
+        'sync' => 'Katalog senkronu bitti — :created oluşturuldu, :updated güncellendi, :skipped atlandı, :deleted silindi.',
     ],
     'git' => [
         'title' => 'Git bağlantıları',
@@ -209,9 +209,9 @@ return [
         ],
         'disconnect' => [
             'title' => 'Bağlantıyı kes',
-            'hint' => 'Bu kurulumu Plane’den kaldırır. GitHub App kayıtlı kalır; diğer hesaplar bağlı kalabilir.',
+            'hint' => 'Bu kurulumu Plane’den kaldırır. GitHub App kayıtlı kalır; diğer hesaplar bağlı kalabilir. Sonraki katalog senkronu bu kaynağın temalarını siler.',
             'action' => 'Bağlantıyı kes',
-            'confirm' => ':account Temalar’dan kesilsin mi? Bu kaynaktaki katalog temaları kalır, bağlantı bağı kopar.',
+            'confirm' => ':account Temalar’dan kesilsin mi? Sonraki katalog senkronu bu kaynağın katalog temalarını siler.',
         ],
     ],
 ];

@@ -76,6 +76,32 @@ class ThemeCatalogSyncTest extends TestCase
         $this->assertSame(ThemeVisibility::Private, $theme->visibility);
         $this->assertNotNull($theme->last_synced_at);
         $this->assertNotNull($theme->theme_git_connection_id);
+        $this->assertSame(0, $result['deleted']);
+    }
+
+    public function test_sync_deletes_themes_orphaned_by_disconnected_git_source(): void
+    {
+        $keptConnection = ThemeGitConnection::query()->firstOrFail();
+        $kept = Theme::factory()->create([
+            'theme_id' => 'still-connected',
+            'repo_full_name' => 'deamon-themes/deamon-theme-still-connected',
+            'theme_git_connection_id' => $keptConnection->id,
+        ]);
+        $orphan = Theme::factory()->create([
+            'theme_id' => 'gone-source',
+            'repo_full_name' => 'old-org/deamon-theme-gone',
+            'theme_git_connection_id' => null,
+        ]);
+
+        Http::fake([
+            'https://api.github.com/orgs/deamon-themes/repos*' => Http::response([], 200),
+        ]);
+
+        $result = app(ThemeCatalogSync::class)->sync();
+
+        $this->assertSame(1, $result['deleted']);
+        $this->assertNotNull($kept->fresh());
+        $this->assertNull(Theme::query()->find($orphan->id));
     }
 
     public function test_sync_falls_back_to_theme_slash_theme_json(): void
