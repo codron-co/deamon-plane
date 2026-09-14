@@ -1,8 +1,9 @@
 # Admin password invite — Plane slice
 
 **Date:** 2026-09-14  
-**Status:** approved design  
+**Status:** done (2026-09-14, branch `alpha`)  
 **Repos:** `deamon-plane`  
+**Plan:** `docs/superpowers/plans/2026-09-14-admin-password-invite.md`  
 **CMS SoT:** `codron-co/deamon` → `docs/superpowers/specs/2026-09-14-admin-password-invite-design.md`
 
 ## Goal (Plane)
@@ -23,12 +24,12 @@
 
 ## Work checklist
 
-- [ ] `CoolifyEnvDefaultCatalog` — remove admin password rows
-- [ ] Agent client + `SiteAdminController` — invite create + password-invite
-- [ ] Admins Blade/JS — third mode + resend action
-- [ ] Lang TR/EN, audit actions
-- [ ] Tests: `SiteAdminAgentTest`, provision/Coolify env tests
-- [ ] Docs: `site-admins.md`, `coolify-client.md`, `provision-site.md`, ledger
+- [x] `CoolifyEnvDefaultCatalog` — remove admin password rows (+ migration deletes leftover catalog rows)
+- [x] Agent client + `SiteAdminController` — invite create + password-invite
+- [x] Admins Blade/JS — third mode + resend action
+- [x] Lang TR/EN, audit actions
+- [x] Tests: `SiteAdminAgentTest`, provision/Coolify env tests
+- [x] Docs: `site-admins.md`, `coolify-client.md`, `provision-site.md`, ledger
 
 ## Depends on
 

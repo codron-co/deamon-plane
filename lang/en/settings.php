@@ -73,7 +73,7 @@ return [
             'agent_secret' => 'HMAC for the CMS site agent. Never shown.',
             'compose_mysql' => 'Compose MySQL user password. Empty makes mysql exit on first init.',
             'compose_mysql_root' => 'Compose MySQL root password. Empty makes mysql exit on first init.',
-            'admin_seed' => 'First migrate seeds support@codron.co. Min 12 characters.',
+            'admin_seed' => 'Legacy. Plane no longer seeds an admin password; use the site Admins tab (invite mail).',
             'app_name' => 'Displayed application name.',
             'app_debug' => 'Must stay false on customer sites.',
             'timezone' => 'Europe/Istanbul for PHP and UI clocks.',

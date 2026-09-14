@@ -73,7 +73,7 @@ return [
             'agent_secret' => 'CMS site agent HMAC. Asla gösterilmez.',
             'compose_mysql' => 'Compose MySQL kullanıcı parolası. Boşsa mysql ilk init’te çıkar.',
             'compose_mysql_root' => 'Compose MySQL root parolası. Boşsa mysql ilk init’te çıkar.',
-            'admin_seed' => 'İlk migrate support@codron.co eker. En az 12 karakter.',
+            'admin_seed' => 'Eski. Plane artık admin şifresi ekmez; site Adminler sekmesinden davet maili gönderin.',
             'app_name' => 'Görünen uygulama adı.',
             'app_debug' => 'Müşteri sitelerinde false kalmalı.',
             'timezone' => 'PHP ve arayüz saatleri için Europe/Istanbul.',

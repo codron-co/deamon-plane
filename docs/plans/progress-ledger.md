@@ -2,6 +2,14 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Admin password invite on site admins (2026-09-14)
+
+- Status: **committed on `alpha`** (4 commits: catalog, agent + controller, UI, docs). Spec: [../superpowers/specs/2026-09-14-admin-password-invite-design.md](../superpowers/specs/2026-09-14-admin-password-invite-design.md). Plan: [../superpowers/plans/2026-09-14-admin-password-invite.md](../superpowers/plans/2026-09-14-admin-password-invite.md).
+- Coolify env packs no longer carry `DEAMON_DEFAULT_ADMIN_PASSWORD`; migration `2026_09_14_120000` deletes leftover catalog rows. Provision tests assert the key is not synced.
+- Admins tab create has **Davet** next to generate/manual (`password_mode=invite`, no password sent or flashed). `password_is_set=false` rows show **Şifre yok** and **Şifre oluşturma maili gönder** → `POST …/admins/{id}/password-invite` (audit `site.admin.password_invite_sent`, id + email only). `ControlPlaneAgentContract::CMS_VERSION` → 1.2.18; older CMS keeps the outdated flash.
+- Not done here: CMS seed / mail side lives in `codron-co/deamon` (CMS plan Tasks 1–5). Live use needs CMS ≥ 1.2.18 deployed.
+- Docs: [../modules/site-admins.md](../modules/site-admins.md), [../modules/coolify-client.md](../modules/coolify-client.md), [../modules/deployment.md](../modules/deployment.md), [../modules/ops-sites.md](../modules/ops-sites.md), [../runbooks/provision-site.md](../runbooks/provision-site.md). Tests: `SiteAdminAgentTest` (+5), `ProvisionSiteTest`, `ProvisionSiteCloudflareTest`.
+
 ## Overnight morning finalize (2026-09-14 ~01:00 Istanbul)
 
 - Status: **report only, uncommitted**. Operator handoff filled in [../superpowers/plans/2026-09-13-overnight-morning-report.md](../superpowers/plans/2026-09-13-overnight-morning-report.md). `php artisan test` **847 passed** / 0 failed (4619 assertions). `node --test` **18 passed**. Pint `--dirty --test` fails on `PaletteFilters.php` `line_ending` only. No commit, no PR, no push. Do not re-dispatch closed P0/P1/P2 items.
