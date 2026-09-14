@@ -271,11 +271,20 @@ class SiteAgentClient
     }
 
     /**
-     * @param  array{name: string, email: string, password: string}  $payload
+     * `password_mode=invite` (CMS 1.2.18+) creates a passwordless admin and mails a
+     * set-password link; send no `password` key in that case.
+     *
+     * @param  array{name: string, email: string, password?: string, password_mode?: string}  $payload
      */
     public function createAdmin(Site $site, array $payload): AdminAgentResult
     {
         return $this->requestAdmins($site, 'POST', ControlPlaneAgentContract::adminsPath(), $payload);
+    }
+
+    /** CMS 1.2.18+: resend the set-password invite mail. Empty body; token never returned. */
+    public function sendAdminPasswordInvite(Site $site, int $adminId): AdminAgentResult
+    {
+        return $this->requestAdmins($site, 'POST', ControlPlaneAgentContract::adminPasswordInvitePath($adminId));
     }
 
     /**

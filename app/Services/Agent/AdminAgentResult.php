@@ -105,6 +105,8 @@ final class AdminAgentResult
             'email' => (string) ($row['email'] ?? ''),
             'is_active' => (bool) ($row['is_active'] ?? false),
             'must_change_password' => (bool) ($row['must_change_password'] ?? false),
+            // CMS < 1.2.18 omits the key; treat as set so the resend action stays hidden.
+            'password_is_set' => (bool) ($row['password_is_set'] ?? true),
             'has_two_factor' => (bool) ($row['has_two_factor'] ?? false),
             'created_at' => self::stringOrNull($row['created_at'] ?? null),
         ];

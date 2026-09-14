@@ -26,16 +26,25 @@ class SiteAdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'password' => ['nullable', 'string', Password::min(12)->mixedCase()->numbers()->symbols()],
-            'password_mode' => ['nullable', 'in:generate,manual'],
+            'password_mode' => ['nullable', 'in:generate,manual,invite'],
         ]);
 
-        $password = $this->resolvePassword($validated);
-
-        $result = $this->agent->createAdmin($site, [
+        $invite = ($validated['password_mode'] ?? null) === 'invite';
+        $payload = [
             'name' => trim((string) $validated['name']),
             'email' => strtolower(trim((string) $validated['email'])),
-            'password' => $password,
-        ]);
+        ];
+
+        // Invite: CMS mails a set-password link. Never generate or flash a password.
+        $password = null;
+        if ($invite) {
+            $payload['password_mode'] = 'invite';
+        } else {
+            $password = $this->resolvePassword($validated);
+            $payload['password'] = $password;
+        }
+
+        $result = $this->agent->createAdmin($site, $payload);
 
         if (! $result->ok) {
             return $this->failureRedirect($site, $result);
@@ -44,9 +53,36 @@ class SiteAdminController extends Controller
         $this->audit($request, $site, 'site.admin.created', null, [
             'admin_id' => $result->admin['id'] ?? null,
             'email' => $result->admin['email'] ?? $validated['email'],
+            'password_mode' => $invite ? 'invite' : 'password',
         ]);
 
-        return $this->successRedirect($site, __('sites.admins.flash.created'), $password);
+        return $this->successRedirect(
+            $site,
+            $invite ? __('sites.admins.flash.created_invite') : __('sites.admins.flash.created'),
+            $password,
+        );
+    }
+
+    public function sendPasswordInvite(Request $request, Site $site, int $remoteAdmin): RedirectResponse
+    {
+        $this->authorize('manageAdmins', $site);
+
+        $validated = $request->validate([
+            'admin_email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        $result = $this->agent->sendAdminPasswordInvite($site, $remoteAdmin);
+
+        if (! $result->ok) {
+            return $this->failureRedirect($site, $result);
+        }
+
+        $this->audit($request, $site, 'site.admin.password_invite_sent', null, [
+            'admin_id' => $remoteAdmin,
+            'email' => $result->admin['email'] ?? ($validated['admin_email'] ?? null),
+        ]);
+
+        return $this->successRedirect($site, __('sites.admins.flash.password_invite_sent'), null);
     }
 
     public function resetPassword(Request $request, Site $site, int $remoteAdmin): RedirectResponse
@@ -167,13 +203,18 @@ class SiteAdminController extends Controller
             ->withFragment('admins');
     }
 
-    private function successRedirect(Site $site, string $status, string $password): RedirectResponse
+    private function successRedirect(Site $site, string $status, ?string $password): RedirectResponse
     {
-        return redirect()
+        $redirect = redirect()
             ->route('ops.sites.show', $site)
             ->with('status', $status)
-            ->with('admin_password_once', $password)
             ->withFragment('admins');
+
+        if ($password !== null) {
+            $redirect->with('admin_password_once', $password);
+        }
+
+        return $redirect;
     }
 
     /**

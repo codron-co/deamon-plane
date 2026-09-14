@@ -100,6 +100,112 @@ class SiteAdminAgentTest extends TestCase
         });
     }
 
+    public function test_operator_can_create_admin_via_invite_without_password_flash(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins' => Http::sequence()
+                ->push([
+                    'ok' => true,
+                    'admin' => ['id' => 9, 'name' => 'Invited', 'email' => 'invited@example.com', 'is_active' => true, 'must_change_password' => true, 'password_is_set' => false, 'has_two_factor' => false, 'created_at' => now()->toIso8601String()],
+                ], 200)
+                ->push(['ok' => true, 'admins' => []], 200),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.admins.store', $site), [
+                'name' => 'Invited',
+                'email' => 'invited@example.com',
+                'password_mode' => 'invite',
+            ])
+            ->assertRedirect(route('ops.sites.show', $site).'#admins')
+            ->assertSessionHas('status', __('sites.admins.flash.created_invite'))
+            ->assertSessionMissing('admin_password_once');
+
+        $audit = AuditLog::query()->where('action', 'site.admin.created')->firstOrFail();
+        $this->assertSame('invite', $audit->after['password_mode'] ?? null);
+        $this->assertSame('invited@example.com', $audit->after['email'] ?? null);
+
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'POST' || ! str_ends_with($request->url(), '/admins')) {
+                return false;
+            }
+
+            $body = $request->data();
+
+            return ($body['password_mode'] ?? null) === 'invite'
+                && ! array_key_exists('password', $body);
+        });
+    }
+
+    public function test_operator_can_resend_password_invite(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins/9/password-invite' => Http::response([
+                'ok' => true,
+                'admin' => ['id' => 9, 'name' => 'Invited', 'email' => 'invited@example.com', 'is_active' => true, 'must_change_password' => true, 'password_is_set' => false, 'has_two_factor' => false, 'created_at' => now()->toIso8601String()],
+            ], 200),
+            'https://shop.example.test/internal/control/v1/admins' => Http::response(['ok' => true, 'admins' => []], 200),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.admins.password-invite', [$site, 9]), [
+                'admin_email' => 'invited@example.com',
+            ])
+            ->assertRedirect(route('ops.sites.show', $site).'#admins')
+            ->assertSessionHas('status', __('sites.admins.flash.password_invite_sent'))
+            ->assertSessionMissing('admin_password_once');
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'site.admin.password_invite_sent',
+            'subject_id' => $site->id,
+        ]);
+
+        $audit = AuditLog::query()->where('action', 'site.admin.password_invite_sent')->firstOrFail();
+        $this->assertSame(['admin_id' => 9, 'email' => 'invited@example.com'], $audit->after);
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && str_ends_with($request->url(), '/admins/9/password-invite')
+                && $request->body() === '';
+        });
+    }
+
+    public function test_password_invite_on_outdated_cms_returns_clear_error(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins/9/password-invite' => Http::response('Not Found', 404),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.admins.password-invite', [$site, 9]))
+            ->assertRedirect(route('ops.sites.show', $site).'#admins')
+            ->assertSessionHasErrors(['admins' => __('sites.admins.errors.outdated')]);
+
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'site.admin.password_invite_sent']);
+    }
+
+    public function test_viewer_cannot_send_password_invite(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake();
+
+        $this->actingAs($this->user(OpsRole::Viewer))
+            ->post(route('ops.sites.admins.password-invite', [$site, 9]))
+            ->assertForbidden();
+
+        Http::assertNothingSent();
+    }
+
     public function test_operator_cannot_deactivate_or_delete_admin(): void
     {
         $site = $this->siteWithSecret();

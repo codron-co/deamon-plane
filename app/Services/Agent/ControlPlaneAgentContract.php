@@ -4,6 +4,7 @@ namespace App\Services\Agent;
 
 /**
  * Locked CMS agent contract (Task 8 health + Task 11 themes, Deamon v1.2.7).
+ * Admin invite mode + password-invite resend (CMS 1.2.18+).
  * Theme git install (CMS 1.2.7+): any github.com owner/name (and https / .git).
  *
  * SoT: deamon `docs/modules/control-plane-agent.md`.
@@ -14,7 +15,7 @@ namespace App\Services\Agent;
  */
 final class ControlPlaneAgentContract
 {
-    public const CMS_VERSION = '1.2.16';
+    public const CMS_VERSION = '1.2.18';
 
     public const BASE_PATH = '/internal/control/v1';
 
@@ -146,6 +147,12 @@ final class ControlPlaneAgentContract
     public static function adminPasswordPath(int $adminId): string
     {
         return self::adminPath($adminId).'/password';
+    }
+
+    /** CMS 1.2.18+: (re)sends the set-password invite mail; Plane never sees the token. */
+    public static function adminPasswordInvitePath(int $adminId): string
+    {
+        return self::adminPath($adminId).'/password-invite';
     }
 
     /**

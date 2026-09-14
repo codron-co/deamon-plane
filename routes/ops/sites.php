@@ -74,6 +74,7 @@ Route::post('/sites/{site}/themes/{installation}/activate', [SiteThemeController
 Route::post('/sites/{site}/themes/{installation}/auto-update', [SiteThemeController::class, 'autoUpdate'])->name('ops.sites.themes.auto-update');
 Route::post('/sites/{site}/admins', [SiteAdminController::class, 'store'])->name('ops.sites.admins.store');
 Route::post('/sites/{site}/admins/{remoteAdmin}/password', [SiteAdminController::class, 'resetPassword'])->name('ops.sites.admins.password');
+Route::post('/sites/{site}/admins/{remoteAdmin}/password-invite', [SiteAdminController::class, 'sendPasswordInvite'])->name('ops.sites.admins.password-invite');
 Route::post('/sites/{site}/admins/{remoteAdmin}/deactivate', [SiteAdminController::class, 'deactivate'])->name('ops.sites.admins.deactivate');
 Route::post('/sites/{site}/admins/{remoteAdmin}/activate', [SiteAdminController::class, 'activate'])->name('ops.sites.admins.activate');
 Route::delete('/sites/{site}/admins/{remoteAdmin}', [SiteAdminController::class, 'destroy'])->name('ops.sites.admins.destroy');
