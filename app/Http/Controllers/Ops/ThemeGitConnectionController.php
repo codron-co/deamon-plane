@@ -7,6 +7,7 @@ use App\Enums\ThemeGitSelectionMode;
 use App\Http\Controllers\Controller;
 use App\Models\GithubSetting;
 use App\Models\ThemeGitConnection;
+use App\Services\GitHub\DeamonGitConnectionService;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
 use App\Services\Themes\ThemeGitConnectionService;
@@ -81,6 +82,10 @@ class ThemeGitConnectionController extends Controller
     public function installed(Request $request): RedirectResponse
     {
         $this->authorize('create', ThemeGitConnection::class);
+
+        if (DeamonGitConnectionService::pendingInstallPurpose() === 'deamon_install') {
+            return app(DeamonGitConnectionController::class)->installed($request);
+        }
 
         try {
             $connection = $this->connections->recordInstallation($request);

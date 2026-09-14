@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Ops\AccountController;
 use App\Http\Controllers\Ops\ActivityController;
+use App\Http\Controllers\Ops\DeamonGitConnectionController;
 use App\Http\Controllers\Ops\FleetController;
 use App\Http\Controllers\Ops\GithubSettingsController;
 use App\Http\Controllers\Ops\OpsJobController;
@@ -62,4 +63,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/coolify/test', [SettingsController::class, 'testConnection'])->name('ops.settings.coolify.test');
     Route::post('/settings/github', [GithubSettingsController::class, 'update'])->name('ops.settings.github.update');
     Route::post('/settings/github/test', [GithubSettingsController::class, 'testConnection'])->name('ops.settings.github.test');
+
+    Route::post('/settings/deamon-git/connect', [DeamonGitConnectionController::class, 'connect'])
+        ->name('ops.settings.deamon-git.connect');
+    Route::get('/settings/deamon-git/callback', [DeamonGitConnectionController::class, 'callback'])
+        ->name('ops.settings.deamon-git.callback');
+    Route::post('/settings/deamon-git/disconnect', [DeamonGitConnectionController::class, 'disconnect'])
+        ->name('ops.settings.deamon-git.disconnect');
+    Route::post('/settings/deamon-git/pat', [DeamonGitConnectionController::class, 'storePat'])
+        ->name('ops.settings.deamon-git.pat');
+    Route::delete('/settings/deamon-git/pat', [DeamonGitConnectionController::class, 'clearPat'])
+        ->name('ops.settings.deamon-git.pat.clear');
 });

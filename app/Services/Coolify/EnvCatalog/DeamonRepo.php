@@ -2,14 +2,15 @@
 
 namespace App\Services\Coolify\EnvCatalog;
 
-use App\Enums\ThemeGitConnectionStatus;
 use App\Models\GithubSetting;
-use App\Models\ThemeGitConnection;
 use App\Services\GitHub\GitHubAppClient;
 
 /**
  * The CMS git repository (`config('ops.deamon.repository')`, e.g. https://github.com/codron-co/deamon.git)
  * and a GitHub client able to read files from it.
+ *
+ * Credentials come only from Settings → Deamon Git (`github_settings` installation / PAT),
+ * never from Themes `theme_git_connections`.
  */
 final class DeamonRepo
 {
@@ -44,31 +45,17 @@ final class DeamonRepo
     }
 
     /**
-     * A GitHub client with credentials that can read the CMS repo, preferring a Themes
-     * connection on the same account, then the legacy Settings PAT / App installation.
-     * Null when Plane has no GitHub credentials at all.
+     * A GitHub client with Deamon Git credentials (Settings installation or PAT).
+     * Null when Plane has no CMS-repo credentials.
      */
     public static function client(): ?GitHubAppClient
     {
-        $owner = self::owner();
-
-        if ($owner !== null) {
-            $connection = ThemeGitConnection::query()
-                ->where('status', ThemeGitConnectionStatus::Connected->value)
-                ->get()
-                ->first(static fn (ThemeGitConnection $row): bool => strcasecmp((string) $row->account_login, $owner) === 0);
-
-            if ($connection instanceof ThemeGitConnection) {
-                return GitHubAppClient::fromConnection($connection);
-            }
-        }
-
         $settings = GithubSetting::current();
-        if ($settings->hasAnyCredentials()) {
-            return GitHubAppClient::fromSettings($settings);
+        if (! $settings->hasDeamonGitCredentials()) {
+            return null;
         }
 
-        return null;
+        return GitHubAppClient::fromSettings($settings);
     }
 
     public static function hasCredentials(): bool

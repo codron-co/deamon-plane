@@ -168,6 +168,17 @@ class CoolifyClient
     }
 
     /**
+     * DELETE /applications/{uuid}/envs/{envUuid} — remove one application env key.
+     */
+    public function deleteEnv(string $uuid, string $envUuid): void
+    {
+        $this->request(
+            'DELETE',
+            '/applications/'.$this->assertUuid($uuid).'/envs/'.$this->assertUuid($envUuid),
+        );
+    }
+
+    /**
      * PATCH existing Coolify application. Never sends `fqdn`. Never DELETE.
      *
      * @param  array<string, mixed>  $body

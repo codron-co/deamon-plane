@@ -48,6 +48,7 @@ class SettingsController extends Controller
             'repository' => config('ops.deamon.repository'),
             'canWrite' => request()->user()?->can('ops.write') ?? false,
             'githubWebhookUrl' => url('/webhooks/github'),
+            'githubSetting' => \App\Models\GithubSetting::current(),
             'envChannels' => $channels,
             'envKinds' => CoolifyEnvKind::cases(),
             'envDefaults' => $envDefaults,

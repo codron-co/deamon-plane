@@ -48,6 +48,7 @@ class CoolifyAppEnvSyncTest extends TestCase
         $this->assertContains('MYSQL_ROOT_PASSWORD', $keys);
         $this->assertContains('DB_PASSWORD', $keys);
         $this->assertContains('DEAMON_CHANNEL', $keys);
+        $this->assertContains('APP_ENV', $keys);
         $this->assertContains('CONTROL_PLANE_AGENT_SECRET', $keys);
         $this->assertContains('CONTROL_PLANE_HOST_ALLOWLIST', $keys);
         $this->assertNotContains('APP_KEY', $keys);
@@ -65,6 +66,7 @@ class CoolifyAppEnvSyncTest extends TestCase
             $map = $this->bulkMap($request);
 
             return $map['DEAMON_CHANNEL'] === Channel::Main->value
+                && $map['APP_ENV'] === 'production'
                 && $map['CONTROL_PLANE_AGENT_SECRET'] === (string) $site->agent_secret_encrypted
                 && $map['CONTROL_PLANE_HOST_ALLOWLIST'] === 'plane.codron.co'
                 && strlen((string) $map['MYSQL_ROOT_PASSWORD']) >= 32
@@ -72,6 +74,40 @@ class CoolifyAppEnvSyncTest extends TestCase
                 && ! array_key_exists('SERVICE_URL_APP', $map)
                 && ! array_key_exists('APP_URL', $map);
         });
+    }
+
+    public function test_prunes_legacy_keys_but_keeps_coolify_injects_and_does_not_rotate_secrets(): void
+    {
+        $site = $this->site();
+        $this->fakeEnvs([
+            ['key' => 'APP_KEY', 'value' => (string) $site->app_key_encrypted, 'uuid' => 'env-app-key'],
+            ['key' => 'DEAMON_SITE_NAME', 'value' => $site->name, 'uuid' => 'env-site-name'],
+            ['key' => 'DEAMON_CHANNEL', 'value' => Channel::Main->value, 'uuid' => 'env-channel'],
+            ['key' => 'APP_ENV', 'value' => 'production', 'uuid' => 'env-app-env'],
+            ['key' => 'CONTROL_PLANE_AGENT_SECRET', 'value' => (string) $site->agent_secret_encrypted, 'uuid' => 'env-agent'],
+            ['key' => 'CONTROL_PLANE_HOST_ALLOWLIST', 'value' => 'plane.codron.co', 'uuid' => 'env-host'],
+            ['key' => 'DB_PASSWORD', 'value' => 'already-set-db-password-value', 'uuid' => 'env-db'],
+            ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => 'already-set-root-password-xx', 'uuid' => 'env-root'],
+            ['key' => 'DEAMON_PLATFORM_MAIL_HOST', 'value' => 'smtp.hostinger.com', 'uuid' => 'env-mail-host'],
+            ['key' => 'SERVICE_URL_APP', 'value' => 'https://example.test', 'uuid' => 'env-service'],
+            ['key' => 'APP_URL', 'value' => 'https://example.test', 'uuid' => 'env-app-url'],
+        ]);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('DEAMON_PLATFORM_MAIL_HOST', $keys);
+        $this->assertNotContains('SERVICE_URL_APP', $keys);
+        $this->assertNotContains('APP_URL', $keys);
+        $this->assertNotContains('DB_PASSWORD', $keys);
+        $this->assertNotContains('MYSQL_ROOT_PASSWORD', $keys);
+        $this->assertNotContains('APP_KEY', $keys);
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-mail-host'));
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-service'));
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH'
+            && str_contains($request->url(), '/envs/bulk'));
     }
 
     public function test_does_not_rotate_filled_db_passwords_but_replaces_example_placeholders(): void
@@ -149,15 +185,24 @@ class CoolifyAppEnvSyncTest extends TestCase
     }
 
     /**
-     * @param  list<array{key: string, value: string}>  $envs
+     * @param  list<array{key: string, value: string, uuid?: string}>  $envs
      */
     private function fakeEnvs(array $envs): void
     {
         Http::fake(function (Request $request) use ($envs) {
             if ($request->method() === 'GET' && str_contains($request->url(), '/envs')) {
-                return Http::response($envs, 200);
+                return Http::response(array_map(static function (array $row): array {
+                    return [
+                        'key' => $row['key'],
+                        'value' => $row['value'],
+                        'uuid' => $row['uuid'] ?? 'env-'.md5($row['key']),
+                    ];
+                }, $envs), 200);
             }
             if ($request->method() === 'PATCH' && str_contains($request->url(), '/envs/bulk')) {
+                return Http::response([], 200);
+            }
+            if ($request->method() === 'DELETE' && str_contains($request->url(), '/envs/')) {
                 return Http::response([], 200);
             }
 

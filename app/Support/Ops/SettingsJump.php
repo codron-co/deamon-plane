@@ -22,6 +22,12 @@ final class SettingsJump
                 'needles' => ['env', 'ortam', 'defaults', 'katalog', 'catalog', 'branch', 'dal', 'main', 'beta', 'alpha', 'app_key'],
             ],
             [
+                'id' => 'deamon_git',
+                'hash' => 'deamon-git-heading',
+                'label' => __('settings.deamon_git.title'),
+                'needles' => ['deamon', 'git', 'cms', 'github', 'pat', 'installation', 'katalog', 'catalog'],
+            ],
+            [
                 'id' => 'github',
                 'hash' => 'github-connection-heading',
                 'label' => __('settings.github.title'),

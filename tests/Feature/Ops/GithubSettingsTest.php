@@ -24,25 +24,27 @@ class GithubSettingsTest extends TestCase
         Http::preventStrayRequests();
     }
 
-    public function test_settings_page_points_to_themes_and_never_renders_a_credential_form(): void
+    public function test_settings_page_shows_deamon_git_and_themes_pointer_without_leaking_secrets(): void
     {
         GithubSetting::factory()->create([
             'token' => self::TOKEN,
             'org' => 'deamon-themes',
+            'installation_id' => '9988',
+            'cms_account_login' => 'codron-co',
         ]);
 
         $this->actingAs($this->operator())
             ->get(route('ops.settings'))
             ->assertOk()
+            ->assertSee('Deamon Git', false)
             ->assertSee('GitHub theme catalog', false)
-            ->assertSee(__('settings.github.pointer'), false)
             ->assertSee(__('settings.github.open_themes'), false)
             ->assertSee(route('ops.themes'), false)
             ->assertSee(__('settings.coolify.title'), false)
             ->assertSee(route('ops.coolify.index'), false)
             ->assertSee('/webhooks/github', false)
+            ->assertSee('codron-co', false)
             ->assertDontSee(self::TOKEN, false)
-            ->assertDontSee('name="token"', false)
             ->assertDontSee('name="private_key"', false)
             ->assertDontSee('name="installation_id"', false)
             ->assertDontSee('name="current_password"', false)

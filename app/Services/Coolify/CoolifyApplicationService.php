@@ -148,6 +148,11 @@ class CoolifyApplicationService
         return $this->client->listEnvs($uuid);
     }
 
+    public function deleteEnv(string $uuid, string $envUuid): void
+    {
+        $this->client->deleteEnv($uuid, $envUuid);
+    }
+
     /**
      * @param  string|array<int|string, mixed>  $fqdn
      */

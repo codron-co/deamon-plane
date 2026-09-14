@@ -483,8 +483,7 @@ class GitHubAppClient
             return $this->installationAccessTokenFor($installationId);
         }
 
-        // Legacy Settings credentials (PAT, then App installation) for repo reads outside
-        // Themes connections — e.g. the CMS repo env catalog.
+        // Settings → Deamon Git (PAT, then App installation) for CMS repo reads.
         $settings = $this->settings ?? GithubSetting::current();
         $pat = trim((string) ($settings->token ?: config('ops.github.token')));
         if ($pat !== '') {
@@ -497,7 +496,7 @@ class GitHubAppClient
         }
 
         throw new GitHubCredentialsException(
-            'GitHub theme connections are not configured. Connect GitHub under Themes.',
+            'Deamon Git is not configured. Connect under Settings → Deamon Git.',
         );
     }
 
@@ -509,7 +508,7 @@ class GitHubAppClient
 
         if ($appId === null || $privateKey === null) {
             throw new GitHubCredentialsException(
-                'GitHub App is not configured. Connect GitHub under Themes.',
+                'GitHub App is not configured. Connect Deamon Git or Themes first.',
             );
         }
 

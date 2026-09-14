@@ -19,6 +19,7 @@ class GithubSetting extends Model
         'token',
         'app_id',
         'installation_id',
+        'cms_account_login',
         'slug',
         'client_id',
         'client_secret',
@@ -103,5 +104,36 @@ class GithubSetting extends Model
             || (filled(config('ops.github.app_id'))
                 && filled(config('ops.github.installation_id'))
                 && filled(config('ops.github.private_key')));
+    }
+
+    /**
+     * Credentials that can read the CMS repo (Settings → Deamon Git).
+     * Themes connections do not count.
+     */
+    public function hasDeamonGitCredentials(): bool
+    {
+        if ($this->hasToken() || filled(config('ops.github.token'))) {
+            return true;
+        }
+
+        $installationId = trim((string) ($this->installation_id ?: config('ops.github.installation_id')));
+        if ($installationId === '') {
+            return false;
+        }
+
+        return $this->hasAppCredentials()
+            || (filled(config('ops.github.app_id')) && filled(config('ops.github.private_key')));
+    }
+
+    public function hasDeamonGitInstallation(): bool
+    {
+        return filled($this->installation_id);
+    }
+
+    public function deamonGitAccountLabel(): ?string
+    {
+        $login = trim((string) $this->cms_account_login);
+
+        return $login !== '' ? $login : null;
     }
 }

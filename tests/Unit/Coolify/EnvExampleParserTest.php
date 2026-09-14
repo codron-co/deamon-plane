@@ -99,6 +99,7 @@ class EnvExampleParserTest extends TestCase
         $keys = array_map(static fn ($row): string => $row->key, $rows);
 
         $this->assertContains('APP_KEY', $keys);
+        $this->assertContains('APP_ENV', $keys);
         $this->assertContains('DB_PASSWORD', $keys);
         $this->assertContains('MYSQL_ROOT_PASSWORD', $keys);
         $this->assertContains('CONTROL_PLANE_AGENT_SECRET', $keys);
@@ -108,9 +109,13 @@ class EnvExampleParserTest extends TestCase
         $this->assertNotContains('APP_TIMEZONE', $keys);
         $this->assertNotContains('DB_HOST', $keys);
         $this->assertNotContains('TRUSTED_PROXIES', $keys);
+        $this->assertNotContains('SERVICE_URL_APP', $keys);
+        $this->assertNotContains('APP_URL', $keys);
+        $this->assertNotContains('COOLIFY_BRANCH', $keys);
 
         foreach ($rows as $row) {
             $this->assertNotSame(CoolifyEnvKind::Static, $row->kind, $row->key.' must not be static — compose owns constants');
+            $this->assertNotSame(CoolifyEnvKind::Skip, $row->kind, $row->key.' must not be a coolify skip row');
         }
     }
 }

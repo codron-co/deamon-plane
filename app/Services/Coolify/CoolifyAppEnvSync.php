@@ -18,12 +18,34 @@ use Illuminate\Support\Str;
 class CoolifyAppEnvSync
 {
     /**
+     * Coolify-owned inject keys — never written by Plane and never pruned.
+     *
+     * @var list<string>
+     */
+    public const PROTECTED_PREFIXES = [
+        'SERVICE_',
+        'COOLIFY_',
+    ];
+
+    /**
+     * Exact Coolify inject keys that do not share a prefix above.
+     *
+     * @var list<string>
+     */
+    public const PROTECTED_KEYS = [
+        'SOURCE_COMMIT',
+        'APP_URL',
+        'DEAMON_SITE_HOST',
+    ];
+
+    /**
      * Align Coolify application env with the catalog for this site's git channel
      * (synced from the CMS `.env.production.example` on that branch).
-     * Never logs values. Generated secrets that already have a real value are left alone
-     * (MySQL volume may already be initialized).
+     * Upserts catalog keys, then deletes leftovers that are no longer in the catalog
+     * (except Coolify-managed injects). Never logs values. Generated secrets that
+     * already have a real value are left alone (MySQL volume may already be initialized).
      *
-     * @return list<string> keys written (never values)
+     * @return list<string> keys written or deleted (never values)
      */
     public function sync(Site $site, CoolifyApplicationService $coolify, ?Channel $channel = null): array
     {
@@ -38,7 +60,8 @@ class CoolifyAppEnvSync
             return [];
         }
 
-        $existing = $this->existingMap($coolify->listEnvs($uuid));
+        $existingVars = $coolify->listEnvs($uuid);
+        $existing = $this->existingMap($existingVars);
         $desired = [];
 
         foreach ($defaults as $row) {
@@ -55,21 +78,27 @@ class CoolifyAppEnvSync
             $desired[$row->key] = $next;
         }
 
-        if ($desired === []) {
-            return [];
+        $written = [];
+        if ($desired !== []) {
+            $written = array_keys($desired);
+            $coolify->updateEnvs($uuid, $desired);
         }
 
-        $keys = array_keys($desired);
-        $coolify->updateEnvs($uuid, $desired);
+        $deleted = $this->prune($coolify, $uuid, $defaults, $existingVars);
 
-        Log::info('coolify.env_synced', [
-            'site_id' => $site->id,
-            'site_slug' => $site->slug,
-            'channel' => $channel->value,
-            'keys' => $keys,
-        ]);
+        $touched = array_values(array_unique([...$written, ...$deleted]));
 
-        return $keys;
+        if ($touched !== []) {
+            Log::info('coolify.env_synced', [
+                'site_id' => $site->id,
+                'site_slug' => $site->slug,
+                'channel' => $channel->value,
+                'keys' => $written,
+                'deleted' => $deleted,
+            ]);
+        }
+
+        return $touched;
     }
 
     public function channelFor(Site $site): Channel
@@ -97,6 +126,67 @@ class CoolifyAppEnvSync
         }
 
         return CoolifyEnvDefault::query()->forChannel($channel)->get();
+    }
+
+    public static function isProtectedKey(string $key): bool
+    {
+        if (in_array($key, self::PROTECTED_KEYS, true)) {
+            return true;
+        }
+
+        foreach (self::PROTECTED_PREFIXES as $prefix) {
+            if (str_starts_with($key, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  Collection<int, CoolifyEnvDefault>  $defaults
+     * @param  Collection<int, mixed>  $existingVars
+     * @return list<string> deleted keys
+     */
+    private function prune(
+        CoolifyApplicationService $coolify,
+        string $uuid,
+        Collection $defaults,
+        Collection $existingVars,
+    ): array {
+        $catalogKeys = [];
+        foreach ($defaults as $row) {
+            if ($row instanceof CoolifyEnvDefault && $row->kind !== CoolifyEnvKind::Skip) {
+                $catalogKeys[$row->key] = true;
+            }
+        }
+
+        $deleted = [];
+
+        foreach ($existingVars as $env) {
+            if (! $env instanceof CoolifyEnvironmentVariable || $env->key === '' || $env->isPreview) {
+                continue;
+            }
+
+            if (isset($catalogKeys[$env->key]) || self::isProtectedKey($env->key)) {
+                continue;
+            }
+
+            $envUuid = trim((string) ($env->uuid ?? ''));
+            if ($envUuid === '') {
+                Log::warning('coolify.env_prune_skipped_no_uuid', [
+                    'key' => $env->key,
+                    'app_uuid' => $uuid,
+                ]);
+
+                continue;
+            }
+
+            $coolify->deleteEnv($uuid, $envUuid);
+            $deleted[] = $env->key;
+        }
+
+        return $deleted;
     }
 
     /**
