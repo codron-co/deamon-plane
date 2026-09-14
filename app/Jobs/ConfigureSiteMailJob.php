@@ -10,10 +10,10 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Pushes the site's Hostinger mail binding to the CMS off the request path. The
- * CMS installs its mail module (migrations) on the first configure, which can
- * outlast the agent timeout; the operator's save must not depend on it. The
- * outcome lands on `sites.mail_configured_at` / `mail_configure_failed_at`.
+ * Pushes the site's Hostinger mail binding to the CMS off the request path. A
+ * slow CMS container has outlasted the agent timeout in production; the
+ * operator's save must not depend on the CMS answering. The outcome lands on
+ * `sites.mail_configured_at` / `mail_configure_failed_at`.
  */
 class ConfigureSiteMailJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
