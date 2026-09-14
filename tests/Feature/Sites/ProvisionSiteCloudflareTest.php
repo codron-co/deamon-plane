@@ -556,7 +556,6 @@ class ProvisionSiteCloudflareTest extends TestCase
                 ['key' => 'DEAMON_SITE_NAME', 'value' => 'Izyem', 'is_preview' => false],
                 ['key' => 'DB_PASSWORD', 'value' => '', 'is_preview' => false],
                 ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => '', 'is_preview' => false],
-                ['key' => 'DEAMON_DEFAULT_ADMIN_PASSWORD', 'value' => '', 'is_preview' => false],
             ], 200);
         }
 

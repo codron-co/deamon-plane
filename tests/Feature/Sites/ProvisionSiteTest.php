@@ -121,14 +121,13 @@ class ProvisionSiteTest extends TestCase
             return in_array('APP_KEY', $keys, true)
                 && in_array('DB_PASSWORD', $keys, true)
                 && in_array('MYSQL_ROOT_PASSWORD', $keys, true)
-                && in_array('DEAMON_DEFAULT_ADMIN_PASSWORD', $keys, true)
+                && ! in_array('DEAMON_DEFAULT_ADMIN_PASSWORD', $keys, true)
                 && in_array('APP_TIMEZONE', $keys, true)
                 && in_array('DB_HOST', $keys, true)
                 && $map->get('APP_TIMEZONE') === 'Europe/Istanbul'
                 && $map->get('DB_HOST') === 'mysql'
                 && strlen((string) $map->get('DB_PASSWORD')) >= 32
                 && strlen((string) $map->get('MYSQL_ROOT_PASSWORD')) >= 32
-                && strlen((string) $map->get('DEAMON_DEFAULT_ADMIN_PASSWORD')) >= 12
                 && ! in_array('SERVICE_URL_APP', $keys, true);
         });
 
@@ -417,7 +416,6 @@ class ProvisionSiteTest extends TestCase
                     ['key' => 'DEAMON_SITE_NAME', 'value' => 'Izyem', 'is_preview' => false],
                     ['key' => 'DB_PASSWORD', 'value' => '', 'is_preview' => false],
                     ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => '', 'is_preview' => false],
-                    ['key' => 'DEAMON_DEFAULT_ADMIN_PASSWORD', 'value' => '', 'is_preview' => false],
                 ], 200);
             }
 
@@ -530,7 +528,6 @@ class ProvisionSiteTest extends TestCase
                     ['key' => 'DEAMON_SITE_NAME', 'value' => 'Izyem', 'is_preview' => false],
                     ['key' => 'DB_PASSWORD', 'value' => $filled ? 'already-set-db-password' : '', 'is_preview' => false],
                     ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => $filled ? 'already-set-root-password' : '', 'is_preview' => false],
-                    ['key' => 'DEAMON_DEFAULT_ADMIN_PASSWORD', 'value' => $filled ? 'already-set-admin-password' : '', 'is_preview' => false],
                 ], 200);
             }
 

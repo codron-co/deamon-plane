@@ -50,6 +50,8 @@ final class CoolifyEnvDefaultCatalog
     /**
      * CMS compose interpolates these from Coolify. Empty MYSQL_ROOT_PASSWORD / DB_PASSWORD
      * makes official mysql:8.0 exit on first volume init.
+     * No DEAMON_DEFAULT_ADMIN_PASSWORD: CMS 1.2.18+ seeds the first admin passwordless
+     * and Plane creates admins over the agent (invite mail), see site-admins.md.
      *
      * @return list<array{0: string, 1: CoolifyEnvKind, 2: ?string, 3: bool, 4: ?string}>
      */
@@ -58,7 +60,6 @@ final class CoolifyEnvDefaultCatalog
         return array_merge(self::siteKeys(), [
             ['DB_PASSWORD', CoolifyEnvKind::Generated, '{{generated}}', true, 'compose_mysql'],
             ['MYSQL_ROOT_PASSWORD', CoolifyEnvKind::Generated, '{{generated}}', true, 'compose_mysql_root'],
-            ['DEAMON_DEFAULT_ADMIN_PASSWORD', CoolifyEnvKind::Generated, '{{generated}}', true, 'admin_seed'],
             ['APP_NAME', CoolifyEnvKind::Static, 'Deamon', false, 'app_name'],
             ['APP_DEBUG', CoolifyEnvKind::Static, 'false', false, 'app_debug'],
             ['APP_TIMEZONE', CoolifyEnvKind::Static, 'Europe/Istanbul', false, 'timezone'],
@@ -93,7 +94,6 @@ final class CoolifyEnvDefaultCatalog
     {
         return array_merge(self::siteKeys(), [
             ['DB_PASSWORD', CoolifyEnvKind::Generated, '{{generated}}', true, 'external_db_password'],
-            ['DEAMON_DEFAULT_ADMIN_PASSWORD', CoolifyEnvKind::Generated, '{{generated}}', true, 'admin_seed'],
             ['APP_NAME', CoolifyEnvKind::Static, 'Deamon', false, 'app_name'],
             ['APP_DEBUG', CoolifyEnvKind::Static, 'false', false, 'app_debug'],
             ['APP_TIMEZONE', CoolifyEnvKind::Static, 'Europe/Istanbul', false, 'timezone'],
