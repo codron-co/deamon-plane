@@ -63,11 +63,14 @@
                                         $isActive = (bool) ($admin['is_active'] ?? false);
                                         $isLastActive = $isActive && $activeAdminCount <= 1;
                                         $adminEmail = (string) ($admin['email'] ?? '');
+                                        $passwordIsSet = ! empty($admin['password_is_set']);
                                     @endphp
                                     <tr>
                                         <td>
                                             {{ $admin['name'] ?? '' }}
-                                            @if (! empty($admin['must_change_password']))
+                                            @if (! $passwordIsSet)
+                                                <span class="status-chip">{{ __('sites.admins.password_not_set') }}</span>
+                                            @elseif (! empty($admin['must_change_password']))
                                                 <span class="status-chip">{{ __('sites.admins.must_change') }}</span>
                                             @endif
                                             @if (! empty($admin['has_two_factor']))
@@ -79,6 +82,14 @@
                                             <span class="status-chip">{{ $isActive ? __('sites.admins.active') : __('sites.admins.inactive') }}</span>
                                         </td>
                                         <td class="ops-table-actions">
+                                            @if (! $passwordIsSet)
+                                                <form method="POST" action="{{ route('ops.sites.admins.password-invite', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.send_password_invite_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.send_password_invite_title') }}" data-confirm-label="{{ __('sites.admins.send_password_invite') }}">
+                                                    @csrf
+                                                    <input type="hidden" name="admin_email" value="{{ $adminEmail }}">
+                                                    <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.admins.send_password_invite') }}</button>
+                                                </form>
+                                            @endif
+
                                             <form method="POST" action="{{ route('ops.sites.admins.password', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending>
                                                 @csrf
                                                 <input type="hidden" name="password_mode" value="generate">
@@ -141,7 +152,12 @@
                             <input type="radio" name="password_mode" value="manual" data-admin-password-mode>
                             <span>{{ __('sites.admins.password_manual') }}</span>
                         </label>
+                        <label class="field-check">
+                            <input type="radio" name="password_mode" value="invite" data-admin-password-mode>
+                            <span>{{ __('sites.admins.password_invite') }}</span>
+                        </label>
                         <input class="input" type="text" name="password" value="" autocomplete="new-password" maxlength="255" data-admin-password-manual hidden placeholder="{{ __('sites.admins.password_placeholder') }}">
+                        <p class="field-hint" data-admin-password-invite-hint hidden>{{ __('sites.admins.password_invite_hint') }}</p>
                     </fieldset>
                     <button type="submit" class="btn btn-primary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.admins.create') }}</button>
                 </form>
@@ -155,10 +171,13 @@
     const form = document.querySelector('[data-admin-create]');
     if (!form) return;
     const manual = form.querySelector('[data-admin-password-manual]');
+    const inviteHint = form.querySelector('[data-admin-password-invite-hint]');
     const modes = form.querySelectorAll('[data-admin-password-mode]');
     const sync = () => {
         const selected = form.querySelector('[data-admin-password-mode]:checked');
         const isManual = selected?.value === 'manual';
+        const isInvite = selected?.value === 'invite';
+        if (inviteHint) inviteHint.hidden = !isInvite;
         if (!manual) return;
         manual.hidden = !isManual;
         manual.required = isManual;

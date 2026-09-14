@@ -206,6 +206,31 @@ class SiteAdminAgentTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_admins_list_shows_send_invite_only_for_passwordless_admins(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins' => Http::response([
+                'ok' => true,
+                'admins' => [
+                    ['id' => 1, 'name' => 'Set', 'email' => 'set@example.com', 'is_active' => true, 'must_change_password' => false, 'password_is_set' => true, 'has_two_factor' => false, 'created_at' => now()->toIso8601String()],
+                    ['id' => 9, 'name' => 'Invited', 'email' => 'invited@example.com', 'is_active' => true, 'must_change_password' => true, 'password_is_set' => false, 'has_two_factor' => false, 'created_at' => now()->toIso8601String()],
+                ],
+            ], 200),
+        ]);
+
+        $html = $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee(__('sites.admins.password_not_set'), false)
+            ->assertSee(__('sites.admins.password_invite'), false)
+            ->getContent();
+
+        $this->assertStringContainsString(route('ops.sites.admins.password-invite', [$site, 9]), $html);
+        $this->assertStringNotContainsString(route('ops.sites.admins.password-invite', [$site, 1]), $html);
+    }
+
     public function test_operator_cannot_deactivate_or_delete_admin(): void
     {
         $site = $this->siteWithSecret();
