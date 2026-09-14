@@ -36,7 +36,7 @@ the existing value. Test connection = list orders and re-match assigned sites. T
 table is a catalog, not a global picker. Tests: `MailListEmptyStatesTest`,
 `OpsListFragmentTest`.
 
-Site create/edit: mail server select (credentials). Site detail **Infrastructure**: mail server + mailbox-domain selects (pre-filled) + mailbox request queue. Saving POSTs CMS configure when at least one domain is bound.
+Site create/edit: mail server select (credentials). Site detail **Infrastructure**: mail server + mailbox-domain selects (pre-filled) + mailbox request queue. Saving persists the bindings first and then **queues** `ConfigureSiteMailJob` (never inline: the CMS runs its mail-module migrations on the first configure and can outlast the agent timeout). The job retries a 429 or a dropped connection once (`RetriesThrottledAgentRequests`). The outcome lands on `sites.mail_configured_at` / `mail_configure_failed_at` / `mail_configure_error` (`timeout`, `http_500`, `no_base_url`, …) and shows as a chip on the Infrastructure card; **CMS’e tekrar gönder** (`POST /sites/{site}/mail-configure`) requeues it. A failed push never blocks the save flash.
 
 Viewer is read-only (`ops.write`). Destroy uses `PlaneConfirm`.
 

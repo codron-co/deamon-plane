@@ -265,6 +265,100 @@ class SiteMailAssignTest extends TestCase
     /**
      * @return array<string, mixed>
      */
+    public function test_configure_failure_is_recorded_on_the_site_and_resend_clears_it(): void
+    {
+        $server = MailServer::factory()->hostingerReady(self::TOKEN)->create();
+        $site = Site::factory()->withSecrets()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Main,
+            'primary_domain' => 'shop.example.test',
+            'agent_base_url' => 'https://shop.example.test',
+        ]);
+
+        Http::fake([
+            // A connection failure cannot be faked on this PHP build (Guzzle ConnectException segfaults);
+            // the retry itself is covered by RetriesThrottledAgentRequestsTest. Any failure records the same state.
+            // First push fails, the resend below succeeds (stubs merge, so one sequence carries both).
+            'https://shop.example.test/internal/control/v1/mail/configure' => Http::sequence()
+                ->push(['ok' => false], 500)
+                ->push(['ok' => true], 200),
+            'https://developers.hostinger.com/api/mail/v1/orders*' => Http::response([
+                'data' => [[
+                    'id' => 'OR9siteorder',
+                    'status' => 'active',
+                    'domain' => ['name' => 'shop.example.test'],
+                ]],
+                'meta' => ['last_page' => 1],
+            ], 200),
+        ]);
+
+        // The save must succeed even though the CMS never answered.
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.mail', $site), ['mail_server_id' => $server->id])
+            ->assertRedirect(route('ops.sites.show', $site))
+            ->assertSessionMissing('error')
+            ->assertSessionHas('status', fn (string $status): bool => str_contains($status, __('mail.flash.configure_queued')));
+
+        $site->refresh();
+        $this->assertSame($server->id, $site->mail_server_id);
+        $this->assertSame('OR9siteorder', $site->hostinger_order_id);
+        $this->assertNotNull($site->mail_configure_failed_at);
+        $this->assertSame('http_500', $site->mail_configure_error);
+        $this->assertNull($site->mail_configured_at);
+        $this->assertSame('failed', $site->mailConfigureState());
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/mail/configure'));
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-mail-configure-state="failed"', false)
+            ->assertSee(__('mail.configure_state.reasons.http_error').' 500', false)
+            ->assertSee(route('ops.sites.mail-configure', $site), false);
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.mail-configure', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
+            ->assertSessionHas('status', __('mail.flash.configure_queued'));
+
+        $site->refresh();
+        $this->assertNotNull($site->mail_configured_at);
+        $this->assertNull($site->mail_configure_failed_at);
+        $this->assertNull($site->mail_configure_error);
+        $this->assertSame('configured', $site->mailConfigureState());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'site.mail_configure_requeued', 'subject_id' => $site->id]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-mail-configure-state="configured"', false)
+            ->assertDontSee(route('ops.sites.mail-configure', $site), false);
+    }
+
+    public function test_resend_without_agent_secret_is_refused(): void
+    {
+        $server = MailServer::factory()->hostingerReady(self::TOKEN)->create();
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Main,
+            'primary_domain' => 'shop.example.test',
+            'mail_server_id' => $server->id,
+            'agent_secret_encrypted' => null,
+        ]);
+
+        Http::fake();
+
+        $this->actingAs($this->operator())
+            ->from(route('ops.sites.show', $site))
+            ->post(route('ops.sites.mail-configure', $site))
+            ->assertRedirect(route('ops.sites.show', $site))
+            ->assertSessionHas('error', __('mail.flash.needs_secret'));
+
+        Http::assertNothingSent();
+    }
+
     private function sitePayload(Site $site, ?string $mailServerId): array
     {
         return [

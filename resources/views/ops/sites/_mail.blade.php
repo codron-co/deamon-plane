@@ -22,6 +22,14 @@
         $selectedOrderIds = [''];
     }
     $domains = $site->mailDomains();
+    $configureState = $site->mailConfigureState();
+    $configureReason = (string) ($site->mail_configure_error ?? '');
+    $configureReasonKey = str_starts_with($configureReason, 'http_') ? 'http_error' : $configureReason;
+    $configureReasonLabel = $configureReason === ''
+        ? ''
+        : (\Illuminate\Support\Facades\Lang::has("mail.configure_state.reasons.$configureReasonKey")
+            ? __("mail.configure_state.reasons.$configureReasonKey").(str_starts_with($configureReason, 'http_') ? ' '.substr($configureReason, 5) : '')
+            : $configureReason);
 @endphp
 
 <article class="site-card site-operation" id="site-mail" aria-labelledby="site-mail-heading">
@@ -32,7 +40,17 @@
         @elseif ($site->mailServer)
             <span class="status-chip">{{ __('mail.sites.unmatched') }}</span>
         @endif
+        @if ($configureState !== 'none')
+            <span class="status-chip" data-mail-configure-state="{{ $configureState }}">{{ __('mail.configure_state.'.$configureState) }}</span>
+        @endif
     </div>
+
+    @if ($configureState === 'failed')
+        <p class="ops-alert ops-alert-warning" role="status" data-mail-configure-error>
+            {{ __('mail.configure_state.failed') }}@if ($configureReasonLabel !== '') ({{ $configureReasonLabel }})@endif
+            · {{ $site->mail_configure_failed_at?->diffForHumans() }}
+        </p>
+    @endif
 
     @if ($canEditMail)
         @php($selectedMailId = (string) old('mail_server_id', $site->mail_server_id))
@@ -103,6 +121,12 @@
                 @csrf
                 <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('mail.boxes.refresh') }}</button>
             </form>
+            @if (in_array($configureState, ['failed', 'not_pushed'], true))
+                <form method="POST" action="{{ route('ops.sites.mail-configure', $site) }}" data-ops-pending data-mail-configure-resend>
+                    @csrf
+                    <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('mail.configure_state.resend') }}</button>
+                </form>
+            @endif
         @endif
     @else
         <p>

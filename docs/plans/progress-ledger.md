@@ -12,6 +12,13 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 - Tests seed every channel from `tests/Fixtures/deamon/env-production.example` (base `TestCase::setUp`). Keep that fixture in step with the CMS file. Tests: `EnvExampleParserTest`, `CoolifyEnvCatalogSyncTest`, `CoolifyAppEnvSyncTest`, `SettingsEnvDefaultsTest`, `DeamonGitConnectionTest`, `ProvisionSiteTest`, `ComposePackMigrateTest`, `SiteAppHealthTest`.
 - Ops action: Settings → Deamon Git connect on CMS owner; webhook on `codron-co/deamon` → `https://plane.codron.co/webhooks/github` (push); Refresh once per branch. Docs: [../modules/coolify-client.md](../modules/coolify-client.md), [../modules/deployment.md](../modules/deployment.md), [../runbooks/provision-site.md](../runbooks/provision-site.md), [../modules/ops-sites.md](../modules/ops-sites.md).
 
+## Domains on any apex + redeploy after bind; mail configure queued with state (2026-09-14)
+
+- Status: **committed on `alpha`**. Fixes two operator reports: “Ek domain’ler … üzerinde kalmalı” (same-apex rule dropped; a foreign apex gets its own Cloudflare zone recorded on `site_domains`) and “domain ekledikten sonra Coolify deploy gerekiyor” (every domain bind now ends in `CoolifyDeploySettings::redeploy`; the edit form pushes alias changes too, it used to write only the DB).
+- Mail: “Mail configure timed out” after saving mailbox domains. Configure moved off the request into `ConfigureSiteMailJob` (retry once on 429 / connection drop), outcome on `sites.mail_configure*`, chip + **CMS’e tekrar gönder** on the Infrastructure card. Save flash no longer depends on the CMS answering.
+- Not done: CMS side still runs module migrations inside `mail/configure` (CMS repo); bulk **Bind on Coolify** stays PATCH-only.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md), [../modules/mail-servers.md](../modules/mail-servers.md), [../runbooks/provision-site.md](../runbooks/provision-site.md). Tests: `SiteLandingFlowTest` (+3, apex accept, own zone, edit push), `SiteMailAssignTest` (+2), new `RetriesThrottledAgentRequestsTest`. `Http::failedConnection()` segfaults on this PHP 8.2 Windows build — connection retry is unit-tested without Guzzle.
+
 ## Admin password invite on site admins (2026-09-14)
 
 - Status: **committed on `alpha`** (4 commits: catalog, agent + controller, UI, docs). Spec: [../superpowers/specs/2026-09-14-admin-password-invite-design.md](../superpowers/specs/2026-09-14-admin-password-invite-design.md). Plan: [../superpowers/plans/2026-09-14-admin-password-invite.md](../superpowers/plans/2026-09-14-admin-password-invite.md).

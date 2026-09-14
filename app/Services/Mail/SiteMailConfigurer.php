@@ -3,8 +3,10 @@
 namespace App\Services\Mail;
 
 use App\Enums\MailProvider;
+use App\Jobs\ConfigureSiteMailJob;
 use App\Models\MailServer;
 use App\Models\Site;
+use App\Services\Agent\Concerns\RetriesThrottledAgentRequests;
 use App\Services\Agent\ControlPlaneAgentContract;
 use App\Support\ControlPlaneAgentSignature;
 use Illuminate\Http\Client\ConnectionException;
@@ -14,7 +16,17 @@ use Throwable;
 
 class SiteMailConfigurer
 {
-    public function sync(Site $site): SiteMailConfigureResult
+    use RetriesThrottledAgentRequests;
+
+    /**
+     * Push off the request path; the outcome lands on the site row (see ConfigureSiteMailJob).
+     */
+    public function queue(Site $site): void
+    {
+        ConfigureSiteMailJob::dispatch((string) $site->id);
+    }
+
+    public function sync(Site $site, bool $retryConnection = false): SiteMailConfigureResult
     {
         if (! $site->hasAgentSecret()) {
             return SiteMailConfigureResult::needsSecret();
@@ -22,6 +34,8 @@ class SiteMailConfigurer
 
         $baseUrl = $site->resolvedAgentBaseUrl();
         if ($baseUrl === null) {
+            $this->recordOutcome($site, 'no_base_url');
+
             return SiteMailConfigureResult::failure('Site has no agent base URL or primary domain.');
         }
 
@@ -52,6 +66,8 @@ class SiteMailConfigurer
 
         $body = ControlPlaneAgentContract::encodeJson($payload);
         if ($body === '') {
+            $this->recordOutcome($site, 'encode_failed');
+
             return SiteMailConfigureResult::failure('Mail configure payload could not be encoded.');
         }
 
@@ -61,23 +77,29 @@ class SiteMailConfigurer
         $url = $baseUrl.ControlPlaneAgentContract::mailConfigurePath();
 
         try {
-            $response = Http::timeout($timeout)
-                ->acceptJson()
-                ->withHeaders($signed['headers'])
-                ->withBody($body, 'application/json')
-                ->post($url);
+            $response = $this->sendWithRetry(
+                fn () => Http::timeout($timeout)
+                    ->acceptJson()
+                    ->withHeaders($signed['headers'])
+                    ->withBody($body, 'application/json')
+                    ->post($url),
+                $retryConnection,
+            );
         } catch (ConnectionException) {
             $this->logFailure($site, 'timeout');
+            $this->recordOutcome($site, 'timeout');
 
             return SiteMailConfigureResult::failure('Mail configure timed out.');
         } catch (Throwable) {
             $this->logFailure($site, 'http_error');
+            $this->recordOutcome($site, 'http_error');
 
             return SiteMailConfigureResult::failure('Mail configure request failed.');
         }
 
         if ($response->failed()) {
             $this->logFailure($site, 'http_error', $response->status());
+            $this->recordOutcome($site, 'http_'.$response->status());
 
             return SiteMailConfigureResult::failure(
                 'Mail configure returned HTTP '.$response->status().'.',
@@ -88,11 +110,32 @@ class SiteMailConfigurer
         $json = $response->json();
         if (is_array($json) && $this->payloadContainsSecret($site, $json, $payload)) {
             $this->logFailure($site, 'secret_echo', $response->status());
+            $this->recordOutcome($site, 'secret_echo');
 
             return SiteMailConfigureResult::failure('Mail configure payload was discarded.', $response->status());
         }
 
+        $this->recordOutcome($site, null);
+
         return SiteMailConfigureResult::ok($enabled, $response->status());
+    }
+
+    /**
+     * Success clears the failure columns, so "failed" always means the *last* push failed.
+     */
+    private function recordOutcome(Site $site, ?string $error): void
+    {
+        $site->forceFill($error === null
+            ? [
+                'mail_configured_at' => now(),
+                'mail_configure_failed_at' => null,
+                'mail_configure_error' => null,
+            ]
+            : [
+                'mail_configure_failed_at' => now(),
+                'mail_configure_error' => mb_substr($error, 0, 64),
+            ]);
+        $site->save();
     }
 
     public function syncAssignedSites(MailServer $server): void

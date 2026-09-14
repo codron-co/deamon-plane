@@ -4,6 +4,7 @@ namespace App\Services\Mail;
 
 use App\Models\PlatformMailSetting;
 use App\Models\Site;
+use App\Services\Agent\Concerns\RetriesThrottledAgentRequests;
 use App\Services\Agent\ControlPlaneAgentContract;
 use App\Support\ControlPlaneAgentSignature;
 use Illuminate\Http\Client\ConnectionException;
@@ -13,6 +14,8 @@ use Throwable;
 
 final class PlatformMailConfigurer
 {
+    use RetriesThrottledAgentRequests;
+
     public function __construct(
         private readonly PlatformMailResolver $resolver,
     ) {}
@@ -66,11 +69,14 @@ final class PlatformMailConfigurer
         $url = $baseUrl.ControlPlaneAgentContract::platformMailConfigurePath();
 
         try {
-            $response = Http::timeout($timeout)
-                ->acceptJson()
-                ->withHeaders($signed['headers'])
-                ->withBody($body, 'application/json')
-                ->post($url);
+            $response = $this->sendWithRetry(
+                fn () => Http::timeout($timeout)
+                    ->acceptJson()
+                    ->withHeaders($signed['headers'])
+                    ->withBody($body, 'application/json')
+                    ->post($url),
+                retryConnection: true,
+            );
         } catch (ConnectionException) {
             $this->logFailure($site, 'timeout');
             $this->recordPushOutcome($site, 'timeout');

@@ -4,49 +4,24 @@ namespace App\Services\Agent;
 
 use App\Enums\CmsPublishStatus;
 use App\Models\Site;
+use App\Services\Agent\Concerns\RetriesThrottledAgentRequests;
 use App\Support\ControlPlaneAgentSignature;
-use App\Support\RetryAfter;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Sleep;
 use Throwable;
 
 class SiteAgentClient
 {
+    use RetriesThrottledAgentRequests;
+
     /**
      * CMS control routes are Laravel-throttled, so a rollout that touches one CMS
      * repeatedly can draw a 429. Replay it after the advertised delay.
      *
      * @param  callable(): Response  $send
      */
-    private function sendWithRetry(callable $send): Response
-    {
-        $max = max(1, (int) config('ops.agent.retry.max_attempts', 2));
-        $baseMs = max(1, (int) config('ops.agent.retry.base_delay_ms', 400));
-        $maxMs = max(1, (int) config('ops.agent.retry.max_delay_ms', 5000));
-        $attempt = 0;
-
-        while (true) {
-            $attempt++;
-            $response = $send();
-
-            if ($response->status() !== 429 || $attempt >= $max) {
-                return $response;
-            }
-
-            $delay = RetryAfter::clamp(
-                RetryAfter::fromResponse($response) ?? RetryAfter::backoff($attempt, $baseMs, $maxMs),
-                $maxMs,
-            );
-
-            if ($delay > 0) {
-                Sleep::for((int) ceil($delay * 1000))->milliseconds();
-            }
-        }
-    }
-
     public function health(Site $site): AgentHealthResult
     {
         if (! $site->hasAgentSecret()) {
