@@ -2,6 +2,14 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Coolify env catalog from CMS `.env.production.example` per branch (2026-09-14)
+
+- Status: **committed on `alpha`**. Build-pack catalogs (`dockercompose` / `dockerfile`) and in-Plane editing are gone; `coolify_env_defaults` is keyed by git **channel** (`2026_09_15_000001_coolify_env_catalog_per_channel` carries legacy compose rows to every channel until the first sync). Source per channel is `coolify_env_catalog_sources` (repo, commit, fetched_at, last_error).
+- `CoolifyEnvCatalogSync` + `EnvExampleParser` read `.env.production.example` from `config('ops.deamon.repository')` at `ref=<channel>` via `GitHubAppClient::fetchTextFile` (Themes connection on the CMS owner, else Settings PAT / App). Triggers: CMS repo `push` webhook (`GitHubWebhookHandler`, same secret), hourly `ops:sync-env-catalog`, Settings **Refresh from GitHub** (`POST /settings/env-defaults/sync`), on-demand when a channel is empty at deploy.
+- Value tokens: `{{generated}}`, `{{site.app_key|name|channel|agent_secret}}`, `{{plane.host}}` (new — `CONTROL_PLANE_HOST_ALLOWLIST`), `{{coolify*}}` (skip), empty = required, else static. `#@secret` + comment-above-key description. Compose constants (`DB_HOST`, `APP_TIMEZONE`, …) and `DEAMON_PLATFORM_MAIL_*` are no longer written — compose / `/platform-mail/configure` own them; `SiteAppHealthInspector` derives required/static checks from the catalog.
+- Tests seed every channel from `tests/Fixtures/deamon/env-production.example` (base `TestCase::setUp`). Keep that fixture in step with the CMS file. Tests: `EnvExampleParserTest`, `CoolifyEnvCatalogSyncTest`, `CoolifyAppEnvSyncTest`, `SettingsEnvDefaultsTest`, `ProvisionSiteTest`, `ComposePackMigrateTest`, `SiteAppHealthTest`.
+- Ops action: add a GitHub webhook on `codron-co/deamon` → `https://plane.codron.co/webhooks/github` (push, same secret as themes) and make sure a GitHub credential can read the CMS repo; then press Refresh once per branch. Docs: [../modules/coolify-client.md](../modules/coolify-client.md), [../modules/deployment.md](../modules/deployment.md), [../runbooks/provision-site.md](../runbooks/provision-site.md), [../modules/ops-sites.md](../modules/ops-sites.md).
+
 ## Admin password invite on site admins (2026-09-14)
 
 - Status: **committed on `alpha`** (4 commits: catalog, agent + controller, UI, docs). Spec: [../superpowers/specs/2026-09-14-admin-password-invite-design.md](../superpowers/specs/2026-09-14-admin-password-invite-design.md). Plan: [../superpowers/plans/2026-09-14-admin-password-invite.md](../superpowers/plans/2026-09-14-admin-password-invite.md).

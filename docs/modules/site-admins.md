@@ -30,6 +30,6 @@ Create modes: **generate** and **manual** flash the password once (`admin_passwo
 
 RBAC: operator list/create/reset/invite; Super Admin deactivate/delete. Audit: `site.admin.created` (`password_mode: invite|password`), `site.admin.password_reset`, `site.admin.password_invite_sent` (admin id + email only). Never log passwords or invite tokens. Outdated CMS (404 without an error code) shows the existing `sites.admins.errors.outdated` flash.
 
-Coolify no longer seeds `DEAMON_DEFAULT_ADMIN_PASSWORD` (dropped from both env packs, leftover rows deleted by `2026_09_14_120000_drop_admin_password_coolify_env_defaults`). The CMS first admin starts passwordless; use invite to hand it over.
+Coolify no longer seeds `DEAMON_DEFAULT_ADMIN_PASSWORD` (not in the CMS `.env.production.example` catalog; leftover rows deleted by `2026_09_14_120000_drop_admin_password_coolify_env_defaults`). The CMS first admin starts passwordless; use invite to hand it over.
 
 Tests: `tests/Feature/Agent/SiteAdminAgentTest.php` (`Http::fake` only).

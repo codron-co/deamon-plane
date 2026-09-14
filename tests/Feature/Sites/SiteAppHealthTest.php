@@ -84,7 +84,8 @@ class SiteAppHealthTest extends TestCase
 
         $codes = collect($site->fresh()->appHealth()->issues)->map(fn ($issue) => $issue->code.'|'.($issue->key ?? ''))->all();
         $this->assertContains('missing_env|MYSQL_ROOT_PASSWORD', $codes);
-        $this->assertContains('wrong_env|DB_HOST', $codes);
+        // Compose constants (DB_HOST etc.) live in docker-compose.coolify.yml, not the env catalog.
+        $this->assertNotContains('wrong_env|DB_HOST', $codes);
     }
 
     public function test_sync_env_fix_writes_compose_catalog_without_page_redirect(): void
@@ -132,7 +133,7 @@ class SiteAppHealthTest extends TestCase
                 }
             }
 
-            return ($map['DB_HOST'] ?? null) === 'mysql'
+            return ! array_key_exists('DB_HOST', $map)
                 && strlen((string) ($map['MYSQL_ROOT_PASSWORD'] ?? '')) >= 32
                 && strlen((string) ($map['DB_PASSWORD'] ?? '')) >= 32;
         });

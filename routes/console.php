@@ -16,3 +16,10 @@ Schedule::job(new DispatchSiteHealthChecksJob)
     ->cron(sprintf('*/%d * * * *', $pollMinutes))
     ->name('ops-site-agent-health')
     ->withoutOverlapping();
+
+// Coolify env catalogs follow the CMS `.env.production.example` per branch. The GitHub push
+// webhook refreshes immediately; this hourly pass covers missed webhooks.
+Schedule::command('ops:sync-env-catalog')
+    ->hourly()
+    ->name('ops-sync-env-catalog')
+    ->withoutOverlapping();

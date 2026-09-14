@@ -2,32 +2,45 @@
 
 namespace App\Http\Controllers\Ops;
 
+use App\Enums\Channel;
 use App\Enums\CoolifyEnvKind;
-use App\Enums\CoolifyEnvPack;
 use App\Http\Controllers\Controller;
+use App\Models\CoolifyEnvCatalogSource;
 use App\Models\CoolifyEnvDefault;
+use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogException;
+use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogSync;
+use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Support\Ops\SettingsJump;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class SettingsController extends Controller
 {
     public function index(): View
     {
+        $channels = array_values(array_filter(
+            Channel::cases(),
+            static fn (Channel $channel): bool => $channel->isAllowed(),
+        ));
+
         $envDefaults = CoolifyEnvDefault::query()
-            ->orderBy('pack')
+            ->orderBy('channel')
             ->orderBy('sort')
             ->orderBy('key')
             ->get()
-            ->groupBy(static fn (CoolifyEnvDefault $row): string => $row->pack->value);
+            ->groupBy(static fn (CoolifyEnvDefault $row): string => $row->channel->value);
+
+        $envSources = CoolifyEnvCatalogSource::query()
+            ->get()
+            ->keyBy(static fn (CoolifyEnvCatalogSource $row): string => $row->channel->value);
 
         $envKeyHaystack = $envDefaults
             ->flatten()
             ->pluck('key')
             ->filter()
+            ->unique()
             ->implode(' ');
 
         return view('ops.settings.index', [
@@ -35,9 +48,12 @@ class SettingsController extends Controller
             'repository' => config('ops.deamon.repository'),
             'canWrite' => request()->user()?->can('ops.write') ?? false,
             'githubWebhookUrl' => url('/webhooks/github'),
-            'envPacks' => CoolifyEnvPack::cases(),
+            'envChannels' => $channels,
             'envKinds' => CoolifyEnvKind::cases(),
             'envDefaults' => $envDefaults,
+            'envSources' => $envSources,
+            'envRepo' => DeamonRepo::fullName(),
+            'envPath' => DeamonRepo::ENV_EXAMPLE_PATH,
             'settingsJump' => SettingsJump::sections(),
             'envKeyHaystack' => $envKeyHaystack,
         ]);
@@ -57,72 +73,48 @@ class SettingsController extends Controller
         return redirect()->route('ops.coolify.index');
     }
 
-    public function updateEnvDefaults(Request $request): RedirectResponse
+    /**
+     * Pull one branch's (or every branch's) catalog from the CMS repo now.
+     */
+    public function syncEnvCatalog(Request $request, CoolifyEnvCatalogSync $sync): RedirectResponse
     {
         $this->authorize('ops.write');
 
         $validated = $request->validate([
-            'pack' => ['required', Rule::enum(CoolifyEnvPack::class)],
-            'rows' => ['required', 'array', 'max:200'],
-            'rows.*.key' => ['nullable', 'string', 'max:120', 'regex:/^[A-Z][A-Z0-9_]*$/'],
-            'rows.*.kind' => ['required', Rule::enum(CoolifyEnvKind::class)],
-            'rows.*.value' => ['nullable', 'string', 'max:4000'],
-            'rows.*.is_secret' => ['sometimes', 'boolean'],
-            'rows.*.notes' => ['nullable', 'string', 'max:64'],
+            'channel' => ['nullable', Rule::enum(Channel::class)],
         ]);
 
-        $pack = CoolifyEnvPack::from($validated['pack']);
-        $seen = [];
-        $rows = [];
-        $sort = 10;
+        $channels = filled($validated['channel'] ?? null)
+            ? [Channel::from((string) $validated['channel'])]
+            : array_values(array_filter(Channel::cases(), static fn (Channel $channel): bool => $channel->isAllowed()));
 
-        foreach ($validated['rows'] as $row) {
-            $key = strtoupper(trim((string) ($row['key'] ?? '')));
-            if ($key === '' || isset($seen[$key])) {
-                continue;
-            }
+        $status = [];
+        $errors = [];
 
-            $seen[$key] = true;
-            $rows[] = [
-                'pack' => $pack->value,
-                'key' => $key,
-                'kind' => $row['kind'],
-                'value' => $this->nullableString($row['value'] ?? null),
-                'is_secret' => filter_var($row['is_secret'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'sort' => $sort,
-                'notes' => $this->nullableString($row['notes'] ?? null),
-            ];
-            $sort += 10;
-        }
-
-        if ($rows === []) {
-            return back()->with('error', __('settings.env.empty'));
-        }
-
-        DB::transaction(function () use ($pack, $rows): void {
-            CoolifyEnvDefault::query()->where('pack', $pack->value)->delete();
-
-            $now = now();
-            foreach ($rows as $row) {
-                CoolifyEnvDefault::query()->create([
-                    ...$row,
-                    'created_at' => $now,
-                    'updated_at' => $now,
+        foreach ($channels as $channel) {
+            try {
+                $source = $sync->sync($channel);
+                $status[] = __('settings.env.synced', [
+                    'branch' => $channel->value,
+                    'count' => (int) $source->row_count,
+                    'sha' => $source->shortSha() ?? $channel->value,
+                ]);
+            } catch (CoolifyEnvCatalogException $exception) {
+                $errors[] = __('settings.env.sync_failed', [
+                    'branch' => $channel->value,
+                    'error' => $exception->getMessage(),
                 ]);
             }
-        });
-
-        return back()->with('status', __('settings.env.saved', ['pack' => $pack->label()]));
-    }
-
-    private function nullableString(mixed $value): ?string
-    {
-        if (! is_string($value)) {
-            return null;
         }
 
-        $trimmed = trim($value);
+        $redirect = back();
+        if ($status !== []) {
+            $redirect->with('status', implode(' ', $status));
+        }
+        if ($errors !== []) {
+            $redirect->with('error', implode(' ', $errors));
+        }
 
-        return $trimmed !== '' ? $trimmed : null;
+        return $redirect;
     }
 }

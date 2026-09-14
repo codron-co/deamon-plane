@@ -1,11 +1,14 @@
 <?php
 
-use App\Support\CoolifyEnvDefaultCatalog;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Original build-pack catalog table. The in-code seed (CoolifyEnvDefaultCatalog) is gone:
+ * 2026_09_15_000001 reshapes this table per git channel and rows come from the CMS
+ * `.env.production.example` via CoolifyEnvCatalogSync.
+ */
 return new class extends Migration
 {
     public function up(): void
@@ -24,16 +27,6 @@ return new class extends Migration
             $table->unique(['pack', 'key']);
             $table->index(['pack', 'sort']);
         });
-
-        $now = now();
-
-        foreach (CoolifyEnvDefaultCatalog::rows() as $row) {
-            DB::table('coolify_env_defaults')->insert([
-                ...$row,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        }
     }
 
     public function down(): void

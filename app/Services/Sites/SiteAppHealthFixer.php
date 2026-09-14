@@ -2,7 +2,6 @@
 
 namespace App\Services\Sites;
 
-use App\Enums\CoolifyEnvPack;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Agent\SiteHealthChecker;
@@ -266,7 +265,7 @@ class SiteAppHealthFixer
             throw new SiteAppHealthException(__('site_ops.pack.missing_app'));
         }
 
-        $this->envSync->sync($site, CoolifyApplicationService::forSite($site), CoolifyEnvPack::DockerCompose);
+        $this->envSync->sync($site, CoolifyApplicationService::forSite($site));
     }
 
     private function bindDomains(Site $site): void

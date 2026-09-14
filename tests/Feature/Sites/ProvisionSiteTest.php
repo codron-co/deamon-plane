@@ -121,11 +121,13 @@ class ProvisionSiteTest extends TestCase
             return in_array('APP_KEY', $keys, true)
                 && in_array('DB_PASSWORD', $keys, true)
                 && in_array('MYSQL_ROOT_PASSWORD', $keys, true)
+                && in_array('DEAMON_CHANNEL', $keys, true)
+                && in_array('CONTROL_PLANE_AGENT_SECRET', $keys, true)
                 && ! in_array('DEAMON_DEFAULT_ADMIN_PASSWORD', $keys, true)
-                && in_array('APP_TIMEZONE', $keys, true)
-                && in_array('DB_HOST', $keys, true)
-                && $map->get('APP_TIMEZONE') === 'Europe/Istanbul'
-                && $map->get('DB_HOST') === 'mysql'
+                && ! in_array('DEAMON_PLATFORM_MAIL_PASSWORD', $keys, true)
+                && ! in_array('APP_TIMEZONE', $keys, true)
+                && ! in_array('DB_HOST', $keys, true)
+                && $map->get('DEAMON_CHANNEL') === 'beta'
                 && strlen((string) $map->get('DB_PASSWORD')) >= 32
                 && strlen((string) $map->get('MYSQL_ROOT_PASSWORD')) >= 32
                 && ! in_array('SERVICE_URL_APP', $keys, true);

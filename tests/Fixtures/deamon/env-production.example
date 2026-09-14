@@ -1,0 +1,69 @@
+# ---------------------------------------------------------------------------
+# Deamon — Coolify env kataloğu (dal başına tek kaynak)
+#
+# Deamon Plane → Sistem → "Coolify env varsayılanları" bu dosyayı GitHub'dan
+# (codron-co/deamon, ilgili dal: main / beta / alpha) okur ve her deploy'da
+# Coolify uygulama env'ini buna göre eşitler. Plane'de elle düzenleme yok:
+# burada değiştir → push → Plane webhook / saatlik senkron ile güncellenir.
+#
+# Satır biçimi: KEY=value  (yorum satırları ve `# KEY=` gibi kapalı satırlar yok sayılır)
+# Değer tokenleri (tür):
+#   {{generated}}                Boşsa/örnekse Plane güçlü rastgele sır üretir; dolu değeri döndürmez
+#   {{site.app_key}}             Plane site kaydı — Laravel APP_KEY
+#   {{site.name}}                Plane site kaydı — müşteri görünen adı
+#   {{site.channel}}             Plane site kaydı — git dalı (main | beta | alpha)
+#   {{site.agent_secret}}        Plane site kaydı — CMS agent HMAC secret
+#   {{plane.host}}               Plane'in kendi host adı (APP_URL)
+#   {{coolify}} / {{coolify.X}}  Coolify enjekte eder; Plane yazmaz (yalnızca belgeleme)
+#   (boş)                        Zorunlu; Coolify'da elle doldurulur, canlı değer korunur
+#   diğer                        Statik değer; farklıysa Plane düzeltir
+# Anahtarın hemen üstündeki `#` satırları açıklama olarak Plane'de gösterilir.
+# `#@secret` satırı değeri sır olarak işaretler (Plane maskeleyerek gösterir).
+#
+# Compose sabitleri (APP_ENV, DB_HOST, REDIS_*, QUEUE/CACHE/SESSION, MAIL_MAILER=log,
+# TRUSTED_PROXIES, WAIT_FOR_*) docker-compose.coolify.yml `environment:` bloğundadır;
+# Coolify env'e yazılmaz. Platform SMTP ve bildirim bayrakları Plane
+# `/platform-mail/configure` ile CMS veritabanına gelir — env yok.
+# ---------------------------------------------------------------------------
+
+# Laravel uygulama anahtarı; Plane site kaydından.
+#@secret
+APP_KEY={{site.app_key}}
+
+# Müşteri / şirket adı (site seed + görünen ad).
+DEAMON_SITE_NAME={{site.name}}
+
+# Git dalı; CMS agent health `channel` olarak raporlar.
+DEAMON_CHANNEL={{site.channel}}
+
+# Deamon Plane site agent HMAC secret. Boş = /internal/control/v1/* register edilmez.
+#@secret
+CONTROL_PLANE_AGENT_SECRET={{site.agent_secret}}
+
+# Plane host allowlist: platform-mail / H-Posta çağrılarındaki plane_base_url bu host olmalı.
+CONTROL_PLANE_HOST_ALLOWLIST={{plane.host}}
+
+# Compose MySQL kullanıcı parolası (app + mysql servisine enjekte). Boşsa mysql ilk init'te çıkar.
+#@secret
+DB_PASSWORD={{generated}}
+
+# Compose MySQL root parolası (yalnızca volume ilk init).
+#@secret
+MYSQL_ROOT_PASSWORD={{generated}}
+
+# Coolify domain proxy'sinden gelir; CMS APP_URL ← SERVICE_URL_APP.
+APP_URL={{coolify.SERVICE_URL_APP}}
+
+# CMS DEAMON_SITE_HOST ← SERVICE_FQDN_APP.
+DEAMON_SITE_HOST={{coolify.SERVICE_FQDN_APP}}
+
+SERVICE_URL_APP={{coolify}}
+SERVICE_FQDN_APP={{coolify}}
+
+# Build anında Coolify enjekte eder (.deamon/git-branch).
+COOLIFY_BRANCH={{coolify}}
+SOURCE_COMMIT={{coolify}}
+
+# İsteğe bağlı override'lar (kapalı satır = katalogda yok, compose varsayılanı geçerli):
+# TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+# CONTROL_PLANE_IP_ALLOWLIST=

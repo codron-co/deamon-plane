@@ -77,7 +77,3 @@
         </div>
     </section>
 @endsection
-
-@section('scripts')
-    <script src="{{ asset('js/ops-env-defaults.js') }}?v={{ filemtime(public_path('js/ops-env-defaults.js')) }}" defer></script>
-@endsection

@@ -2,7 +2,6 @@
 
 namespace App\Services\Sites;
 
-use App\Enums\CoolifyEnvPack;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
@@ -41,7 +40,7 @@ class ComposePackMigrator
         if ($app->isComposePack()) {
             $this->ensureComposeLocation($coolify, $uuid, $app);
             try {
-                app(CoolifyAppEnvSync::class)->sync($site, $coolify, CoolifyEnvPack::DockerCompose);
+                app(CoolifyAppEnvSync::class)->sync($site, $coolify);
             } catch (CoolifyApiException $exception) {
                 throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
             }
@@ -77,7 +76,7 @@ class ComposePackMigrator
 
         try {
             $this->restoreAppEnvs($coolify, $uuid, $snapshot);
-            app(CoolifyAppEnvSync::class)->sync($site, $coolify, CoolifyEnvPack::DockerCompose);
+            app(CoolifyAppEnvSync::class)->sync($site, $coolify);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }

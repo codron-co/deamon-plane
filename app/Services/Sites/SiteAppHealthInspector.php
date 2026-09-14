@@ -2,12 +2,15 @@
 
 namespace App\Services\Sites;
 
+use App\Enums\CoolifyEnvKind;
 use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
+use App\Models\CoolifyEnvDefault;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Agent\SiteHealthEvaluator;
 use App\Services\Coolify\CoolifyApiException;
+use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
@@ -16,17 +19,11 @@ use App\Services\Coolify\Dto\CreateComposeAppRequest;
 class SiteAppHealthInspector
 {
     /**
+     * Keys that must be filled even when the channel catalog has not been synced yet.
+     *
      * @var list<string>
      */
-    private const COMPOSE_REQUIRED = ['DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'APP_KEY'];
-
-    /**
-     * @var array<string, string>
-     */
-    private const COMPOSE_STATICS = [
-        'DB_HOST' => 'mysql',
-        'DB_CONNECTION' => 'mysql',
-    ];
+    private const COMPOSE_REQUIRED_FALLBACK = ['DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'APP_KEY'];
 
     public function __construct(
         private readonly SiteHealthEvaluator $agentHealth,
@@ -221,13 +218,15 @@ class SiteAppHealthInspector
     {
         $issues = [];
 
-        foreach (self::COMPOSE_REQUIRED as $key) {
+        [$required, $statics] = $this->catalogExpectations($site);
+
+        foreach ($required as $key) {
             if ($this->isBlank($envs[$key] ?? null) || $this->isPlaceholder($envs[$key] ?? null)) {
                 $issues[] = new SiteAppHealthIssue('missing_env', 'sync_env', $key);
             }
         }
 
-        foreach (self::COMPOSE_STATICS as $key => $expected) {
+        foreach ($statics as $key => $expected) {
             $current = trim((string) ($envs[$key] ?? ''));
             if ($current !== '' && strcasecmp($current, $expected) !== 0) {
                 $issues[] = new SiteAppHealthIssue('wrong_env', 'sync_env', $key);
@@ -245,6 +244,45 @@ class SiteAppHealthInspector
         }
 
         return $issues;
+    }
+
+    /**
+     * Required keys + static expectations from the channel catalog (CMS `.env.production.example`).
+     * Without a synced catalog the compose secrets stay required.
+     *
+     * @return array{0: list<string>, 1: array<string, string>}
+     */
+    private function catalogExpectations(Site $site): array
+    {
+        $required = [];
+        $statics = [];
+
+        try {
+            $channel = app(CoolifyAppEnvSync::class)->channelFor($site);
+            $rows = CoolifyEnvDefault::query()->forChannel($channel)->get();
+        } catch (\Throwable) {
+            $rows = collect();
+        }
+
+        foreach ($rows as $row) {
+            if (! $row instanceof CoolifyEnvDefault) {
+                continue;
+            }
+
+            if ($row->kind === CoolifyEnvKind::Generated || $row->kind === CoolifyEnvKind::Required) {
+                $required[] = (string) $row->key;
+            } elseif ($row->kind === CoolifyEnvKind::Site && $row->key !== 'CONTROL_PLANE_AGENT_SECRET') {
+                $required[] = (string) $row->key;
+            } elseif ($row->kind === CoolifyEnvKind::Static && filled($row->value)) {
+                $statics[(string) $row->key] = (string) $row->value;
+            }
+        }
+
+        if ($required === []) {
+            $required = self::COMPOSE_REQUIRED_FALLBACK;
+        }
+
+        return [array_values(array_unique($required)), $statics];
     }
 
     /**

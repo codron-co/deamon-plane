@@ -4,10 +4,12 @@ namespace App\Services\Coolify;
 
 use App\Enums\Channel;
 use App\Enums\CoolifyEnvKind;
-use App\Enums\CoolifyEnvPack;
 use App\Models\CoolifyEnvDefault;
 use App\Models\Site;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
+use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogException;
+use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogSync;
+use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Services\Sites\ChannelEnvironmentMap;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -16,21 +18,22 @@ use Illuminate\Support\Str;
 class CoolifyAppEnvSync
 {
     /**
-     * Align Coolify application env with the catalog for this site's build pack.
+     * Align Coolify application env with the catalog for this site's git channel
+     * (synced from the CMS `.env.production.example` on that branch).
      * Never logs values. Generated secrets that already have a real value are left alone
      * (MySQL volume may already be initialized).
      *
      * @return list<string> keys written (never values)
      */
-    public function sync(Site $site, CoolifyApplicationService $coolify, ?CoolifyEnvPack $pack = null): array
+    public function sync(Site $site, CoolifyApplicationService $coolify, ?Channel $channel = null): array
     {
         $uuid = trim((string) $site->coolify_app_uuid);
         if ($uuid === '') {
             return [];
         }
 
-        $pack ??= $this->packFor($site);
-        $defaults = CoolifyEnvDefault::query()->forPack($pack)->get();
+        $channel ??= $this->channelFor($site);
+        $defaults = $this->catalog($channel);
         if ($defaults->isEmpty()) {
             return [];
         }
@@ -62,18 +65,38 @@ class CoolifyAppEnvSync
         Log::info('coolify.env_synced', [
             'site_id' => $site->id,
             'site_slug' => $site->slug,
-            'pack' => $pack->value,
+            'channel' => $channel->value,
             'keys' => $keys,
         ]);
 
         return $keys;
     }
 
-    public function packFor(Site $site): CoolifyEnvPack
+    public function channelFor(Site $site): Channel
     {
-        return $site->hasDockerfileBuildPackWarning()
-            ? CoolifyEnvPack::Dockerfile
-            : CoolifyEnvPack::DockerCompose;
+        return $this->channel($site);
+    }
+
+    /**
+     * Catalog rows for a channel. An empty catalog (fresh Plane, never synced) is fetched
+     * on demand when GitHub credentials exist; failures are recorded on the source row.
+     *
+     * @return Collection<int, CoolifyEnvDefault>
+     */
+    public function catalog(Channel $channel): Collection
+    {
+        $rows = CoolifyEnvDefault::query()->forChannel($channel)->get();
+        if ($rows->isNotEmpty() || ! DeamonRepo::hasCredentials()) {
+            return $rows;
+        }
+
+        try {
+            app(CoolifyEnvCatalogSync::class)->sync($channel);
+        } catch (CoolifyEnvCatalogException) {
+            return $rows;
+        }
+
+        return CoolifyEnvDefault::query()->forChannel($channel)->get();
     }
 
     /**
@@ -145,7 +168,7 @@ class CoolifyAppEnvSync
 
     private function siteValue(Site $site, CoolifyEnvDefault $row, ?string $current): ?string
     {
-        $desired = $this->resolveSiteToken($site, $row);
+        $desired = $this->interpolate($site, (string) ($row->value ?? ''));
         if ($desired === null || $desired === '') {
             return null;
         }
@@ -157,20 +180,9 @@ class CoolifyAppEnvSync
         return $desired;
     }
 
-    private function resolveSiteToken(Site $site, CoolifyEnvDefault $row): ?string
-    {
-        $channel = $this->channel($site);
-
-        return match ($row->key) {
-            'APP_KEY' => filled($site->app_key_encrypted) ? (string) $site->app_key_encrypted : null,
-            'CONTROL_PLANE_AGENT_SECRET' => filled($site->agent_secret_encrypted) ? (string) $site->agent_secret_encrypted : null,
-            'DEAMON_SITE_NAME' => $site->name,
-            'DEAMON_CHANNEL' => $channel->value,
-            'APP_ENV' => ChannelEnvironmentMap::appEnv($channel),
-            default => $this->interpolate($site, (string) ($row->value ?? '')),
-        };
-    }
-
+    /**
+     * `{{site.*}}` / `{{plane.*}}` tokens from the CMS example → live values.
+     */
     private function interpolate(Site $site, string $template): ?string
     {
         if ($template === '' || ! str_contains($template, '{{')) {
@@ -181,14 +193,22 @@ class CoolifyAppEnvSync
         $map = [
             '{{site.app_key}}' => filled($site->app_key_encrypted) ? (string) $site->app_key_encrypted : '',
             '{{site.agent_secret}}' => filled($site->agent_secret_encrypted) ? (string) $site->agent_secret_encrypted : '',
-            '{{site.name}}' => $site->name,
+            '{{site.name}}' => (string) $site->name,
             '{{site.channel}}' => $channel->value,
             '{{site.app_env}}' => ChannelEnvironmentMap::appEnv($channel),
+            '{{plane.host}}' => $this->planeHost(),
         ];
 
         $resolved = strtr($template, $map);
 
         return ($resolved === '' || str_contains($resolved, '{{')) ? null : $resolved;
+    }
+
+    private function planeHost(): string
+    {
+        $host = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+        return is_string($host) ? strtolower($host) : '';
     }
 
     private function channel(Site $site): Channel

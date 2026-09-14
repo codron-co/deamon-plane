@@ -2,11 +2,14 @@
 
 namespace App\Services\GitHub;
 
+use App\Enums\Channel;
 use App\Enums\ThemeGitSelectionMode;
 use App\Enums\ThemeInstallationStatus;
+use App\Jobs\SyncCoolifyEnvCatalogJob;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
 use App\Models\ThemeGitConnection;
+use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Services\Themes\ThemeRolloutService;
 use Illuminate\Support\Carbon;
 
@@ -29,6 +32,14 @@ class GitHubWebhookHandler
         $repo = $this->repoFullName($payload);
         if ($repo === null) {
             return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
+        }
+
+        // CMS repo push → refresh that branch's Coolify env catalog (.env.production.example).
+        $catalogChannel = $this->envCatalogChannel($event, $repo, $payload);
+        if ($catalogChannel !== null) {
+            SyncCoolifyEnvCatalogJob::dispatch($catalogChannel->value);
+
+            return ['ok' => true, 'event' => $event, 'updated' => true, 'fanout' => 0, 'skipped' => 0];
         }
 
         $connection = $this->connectionFromPayload($payload);
@@ -98,6 +109,32 @@ class GitHubWebhookHandler
     /**
      * @param  array<string, mixed>  $payload
      */
+    /**
+     * A `push` to an allowlisted branch of the CMS repo (config ops.deamon.repository).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function envCatalogChannel(string $event, string $repo, array $payload): ?Channel
+    {
+        if ($event !== 'push') {
+            return null;
+        }
+
+        $cms = DeamonRepo::fullName();
+        if ($cms === null || strcasecmp($cms, $repo) !== 0) {
+            return null;
+        }
+
+        $ref = $payload['ref'] ?? null;
+        if (! is_string($ref) || ! str_starts_with($ref, 'refs/heads/')) {
+            return null;
+        }
+
+        $channel = Channel::tryFrom(substr($ref, 11));
+
+        return $channel !== null && $channel->isAllowed() ? $channel : null;
+    }
+
     private function connectionFromPayload(array $payload): ?ThemeGitConnection
     {
         $installationId = $payload['installation']['id'] ?? null;

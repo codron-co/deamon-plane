@@ -123,7 +123,7 @@ class ComposePackMigrateTest extends TestCase
                 static fn (array $row): array => [(string) ($row['key'] ?? '') => (string) ($row['value'] ?? '')],
             );
 
-            return $map->get('DB_HOST') === 'mysql'
+            return ! $map->has('DB_HOST')
                 && strlen((string) $map->get('MYSQL_ROOT_PASSWORD')) >= 32
                 && ! $map->has('DB_PASSWORD');
         });

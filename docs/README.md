@@ -10,6 +10,7 @@
 - **[Implementation plan](plans/2026-08-13-deamon-plane.md)** — fleet, Coolify, agent, tema mağazası, task checklist
 - [Coolify spike notes (Dalga 0)](plans/2026-08-13-coolify-spike-notes.md) — API map; **Go**
 - [Progress ledger](plans/progress-ledger.md)
+- [Plane inceleme ve öneri raporu (2026-09-14)](plans/2026-09-14-plane-review-and-proposals.md) — envanter, boşluklar, otomasyon / özellik / güvenlik önerileri, öncelik dalgaları
 - [Theme Git connections spec](superpowers/specs/2026-09-10-theme-git-connections-design.md) — one Plane GitHub App, many Themes installations (Settings paste retired)
 - [Theme Git connections plan](plans/2026-09-10-theme-git-connections.md) — code-worker todos; CMS **1.2.7** git `repo` allowlist already landed in `deamon`
 - [Site admin management spec](superpowers/specs/2026-09-11-site-admin-management-design.md) — HMAC CMS admins from site detail

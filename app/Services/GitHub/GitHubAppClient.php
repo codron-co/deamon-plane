@@ -245,6 +245,37 @@ class GitHubAppClient
         return is_array($decoded) ? $decoded : null;
     }
 
+    /**
+     * Raw text of a file at a ref (branch / tag / sha). Null when the path does not exist.
+     */
+    public function fetchTextFile(string $repoFullName, string $path, string $ref): ?string
+    {
+        try {
+            $payload = $this->getJson('/repos/'.$repoFullName.'/contents/'.ltrim($path, '/'), [
+                'ref' => $ref,
+            ]);
+        } catch (GitHubApiException $exception) {
+            if ($exception->status === 404) {
+                return null;
+            }
+
+            throw $exception;
+        }
+
+        if (($payload['type'] ?? 'file') !== 'file') {
+            return null;
+        }
+
+        $encoding = (string) ($payload['encoding'] ?? '');
+        $content = (string) ($payload['content'] ?? '');
+        if ($encoding === 'base64') {
+            $decoded = base64_decode(str_replace("\n", '', $content), true);
+            $content = is_string($decoded) ? $decoded : '';
+        }
+
+        return $content !== '' ? $content : null;
+    }
+
     public function latestCommitSha(string $repoFullName, string $ref): ?string
     {
         $payload = $this->getJson('/repos/'.$repoFullName.'/commits', [
@@ -449,6 +480,19 @@ class GitHubAppClient
                 throw new GitHubCredentialsException('This GitHub App connection has no installation.');
             }
 
+            return $this->installationAccessTokenFor($installationId);
+        }
+
+        // Legacy Settings credentials (PAT, then App installation) for repo reads outside
+        // Themes connections — e.g. the CMS repo env catalog.
+        $settings = $this->settings ?? GithubSetting::current();
+        $pat = trim((string) ($settings->token ?: config('ops.github.token')));
+        if ($pat !== '') {
+            return $pat;
+        }
+
+        $installationId = trim((string) ($settings->installation_id ?: config('ops.github.installation_id')));
+        if ($installationId !== '' && $this->resolvedAppId($settings) !== null && $this->resolvedPrivateKey($settings) !== null) {
             return $this->installationAccessTokenFor($installationId);
         }
 

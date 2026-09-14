@@ -19,7 +19,7 @@ final class SettingsJump
                 'id' => 'env',
                 'hash' => 'env-defaults-heading',
                 'label' => __('settings.env.title'),
-                'needles' => ['env', 'ortam', 'defaults', 'compose', 'dockerfile', 'app_key', 'timezone'],
+                'needles' => ['env', 'ortam', 'defaults', 'katalog', 'catalog', 'branch', 'dal', 'main', 'beta', 'alpha', 'app_key'],
             ],
             [
                 'id' => 'github',

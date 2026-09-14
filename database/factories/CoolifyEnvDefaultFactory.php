@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\Channel;
 use App\Enums\CoolifyEnvKind;
-use App\Enums\CoolifyEnvPack;
 use App\Models\CoolifyEnvDefault;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,13 +18,13 @@ class CoolifyEnvDefaultFactory extends Factory
     public function definition(): array
     {
         return [
-            'pack' => CoolifyEnvPack::DockerCompose,
+            'channel' => Channel::Main,
             'key' => 'APP_'.strtoupper(fake()->unique()->lexify('????')),
             'kind' => CoolifyEnvKind::Static,
             'value' => 'example',
             'is_secret' => false,
             'sort' => 100,
-            'notes' => null,
+            'description' => null,
         ];
     }
 }

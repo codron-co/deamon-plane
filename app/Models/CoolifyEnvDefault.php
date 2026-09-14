@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\Channel;
 use App\Enums\CoolifyEnvKind;
-use App\Enums\CoolifyEnvPack;
 use Database\Factories\CoolifyEnvDefaultFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * One Coolify env catalog row for a git channel. Rows are written only by
+ * CoolifyEnvCatalogSync from the CMS `.env.production.example` on that branch.
+ */
 class CoolifyEnvDefault extends Model
 {
     /** @use HasFactory<CoolifyEnvDefaultFactory> */
@@ -18,13 +22,13 @@ class CoolifyEnvDefault extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'pack',
+        'channel',
         'key',
         'kind',
         'value',
         'is_secret',
         'sort',
-        'notes',
+        'description',
     ];
 
     /**
@@ -33,7 +37,7 @@ class CoolifyEnvDefault extends Model
     protected function casts(): array
     {
         return [
-            'pack' => CoolifyEnvPack::class,
+            'channel' => Channel::class,
             'kind' => CoolifyEnvKind::class,
             'is_secret' => 'boolean',
             'sort' => 'integer',
@@ -44,11 +48,11 @@ class CoolifyEnvDefault extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeForPack(Builder $query, CoolifyEnvPack|string $pack): Builder
+    public function scopeForChannel(Builder $query, Channel|string $channel): Builder
     {
-        $value = $pack instanceof CoolifyEnvPack ? $pack->value : $pack;
+        $value = $channel instanceof Channel ? $channel->value : $channel;
 
-        return $query->where('pack', $value)->orderBy('sort')->orderBy('key');
+        return $query->where('channel', $value)->orderBy('sort')->orderBy('key');
     }
 
     public function developerValue(): string
@@ -74,13 +78,13 @@ class CoolifyEnvDefault extends Model
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|bool|null>
      */
     public function __debugInfo(): array
     {
         return [
             'id' => (string) $this->id,
-            'pack' => $this->pack?->value,
+            'channel' => $this->channel?->value,
             'key' => (string) $this->key,
             'kind' => $this->kind?->value,
             'value' => $this->is_secret ? '[redacted]' : $this->value,
