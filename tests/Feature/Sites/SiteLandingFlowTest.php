@@ -62,7 +62,7 @@ class SiteLandingFlowTest extends TestCase
         $this->assertTrue($site->domains()->where('domain', 'www.shop.izyem.test')->where('is_www', true)->exists());
     }
 
-    public function test_create_rejects_alias_on_a_different_apex(): void
+    public function test_create_accepts_alias_on_a_different_apex(): void
     {
         $this->actingAs($this->user(OpsRole::Operator))
             ->post(route('ops.sites.store'), [
@@ -72,9 +72,173 @@ class SiteLandingFlowTest extends TestCase
                 'aliases' => ['other.example'],
                 'channel' => 'beta',
             ])
-            ->assertSessionHasErrors('aliases.0');
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
 
-        $this->assertDatabaseCount('sites', 0);
+        $site = Site::query()->where('slug', 'izyem')->firstOrFail();
+        $this->assertTrue($site->domains()->where('domain', 'other.example')->where('is_primary', false)->exists());
+        $this->assertTrue($site->domains()->where('domain', 'www.other.example')->where('is_www', true)->exists());
+        $this->assertSame('izyem.test', $site->primary_domain);
+    }
+
+    public function test_detail_add_domain_on_another_apex_opens_its_own_zone_and_redeploys(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'cloudflare_zone_id' => 'zone-existing',
+            'cloudflare_zone_status' => 'active',
+            'coolify_app_uuid' => 'coolify-app-1',
+            'coolify_server_uuid' => 'srv_test',
+            'status' => SiteStatus::Active,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+        ]);
+
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'api.cloudflare.com')) {
+                return $this->cloudflareResponse($request, zoneStatus: 'pending', zonesByName: [
+                    'izyem.test' => $this->zonePayload('zone-existing', 'izyem.test', 'active'),
+                ]);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $response = $this->actingAs($this->user(OpsRole::Operator))
+            ->postJson(route('ops.sites.domains.store', $site), [
+                'domain' => 'cukurova.example',
+            ])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('redeploy', 'redeployed');
+
+        $this->assertStringContainsString('ada.ns.cloudflare.com', (string) $response->json('message'));
+
+        $site->refresh();
+        $this->assertSame('zone-existing', $site->cloudflare_zone_id, 'primary zone must not move to the alias apex');
+
+        $alias = $site->domains()->where('domain', 'cukurova.example')->firstOrFail();
+        $this->assertSame('zone-new', $alias->cloudflare_zone_id);
+        $this->assertSame('pending', $alias->cloudflare_zone_status);
+        $this->assertSame(['ada.ns.cloudflare.com', 'bob.ns.cloudflare.com'], $alias->cloudflare_nameservers);
+        $this->assertTrue($alias->zonePending());
+        $this->assertSame('zone-new', $site->domains()->where('domain', 'www.cukurova.example')->value('cloudflare_zone_id'));
+        $this->assertNull($site->domains()->where('domain', 'izyem.test')->value('cloudflare_zone_id'));
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && $request->url() === 'https://api.cloudflare.com/client/v4/zones'
+                && ($request->data()['name'] ?? null) === 'cukurova.example';
+        });
+
+        Http::assertSent(function (Request $request): bool {
+            $domain = data_get($request->data(), 'docker_compose_domains.0.domain');
+
+            return $request->method() === 'PATCH'
+                && str_contains((string) $request->url(), '/applications/coolify-app-1')
+                && is_string($domain)
+                && str_contains($domain, 'https://cukurova.example')
+                && str_contains($domain, 'https://www.cukurova.example')
+                && str_contains($domain, 'https://izyem.test');
+        });
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request->url(), '/deploy'));
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-domain-zone-pending="cukurova.example"', false)
+            ->assertSee('ada.ns.cloudflare.com', false);
+    }
+
+    public function test_edit_form_alias_change_writes_dns_binds_coolify_and_redeploys(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'cloudflare_zone_id' => 'zone-existing',
+            'cloudflare_zone_status' => 'active',
+            'coolify_app_uuid' => 'coolify-app-1',
+            'coolify_server_uuid' => 'srv_test',
+            'status' => SiteStatus::Active,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+        ]);
+
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'api.cloudflare.com')) {
+                return $this->cloudflareResponse($request, zonesByName: [
+                    'izyem.test' => $this->zonePayload('zone-existing', 'izyem.test', 'active'),
+                ]);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->put(route('ops.sites.update', $site), [
+                'slug' => 'izyem',
+                'name' => 'Izyem',
+                'domain' => 'izyem.test',
+                'aliases' => ['shop.izyem.test'],
+                'channel' => 'beta',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('ops.sites.show', $site))
+            ->assertSessionHas('status', fn (string $status): bool => str_contains($status, __('sites.flash.domain_redeploy_queued')));
+
+        $this->assertTrue($site->domains()->where('domain', 'shop.izyem.test')->whereNotNull('verified_at')->exists());
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && str_contains($request->url(), '/dns_records')
+                && in_array((string) ($request->data()['name'] ?? ''), ['shop', 'www.shop'], true);
+        });
+
+        Http::assertSent(function (Request $request): bool {
+            $domain = data_get($request->data(), 'docker_compose_domains.0.domain');
+
+            return $request->method() === 'PATCH'
+                && str_contains((string) $request->url(), '/applications/coolify-app-1')
+                && is_string($domain)
+                && str_contains($domain, 'https://shop.izyem.test');
+        });
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request->url(), '/deploy'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'site.redeployed', 'subject_id' => $site->id]);
+    }
+
+    public function test_edit_form_without_host_change_does_not_redeploy(): void
+    {
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'coolify_app_uuid' => 'coolify-app-1',
+            'status' => SiteStatus::Active,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+        ]);
+
+        Http::fake();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->put(route('ops.sites.update', $site), [
+                'slug' => 'izyem',
+                'name' => 'Izyem renamed',
+                'domain' => 'izyem.test',
+                'aliases' => [],
+                'channel' => 'beta',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        Http::assertNothingSent();
     }
 
     public function test_create_and_detail_offer_multiple_domains_and_dns_confirm(): void
@@ -267,10 +431,16 @@ class SiteLandingFlowTest extends TestCase
                 'domain' => 'shop.izyem.test',
             ])
             ->assertOk()
-            ->assertJsonPath('ok', true);
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('redeploy', 'redeployed');
 
-        $this->assertTrue($site->domains()->where('domain', 'shop.izyem.test')->exists());
+        $this->assertTrue($site->domains()->where('domain', 'shop.izyem.test')->whereNotNull('verified_at')->exists());
         $this->assertTrue($site->domains()->where('domain', 'www.shop.izyem.test')->exists());
+        $this->assertNull($site->domains()->where('domain', 'shop.izyem.test')->value('cloudflare_zone_id'));
+
+        // Coolify only regenerates Traefik labels on deploy; a PATCH alone leaves the host dark.
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request->url(), '/deploy'));
+        $this->assertDatabaseHas('deployments', ['site_id' => $site->id, 'coolify_deployment_uuid' => 'dep-1']);
 
         Http::assertSent(function (Request $request): bool {
             if ($request->method() !== 'POST' || ! str_contains($request->url(), '/dns_records')) {

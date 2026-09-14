@@ -39,12 +39,25 @@
                     @else
                         {{ __('domains.coolify.unbound') }}
                     @endif
+                    @if ($row->zonePending())
+                        · <span class="status-chip">{{ __('sites.detail.domain_zone_pending') }}</span>
+                    @endif
                 </span>
             </li>
         @empty
             <li class="muted">{{ $site->primary_domain ?: __('ops.none') }}</li>
         @endforelse
     </ul>
+
+    @foreach ($site->aliasZonesPending() as $pendingZone)
+        <p class="site-note" data-domain-zone-pending="{{ $pendingZone['host'] }}">
+            <strong>{{ $pendingZone['host'] }}</strong> — {{ __('sites.detail.domain_zone_pending') }}.
+            {{ __('sites.detail.domain_zone_ns') }}:
+            @foreach ($pendingZone['nameservers'] as $ns)
+                <code>{{ $ns }}</code>@if (! $loop->last), @endif
+            @endforeach
+        </p>
+    @endforeach
 
     @if ($canEditDomains)
         <form

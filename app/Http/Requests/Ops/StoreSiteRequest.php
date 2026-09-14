@@ -59,7 +59,6 @@ class StoreSiteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->withCoolifyTargetValidator($validator);
-        $this->validateAliasApex($validator);
     }
 
     /**

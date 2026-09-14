@@ -16,7 +16,7 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/provision` | `ops.sites.provision` | operator, super_admin; draft or error only |
 | POST | `/sites/{site}/cloudflare/zone` | `ops.sites.cloudflare.zone` | operator, super_admin; create/refresh Free zone + return NS |
 | POST | `/sites/{site}/cloudflare/dns` | `ops.sites.cloudflare.dns` | operator, super_admin; confirm registrar NS / tear down temp host |
-| POST | `/sites/{site}/domains` | `ops.sites.domains.store` | operator, super_admin; add extra host + www on the same apex |
+| POST | `/sites/{site}/domains` | `ops.sites.domains.store` | operator, super_admin; add extra host + www (any apex) → Cloudflare DNS → Coolify bind → **redeploy** |
 | POST | `/sites/{site}/channel` | `ops.sites.channel` | operator, super_admin; active or error with `coolify_app_uuid`; blocked while `deploying` |
 | POST | `/sites/{site}/health` | `ops.sites.health` | operator, super_admin; on-demand agent poll |
 | POST | `/sites/{site}/publish-status` | `ops.sites.publish-status` | operator, super_admin; CMS yayın durumu via signed agent |
@@ -108,9 +108,13 @@ A mixed two-hour widget hides the one failure behind twenty completed rows. **Sa
 
 `ops-jobs.js` persists the toggle in `sessionStorage` (`planeOpsJobsFailedOnly`) and builds the poll URL with `PlaneOpsContracts.jobsIndexUrl`. Client-side `isFailedStatus` hides non-failed rows already on screen until the next poll arrives. An empty failed-only list **keeps the panel** so the toggle stays reachable. Tests: `JobsFailedFilterTest`; `node --test` for `isFailedStatus` / `jobsIndexUrl`.
 
+## Domain binding always redeploys
+
+Coolify writes the Traefik labels of a compose app at deploy time, so a `docker_compose_domains` PATCH alone never makes a new host answer. `SiteLanding::bindAndRedeploy` is the one path every domain mutation uses: detail **Add domain**, the edit form when the host list changed, fleet **Domains** create / assign / bind, and **DNS confirm**. It PATCHes the binding, stamps `verified_at`, then queues `CoolifyDeploySettings::redeploy` (audit `site.redeployed`). Outcomes reach the flash as a suffix: `redeployed`, `deploy_busy` (gate refused — redeploy by hand later), `waiting_dns` (zone still pending — DNS confirm will bind and deploy), `no_app`. Bulk **Bind on Coolify** on `/domains` is still PATCH-only by design; run **Tekrar deploy** on the touched sites afterwards.
+
 ## Fields
 
-Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + primary `site_domains` row), optional `aliases[]` on the **same registrable apex**, automatic **www** siblings (`www.{host}` written to `site_domains`, Cloudflare, and Coolify `app` as a comma-separated `https://` list). Coolify generate-domains are not listed. Optional **Cloudflare account** (`sites.cloudflare_setting_id`; also changeable on the site detail Infrastructure tab before **Add to Cloudflare (Free)**), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger credentials; mailbox domains are selected on the site detail Infrastructure tab), optional attach of an existing `codron-co/deamon` app, `notes`. Extra hosts can also be added on site detail (`POST /sites/{site}/domains`).
+Create/edit desired state: `slug`, `name`, `domain` (`sites.primary_domain` + primary `site_domains` row), optional `aliases[]` on the same **or another** registrable apex (a foreign apex gets its own Cloudflare zone; its `zone_id` / status / nameservers live on the `site_domains` row and the detail page lists the NS until the zone is `active`), automatic **www** siblings (`www.{host}` written to `site_domains`, Cloudflare, and Coolify `app` as a comma-separated `https://` list). Coolify generate-domains are not listed. Optional **Cloudflare account** (`sites.cloudflare_setting_id`; also changeable on the site detail Infrastructure tab before **Add to Cloudflare (Free)**), `channel` (`main` \| `beta` \| `alpha` only — no free-typed branch), Coolify **selects** (connection, active server / project / environment / Git source), optional **mail server** (`sites.mail_server_id`, Hostinger credentials; mailbox domains are selected on the site detail Infrastructure tab), optional attach of an existing `codron-co/deamon` app, `notes`. Extra hosts can also be added on site detail (`POST /sites/{site}/domains`).
 
 Coolify UUIDs are **not** free-text on site create. Super Admin may open a collapsed, warned “Gelişmiş” paste. Compose file is never an operator field — always `/docker-compose.coolify.yml`.
 

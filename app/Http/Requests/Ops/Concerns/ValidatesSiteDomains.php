@@ -3,8 +3,6 @@
 namespace App\Http\Requests\Ops\Concerns;
 
 use App\Models\Site;
-use App\Services\Cloudflare\CloudflareHostname;
-use Illuminate\Validation\Validator;
 
 trait ValidatesSiteDomains
 {
@@ -23,34 +21,6 @@ trait ValidatesSiteDomains
             ->filter()
             ->values()
             ->all();
-    }
-
-    protected function validateAliasApex(Validator $validator): void
-    {
-        $validator->after(function (Validator $validator): void {
-            if ($validator->errors()->isNotEmpty()) {
-                return;
-            }
-
-            $primary = CloudflareHostname::normalize((string) $this->input('domain'));
-            if ($primary === '') {
-                return;
-            }
-
-            foreach ((array) $this->input('aliases', []) as $index => $alias) {
-                $host = CloudflareHostname::normalize((string) $alias);
-                if ($host === '' || $host === $primary) {
-                    continue;
-                }
-
-                if (! CloudflareHostname::sameRegistrableApex($primary, $host)) {
-                    $validator->errors()->add(
-                        'aliases.'.$index,
-                        __('sites.form.alias_apex', ['apex' => CloudflareHostname::apex($primary)]),
-                    );
-                }
-            }
-        });
     }
 
     protected function routeSite(): ?Site

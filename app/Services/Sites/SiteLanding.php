@@ -5,6 +5,7 @@ namespace App\Services\Sites;
 use App\Models\CloudflareSetting;
 use App\Models\CoolifyConnection;
 use App\Models\Site;
+use App\Models\User;
 use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Cloudflare\CloudflareApiException;
 use App\Services\Cloudflare\CloudflareClient;
@@ -16,10 +17,59 @@ use Throwable;
 
 class SiteLanding
 {
+    public const BIND_NO_APP = 'no_app';
+
+    public const BIND_WAITING_DNS = 'waiting_dns';
+
+    public const BIND_REDEPLOYED = 'redeployed';
+
+    public const BIND_DEPLOY_BUSY = 'deploy_busy';
+
     public function __construct(
         private readonly CloudflareZoneService $zones,
         private readonly CoolifyApplicationService $coolify,
+        private readonly CoolifyDeploySettings $deploys,
     ) {}
+
+    /**
+     * Push the operator hosts to Coolify, then queue a rebuild. Coolify writes the
+     * Traefik labels at deploy time, so a `docker_compose_domains` PATCH alone never
+     * makes a new host answer. Returns one of the BIND_* outcomes for the flash.
+     *
+     * @throws SiteProvisionException when the Coolify PATCH itself fails
+     */
+    public function bindAndRedeploy(Site $site, ?User $actor = null, ?string $ip = null): string
+    {
+        $fresh = $site->fresh() ?? $site;
+        if (! $fresh->canBindCoolifyDomains()) {
+            return self::BIND_NO_APP;
+        }
+
+        if ($fresh->isWaitingOnDns()) {
+            return self::BIND_WAITING_DNS;
+        }
+
+        $this->syncCoolifyDomains($fresh);
+        $fresh->domains()->where('is_temporary', false)->update(['verified_at' => now()]);
+
+        try {
+            $this->deploys->redeploy($fresh, $actor, $ip);
+        } catch (ComposePackException) {
+            return self::BIND_DEPLOY_BUSY;
+        }
+
+        return self::BIND_REDEPLOYED;
+    }
+
+    public static function bindFlashSuffix(string $outcome): string
+    {
+        return match ($outcome) {
+            self::BIND_REDEPLOYED => ' '.__('sites.flash.domain_redeploy_queued'),
+            self::BIND_DEPLOY_BUSY => ' '.__('sites.flash.domain_deploy_busy'),
+            self::BIND_WAITING_DNS => ' '.__('sites.flash.domain_waiting_dns'),
+            default => '',
+        };
+    }
 
     /**
      * @param  array<string, mixed>  $zone
@@ -116,9 +166,12 @@ class SiteLanding
         $site->save();
         $site->unsetRelation('domains');
 
-        $this->syncCoolifyDomains($site);
+        if ($settings instanceof CloudflareSetting) {
+            $this->zones->refreshAliasZones($site, $settings);
+        }
 
-        $site->domains()->where('is_temporary', false)->update(['verified_at' => now()]);
+        $actor = $actorUserId !== null ? User::query()->find($actorUserId) : null;
+        $outcome = $this->bindAndRedeploy($site, $actor instanceof User ? $actor : null, $ip);
 
         $site->auditLogs()->create([
             'actor_user_id' => $actorUserId,
@@ -127,15 +180,17 @@ class SiteLanding
                 'primary_domain' => $site->primary_domain,
                 'hosts' => $site->operatorHosts(),
                 'removed_temporary_domain' => $temp,
+                'redeploy' => $outcome,
             ],
             'ip' => $ip,
         ]);
 
         return [
             'ready' => true,
-            'message' => __('sites.landing.dns_confirmed'),
+            'message' => __('sites.landing.dns_confirmed').self::bindFlashSuffix($outcome),
             'zone_status' => (string) $site->cloudflare_zone_status,
             'nameservers' => $nameservers,
+            'redeploy' => $outcome,
         ];
     }
 

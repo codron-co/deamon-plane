@@ -71,15 +71,13 @@ class DomainController extends Controller
 
         try {
             $fresh = $site->fresh() ?? $site;
-            if (filled($fresh->coolify_app_uuid) && ! $fresh->isWaitingOnDns()) {
-                $landing->syncCoolifyDomains($fresh);
-                SiteDomain::query()->where('site_id', $fresh->id)->where('domain', $host)->update(['verified_at' => now()]);
-            }
+            $landing->applyAliasDns($fresh);
+            $outcome = $landing->bindAndRedeploy($fresh, $request->user(), $request->ip());
         } catch (SiteProvisionException $exception) {
             return redirect()->route('ops.domains')->with('error', $exception->getMessage());
         }
 
-        return redirect()->route('ops.domains')->with('status', __('domains.flash.created_bound'));
+        return redirect()->route('ops.domains')->with('status', __('domains.flash.created_bound').SiteLanding::bindFlashSuffix($outcome));
     }
 
     public function update(UpdateFleetDomainRequest $request, SiteDomain $domain, SiteDomainSync $sync, SiteLanding $landing): RedirectResponse
@@ -112,14 +110,13 @@ class DomainController extends Controller
 
         try {
             $fresh = $site->fresh() ?? $site;
-            if (filled($fresh->coolify_app_uuid) && ! $fresh->isWaitingOnDns()) {
-                $landing->syncCoolifyDomains($fresh);
-            }
+            $landing->applyAliasDns($fresh);
+            $outcome = $landing->bindAndRedeploy($fresh, $request->user(), $request->ip());
         } catch (SiteProvisionException $exception) {
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('status', __('domains.flash.assigned'));
+        return back()->with('status', __('domains.flash.assigned').SiteLanding::bindFlashSuffix($outcome));
     }
 
     public function bind(Request $request, SiteDomain $domain, SiteLanding $landing): RedirectResponse
@@ -132,14 +129,12 @@ class DomainController extends Controller
         $this->authorize('update', $site);
 
         try {
-            $landing->syncCoolifyDomains($site);
-            $domain->verified_at = now();
-            $domain->save();
+            $outcome = $landing->bindAndRedeploy($site, $request->user(), $request->ip());
         } catch (SiteProvisionException $exception) {
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('status', __('domains.flash.bound'));
+        return back()->with('status', __('domains.flash.bound').SiteLanding::bindFlashSuffix($outcome));
     }
 
     public function bindBulk(BulkDomainIdsRequest $request, DomainBindSweep $sweep): RedirectResponse|JsonResponse

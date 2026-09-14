@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Cloudflare\CloudflareHostname;
 use Database\Factories\SiteDomainFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +25,9 @@ class SiteDomain extends Model
         'is_temporary',
         'coolify_domain_id',
         'verified_at',
+        'cloudflare_zone_id',
+        'cloudflare_zone_status',
+        'cloudflare_nameservers',
     ];
 
     /**
@@ -36,7 +40,18 @@ class SiteDomain extends Model
             'is_www' => 'boolean',
             'is_temporary' => 'boolean',
             'verified_at' => 'datetime',
+            'cloudflare_nameservers' => 'array',
         ];
+    }
+
+    /**
+     * True when this host lives on its own Cloudflare zone (a different apex than
+     * the site primary) and that zone is still waiting for registrar nameservers.
+     */
+    public function zonePending(): bool
+    {
+        return filled($this->cloudflare_zone_id)
+            && ! CloudflareHostname::zoneIsReady($this->cloudflare_zone_status);
     }
 
     public function site(): BelongsTo

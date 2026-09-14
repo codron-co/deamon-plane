@@ -71,6 +71,9 @@ class Site extends Model
         'mail_server_id',
         'hostinger_order_id',
         'mail_domain',
+        'mail_configured_at',
+        'mail_configure_failed_at',
+        'mail_configure_error',
         'platform_notification_overrides',
         'platform_mail_recipient',
         'platform_mail_pushed_at',
@@ -122,6 +125,8 @@ class Site extends Model
             'platform_notification_overrides' => 'array',
             'platform_mail_pushed_at' => 'datetime',
             'platform_mail_push_failed_at' => 'datetime',
+            'mail_configured_at' => 'datetime',
+            'mail_configure_failed_at' => 'datetime',
             'last_health_notify_at' => 'datetime',
         ];
     }
@@ -279,6 +284,62 @@ class Site extends Model
     /**
      * Coolify `app` domain list: comma-separated https hosts.
      */
+    /**
+     * Alias hosts on their own Cloudflare zone that still waits for nameservers,
+     * one entry per zone so the detail page can show the NS to hand the customer.
+     *
+     * @return list<array{host: string, zone_status: ?string, nameservers: list<string>}>
+     */
+    public function aliasZonesPending(): array
+    {
+        $rows = $this->relationLoaded('domains') ? $this->domains : $this->domains()->get();
+        $out = [];
+
+        foreach ($rows->where('is_temporary', false)->sortBy('is_www') as $row) {
+            if (! $row->zonePending()) {
+                continue;
+            }
+
+            $zoneId = (string) $row->cloudflare_zone_id;
+            if (isset($out[$zoneId])) {
+                continue;
+            }
+
+            $ns = is_array($row->cloudflare_nameservers) ? array_values($row->cloudflare_nameservers) : [];
+            $out[$zoneId] = [
+                'host' => (string) $row->domain,
+                'zone_status' => $row->cloudflare_zone_status,
+                'nameservers' => array_values(array_filter($ns, is_string(...))),
+            ];
+        }
+
+        return array_values($out);
+    }
+
+    /**
+     * Last CMS mail configure outcome: none | needs_secret | failed | configured | not_pushed.
+     */
+    public function mailConfigureState(): string
+    {
+        if (blank($this->mail_server_id)) {
+            return 'none';
+        }
+
+        if (! $this->hasAgentSecret()) {
+            return 'needs_secret';
+        }
+
+        if ($this->mail_configure_failed_at !== null) {
+            return 'failed';
+        }
+
+        if ($this->mail_configured_at !== null) {
+            return 'configured';
+        }
+
+        return 'not_pushed';
+    }
+
     public function coolifyDomainBinding(): string
     {
         $hosts = $this->isWaitingOnDns() && filled($this->temporary_domain)

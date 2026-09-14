@@ -50,8 +50,21 @@ class CloudflareZoneService
             if ($hosts === []) {
                 $hosts = [$requested];
             }
+
+            // Hosts under the primary zone attach there. A host on another apex gets
+            // its own zone (found or created) and records it on its site_domains row.
+            $foreignZones = [];
             foreach ($hosts as $host) {
-                $this->applyDnsForHost($client, (string) $zone['id'], $zoneName, $host, $settings);
+                if (self::hostUnderZone($host, $zoneName)) {
+                    $this->applyDnsForHost($client, (string) $zone['id'], $zoneName, $host, $settings);
+                    $this->storeRowZone($site, $host, null);
+
+                    continue;
+                }
+
+                $own = $this->resolveZoneForHost($client, $accountId, $host, $foreignZones);
+                $this->applyDnsForHost($client, (string) $own['id'], (string) ($own['name'] ?? ''), $host, $settings);
+                $this->storeRowZone($site, $host, $own);
             }
 
             $status = strtolower(trim((string) ($zone['status'] ?? '')));
@@ -67,6 +80,47 @@ class CloudflareZoneService
             ];
         } catch (CloudflareApiException $exception) {
             throw $this->mapApiException($exception);
+        }
+    }
+
+    /**
+     * Re-read the zone status of alias hosts that live on their own zone. Best effort:
+     * a zone Cloudflare cannot return keeps its last known status.
+     */
+    public function refreshAliasZones(Site $site, CloudflareSetting $settings): void
+    {
+        $rows = $site->domains()
+            ->where('is_temporary', false)
+            ->whereNotNull('cloudflare_zone_id')
+            ->get();
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $client = CloudflareClient::fromSettings($settings);
+        $seen = [];
+
+        foreach ($rows->groupBy('cloudflare_zone_id') as $zoneId => $group) {
+            $zoneId = (string) $zoneId;
+            if (isset($seen[$zoneId])) {
+                continue;
+            }
+            $seen[$zoneId] = true;
+
+            try {
+                $zone = $client->getZone($zoneId);
+            } catch (CloudflareApiException) {
+                continue;
+            }
+
+            $status = strtolower(trim((string) ($zone['status'] ?? '')));
+            $ns = $this->nameservers($zone);
+            foreach ($group as $row) {
+                $row->forceFill([
+                    'cloudflare_zone_status' => $status !== '' ? $status : null,
+                    'cloudflare_nameservers' => $ns !== [] ? $ns : $row->cloudflare_nameservers,
+                ])->save();
+            }
         }
     }
 
@@ -212,6 +266,78 @@ class CloudflareZoneService
         }
 
         $client->deleteDnsRecord($zoneId, (string) $existing['id']);
+    }
+
+    public static function hostUnderZone(string $host, string $zoneName): bool
+    {
+        $host = CloudflareHostname::normalize($host);
+        $zoneName = CloudflareHostname::normalize($zoneName);
+
+        return $host !== '' && $zoneName !== ''
+            && (strcasecmp($host, $zoneName) === 0 || str_ends_with($host, '.'.$zoneName));
+    }
+
+    /**
+     * Covering zone for a host on another apex, else a new Free zone on that apex
+     * (with the Deamon template). `$cache` keeps www siblings from listing twice.
+     *
+     * @param  array<string, array<string, mixed>>  $cache
+     * @return array<string, mixed>
+     */
+    private function resolveZoneForHost(CloudflareClient $client, string $accountId, string $host, array &$cache): array
+    {
+        foreach ($cache as $name => $zone) {
+            if (self::hostUnderZone($host, $name)) {
+                return $zone;
+            }
+        }
+
+        $zone = $this->findCoveringZone($client, $accountId, $host);
+        if ($zone === null) {
+            $apex = CloudflareHostname::apex($host);
+            if ($apex === '') {
+                throw new CloudflareApiException(__('cloudflare.errors.domain_required'), 422);
+            }
+
+            $zone = $this->createApexZone($client, $accountId, $apex);
+            $this->upsertTemplate($client, (string) $zone['id'], $apex);
+        }
+
+        $cache[(string) ($zone['name'] ?? $host)] = $zone;
+
+        return $zone;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $zone  null clears a stale own-zone record
+     */
+    private function storeRowZone(Site $site, string $host, ?array $zone): void
+    {
+        $row = $site->domains()->where('domain', $host)->first();
+        if ($row === null) {
+            return;
+        }
+
+        if ($zone === null) {
+            if ($row->cloudflare_zone_id === null) {
+                return;
+            }
+
+            $row->forceFill([
+                'cloudflare_zone_id' => null,
+                'cloudflare_zone_status' => null,
+                'cloudflare_nameservers' => null,
+            ])->save();
+
+            return;
+        }
+
+        $status = strtolower(trim((string) ($zone['status'] ?? '')));
+        $row->forceFill([
+            'cloudflare_zone_id' => (string) $zone['id'],
+            'cloudflare_zone_status' => $status !== '' ? $status : null,
+            'cloudflare_nameservers' => $this->nameservers($zone),
+        ])->save();
     }
 
     /**

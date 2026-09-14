@@ -29,18 +29,14 @@ class SiteDomainSync
             $this->push($wanted, $www, false, true);
         }
 
-        foreach ($aliases as $index => $alias) {
+        foreach ($aliases as $alias) {
             $host = CloudflareHostname::normalize((string) $alias);
             if ($host === '' || $host === $primaryHost) {
                 continue;
             }
 
-            if (! CloudflareHostname::sameRegistrableApex($primaryHost, $host)) {
-                throw ValidationException::withMessages([
-                    'aliases.'.$index => __('sites.form.alias_apex', ['apex' => CloudflareHostname::apex($primaryHost)]),
-                ]);
-            }
-
+            // Any registrable apex is welcome; a foreign apex gets its own Cloudflare
+            // zone when DNS is applied (CloudflareZoneService::ensureZoneAndDns).
             $this->push($wanted, $host, false, false);
             $aliasWww = CloudflareHostname::wwwHost($host);
             if ($aliasWww !== '') {

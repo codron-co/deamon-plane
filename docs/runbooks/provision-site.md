@@ -32,7 +32,7 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
 
 ## After provision
 
-1. Point DNS A/CNAME at Coolify.
+1. Point DNS A/CNAME at Coolify. Adding a host later (detail **Add domain**, edit form, `/domains`) writes Cloudflare DNS, PATCHes Coolify and **queues a redeploy** — a host on another apex gets its own Cloudflare zone; hand the customer the nameservers shown on the Domains card.
 2. Wait for TLS / Traefik. Confirm `/up` in the browser when the instance is up (manual).
 3. Default CMS admin (`support@codron.co`) is seeded **without a password** (CMS 1.2.18+). Open the site **Adminler** tab: create the customer admin with **Davet** (set-password mail) or press **Şifre oluşturma maili gönder** on the seeded row. Plane never sees the link. See [../modules/site-admins.md](../modules/site-admins.md).
 4. Theme assign is Faz B. ZIP upload is not available in Plane.

@@ -21,14 +21,13 @@ class SiteDomainController extends Controller
         SiteLanding $landing,
     ): RedirectResponse|JsonResponse {
         $host = (string) $request->validated('domain');
+        $outcome = SiteLanding::BIND_NO_APP;
 
         try {
             $sync->addAlias($site, $host);
             $site->refresh();
             $landing->applyAliasDns($site);
-            if (! $site->fresh()?->isWaitingOnDns()) {
-                $landing->syncCoolifyDomains($site);
-            }
+            $outcome = $landing->bindAndRedeploy($site, $request->user(), $request->ip());
         } catch (SiteProvisionException $exception) {
             return $this->failed($request, $site, $exception->getMessage(), $exception->getCode());
         }
@@ -40,11 +39,22 @@ class SiteDomainController extends Controller
             'after' => [
                 'domain' => $host,
                 'hosts' => $site->operatorHosts(),
+                'redeploy' => $outcome,
             ],
             'ip' => $request->ip(),
         ]);
 
-        $message = __('sites.flash.domain_added');
+        $message = __('sites.flash.domain_added').SiteLanding::bindFlashSuffix($outcome);
+
+        // A host on another apex got its own Cloudflare zone; hand the NS to the customer.
+        $row = $site->domains()->where('domain', $host)->first();
+        if ($row !== null && $row->zonePending()) {
+            $ns = is_array($row->cloudflare_nameservers) ? $row->cloudflare_nameservers : [];
+            $message .= ' '.__('sites.flash.domain_zone_pending', [
+                'host' => $host,
+                'ns' => implode(', ', array_filter($ns, is_string(...))),
+            ]);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -52,6 +62,7 @@ class SiteDomainController extends Controller
                 'message' => $message,
                 'type' => 'status',
                 'hosts' => $site->operatorHosts(),
+                'redeploy' => $outcome,
             ]);
         }
 
