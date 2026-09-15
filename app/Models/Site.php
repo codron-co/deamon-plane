@@ -8,6 +8,7 @@ use App\Enums\CoolifyGitSourceKind;
 use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
 use App\Services\Agent\AgentHealthStatus;
+use App\Services\Agent\ControlPlaneAgentContract;
 use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Sites\SiteAppHealthReport;
 use App\Services\Sites\SiteFilterVerdict;
@@ -638,6 +639,24 @@ class Site extends Model
     public function canChangePublishStatus(): bool
     {
         return $this->hasAgentSecret() && $this->resolvedAgentBaseUrl() !== null;
+    }
+
+    /**
+     * True when the reported CMS keeps site edits on theme merge and accepts overwrite.
+     * An unknown version is treated as old: a wrong "yes" loses the owner's edits.
+     */
+    public function supportsEditSafeThemeSync(): bool
+    {
+        $reported = $this->reportedDeamonVersion();
+        if ($reported === null) {
+            return false;
+        }
+
+        return version_compare(
+            ltrim($reported, 'vV'),
+            ControlPlaneAgentContract::THEME_SYNC_EDIT_SAFE_VERSION,
+            '>=',
+        );
     }
 
     public function reportedDeamonVersion(): ?string

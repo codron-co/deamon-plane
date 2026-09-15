@@ -17,6 +17,10 @@
     $healthDiffers = $activeTheme
         && filled($healthThemeId)
         && $healthThemeId !== $activeTheme->theme_id;
+    // CMS < 1.2.21 (or unknown): merge rewrites every row and overwrite is rejected.
+    $editSafeSync = $site->supportsEditSafeThemeSync();
+    $editSafeVersion = \App\Services\Agent\ControlPlaneAgentContract::THEME_SYNC_EDIT_SAFE_VERSION;
+    $reportedCms = $site->reportedDeamonVersion() ?? __('ops.unknown');
 @endphp
 
 <section class="site-theme-section" aria-labelledby="site-themes-heading">
@@ -159,27 +163,43 @@
                                     <form
                                         method="POST"
                                         action="{{ route('ops.sites.themes.sync', [$site, $installation]) }}"
-                                        data-confirm="{{ __('sites.themes.sync_confirm', ['theme' => $installedTheme?->theme_id]) }}"
+                                        data-theme-sync="merge"
+                                        data-confirm="{{ $editSafeSync
+                                            ? __('sites.themes.sync_confirm', ['theme' => $installedTheme?->theme_id])
+                                            : __('sites.themes.sync_confirm_legacy', ['theme' => $installedTheme?->theme_id, 'version' => $editSafeVersion, 'reported' => $reportedCms]) }}"
                                         data-confirm-title="{{ __('sites.themes.sync_title') }}"
                                         data-confirm-label="{{ __('sites.themes.sync') }}"
-                                        data-confirm-danger="false"
+                                        data-confirm-danger="{{ $editSafeSync ? 'false' : 'true' }}"
                                     >
                                         @csrf
                                         <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync') }}</button>
                                     </form>
-                                    <form
-                                        method="POST"
-                                        action="{{ route('ops.sites.themes.sync', [$site, $installation]) }}"
-                                        data-confirm="{{ __('sites.themes.sync_overwrite_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
-                                        data-confirm-title="{{ __('sites.themes.sync_overwrite_title') }}"
-                                        data-confirm-label="{{ __('sites.themes.sync_overwrite') }}"
-                                        data-confirm-danger="true"
-                                    >
-                                        @csrf
-                                        <input type="hidden" name="mode" value="overwrite">
-                                        <input type="hidden" name="confirmed" value="0">
-                                        <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync_overwrite') }}</button>
-                                    </form>
+                                    @if ($editSafeSync)
+                                        <form
+                                            method="POST"
+                                            action="{{ route('ops.sites.themes.sync', [$site, $installation]) }}"
+                                            data-theme-sync="overwrite"
+                                            data-confirm="{{ __('sites.themes.sync_overwrite_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
+                                            data-confirm-title="{{ __('sites.themes.sync_overwrite_title') }}"
+                                            data-confirm-label="{{ __('sites.themes.sync_overwrite') }}"
+                                            data-confirm-danger="true"
+                                        >
+                                            @csrf
+                                            <input type="hidden" name="mode" value="overwrite">
+                                            <input type="hidden" name="confirmed" value="0">
+                                            <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync_overwrite') }}</button>
+                                        </form>
+                                    @else
+                                        <button
+                                            type="button"
+                                            class="btn btn-ghost btn-sm"
+                                            disabled
+                                            data-theme-sync-overwrite-disabled
+                                            title="{{ __('sites.themes.sync_overwrite_needs_cms', ['version' => $editSafeVersion, 'reported' => $reportedCms]) }}"
+                                            aria-describedby="theme-overwrite-needs-cms-{{ $installation->id }}"
+                                        >{{ __('sites.themes.sync_overwrite') }}</button>
+                                        <span class="visually-hidden" id="theme-overwrite-needs-cms-{{ $installation->id }}">{{ __('sites.themes.sync_overwrite_needs_cms', ['version' => $editSafeVersion, 'reported' => $reportedCms]) }}</span>
+                                    @endif
                                     @if ($installation->last_sync_task_id)
                                         <form
                                             method="POST"

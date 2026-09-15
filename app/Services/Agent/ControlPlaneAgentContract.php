@@ -76,6 +76,12 @@ final class ControlPlaneAgentContract
 
     public const SYNC_MODE_RESET = 'reset';
 
+    /**
+     * First CMS that keeps site edits on merge and accepts overwrite. Older CMS answers
+     * "Sync mode must be merge or reset." to overwrite, and its merge rewrites every row.
+     */
+    public const THEME_SYNC_EDIT_SAFE_VERSION = '1.2.21';
+
     public const JSON_ENCODE_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
     /**

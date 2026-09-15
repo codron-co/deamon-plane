@@ -71,6 +71,14 @@ class SiteThemeController extends Controller
             return back()->with('error', __('sites.theme_flash.sync_overwrite_needs_confirm'));
         }
 
+        // An older CMS rejects overwrite with an English validation error; say what to do instead.
+        if ($overwrite && ! $site->supportsEditSafeThemeSync()) {
+            return back()->with('error', __('sites.theme_flash.sync_overwrite_needs_cms', [
+                'version' => ControlPlaneAgentContract::THEME_SYNC_EDIT_SAFE_VERSION,
+                'reported' => $site->reportedDeamonVersion() ?? __('ops.unknown'),
+            ]));
+        }
+
         try {
             $outcome = $rollout->syncNow($installation, $request->user(), $request->ip(), $mode);
         } catch (ThemeRolloutException $exception) {

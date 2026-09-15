@@ -277,7 +277,7 @@ class ThemeAssignTest extends TestCase
 
     public function test_confirmed_overwrite_sync_sends_overwrite_mode_and_audits_it(): void
     {
-        [$site, $installation] = $this->activeInstallation();
+        [$site, $installation] = $this->activeInstallation(cmsVersion: '1.2.21');
 
         Http::fake([
             'https://shop.example.test/internal/control/v1/themes/sync' => Http::response(['ok' => true, 'queued' => true], 200),
@@ -386,6 +386,63 @@ class ThemeAssignTest extends TestCase
             ->assertSessionHas('error', __('sites.theme_flash.files_rollback_unavailable'));
 
         Http::assertNothingSent();
+    }
+
+    public function test_overwrite_is_refused_before_calling_an_old_cms(): void
+    {
+        $this->assertOverwriteRefusedFor('1.2.20');
+    }
+
+    public function test_overwrite_is_refused_when_the_cms_version_is_unknown(): void
+    {
+        $this->assertOverwriteRefusedFor(null);
+    }
+
+    private function assertOverwriteRefusedFor(?string $version): void
+    {
+        [$site, $installation] = $this->activeInstallation(cmsVersion: $version);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]), ['mode' => 'overwrite', 'confirmed' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('error', __('sites.theme_flash.sync_overwrite_needs_cms', [
+                'version' => ControlPlaneAgentContract::THEME_SYNC_EDIT_SAFE_VERSION,
+                'reported' => $version ?? __('ops.unknown'),
+            ]));
+
+        Http::assertNothingSent();
+    }
+
+    public function test_theme_card_disables_overwrite_and_warns_merge_on_an_old_cms(): void
+    {
+        [$site, $installation] = $this->activeInstallation(cmsVersion: '1.2.20');
+
+        $html = (string) $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('data-theme-sync="overwrite"', $html);
+        $this->assertStringContainsString('data-theme-sync-overwrite-disabled', $html);
+        $this->assertStringContainsString(e(__('sites.themes.sync_confirm_legacy', [
+            'theme' => 'izyem',
+            'version' => '1.2.21',
+            'reported' => '1.2.20',
+        ])), $html);
+    }
+
+    public function test_theme_card_offers_overwrite_and_the_safe_merge_copy_on_a_current_cms(): void
+    {
+        [$site, $installation] = $this->activeInstallation(cmsVersion: '1.2.21');
+
+        $html = (string) $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('data-theme-sync="overwrite"', $html);
+        $this->assertStringNotContainsString('data-theme-sync-overwrite-disabled', $html);
+        $this->assertStringContainsString(e(__('sites.themes.sync_confirm', ['theme' => 'izyem'])), $html);
     }
 
     public function test_sync_rejects_the_reset_mode(): void
@@ -604,6 +661,8 @@ class ThemeAssignTest extends TestCase
             'last_health_payload' => [
                 'ok' => true,
                 'active_theme_id' => 'izyem',
+                // A CMS that keeps site edits, so the card offers the safe merge copy.
+                'deamon_version' => '1.2.21',
             ],
         ]);
         $theme = Theme::factory()->publicCatalog()->create([
@@ -726,9 +785,12 @@ class ThemeAssignTest extends TestCase
     /**
      * @return array{0: Site, 1: SiteThemeInstallation}
      */
-    private function activeInstallation(): array
+    private function activeInstallation(?string $cmsVersion = null): array
     {
-        $site = $this->readySite();
+        $site = $this->readySite($cmsVersion === null ? [] : [
+            'last_health_at' => now(),
+            'last_health_payload' => ['ok' => true, 'status' => 'healthy', 'deamon_version' => $cmsVersion],
+        ]);
         $theme = Theme::factory()->publicCatalog()->create(['theme_id' => 'izyem']);
         $installation = SiteThemeInstallation::factory()->active()->create([
             'site_id' => $site->id,
