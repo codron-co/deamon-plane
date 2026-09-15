@@ -58,6 +58,7 @@ return [
         'pushed' => 'Yazılım e-posta ayarları :count siteye yeniden aktarıldı.',
         'pushed_queued' => 'Sitelere yeniden aktarım kuyruğa alındı.',
         'site_saved' => 'Site yazılım e-posta override kaydedildi.',
+        'site_push_queued' => 'Siteye aktarım arka planda yapılıyor; sonucu Yazılım maili sayfasındaki durum gösterir.',
     ],
     'test' => [
         'button' => 'Test e-postası gönder',

@@ -53,7 +53,7 @@
 - **Kabul:** Detay GET'i agent'a istek atmaz. Fragment uç noktası listeyi, hata ve `needs_secret` durumunu döndürür.
 
 ### B7 · Yazılım maili site ayarı istek içinde CMS'i bekliyor
-- [ ] **Sorun:** `assignPlatformMail` configure'u senkron çağırıyor. Bağlantı retry'ı ile istek ~25 saniye sürebilir. Hostinger mail için yapılan kuyruk düzeltmesi burada yok.
+- [x] **Sorun:** `assignPlatformMail` configure'u senkron çağırıyor. Bağlantı retry'ı ile istek ~25 saniye sürebilir. Hostinger mail için yapılan kuyruk düzeltmesi burada yok.
 - **Kanıt:** `SiteController::assignPlatformMail` → `$configurer->sync($site)`.
 - **Yapılacak:** `PushPlatformMailJob` kuyruğa. Flash "arka planda aktarılıyor" desin, sonuç mevcut `platform_mail_push_*` kolonlarında görünsün.
 - **Kabul:** Kayıt isteği agent'a senkron istek atmaz, job kuyruğa girer.

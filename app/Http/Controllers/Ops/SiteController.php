@@ -14,6 +14,7 @@ use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\StoreSiteRequest;
 use App\Http\Requests\Ops\SwitchSiteChannelRequest;
 use App\Http\Requests\Ops\UpdateSiteRequest;
+use App\Jobs\PushPlatformMailJob;
 use App\Models\CoolifyConnection;
 use App\Models\Deployment;
 use App\Models\MailServer;
@@ -24,7 +25,6 @@ use App\Services\Agent\SiteHealthChecker;
 use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Hostinger\HostingerMailException;
-use App\Services\Mail\PlatformMailConfigurer;
 use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailOrderBinder;
@@ -664,7 +664,7 @@ class SiteController extends Controller
             ->with('status', __('mail.flash.assigned').$this->mailQueueSuffix($site, $bind, $configurer));
     }
 
-    public function assignPlatformMail(Request $request, Site $site, PlatformMailConfigurer $configurer): RedirectResponse
+    public function assignPlatformMail(Request $request, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);
 
@@ -711,12 +711,14 @@ class SiteController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        $configure = $configurer->sync($site);
+        // Queued like the Hostinger mail push: a slow CMS must not hold the save open.
+        // The outcome lands on sites.platform_mail_pushed_at / push_failed_at.
         $status = __('platform_mail.flash.site_saved');
-        if ($configure->status === 'needs_secret') {
+        if ($site->hasAgentSecret()) {
+            PushPlatformMailJob::dispatch((string) $site->id);
+            $status .= ' '.__('platform_mail.flash.site_push_queued');
+        } else {
             $status .= ' '.__('mail.flash.needs_secret');
-        } elseif ($configure->status === 'failed') {
-            $status .= ' '.__('mail.flash.configure_failed');
         }
 
         return redirect()

@@ -58,6 +58,7 @@ return [
         'pushed' => 'Software mail settings re-pushed to :count site(s).',
         'pushed_queued' => 'Re-push to sites queued.',
         'site_saved' => 'Site software-mail overrides saved.',
+        'site_push_queued' => 'The push to the site runs in the background; Software mail shows the outcome.',
     ],
     'test' => [
         'button' => 'Send test email',
