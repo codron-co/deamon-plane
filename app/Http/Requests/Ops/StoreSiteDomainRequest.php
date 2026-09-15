@@ -4,6 +4,7 @@ namespace App\Http\Requests\Ops;
 
 use App\Http\Requests\Ops\Concerns\ValidatesSiteDomains;
 use App\Models\Site;
+use App\Rules\NotHeldByArchivedSite;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -41,6 +42,7 @@ class StoreSiteDomainRequest extends FormRequest
                 'string',
                 'max:255',
                 'regex:'.$this->hostnamePattern(),
+                NotHeldByArchivedSite::host($siteId),
                 Rule::unique('sites', 'primary_domain')->whereNull('deleted_at'),
                 Rule::unique('site_domains', 'domain')->where(
                     fn ($query) => $siteId ? $query->where('site_id', '!=', $siteId) : $query,

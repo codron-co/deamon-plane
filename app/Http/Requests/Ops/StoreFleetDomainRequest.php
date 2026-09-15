@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Ops;
 
+use App\Rules\NotHeldByArchivedSite;
 use App\Services\Cloudflare\CloudflareHostname;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,6 +25,7 @@ class StoreFleetDomainRequest extends FormRequest
                 'string',
                 'max:255',
                 'regex:/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/',
+                NotHeldByArchivedSite::host(),
                 Rule::unique('site_domains', 'domain'),
             ],
             'site_id' => ['required', 'ulid', 'exists:sites,id'],

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Ops;
 use App\Http\Requests\Ops\Concerns\ValidatesCoolifySiteTargets;
 use App\Http\Requests\Ops\Concerns\ValidatesSiteDomains;
 use App\Models\Site;
+use App\Rules\NotHeldByArchivedSite;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -50,13 +51,14 @@ class UpdateSiteRequest extends FormRequest
         $domainId = $site instanceof Site ? $site->primaryDomainRecord?->id : null;
 
         return array_merge([
-            'slug' => ['required', 'string', 'min:2', 'max:64', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('sites', 'slug')->whereNull('deleted_at')->ignore($siteId)],
+            'slug' => ['required', 'string', 'min:2', 'max:64', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', NotHeldByArchivedSite::slug($siteId), Rule::unique('sites', 'slug')->whereNull('deleted_at')->ignore($siteId)],
             'name' => ['required', 'string', 'max:255'],
             'domain' => [
                 'required',
                 'string',
                 'max:255',
                 'regex:'.$this->hostnamePattern(),
+                NotHeldByArchivedSite::host($siteId),
                 Rule::unique('sites', 'primary_domain')->whereNull('deleted_at')->ignore($siteId),
                 Rule::unique('site_domains', 'domain')->ignore($domainId),
             ],
@@ -67,6 +69,7 @@ class UpdateSiteRequest extends FormRequest
                 'max:255',
                 'distinct',
                 'regex:'.$this->hostnamePattern(),
+                NotHeldByArchivedSite::host($siteId),
                 Rule::unique('sites', 'primary_domain')->whereNull('deleted_at')->ignore($siteId),
                 Rule::unique('site_domains', 'domain')->where(
                     fn ($query) => $siteId ? $query->where('site_id', '!=', $siteId) : $query,

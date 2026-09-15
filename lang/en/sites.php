@@ -362,6 +362,7 @@ return [
         'domain' => 'Domain',
         'domain_hint' => 'Primary hostname. www is added automatically on Cloudflare and Coolify.',
         'aliases' => 'Extra domains',
+        'archived_owner' => ':value belongs to the archived site ":site". Restore or purge that site first.',
         'domain_primary_locked' => 'The primary domain and its www sibling cannot be removed. Change the primary first.',
         'aliases_hint' => 'Same or another apex; for a foreign apex Plane opens a separate Cloudflare zone and shows its nameservers. Each host also gets its www sibling. Saving writes Coolify and redeploys.',
         'alias_placeholder' => 'shop.example.com',

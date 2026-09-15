@@ -195,6 +195,60 @@ class SiteCrudTest extends TestCase
         ]);
     }
 
+    public function test_archived_site_keeps_its_slug_and_hosts_with_a_clear_error(): void
+    {
+        $archived = Site::factory()->create([
+            'slug' => 'gone',
+            'name' => 'Gone Shop',
+            'primary_domain' => 'gone.example.test',
+        ]);
+        $archived->domains()->createMany([
+            ['domain' => 'gone.example.test', 'is_primary' => true],
+            ['domain' => 'shop.gone.example.test'],
+        ]);
+        $archived->delete();
+
+        $operator = $this->user(OpsRole::Operator);
+        $expected = fn (string $value): string => __('sites.form.archived_owner', ['value' => $value, 'site' => 'Gone Shop']);
+
+        // Before: slug and primary passed validation and the INSERT hit the unique index (500).
+        $this->actingAs($operator)
+            ->from(route('ops.sites.create'))
+            ->post(route('ops.sites.store'), $this->validPayload([
+                'slug' => 'gone',
+                'domain' => 'gone.example.test',
+                'aliases' => ['shop.gone.example.test'],
+            ]))
+            ->assertRedirect(route('ops.sites.create'))
+            ->assertSessionHasErrors([
+                'slug' => $expected('gone'),
+                'domain' => $expected('gone.example.test'),
+                'aliases.0' => $expected('shop.gone.example.test'),
+            ]);
+
+        $this->assertSame(0, Site::query()->count());
+        $this->assertSame(1, Site::withTrashed()->count());
+    }
+
+    public function test_live_site_is_not_blocked_by_its_own_values_on_update(): void
+    {
+        $site = Site::factory()->create([
+            'slug' => 'izyem',
+            'name' => 'Izyem',
+            'primary_domain' => 'shop.izyem.example.test',
+            'channel' => Channel::Beta,
+            'status' => SiteStatus::Draft,
+        ]);
+        $site->domains()->create(['domain' => 'shop.izyem.example.test', 'is_primary' => true]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->put(route('ops.sites.update', $site), $this->validPayload(['name' => 'Izyem 2']))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $this->assertSame('Izyem 2', $site->fresh()->name);
+    }
+
     public function test_viewer_can_read_but_cannot_write(): void
     {
         $site = Site::factory()->create([

@@ -363,6 +363,7 @@ return [
         'domain' => 'Domain',
         'domain_hint' => 'Birincil hostname. www Cloudflare ve Coolify’e otomatik eklenir.',
         'aliases' => 'Ek domain’ler',
+        'archived_owner' => ':value arşivdeki ":site" sitesine ait. Önce o siteyi geri yükleyin veya kalıcı silin.',
         'domain_primary_locked' => 'Birincil domain ve www kardeşi kaldırılamaz. Önce birincil domaini değiştirin.',
         'aliases_hint' => 'Aynı veya farklı apex; farklı bir apex için Plane ayrı Cloudflare zone açar ve NS’leri gösterir. Her hostun www kardeşi de eklenir. Kaydedince Coolify’e yazılır ve yeniden deploy edilir.',
         'alias_placeholder' => 'magaza.ornek.com',

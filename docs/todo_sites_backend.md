@@ -23,11 +23,12 @@
 - **Yapılacak:** Silinen hostları döndür, B1'deki DNS temizleme servisiyle kaldır.
 - **Kabul:** Formdan takma ad çıkarılınca ilgili `dns_records` DELETE'i gönderilir.
 
-### B3 · Arşivlenen sitenin domainleri yeni sitede kullanılamıyor
-- [ ] **Sorun:** Arşiv (soft delete) `site_domains` satırlarını tutuyor. `site_domains.domain` benzersiz. Aynı domainle yeni site açmak "alınmış" hatası veriyor.
-- **Kanıt:** `create_site_domains_table` → `domain` unique. `StoreSiteRequest` → `Rule::unique('site_domains', 'domain')` arşivli siteyi hariç tutmuyor. `SiteController::destroy` yalnız `$site->delete()`.
-- **Yapılacak:** Arşivde host listesini audit'e yaz, `site_domains` satırlarını sil. Geri yüklemede birincil + www yeniden oluşturulur.
-- **Kabul:** Site arşivlendikten sonra aynı birincil domain ile yeni site oluşturulabilir.
+### B3 · Arşivlenen sitenin slug ve domaini 500 veriyor
+- [x] **Sorun:** Arşivli sitenin slug'ı veya birincil domaini ile yeni site açınca doğrulama geçiyor, INSERT benzersizlik ihlaliyle 500 veriyor. Takma adda genel "alınmış" mesajı çıkıyor, hangi site olduğu söylenmiyor.
+- **Kanıt:** `create_sites_table` → `slug` ve `primary_domain` DB'de unique. `StoreSiteRequest` / `UpdateSiteRequest` → `Rule::unique('sites', ...)->whereNull('deleted_at')` arşivli satırı atlıyor.
+- **Karar (denetimden sonra revize):** Satırları silmek yerine arşivli site değerlerini sahiplenmeye devam eder. Importer da arşivli siteyi hostunu "dolu" sayıyor (`CoolifyFleetImporter::trashedOccupies`), satır silmek bununla çelişirdi. Domaini serbest bırakmanın yolu B11'deki geri yükle / kalıcı sil.
+- **Yapılan:** `App\Rules\NotHeldByArchivedSite` slug, birincil, takma ad ve domain ekleme formlarında. Mesaj arşivdeki siteyi adıyla söylüyor.
+- **Kabul:** Arşivli değerle oluşturma 500 değil, alan bazında hata döner. Canlı site kendi değerleriyle güncellenebilir.
 
 ---
 
