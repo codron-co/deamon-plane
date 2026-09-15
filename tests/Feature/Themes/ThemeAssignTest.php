@@ -517,6 +517,39 @@ class ThemeAssignTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_update_to_latest_sends_catalog_latest_sha_instead_of_the_old_pin(): void
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'beyazoglu',
+            'repo_full_name' => 'deamon-themes/deamon-theme-beyazoglu',
+            'latest_sha' => 'bbb222',
+        ]);
+        $installation = SiteThemeInstallation::factory()->active()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+            'ref' => 'main',
+            'pinned_sha' => 'aaa111',
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/update' => fn (Request $request) => Http::response([
+                'ok' => true,
+                'theme_id' => 'beyazoglu',
+                'ref' => 'main',
+                'sha' => $request->data()['sha'] ?? null,
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.update', [$site, $installation]))
+            ->assertRedirect();
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/themes/update')
+            && ($request->data()['sha'] ?? null) === 'bbb222');
+        $this->assertSame('bbb222', $installation->fresh()->pinned_sha);
+    }
+
     private function signatureMatches(Request $request, string $secret): bool
     {
         $timestamp = (string) ($request->header(ControlPlaneAgentContract::HEADER_TIMESTAMP)[0] ?? '');

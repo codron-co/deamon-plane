@@ -309,7 +309,7 @@ class ThemeRolloutService
         $installation->last_error = null;
         $installation->save();
 
-        $payload = $this->themePayload($theme, $installation);
+        $payload = $this->themePayload($theme, $installation, preferLatest: true);
         $result = $this->agent->updateTheme($site, $payload);
 
         if (! $result->ok) {
@@ -400,11 +400,17 @@ class ThemeRolloutService
     }
 
     /**
+     * Install (re)publishes what the site already runs, so the pinned SHA wins.
+     * Update moves the site forward, so the catalog's latest SHA wins; the pin
+     * is only a fallback while the catalog has not seen a push yet.
+     *
      * @return array<string, mixed>
      */
-    private function themePayload(Theme $theme, SiteThemeInstallation $installation): array
+    private function themePayload(Theme $theme, SiteThemeInstallation $installation, bool $preferLatest = false): array
     {
-        $sha = $installation->pinned_sha ?: $theme->latest_sha;
+        $sha = $preferLatest
+            ? ($theme->latest_sha ?: $installation->pinned_sha)
+            : ($installation->pinned_sha ?: $theme->latest_sha);
         $cloneToken = null;
 
         try {
