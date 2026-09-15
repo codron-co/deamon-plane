@@ -146,7 +146,7 @@
                 </div>
             </article>
             <article class="site-metric">
-                <div class="site-metric-icon is-theme" aria-hidden="true"><span></span></div>
+                <div class="site-metric-icon is-mail" aria-hidden="true"><span></span></div>
                 <div>
                     <span>{{ __('sites.detail.mail') }}</span>
                     <strong>

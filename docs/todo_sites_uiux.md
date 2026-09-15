@@ -80,7 +80,7 @@
 - **Kabul:** Seçim diğer alanlarla aynı görünür.
 
 ### U11 · Mail metrik kartı tema ikonunu kullanıyor
-- [ ] **Sorun:** Genel bakıştaki "Mail" kartı ile "Tema" kartı aynı ikonla çıkıyor.
+- [x] **Sorun:** Genel bakıştaki "Mail" kartı ile "Tema" kartı aynı ikonla çıkıyor.
 - **Kanıt:** `sites/show.blade.php` → mail kartında `site-metric-icon is-theme`.
 - **Yapılacak:** Mail için ayrı ikon sınıfı ve CSS.
 - **Kabul:** İki kart farklı ikon gösterir.

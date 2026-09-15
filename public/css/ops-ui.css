@@ -1233,6 +1233,7 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
 .site-metric-icon.is-error span { background: var(--danger); box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 13%, transparent); }
 .site-metric-icon.is-deploy span { border-radius: 2px; background: var(--accent); transform: rotate(45deg); }
 .site-metric-icon.is-theme span { width: 12px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 68%, var(--text)); }
+.site-metric-icon.is-mail span { width: 13px; height: 9px; border-radius: 2px; background: transparent; border: 1.5px solid color-mix(in srgb, var(--accent) 68%, var(--text)); box-shadow: none; }
 .site-metric-icon.is-connection span { width: 12px; height: 2px; border-radius: 2px; background: var(--text-muted); box-shadow: 0 -4px 0 var(--text-muted), 0 4px 0 var(--text-muted); }
 
 .site-overview-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, .75fr); gap: 10px; margin-top: 10px; }
