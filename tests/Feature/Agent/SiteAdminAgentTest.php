@@ -271,7 +271,7 @@ class SiteAdminAgentTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.admins.panel', $site))
             ->assertOk()
             ->getContent();
 
@@ -310,7 +310,7 @@ class SiteAdminAgentTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.admins.panel', $site))
             ->assertOk()
             ->assertSee(__('sites.admins.password_not_set'), false)
             ->assertSee(__('sites.admins.password_invite'), false)
@@ -369,7 +369,7 @@ class SiteAdminAgentTest extends TestCase
         ]);
 
         $this->actingAs($this->user(OpsRole::Operator))
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.admins.panel', $site))
             ->assertOk()
             ->assertSee(__('sites.admins.errors.outdated'), false);
     }
@@ -382,6 +382,67 @@ class SiteAdminAgentTest extends TestCase
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertDontSee(__('sites.admins.title'), false);
+    }
+
+    public function test_detail_page_does_not_wait_on_the_cms_agent(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-admins-url="'.route('ops.sites.admins.panel', $site).'"', false)
+            ->assertSee(__('sites.admins.loading'), false);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_panel_renders_needs_secret_without_an_agent_call(): void
+    {
+        $site = Site::factory()->create([
+            'primary_domain' => 'shop.example.test',
+            'agent_secret_encrypted' => null,
+        ]);
+
+        Http::fake();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.admins.panel', $site))
+            ->assertOk()
+            ->assertSee(__('sites.admins.needs_secret'), false)
+            ->assertDontSee('<html', false);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_viewer_cannot_load_the_admins_panel(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake();
+
+        $this->actingAs($this->user(OpsRole::Viewer))
+            ->get(route('ops.sites.admins.panel', $site))
+            ->assertForbidden();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_one_time_password_is_rendered_by_the_page_not_the_panel(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->withSession(['admin_password_once' => 'OnceOnly!2345'])
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('OnceOnly!2345', false);
+
+        Http::assertNothingSent();
     }
 
     private function siteWithSecret(): Site

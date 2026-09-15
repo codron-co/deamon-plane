@@ -9,8 +9,6 @@ use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\Theme;
-use App\Services\Agent\AdminAgentResult;
-use App\Services\Agent\SiteAgentClient;
 use App\Services\Agent\SiteHealthEvaluator;
 use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Coolify\CoolifyDeploymentSync;
@@ -30,7 +28,6 @@ class SiteDetailController extends Controller
         SiteHealthEvaluator $agentHealth,
         SiteMailOrderBinder $mailBinder,
         PlatformMailResolver $platformMail,
-        SiteAgentClient $agentClient,
     ): View {
         $this->authorize('view', $site);
 
@@ -54,10 +51,8 @@ class SiteDetailController extends Controller
         ]);
 
         $user = $request->user();
+        // The Admins tab fetches ops.sites.admins.panel on first view; no agent call here.
         $canManageAdmins = $user?->can('manageAdmins', $site) ?? false;
-        $adminsResult = $canManageAdmins
-            ? $agentClient->listAdmins($site)
-            : AdminAgentResult::failure('Forbidden.');
 
         return view('ops.sites.show', [
             'site' => $site,
@@ -84,7 +79,6 @@ class SiteDetailController extends Controller
             'canManageAdmins' => $canManageAdmins,
             'canToggleAdminActive' => $user?->can('toggleAdminActive', $site) ?? false,
             'canDestroyAdmin' => $user?->can('destroyAdmin', $site) ?? false,
-            'adminsResult' => $adminsResult,
             'agentHealth' => $agentHealth,
             'channelSwitchTargets' => $this->channelSwitchTargets($site),
             'channelSwitchInProgress' => $site->status === SiteStatus::Deploying,

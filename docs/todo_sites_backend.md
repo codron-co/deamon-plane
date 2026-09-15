@@ -47,7 +47,7 @@
 - **Kabul:** Takma adı birincil yapma kaydedilir, eski birincil takma ada düşmez ve DNS/Coolify akışı çalışır.
 
 ### B6 · Site detay sayfası her açılışta CMS'i bekliyor
-- [ ] **Sorun:** `SiteDetailController` her istekte `listAdmins` çağırıyor. CMS yavaş veya kapalıysa sayfa 10 saniye + retry kadar donuyor.
+- [x] **Sorun:** `SiteDetailController` her istekte `listAdmins` çağırıyor. CMS yavaş veya kapalıysa sayfa 10 saniye + retry kadar donuyor.
 - **Kanıt:** `app/Http/Controllers/Ops/SiteDetailController.php` → `$agentClient->listAdmins($site)` senkron.
 - **Yapılacak:** Admin paneli ayrı fragment uç noktasından sonradan yüklensin. Sayfa CMS'e bağlı olmadan açılsın.
 - **Kabul:** Detay GET'i agent'a istek atmaz. Fragment uç noktası listeyi, hata ve `needs_secret` durumunu döndürür.

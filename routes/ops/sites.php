@@ -76,6 +76,7 @@ Route::post('/sites/{site}/themes/{installation}/update', [SiteThemeController::
 Route::post('/sites/{site}/themes/{installation}/sync', [SiteThemeController::class, 'sync'])->name('ops.sites.themes.sync');
 Route::post('/sites/{site}/themes/{installation}/activate', [SiteThemeController::class, 'activate'])->name('ops.sites.themes.activate');
 Route::post('/sites/{site}/themes/{installation}/auto-update', [SiteThemeController::class, 'autoUpdate'])->name('ops.sites.themes.auto-update');
+Route::get('/sites/{site}/admins/panel', [SiteAdminController::class, 'panel'])->name('ops.sites.admins.panel');
 Route::post('/sites/{site}/admins', [SiteAdminController::class, 'store'])->name('ops.sites.admins.store');
 Route::post('/sites/{site}/admins/{remoteAdmin}/password', [SiteAdminController::class, 'resetPassword'])->name('ops.sites.admins.password');
 Route::post('/sites/{site}/admins/{remoteAdmin}/password-invite', [SiteAdminController::class, 'sendPasswordInvite'])->name('ops.sites.admins.password-invite');

@@ -1028,6 +1028,9 @@
             if (updateHash) {
                 history.replaceState(null, "", "#" + nextId);
             }
+
+            // Lets a panel load its content on first view (e.g. the site Admins tab).
+            document.dispatchEvent(new CustomEvent("ops:tab-activated", { detail: { id: nextId } }));
         }
 
         function groupForPanel(id) {

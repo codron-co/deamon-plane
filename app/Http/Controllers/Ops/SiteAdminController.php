@@ -9,6 +9,7 @@ use App\Services\Agent\AdminAgentResult;
 use App\Services\Agent\SiteAgentClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
@@ -17,6 +18,22 @@ class SiteAdminController extends Controller
     public function __construct(
         private readonly SiteAgentClient $agent = new SiteAgentClient,
     ) {}
+
+    /**
+     * HTML fragment for the site Admins tab. Loaded after the page so a slow or
+     * unreachable CMS never holds the detail page open.
+     */
+    public function panel(Request $request, Site $site): Response
+    {
+        $this->authorize('manageAdmins', $site);
+
+        return response()->view('ops.sites._admins_body', [
+            'site' => $site,
+            'adminsResult' => $this->agent->listAdmins($site),
+            'canToggleAdminActive' => $request->user()?->can('toggleAdminActive', $site) ?? false,
+            'canDestroyAdmin' => $request->user()?->can('destroyAdmin', $site) ?? false,
+        ]);
+    }
 
     public function store(Request $request, Site $site): RedirectResponse
     {

@@ -543,6 +543,9 @@ return [
         'password_once_title' => 'Tek seferlik şifre',
         'password_once_hint' => 'Şimdi kopyalayın. Plane bir daha göstermez ve saklamaz.',
         'needs_secret' => 'Admin yönetimi için önce agent secret basılmalı.',
+        'loading' => 'CMS adminleri yükleniyor…',
+        'load_failed' => 'CMS admin listesi yüklenemedi.',
+        'retry' => 'Tekrar dene',
         'fields' => [
             'name' => 'Ad',
             'email' => 'E-posta',

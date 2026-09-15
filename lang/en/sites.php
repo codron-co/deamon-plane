@@ -542,6 +542,9 @@ return [
         'password_once_title' => 'One-time password',
         'password_once_hint' => 'Copy now. Plane will not show it again and does not store it.',
         'needs_secret' => 'Inject an agent secret before managing admins.',
+        'loading' => 'Loading CMS admins…',
+        'load_failed' => 'The CMS admin list could not be loaded.',
+        'retry' => 'Try again',
         'fields' => [
             'name' => 'Name',
             'email' => 'Email',
