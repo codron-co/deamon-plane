@@ -51,6 +51,23 @@ return [
         'hour' => 'Saat (0–23, Europe/Istanbul)',
         'site_recipient' => 'Site yazılım e-posta alıcısı',
         'site_override' => 'Bildirim override (boş = global)',
+        'weekday' => 'Haftanın günü',
+        'send_hour' => 'Gönderim saati (Europe/Istanbul)',
+        'version_threshold' => 'Bildirim eşiği',
+    ],
+    'weekdays' => [
+        0 => 'Pazar',
+        1 => 'Pazartesi',
+        2 => 'Salı',
+        3 => 'Çarşamba',
+        4 => 'Perşembe',
+        5 => 'Cuma',
+        6 => 'Cumartesi',
+    ],
+    'version_thresholds' => [
+        'patch' => 'Her sürümde (yama dahil)',
+        'minor' => 'Minor ve üstü',
+        'major' => 'Yalnız major',
     ],
     'flash' => [
         'saved' => 'Yazılım e-posta ayarları kaydedildi.',

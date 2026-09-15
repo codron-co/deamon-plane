@@ -51,6 +51,23 @@ return [
         'hour' => 'Hour (0–23, Europe/Istanbul)',
         'site_recipient' => 'Site software-mail recipient',
         'site_override' => 'Notification overrides (empty = global)',
+        'weekday' => 'Day of week',
+        'send_hour' => 'Send hour (Europe/Istanbul)',
+        'version_threshold' => 'Notify on',
+    ],
+    'weekdays' => [
+        0 => 'Sunday',
+        1 => 'Monday',
+        2 => 'Tuesday',
+        3 => 'Wednesday',
+        4 => 'Thursday',
+        5 => 'Friday',
+        6 => 'Saturday',
+    ],
+    'version_thresholds' => [
+        'patch' => 'Every release (patch and up)',
+        'minor' => 'Minor and up',
+        'major' => 'Major only',
     ],
     'flash' => [
         'saved' => 'Software mail settings saved.',

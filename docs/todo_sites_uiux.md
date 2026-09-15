@@ -64,7 +64,7 @@
 - **Kabul:** Rozette çevrilmiş neden görünür.
 
 ### U9 · Yazılım maili bildirim tablosu ham değerler gösteriyor
-- [ ] **Sorun:** Haftalık rapor günü 0–6, saati 0–23 sayı kutusu. Hangi günün 0 olduğu belli değil. Sürüm eşiği `patch / minor / major` ham seçenek ve stilsiz select. Erişilebilirlik etiketleri İngilizce `day` / `hour`.
+- [x] **Sorun:** Haftalık rapor günü 0–6, saati 0–23 sayı kutusu. Hangi günün 0 olduğu belli değil. Sürüm eşiği `patch / minor / major` ham seçenek ve stilsiz select. Erişilebilirlik etiketleri İngilizce `day` / `hour`.
 - **Kanıt:** `sites/_platform-mail.blade.php` satır 52–58.
 - **Yapılacak:** Gün için Pazartesi…Pazar select, saat için 00:00…23:00 select, sürüm eşiği için çevrilmiş etiketler, `field-input` sınıfı, Türkçe `aria-label`.
 - **Kabul:** Tabloda ham sayı ve İngilizce etiket kalmaz, gönderilen değerler değişmez.

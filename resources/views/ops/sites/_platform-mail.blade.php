@@ -49,12 +49,25 @@
                                 </td>
                                 <td>
                                     @if ($key === 'weekly_visitor_report')
-                                        <input class="field-input" type="number" min="0" max="6" name="notifications[{{ $key }}][day]" value="{{ old('notifications.'.$key.'.day', $row['day'] ?? $eff['day'] ?? 1) }}" aria-label="day">
-                                        <input class="field-input" type="number" min="0" max="23" name="notifications[{{ $key }}][hour]" value="{{ old('notifications.'.$key.'.hour', $row['hour'] ?? $eff['hour'] ?? 8) }}" aria-label="hour">
+                                        @php
+                                            $dayValue = (int) old('notifications.'.$key.'.day', $row['day'] ?? $eff['day'] ?? 1);
+                                            $hourValue = (int) old('notifications.'.$key.'.hour', $row['hour'] ?? $eff['hour'] ?? 8);
+                                        @endphp
+                                        {{-- Values stay 0=Sunday … 6=Saturday and 0–23; only the labels are human. --}}
+                                        <select class="field-input" name="notifications[{{ $key }}][day]" aria-label="{{ __('platform_mail.fields.weekday') }}">
+                                            @foreach ([1, 2, 3, 4, 5, 6, 0] as $day)
+                                                <option value="{{ $day }}" @selected($dayValue === $day)>{{ __('platform_mail.weekdays.'.$day) }}</option>
+                                            @endforeach
+                                        </select>
+                                        <select class="field-input" name="notifications[{{ $key }}][hour]" aria-label="{{ __('platform_mail.fields.send_hour') }}">
+                                            @foreach (range(0, 23) as $hour)
+                                                <option value="{{ $hour }}" @selected($hourValue === $hour)>{{ sprintf('%02d:00', $hour) }}</option>
+                                            @endforeach
+                                        </select>
                                     @elseif ($key === 'site_version_update')
-                                        <select name="notifications[{{ $key }}][on]">
+                                        <select class="field-input" name="notifications[{{ $key }}][on]" aria-label="{{ __('platform_mail.fields.version_threshold') }}">
                                             @foreach (['patch', 'minor', 'major'] as $value)
-                                                <option value="{{ $value }}" @selected(old('notifications.'.$key.'.on', $row['on'] ?? $eff['on'] ?? 'patch') === $value)>{{ $value }}</option>
+                                                <option value="{{ $value }}" @selected(old('notifications.'.$key.'.on', $row['on'] ?? $eff['on'] ?? 'patch') === $value)>{{ __('platform_mail.version_thresholds.'.$value) }}</option>
                                             @endforeach
                                         </select>
                                     @else
