@@ -2,7 +2,9 @@
 
 namespace App\Services\Sites;
 
+use App\Jobs\PushDeskronJob;
 use App\Models\CoolifyConnection;
+use App\Models\DeskronSetting;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
@@ -45,5 +47,11 @@ class SiteAgentSecretInjector
             ],
             'ip' => $ip,
         ]);
+
+        // A new agent secret means a new (or re-keyed) CMS: hand it the DeskRon
+        // application once its agent routes are up. The job retries until then.
+        if (DeskronSetting::current()->isReady()) {
+            PushDeskronJob::dispatch((string) $site->id)->delay(now()->addMinutes(2));
+        }
     }
 }

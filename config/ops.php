@@ -120,6 +120,7 @@ return [
         'theme_sync_path' => '/internal/control/v1/themes/sync',
         'theme_sync_rollback_path' => '/internal/control/v1/themes/sync-rollback',
         'mail_configure_path' => '/internal/control/v1/mail/configure',
+        'deskron_configure_path' => '/internal/control/v1/deskron/configure',
         'nonce_ttl_seconds' => (int) env('CONTROL_PLANE_AGENT_NONCE_TTL', 120),
     ],
 

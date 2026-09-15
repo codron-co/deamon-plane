@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DispatchDeskronPushJob;
 use App\Models\AuditLog;
 use App\Models\DeskronSetting;
+use App\Models\Site;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +18,20 @@ class DeskronSettingsController extends Controller
         return view('ops.deskron.edit', [
             'settings' => DeskronSetting::current(),
             'canWrite' => $request->user()?->can('ops.write') ?? false,
+            'pushedSites' => Site::query()->whereNotNull('deskron_pushed_at')->whereNull('deskron_push_failed_at')->count(),
+            'failedSites' => Site::query()->whereNotNull('deskron_push_failed_at')->orderBy('name')->get(['id', 'name', 'slug', 'deskron_push_error']),
         ]);
+    }
+
+    public function push(Request $request): RedirectResponse
+    {
+        $this->authorize('ops.write');
+
+        DispatchDeskronPushJob::dispatch();
+
+        return redirect()
+            ->route('ops.deskron.edit')
+            ->with('status', __('deskron.flash.push_queued'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -53,6 +68,9 @@ class DeskronSettingsController extends Controller
             'after' => $this->auditSnapshot($settings),
             'ip' => $request->ip(),
         ]);
+
+        // Every CMS gets the new application right away; no env, no redeploy.
+        DispatchDeskronPushJob::dispatch();
 
         return redirect()
             ->route('ops.deskron.edit')

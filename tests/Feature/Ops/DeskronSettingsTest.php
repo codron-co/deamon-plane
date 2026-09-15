@@ -8,6 +8,7 @@ use App\Models\DeskronSetting;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class DeskronSettingsTest extends TestCase
@@ -18,6 +19,7 @@ class DeskronSettingsTest extends TestCase
     {
         parent::setUp();
         $this->seed(RoleSeeder::class);
+        Queue::fake();
     }
 
     public function test_operator_saves_deskron_settings_encrypted_and_never_sees_the_key_again(): void

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * The DeskRon Application every Deamon CMS site uses for its admin Support page.
- * Written into each site's Coolify env through `{{plane.deskron_*}}` catalog tokens.
+ * Pushed to each CMS over the signed agent (POST /deskron/configure), never env.
  */
 class DeskronSetting extends Model
 {
@@ -20,6 +20,7 @@ class DeskronSetting extends Model
         'application_id',
         'api_key',
         'webhook_secret',
+        'last_pushed_at',
     ];
 
     /**
@@ -38,6 +39,7 @@ class DeskronSetting extends Model
         return [
             'api_key' => 'encrypted',
             'webhook_secret' => 'encrypted',
+            'last_pushed_at' => 'datetime',
         ];
     }
 

@@ -44,6 +44,9 @@ final class ControlPlaneAgentContract
 
     public const PLATFORM_MAIL_CONFIGURE_PATH = '/internal/control/v1/platform-mail/configure';
 
+    /** CMS 1.2.22+: stores the DeskRon application the admin Support page uses. */
+    public const DESKRON_CONFIGURE_PATH = '/internal/control/v1/deskron/configure';
+
     public const ADMINS_PATH = '/internal/control/v1/admins';
 
     public const HEADER_SITE = 'X-Deamon-Site';
@@ -150,6 +153,11 @@ final class ControlPlaneAgentContract
     public static function platformMailConfigurePath(): string
     {
         return self::configuredPath('ops.agent.platform_mail_configure_path', self::PLATFORM_MAIL_CONFIGURE_PATH);
+    }
+
+    public static function deskronConfigurePath(): string
+    {
+        return self::configuredPath('ops.agent.deskron_configure_path', self::DESKRON_CONFIGURE_PATH);
     }
 
     public static function adminsPath(): string

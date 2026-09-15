@@ -2,6 +2,15 @@
 
 @section('title', __('deskron.title'))
 
+@section('actions')
+    @if ($canWrite)
+        <form method="POST" action="{{ route('ops.deskron.push') }}" data-ops-pending>
+            @csrf
+            <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('deskron.push') }}</button>
+        </form>
+    @endif
+@endsection
+
 @section('content')
     <p class="page-lede">{{ __('deskron.lede') }}</p>
 
@@ -52,6 +61,20 @@
         <article class="site-card">
             <h2>{{ __('deskron.rollout.title') }}</h2>
             <p class="field-hint">{{ __('deskron.rollout.hint') }}</p>
+            <p class="site-note">
+                {{ __('deskron.rollout.pushed', ['count' => $pushedSites]) }}
+                @if ($settings->last_pushed_at)
+                    · {{ __('deskron.rollout.last_pushed', ['time' => $settings->last_pushed_at->diffForHumans()]) }}
+                @endif
+            </p>
+            @if ($failedSites->isNotEmpty())
+                <p class="ops-alert ops-alert-warning" role="status">{{ __('deskron.rollout.failed', ['count' => $failedSites->count()]) }}</p>
+                <ul class="ops-alert-list">
+                    @foreach ($failedSites as $failedSite)
+                        <li><a href="{{ route('ops.sites.show', $failedSite) }}">{{ $failedSite->name }}</a> <span class="muted">{{ $failedSite->deskron_push_error }}</span></li>
+                    @endforeach
+                </ul>
+            @endif
         </article>
 
         @if ($canWrite)

@@ -2,8 +2,9 @@
 
 return [
     'title' => 'DeskRon support',
-    'lede' => 'The Support page in every Deamon CMS admin connects to this DeskRon application. Values are stored encrypted and written into each site’s Coolify env through the DESKRON_* catalog rows.',
+    'lede' => 'The Support page in every Deamon CMS admin connects to this DeskRon application. Values are stored encrypted and pushed straight to the sites over the signed agent; no env, no redeploy.',
     'save' => 'Save',
+    'push' => 'Push to sites again',
     'form_errors' => 'Fix the highlighted fields and try again.',
     'state_label' => 'Status',
     'state' => [
@@ -11,7 +12,7 @@ return [
         'missing' => 'Missing',
     ],
     'state_hint' => [
-        'ready' => 'Application id and API key are saved. Sites pick them up on their next deploy.',
+        'ready' => 'Application id and API key are saved; saving pushes them to every site.',
         'missing' => 'Application id or API key is missing. The Support page on sites says “Destek şu an bağlanamadı”.',
     ],
     'application' => [
@@ -20,7 +21,7 @@ return [
     ],
     'fields' => [
         'application_id' => 'Application id (DESKRON_APPLICATION_ID)',
-        'application_id_hint' => 'The DeskRon application ULID.',
+        'application_id_hint' => 'The DeskRon application ULID. Changing it makes sites recreate their DeskRon organization under the new application.',
         'api_key' => 'API key (DESKRON_API_KEY)',
         'api_key_hint' => 'The application’s app_master_key (dsk_…).',
         'webhook_secret' => 'Webhook secret (DESKRON_WEBHOOK_SECRET)',
@@ -28,10 +29,14 @@ return [
         'secret_saved' => 'Saved. Type a new value to replace it; leaving it blank keeps the current one.',
     ],
     'rollout' => [
-        'title' => 'Rolling out to sites',
-        'hint' => 'Plane aligns each site’s env with the CMS catalog on every deploy. After saving, redeploy the sites whose Support page does not connect (Sites → bulk redeploy). A blank value never removes a value already on a site.',
+        'title' => 'Pushing to sites',
+        'hint' => 'Saving pushes the setting to every site over the signed agent right away; a site that gets a new agent secret receives it too. Needs CMS 1.2.22 or later.',
+        'pushed' => ':count sites accepted the last push',
+        'last_pushed' => 'last push :time',
+        'failed' => ':count sites did not accept the last push. Use “Push to sites again” to retry.',
     ],
     'flash' => [
-        'saved' => 'DeskRon settings saved. Sites receive the values on their next deploy.',
+        'saved' => 'DeskRon settings saved and queued for every site.',
+        'push_queued' => 'Pushing the DeskRon setting to every site again.',
     ],
 ];

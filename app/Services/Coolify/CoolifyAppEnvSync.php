@@ -5,7 +5,6 @@ namespace App\Services\Coolify;
 use App\Enums\Channel;
 use App\Enums\CoolifyEnvKind;
 use App\Models\CoolifyEnvDefault;
-use App\Models\DeskronSetting;
 use App\Models\Site;
 use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogException;
@@ -289,16 +288,6 @@ class CoolifyAppEnvSync
             '{{site.app_env}}' => ChannelEnvironmentMap::appEnv($channel),
             '{{plane.host}}' => $this->planeHost(),
         ];
-
-        if (str_contains($template, '{{plane.deskron_')) {
-            // Unset values resolve to empty: the row is then left alone (never blanked, never pruned).
-            $deskron = DeskronSetting::current();
-            $map += [
-                '{{plane.deskron_application_id}}' => (string) ($deskron->application_id ?? ''),
-                '{{plane.deskron_api_key}}' => (string) ($deskron->api_key ?? ''),
-                '{{plane.deskron_webhook_secret}}' => (string) ($deskron->webhook_secret ?? ''),
-            ];
-        }
 
         $resolved = strtr($template, $map);
 
