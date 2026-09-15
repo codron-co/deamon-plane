@@ -3,10 +3,12 @@
 namespace Tests\Feature\Coolify;
 
 use App\Enums\Channel;
+use App\Jobs\InspectSiteAppHealthJob;
 use App\Jobs\SyncCoolifyEnvCatalogJob;
 use App\Models\CoolifyEnvCatalogSource;
 use App\Models\CoolifyEnvDefault;
 use App\Models\GithubSetting;
+use App\Models\Site;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogException;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogSync;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
@@ -131,6 +133,35 @@ class CoolifyEnvCatalogSyncTest extends TestCase
         foreach (Channel::cases() as $channel) {
             $this->assertSame(['CMD_KEY'], CoolifyEnvDefault::query()->forChannel($channel)->pluck('key')->all());
         }
+    }
+
+    public function test_a_changed_catalog_key_set_reinspects_that_channels_apps(): void
+    {
+        $alphaSite = Site::factory()->create(['channel' => Channel::Alpha, 'coolify_app_uuid' => 'alpha-app']);
+        Site::factory()->create(['channel' => Channel::Main, 'coolify_app_uuid' => 'main-app']);
+        Site::factory()->create(['channel' => Channel::Alpha, 'coolify_app_uuid' => null]);
+
+        $sync = app(CoolifyEnvCatalogSync::class);
+        $sync->importContents(Channel::Alpha, "APP_KEY={{site.app_key}}\nDESKRON_API_KEY={{plane.deskron_api_key}}\n");
+
+        Queue::fake();
+        $sync->importContents(Channel::Alpha, "APP_KEY={{site.app_key}}\n");
+
+        Queue::assertPushed(InspectSiteAppHealthJob::class, 1);
+        Queue::assertPushed(InspectSiteAppHealthJob::class, fn (InspectSiteAppHealthJob $job): bool => $job->siteId === (string) $alphaSite->id);
+    }
+
+    public function test_an_unchanged_catalog_key_set_does_not_reinspect(): void
+    {
+        Site::factory()->create(['channel' => Channel::Alpha, 'coolify_app_uuid' => 'alpha-app']);
+
+        $sync = app(CoolifyEnvCatalogSync::class);
+        $sync->importContents(Channel::Alpha, "APP_KEY={{site.app_key}}\n");
+
+        Queue::fake();
+        $sync->importContents(Channel::Alpha, "# reworded description\nAPP_KEY={{site.app_key}}\n");
+
+        Queue::assertNotPushed(InspectSiteAppHealthJob::class);
     }
 
     private function fakeGithub(string $example, string $sha): void

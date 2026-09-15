@@ -3,8 +3,10 @@
 namespace App\Services\Coolify\EnvCatalog;
 
 use App\Enums\Channel;
+use App\Jobs\InspectSiteAppHealthJob;
 use App\Models\CoolifyEnvCatalogSource;
 use App\Models\CoolifyEnvDefault;
+use App\Models\Site;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
 use Illuminate\Support\Facades\DB;
@@ -111,6 +113,10 @@ class CoolifyEnvCatalogSync
      */
     public function replace(Channel $channel, array $rows): void
     {
+        $previousKeys = CoolifyEnvDefault::query()->where('channel', $channel->value)->orderBy('key')->pluck('key')->all();
+        $nextKeys = array_map(static fn (ParsedEnvRow $row): string => $row->key, $rows);
+        sort($nextKeys);
+
         DB::transaction(function () use ($channel, $rows): void {
             CoolifyEnvDefault::query()->where('channel', $channel->value)->delete();
 
@@ -127,6 +133,22 @@ class CoolifyEnvCatalogSync
                 $sort += 10;
             }
         });
+
+        // Stored App health lists missing catalog keys. When the key set changes, those
+        // verdicts are stale (a removed key would keep showing as "missing"), so
+        // re-inspect the channel's apps against the new catalog.
+        if ($previousKeys !== [] && $previousKeys !== $nextKeys) {
+            $this->reinspectChannelApps($channel);
+        }
+    }
+
+    public function reinspectChannelApps(Channel $channel): void
+    {
+        Site::query()
+            ->where('channel', $channel->value)
+            ->whereNotNull('coolify_app_uuid')
+            ->pluck('id')
+            ->each(static fn (string $siteId) => InspectSiteAppHealthJob::dispatch($siteId));
     }
 
     /**
