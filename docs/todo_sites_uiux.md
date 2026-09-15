@@ -40,7 +40,7 @@
 - **Kabul:** `lang/tr` içinde bu dört İngilizce etiket kalmaz, ilgili testler çeviri anahtarıyla doğrular.
 
 ### U5 · Formda takma ad satırı kaldırılamıyor, hataların çoğu görünmüyor
-- [ ] **Sorun:** "Domain ekle" satır ekliyor ama satır silmenin yolu yok, yalnız metni temizlemek. 20 takma ada izin var ama hata yalnız ilk iki satır için basılıyor, üçüncü satırdaki hata hiçbir yerde görünmüyor.
+- [x] **Sorun:** "Domain ekle" satır ekliyor ama satır silmenin yolu yok, yalnız metni temizlemek. 20 takma ada izin var ama hata yalnız ilk iki satır için basılıyor, üçüncü satırdaki hata hiçbir yerde görünmüyor.
 - **Kanıt:** `sites/_form.blade.php` → yalnız `@error('aliases.0')` ve `@error('aliases.1')`. `public/js/sites-aliases.js` yalnız ekleme yapıyor.
 - **Yapılacak:** Her satırın altında kendi `@error("aliases.$index")`. Her satırda "Kaldır" butonu (JS), son satır silinince boş bir satır kalsın.
 - **Kabul:** Üçüncü takma ad hatası kendi satırında görünür. Satır kaldırılınca form o değeri göndermez.

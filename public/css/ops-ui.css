@@ -1339,7 +1339,8 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
 .ops-host-copy code { min-width: 0; }
 .ops-ns-all { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 .ops-alias-list { display: grid; gap: 8px; }
-.ops-alias-row { display: grid; }
+.ops-alias-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.ops-alias-row .field-error { grid-column: 1 / -1; margin: 0; }
 #site-landing .ops-form,
 #site-domains .ops-form { margin-top: 12px; }
 .site-pin-status,

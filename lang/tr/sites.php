@@ -368,6 +368,8 @@ return [
         'aliases_hint' => 'Aynı veya farklı apex; farklı bir apex için Plane ayrı Cloudflare zone açar ve NS’leri gösterir. Her hostun www kardeşi de eklenir. Kaydedince Coolify’e yazılır ve yeniden deploy edilir.',
         'alias_placeholder' => 'magaza.ornek.com',
         'alias_add' => 'Başka domain ekle',
+        'alias_remove' => 'Kaldır',
+        'alias_remove_named' => ':n. ek domain satırını kaldır',
         'domain_invalid' => 'Geçerli bir hostname girin.',
         'domain_taken' => ':domain başka bir sitede kullanılıyor.',
         'www_auto' => 'www otomatik eklenir.',

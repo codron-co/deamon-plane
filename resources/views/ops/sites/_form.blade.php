@@ -111,7 +111,7 @@
         <p class="field-hint">{{ __('sites.form.aliases_hint') }}</p>
         <div class="ops-alias-list" data-alias-list>
             @foreach ($aliasValues as $index => $alias)
-                <div class="ops-alias-row">
+                <div class="ops-alias-row" data-alias-row>
                     <input
                         id="site_alias_{{ $index }}"
                         class="field-input"
@@ -123,15 +123,24 @@
                         placeholder="{{ __('sites.form.alias_placeholder') }}"
                         @readonly($readonly)
                     >
+                    @if (! $readonly)
+                        <button type="button" class="btn btn-ghost btn-sm" data-alias-remove aria-label="{{ __('sites.form.alias_remove_named', ['n' => $index + 1]) }}">{{ __('sites.form.alias_remove') }}</button>
+                    @endif
+                    {{-- One error per row: all 20 allowed aliases can fail, not only the first two. --}}
+                    @error('aliases.'.$index) <p class="field-error">{{ $message }}</p> @enderror
                 </div>
             @endforeach
         </div>
         @if (! $readonly)
-            <button type="button" class="btn btn-ghost btn-sm" data-alias-add>{{ __('sites.form.alias_add') }}</button>
+            <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                data-alias-add
+                data-remove-label="{{ __('sites.form.alias_remove') }}"
+                data-remove-aria="{{ __('sites.form.alias_remove_named', ['n' => '__N__']) }}"
+            >{{ __('sites.form.alias_add') }}</button>
         @endif
         @error('aliases') <p class="field-error">{{ $message }}</p> @enderror
-        @error('aliases.0') <p class="field-error">{{ $message }}</p> @enderror
-        @error('aliases.1') <p class="field-error">{{ $message }}</p> @enderror
     </div>
 </section>
 

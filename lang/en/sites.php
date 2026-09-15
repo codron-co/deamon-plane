@@ -367,6 +367,8 @@ return [
         'aliases_hint' => 'Same or another apex; for a foreign apex Plane opens a separate Cloudflare zone and shows its nameservers. Each host also gets its www sibling. Saving writes Coolify and redeploys.',
         'alias_placeholder' => 'shop.example.com',
         'alias_add' => 'Add another domain',
+        'alias_remove' => 'Remove',
+        'alias_remove_named' => 'Remove extra domain row :n',
         'domain_invalid' => 'Enter a valid hostname.',
         'domain_taken' => ':domain is already used by another site.',
         'www_auto' => 'www is added automatically.',
