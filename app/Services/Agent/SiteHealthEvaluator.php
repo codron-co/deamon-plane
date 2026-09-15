@@ -35,6 +35,7 @@ class SiteHealthEvaluator
             AgentHealthReason::BadSignature,
             AgentHealthReason::QueueUnhealthy,
             AgentHealthReason::HttpError,
+            AgentHealthReason::AgentNotRegistered,
         ], true)) {
             return true;
         }

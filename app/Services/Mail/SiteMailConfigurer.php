@@ -98,11 +98,25 @@ class SiteMailConfigurer
         }
 
         if ($response->failed()) {
-            $this->logFailure($site, 'http_error', $response->status());
-            $this->recordOutcome($site, 'http_'.$response->status());
+            $failure = $response->json();
+            $cmsCode = is_array($failure) && is_string($failure['error'] ?? null) ? $failure['error'] : null;
+            $cmsMessage = is_array($failure) && is_string($failure['message'] ?? null)
+                ? mb_substr(trim($failure['message']), 0, 500)
+                : null;
+            if ($cmsMessage !== null && $this->payloadContainsSecret($site, ['message' => $cmsMessage], $payload)) {
+                $cmsMessage = null;
+            }
+
+            $this->logFailure($site, 'http_error', $response->status(), [
+                'cms_error' => $cmsCode,
+                'cms_message' => $cmsMessage,
+            ]);
+            $this->recordOutcome($site, 'http_'.$response->status(), $cmsMessage);
 
             return SiteMailConfigureResult::failure(
-                'Mail configure returned HTTP '.$response->status().'.',
+                $cmsMessage !== null
+                    ? 'Mail configure returned HTTP '.$response->status().': '.$cmsMessage
+                    : 'Mail configure returned HTTP '.$response->status().'.',
                 $response->status(),
             );
         }
@@ -123,17 +137,19 @@ class SiteMailConfigurer
     /**
      * Success clears the failure columns, so "failed" always means the *last* push failed.
      */
-    private function recordOutcome(Site $site, ?string $error): void
+    private function recordOutcome(Site $site, ?string $error, ?string $message = null): void
     {
         $site->forceFill($error === null
             ? [
                 'mail_configured_at' => now(),
                 'mail_configure_failed_at' => null,
                 'mail_configure_error' => null,
+                'mail_configure_message' => null,
             ]
             : [
                 'mail_configure_failed_at' => now(),
                 'mail_configure_error' => mb_substr($error, 0, 64),
+                'mail_configure_message' => $message,
             ]);
         $site->save();
     }
@@ -189,13 +205,16 @@ class SiteMailConfigurer
         return false;
     }
 
-    private function logFailure(Site $site, string $reason, ?int $httpStatus = null): void
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logFailure(Site $site, string $reason, ?int $httpStatus = null, array $context = []): void
     {
-        Log::warning('Site mail configure failed', [
+        Log::warning('Site mail configure failed', array_merge([
             'site_id' => $site->id,
             'site_slug' => $site->slug,
             'reason' => $reason,
             'http_status' => $httpStatus,
-        ]);
+        ], array_filter($context, static fn (mixed $value): bool => $value !== null)));
     }
 }

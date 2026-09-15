@@ -96,11 +96,16 @@ class SiteAgentClient
 
         $json = $response->json();
         if (! is_array($json)) {
-            $this->logFailure($site, AgentHealthReason::HttpError, $response->status());
+            $looksLikePage = str_contains(strtolower((string) $response->header('Content-Type')), 'text/html')
+                || str_starts_with(ltrim($response->body()), '<');
+            $reason = $looksLikePage ? AgentHealthReason::AgentNotRegistered : AgentHealthReason::HttpError;
+            $this->logFailure($site, $reason, $response->status());
 
             return AgentHealthResult::failure(
-                AgentHealthReason::HttpError,
-                'Agent health returned a non-JSON body.',
+                $reason,
+                $looksLikePage
+                    ? 'The CMS answered with a web page: its agent routes are not registered. Set CONTROL_PLANE_AGENT_SECRET on the CMS app and redeploy.'
+                    : 'Agent health returned a non-JSON body.',
                 $response->status(),
             );
         }

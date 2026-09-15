@@ -125,6 +125,7 @@ return [
     'none' => 'None',
     'configure_state' => [
         'configured' => 'Pushed to CMS',
+        'cms_said' => 'CMS said: :message',
         'failed' => 'CMS push failed',
         'not_pushed' => 'Not pushed to CMS yet',
         'needs_secret' => 'Waiting for agent secret',

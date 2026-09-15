@@ -17,4 +17,10 @@ final class AgentHealthReason
     public const NeedsSecret = 'needs_secret';
 
     public const NoBaseUrl = 'no_base_url';
+
+    /**
+     * The CMS answered 200 with a web page: it registers /internal/control/v1/* only when
+     * CONTROL_PLANE_AGENT_SECRET is set, so the request fell through to the site frontend.
+     */
+    public const AgentNotRegistered = 'agent_not_registered';
 }

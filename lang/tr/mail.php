@@ -125,6 +125,7 @@ return [
     'none' => 'Yok',
     'configure_state' => [
         'configured' => 'CMS’e aktarıldı',
+        'cms_said' => 'CMS yanıtı: :message',
         'failed' => 'CMS aktarımı başarısız',
         'not_pushed' => 'CMS’e henüz aktarılmadı',
         'needs_secret' => 'Agent secret bekliyor',

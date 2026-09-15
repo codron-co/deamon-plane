@@ -549,6 +549,7 @@ return [
     'agent' => [
         'reasons' => [
             'timeout' => 'timed out',
+            'agent_not_registered' => 'CMS agent not registered: CONTROL_PLANE_AGENT_SECRET is missing on the site or the app was not redeployed',
             'bad_signature' => 'signature rejected',
             'queue_unhealthy' => 'queue not running',
             'http_error' => 'HTTP error',

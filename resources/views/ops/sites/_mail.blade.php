@@ -49,6 +49,9 @@
         <p class="ops-alert ops-alert-warning" role="status" data-mail-configure-error>
             {{ __('mail.configure_state.failed') }}@if ($configureReasonLabel !== '') ({{ $configureReasonLabel }})@endif
             · {{ $site->mail_configure_failed_at?->diffForHumans() }}
+            @if (filled($site->mail_configure_message))
+                <br><span data-mail-configure-cms-message>{{ __('mail.configure_state.cms_said', ['message' => $site->mail_configure_message]) }}</span>
+            @endif
         </p>
     @endif
 

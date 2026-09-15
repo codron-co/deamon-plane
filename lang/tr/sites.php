@@ -550,6 +550,7 @@ return [
     'agent' => [
         'reasons' => [
             'timeout' => 'zaman aşımı',
+            'agent_not_registered' => 'CMS agent kayıtlı değil: sitede CONTROL_PLANE_AGENT_SECRET yok veya uygulama yeniden deploy edilmedi',
             'bad_signature' => 'imza reddedildi',
             'queue_unhealthy' => 'kuyruk çalışmıyor',
             'http_error' => 'HTTP hatası',
