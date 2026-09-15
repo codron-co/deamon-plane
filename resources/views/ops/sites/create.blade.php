@@ -15,11 +15,12 @@
 @section('content')
     <p class="page-lede">{{ __('sites.create.lede', ['compose' => '/docker-compose.coolify.yml']) }}</p>
 
-    <form method="POST" action="{{ route('ops.sites.store') }}" class="ops-form ops-form-stack">
+    {{-- Native submit: a long form needs validation errors next to each field and old() input, which a fetch toast cannot give. --}}
+    <form method="POST" action="{{ route('ops.sites.store') }}" class="ops-form ops-form-stack" data-ops-native data-ops-pending data-site-form>
         @csrf
         @include('ops.sites._form', ['site' => $site, 'channels' => $channels, 'readonly' => false, 'channelLocked' => false])
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">{{ __('sites.create.save') }}</button>
+            <button type="submit" class="btn btn-primary" data-pending-label="{{ __('ops.actions.saving') }}">{{ __('sites.create.save') }}</button>
             <a class="btn btn-ghost" href="{{ route('ops.sites') }}">{{ __('ops.actions.cancel') }}</a>
         </div>
     </form>

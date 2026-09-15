@@ -55,6 +55,7 @@ return [
         'copy' => 'Kopyala',
         'copied' => 'Kopyalandı',
         'working' => 'Çalışıyor…',
+        'saving' => 'Kaydediliyor…',
     ],
     'confirm' => [
         'title' => 'Onay',

@@ -55,6 +55,7 @@ return [
         'copy' => 'Copy',
         'copied' => 'Copied',
         'working' => 'Working…',
+        'saving' => 'Saving…',
     ],
     'confirm' => [
         'title' => 'Confirm',

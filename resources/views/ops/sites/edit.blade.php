@@ -29,13 +29,14 @@
         @endif
     </p>
 
-    <form method="POST" action="{{ route('ops.sites.update', $site) }}" class="ops-form ops-form-stack">
+    {{-- Native submit: a long form needs validation errors next to each field and old() input, which a fetch toast cannot give. --}}
+    <form method="POST" action="{{ route('ops.sites.update', $site) }}" class="ops-form ops-form-stack" data-ops-native data-ops-pending data-site-form>
         @csrf
         @method('PUT')
         @include('ops.sites._form')
         @if (! $readonly)
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">{{ __('ops.actions.save_changes') }}</button>
+                <button type="submit" class="btn btn-primary" data-pending-label="{{ __('ops.actions.saving') }}">{{ __('ops.actions.save_changes') }}</button>
                 <a class="btn btn-ghost" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.cancel') }}</a>
             </div>
         @endif

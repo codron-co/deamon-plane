@@ -12,7 +12,7 @@
 ## P0
 
 ### U1 · Oluştur / düzenle formunda doğrulama hataları alan yanında görünmüyor
-- [ ] **Sorun:** Form fetch ile gönderiliyor. Hata olunca tüm mesajlar birleşik tek bir bildirim olarak çıkıyor, alanın altında kırmızı yazı yok, girilen değerler sayfada kalıyor ama sunucu `old()` ile doldurmuyor. "Ek domain'ler … üzerinde kalmalı" raporu bu yüzden bildirim olarak geldi.
+- [x] **Sorun:** Form fetch ile gönderiliyor. Hata olunca tüm mesajlar birleşik tek bir bildirim olarak çıkıyor, alanın altında kırmızı yazı yok, girilen değerler sayfada kalıyor ama sunucu `old()` ile doldurmuyor. "Ek domain'ler … üzerinde kalmalı" raporu bu yüzden bildirim olarak geldi.
 - **Kanıt:** `layouts/ops.blade.php` → `<body class="ops-app">`. `ops-async.js` `.ops-app` içindeki her POST formunu yakalıyor, yalnız `data-ops-native` atlanıyor. `sites/create.blade.php` ve `sites/edit.blade.php` formlarında bu işaret yok. 422'de `flattenErrors()` bildirime yazıyor.
 - **Yapılacak:** İki forma `data-ops-native`. Gönderimde butonu kilitleyen ve "Kaydediliyor…" gösteren küçük bir native bekleme davranışı.
 - **Kabul:** Hatalı gönderimde sayfa yeniden yüklenir, hata ilgili alanın altında görünür, girilen değerler korunur.
