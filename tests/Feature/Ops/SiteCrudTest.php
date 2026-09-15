@@ -9,6 +9,7 @@ use App\Models\Site;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class SiteCrudTest extends TestCase
@@ -247,6 +248,62 @@ class SiteCrudTest extends TestCase
             ->assertRedirect(route('ops.sites.show', $site));
 
         $this->assertSame('Izyem 2', $site->fresh()->name);
+    }
+
+    public function test_alias_can_be_promoted_to_primary_in_the_edit_form(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake();
+
+        $site = Site::factory()->create([
+            'slug' => 'izyem',
+            'name' => 'Izyem',
+            'primary_domain' => 'izyem.test',
+            'channel' => Channel::Beta,
+            'status' => SiteStatus::Draft,
+            'coolify_app_uuid' => null,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+            ['domain' => 'shop.izyem.test'],
+            ['domain' => 'www.shop.izyem.test', 'is_www' => true],
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->put(route('ops.sites.update', $site), $this->validPayload([
+                'domain' => 'shop.izyem.test',
+                'aliases' => ['izyem.test'],
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $site->refresh();
+        $this->assertSame('shop.izyem.test', $site->primary_domain);
+        $this->assertTrue($site->domains()->where('domain', 'shop.izyem.test')->where('is_primary', true)->exists());
+        $this->assertTrue($site->domains()->where('domain', 'izyem.test')->where('is_primary', false)->exists());
+        $this->assertSame(1, $site->domains()->where('is_primary', true)->count());
+    }
+
+    public function test_host_owned_by_another_site_still_cannot_become_primary(): void
+    {
+        $other = Site::factory()->create(['slug' => 'other', 'primary_domain' => 'other.test']);
+        $other->domains()->create(['domain' => 'shop.other.test']);
+
+        $site = Site::factory()->create([
+            'slug' => 'izyem',
+            'primary_domain' => 'izyem.test',
+            'channel' => Channel::Beta,
+            'status' => SiteStatus::Draft,
+        ]);
+        $site->domains()->create(['domain' => 'izyem.test', 'is_primary' => true]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->from(route('ops.sites.edit', $site))
+            ->put(route('ops.sites.update', $site), $this->validPayload(['domain' => 'shop.other.test']))
+            ->assertSessionHasErrors('domain');
+
+        $this->assertSame('izyem.test', $site->fresh()->primary_domain);
     }
 
     public function test_viewer_can_read_but_cannot_write(): void

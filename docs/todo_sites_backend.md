@@ -41,7 +41,7 @@
 - **Kabul:** Purge testinde host başına DNS DELETE görülür, Cloudflare hatası purge'ü engellemez.
 
 ### B5 · Takma ad birincil domain yapılamıyor
-- [ ] **Sorun:** Düzenleme formunda birincil alanına aynı sitenin takma adını yazınca "alınmış" hatası.
+- [x] **Sorun:** Düzenleme formunda birincil alanına aynı sitenin takma adını yazınca "alınmış" hatası.
 - **Kanıt:** `UpdateSiteRequest` → `Rule::unique('site_domains', 'domain')->ignore($domainId)` yalnız mevcut birincil satırı hariç tutuyor.
 - **Yapılacak:** Kural bu sitenin tüm satırlarını hariç tutsun (`where('site_id', '!=', $siteId)`).
 - **Kabul:** Takma adı birincil yapma kaydedilir, eski birincil takma ada düşmez ve DNS/Coolify akışı çalışır.

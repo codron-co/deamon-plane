@@ -48,7 +48,6 @@ class UpdateSiteRequest extends FormRequest
     {
         $site = $this->route('site');
         $siteId = $site instanceof Site ? $site->id : null;
-        $domainId = $site instanceof Site ? $site->primaryDomainRecord?->id : null;
 
         return array_merge([
             'slug' => ['required', 'string', 'min:2', 'max:64', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', NotHeldByArchivedSite::slug($siteId), Rule::unique('sites', 'slug')->whereNull('deleted_at')->ignore($siteId)],
@@ -60,7 +59,11 @@ class UpdateSiteRequest extends FormRequest
                 'regex:'.$this->hostnamePattern(),
                 NotHeldByArchivedSite::host($siteId),
                 Rule::unique('sites', 'primary_domain')->whereNull('deleted_at')->ignore($siteId),
-                Rule::unique('site_domains', 'domain')->ignore($domainId),
+                // Any host this site already owns (an alias, its www) may become the primary;
+                // ignoring only the current primary row blocked the swap with "taken".
+                Rule::unique('site_domains', 'domain')->where(
+                    fn ($query) => $siteId ? $query->where('site_id', '!=', $siteId) : $query,
+                ),
             ],
             'aliases' => ['nullable', 'array', 'max:20'],
             'aliases.*' => [
