@@ -22,7 +22,8 @@ Base: `/internal/control/v1`
 | POST | `/themes/update` | same as install |
 | POST | `/themes/activate` | `{theme_id}` |
 | POST | `/themes/data-install` | `{theme_id}` — CMS **1.2.14+** |
-| POST | `/themes/sync` | `{action:sync_all\|capability, mode:merge\|reset, theme_id?, capability_id?, preserve?}` |
+| POST | `/themes/sync` | `{action:sync_all\|capability, mode:merge\|overwrite\|reset, theme_id?, capability_id?, preserve?}` — Plane sends `merge` (Sync now) or `overwrite` (confirmed Overwrite), never `reset` |
+| POST | `/themes/sync-rollback` | `{task_id}` — restores the rows that sync task changed |
 
 Install does **not** activate or data-sync. Assign flow is three separate calls: install → (optional) activate → (optional) sync.
 
@@ -62,7 +63,9 @@ CMS `auto_update` is always `false` in agent JSON. Opt-in lives on Plane `site_t
 
 ## Plane UI
 
-Site → **Themes** tab: assign (confirm modal when activating), Update to latest, Sync now, Activate, auto-update toggle (default **off**).
+Site → **Themes** tab: assign (confirm modal when activating), Update to latest, Sync now (merge), Overwrite (danger confirm), Roll back sync (when `last_sync_task_id` is set), Roll back theme (when `previous_pinned_sha` is set), Activate, auto-update toggle (default **off**).
+
+Update sends the catalog `latest_sha`; the installation `pinned_sha` is only a fallback. Before this, update re-sent the pin, so auto-update and Update to latest re-installed the first commit forever.
 
 Allowlist/public/private enforced in `ThemeVisibilityGate`.
 

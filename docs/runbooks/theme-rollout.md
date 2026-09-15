@@ -21,8 +21,11 @@ Themes are **git-only**. Plane has no ZIP upload. Emergency ZIP is CMS Super Adm
 
 ## Update / sync
 
-- **Update to latest** — agent `themes/update` to catalog `latest_sha` / ref.
-- **Sync now** — agent `themes/sync` (CMS BackgroundTasks). If the CMS answers `data_package_missing`, Plane calls `themes/data-install` once and retries; see [theme-agent-client.md](../modules/theme-agent-client.md).
+- **Update to latest** — agent `themes/update` with the catalog `latest_sha` (the installation's `pinned_sha` is only a fallback while the catalog has not seen a push). The SHA it replaces is kept as `previous_pinned_sha`. Theme **files** are replaced wholesale; database rows are not synced.
+- **Roll back theme** — shown when `previous_pinned_sha` is set. Agent `themes/update` with that SHA; the two SHAs swap so the operator can move forward again.
+- **Sync now** — agent `themes/sync` with `mode=merge` (CMS BackgroundTasks). CMS 1.2.21+ keeps rows the site owner edited after the last sync; older CMS still overwrites them. If the CMS answers `data_package_missing`, Plane calls `themes/data-install` once and retries; see [theme-agent-client.md](../modules/theme-agent-client.md). Plane stores the returned CMS `task_id` as `last_sync_task_id`.
+- **Overwrite** — `themes/sync` with `mode=overwrite` behind a danger confirmation: replaces edited rows too, deletes nothing, never deferred. `reset` is not offered from Plane.
+- **Roll back sync** — shown when `last_sync_task_id` is set. Agent `themes/sync-rollback` `{task_id}` restores the rows that task changed and removes rows it created; rows edited after that sync stay. Settings and child rows (form fields, story slides, product gallery) are not snapshotted.
 - **Enable auto-update** — opt-in only. GitHub push then fans out [github-webhooks.md](../modules/github-webhooks.md).
 
 If `minimum_deamon_version` is set and last health `deamon_version` is lower, Plane skips and audits `theme.update_skipped_version`.
