@@ -65,7 +65,11 @@ final class ControlPlaneAgentContract
 
     public const SYNC_ACTION_CAPABILITY = 'capability';
 
+    /** CMS keeps rows the site owner edited after the last sync. */
     public const SYNC_MODE_MERGE = 'merge';
+
+    /** CMS also replaces rows the site owner edited; deletes nothing. */
+    public const SYNC_MODE_OVERWRITE = 'overwrite';
 
     public const SYNC_MODE_RESET = 'reset';
 

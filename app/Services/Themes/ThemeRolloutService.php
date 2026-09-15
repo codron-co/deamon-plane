@@ -127,8 +127,21 @@ class ThemeRolloutService
     /**
      * @return 'ran'|'deferred'
      */
-    public function syncNow(SiteThemeInstallation $installation, ?User $actor, ?string $ip): string
-    {
+    /**
+     * Merge (default) adds what the package has and keeps rows the site owner
+     * edited. Overwrite also replaces those edits and is never deferred, so the
+     * operator sees it run against the state they confirmed.
+     */
+    public function syncNow(
+        SiteThemeInstallation $installation,
+        ?User $actor,
+        ?string $ip,
+        string $mode = ControlPlaneAgentContract::SYNC_MODE_MERGE,
+    ): string {
+        if (! in_array($mode, [ControlPlaneAgentContract::SYNC_MODE_MERGE, ControlPlaneAgentContract::SYNC_MODE_OVERWRITE], true)) {
+            throw new ThemeRolloutException('Theme sync mode must be merge or overwrite.');
+        }
+
         $installation->loadMissing(['site', 'theme']);
         $site = $installation->site;
         $theme = $installation->theme;
@@ -141,17 +154,18 @@ class ThemeRolloutService
             throw new ThemeRolloutException('Site has no agent secret.');
         }
 
-        if ($this->deferSyncIfDeployOpen($installation, $site)) {
+        if ($mode === ControlPlaneAgentContract::SYNC_MODE_MERGE && $this->deferSyncIfDeployOpen($installation, $site)) {
             return 'deferred';
         }
 
-        $result = $this->syncWithDataRepair($site, $theme, $actor, $ip);
+        $result = $this->syncWithDataRepair($site, $theme, $actor, $ip, $mode);
 
         $site->auditLogs()->create([
             'actor_user_id' => $actor?->id,
             'action' => $result->ok ? 'theme.sync_succeeded' : 'theme.sync_failed',
             'after' => [
                 'theme_id' => $theme->theme_id,
+                'mode' => $mode,
                 'ok' => $result->ok,
             ],
             'ip' => $ip,
@@ -367,9 +381,14 @@ class ThemeRolloutService
      * only the `theme/` subtree. Install the data package from the clone once, then
      * retry the sync so the operator does not need SSH.
      */
-    private function syncWithDataRepair(Site $site, Theme $theme, ?User $actor, ?string $ip): ThemeAgentResult
-    {
-        $body = ControlPlaneAgentContract::syncBody($theme->theme_id);
+    private function syncWithDataRepair(
+        Site $site,
+        Theme $theme,
+        ?User $actor,
+        ?string $ip,
+        string $mode = ControlPlaneAgentContract::SYNC_MODE_MERGE,
+    ): ThemeAgentResult {
+        $body = ControlPlaneAgentContract::syncBody($theme->theme_id, ControlPlaneAgentContract::SYNC_ACTION_ALL, $mode);
         $result = $this->agent->syncTheme($site, $body);
 
         if ($result->ok || $result->errorCode !== 'data_package_missing') {

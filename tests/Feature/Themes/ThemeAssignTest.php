@@ -247,6 +247,62 @@ class ThemeAssignTest extends TestCase
         ], $paths);
     }
 
+    public function test_sync_now_sends_merge_by_default(): void
+    {
+        [$site, $installation] = $this->activeInstallation();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/sync' => Http::response(['ok' => true, 'queued' => true], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]))
+            ->assertRedirect()
+            ->assertSessionHas('status', __('sites.theme_flash.sync_requested'));
+
+        Http::assertSent(fn (Request $request): bool => ($request->data()['mode'] ?? null) === ControlPlaneAgentContract::SYNC_MODE_MERGE);
+    }
+
+    public function test_overwrite_sync_is_refused_without_confirmation(): void
+    {
+        [$site, $installation] = $this->activeInstallation();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]), ['mode' => 'overwrite', 'confirmed' => '0'])
+            ->assertRedirect()
+            ->assertSessionHas('error', __('sites.theme_flash.sync_overwrite_needs_confirm'));
+
+        Http::assertNothingSent();
+    }
+
+    public function test_confirmed_overwrite_sync_sends_overwrite_mode_and_audits_it(): void
+    {
+        [$site, $installation] = $this->activeInstallation();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/sync' => Http::response(['ok' => true, 'queued' => true], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]), ['mode' => 'overwrite', 'confirmed' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('status', __('sites.theme_flash.sync_overwrite_requested'));
+
+        Http::assertSent(fn (Request $request): bool => ($request->data()['mode'] ?? null) === ControlPlaneAgentContract::SYNC_MODE_OVERWRITE);
+        $this->assertSame('overwrite', $site->auditLogs()->where('action', 'theme.sync_succeeded')->latest()->first()?->after['mode']);
+    }
+
+    public function test_sync_rejects_the_reset_mode(): void
+    {
+        [$site, $installation] = $this->activeInstallation();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]), ['mode' => 'reset', 'confirmed' => '1'])
+            ->assertSessionHasErrors('mode');
+
+        Http::assertNothingSent();
+    }
+
     public function test_sync_now_surfaces_the_cms_message_when_the_repair_route_is_missing(): void
     {
         $site = $this->readySite();
@@ -569,6 +625,21 @@ class ThemeAssignTest extends TestCase
             'primary_domain' => 'shop.example.test',
             'agent_base_url' => 'https://shop.example.test',
         ], $overrides));
+    }
+
+    /**
+     * @return array{0: Site, 1: SiteThemeInstallation}
+     */
+    private function activeInstallation(): array
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create(['theme_id' => 'izyem']);
+        $installation = SiteThemeInstallation::factory()->active()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+        ]);
+
+        return [$site, $installation];
     }
 
     private function operator(): User

@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Site;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
+use App\Services\Agent\ControlPlaneAgentContract;
 use App\Services\Themes\ThemeRolloutException;
 use App\Services\Themes\ThemeRolloutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SiteThemeController extends Controller
 {
@@ -57,15 +59,29 @@ class SiteThemeController extends Controller
         $this->assertInstallation($site, $installation);
         $this->authorize('assign', Theme::class);
 
+        $validated = $request->validate([
+            'mode' => ['sometimes', Rule::in([ControlPlaneAgentContract::SYNC_MODE_MERGE, ControlPlaneAgentContract::SYNC_MODE_OVERWRITE])],
+            'confirmed' => ['sometimes', 'boolean'],
+        ]);
+
+        $mode = $validated['mode'] ?? ControlPlaneAgentContract::SYNC_MODE_MERGE;
+        $overwrite = $mode === ControlPlaneAgentContract::SYNC_MODE_OVERWRITE;
+
+        if ($overwrite && ! $request->boolean('confirmed')) {
+            return back()->with('error', __('sites.theme_flash.sync_overwrite_needs_confirm'));
+        }
+
         try {
-            $outcome = $rollout->syncNow($installation, $request->user(), $request->ip());
+            $outcome = $rollout->syncNow($installation, $request->user(), $request->ip(), $mode);
         } catch (ThemeRolloutException $exception) {
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('status', $outcome === 'deferred'
-            ? __('sites.theme_flash.sync_deferred')
-            : __('sites.theme_flash.sync_requested'));
+        return back()->with('status', match (true) {
+            $outcome === 'deferred' => __('sites.theme_flash.sync_deferred'),
+            $overwrite => __('sites.theme_flash.sync_overwrite_requested'),
+            default => __('sites.theme_flash.sync_requested'),
+        });
     }
 
     public function activate(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse

@@ -167,6 +167,19 @@
                                         @csrf
                                         <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync') }}</button>
                                     </form>
+                                    <form
+                                        method="POST"
+                                        action="{{ route('ops.sites.themes.sync', [$site, $installation]) }}"
+                                        data-confirm="{{ __('sites.themes.sync_overwrite_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
+                                        data-confirm-title="{{ __('sites.themes.sync_overwrite_title') }}"
+                                        data-confirm-label="{{ __('sites.themes.sync_overwrite') }}"
+                                        data-confirm-danger="true"
+                                    >
+                                        @csrf
+                                        <input type="hidden" name="mode" value="overwrite">
+                                        <input type="hidden" name="confirmed" value="0">
+                                        <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync_overwrite') }}</button>
+                                    </form>
                                     @if (! $installation->is_active)
                                         <form
                                             method="POST"
