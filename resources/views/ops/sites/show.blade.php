@@ -262,10 +262,10 @@
                 </div>
                 <div class="danger-zone-actions">
                     @if ($canDelete ?? false)
-                        <form method="POST" action="{{ route('ops.sites.destroy', $site) }}" data-confirm="{{ __('sites.danger.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.confirm_title') }}" data-confirm-label="{{ __('sites.menu.soft_delete') }}" data-confirm-danger="true">@csrf @method('DELETE')<button type="submit" class="btn btn-secondary">{{ __('sites.menu.soft_delete') }}</button></form>
+                        <form method="POST" action="{{ route('ops.sites.destroy', $site) }}" data-ops-pending data-delete-site="soft" data-confirm="{{ __('sites.danger.confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.confirm_title') }}" data-confirm-label="{{ __('sites.menu.soft_delete') }}" data-confirm-danger="true">@csrf @method('DELETE')<button type="submit" class="btn btn-secondary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.soft_delete') }}</button></form>
                     @endif
                     @if ($canForceDelete ?? false)
-                        <form method="POST" action="{{ route('ops.sites.purge', $site) }}" data-confirm="{{ __('sites.danger.hard_confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.hard_confirm_title') }}" data-confirm-label="{{ __('sites.menu.hard_delete') }}" data-confirm-danger="true">@csrf @method('DELETE')<button type="submit" class="btn btn-danger">{{ __('sites.menu.hard_delete') }}</button></form>
+                        <form method="POST" action="{{ route('ops.sites.purge', $site) }}" data-ops-pending data-delete-site="hard" data-confirm="{{ __('sites.danger.hard_confirm', ['name' => $site->name]) }}" data-confirm-title="{{ __('sites.danger.hard_confirm_title') }}" data-confirm-label="{{ __('sites.menu.hard_delete') }}" data-confirm-danger="true">@csrf @method('DELETE')<button type="submit" class="btn btn-danger" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.hard_delete') }}</button></form>
                     @endif
                 </div>
             </article>

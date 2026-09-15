@@ -163,6 +163,8 @@
                 <form
                     method="POST"
                     action="{{ route('ops.sites.destroy', $site) }}"
+                    data-ops-pending
+                    data-delete-site="soft"
                     data-confirm="{{ __('sites.danger.confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('sites.danger.confirm_title') }}"
                     data-confirm-label="{{ __('sites.menu.soft_delete') }}"
@@ -170,13 +172,15 @@
                 >
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="ops-menu-button is-danger" role="menuitem">{{ __('sites.menu.soft_delete') }}</button>
+                    <button type="submit" class="ops-menu-button is-danger" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.soft_delete') }}</button>
                 </form>
             @endif
             @if ($canForceDelete)
                 <form
                     method="POST"
                     action="{{ route('ops.sites.purge', $site) }}"
+                    data-ops-pending
+                    data-delete-site="hard"
                     data-confirm="{{ __('sites.danger.hard_confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('sites.danger.hard_confirm_title') }}"
                     data-confirm-label="{{ __('sites.menu.hard_delete') }}"
@@ -184,7 +188,7 @@
                 >
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="ops-menu-button is-danger" role="menuitem">{{ __('sites.menu.hard_delete') }}</button>
+                    <button type="submit" class="ops-menu-button is-danger" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.hard_delete') }}</button>
                 </form>
             @endif
         </div>

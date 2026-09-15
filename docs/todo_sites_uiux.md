@@ -24,7 +24,7 @@
 - **Kabul:** Detay GET'i Coolify'a istek göndermez. Fragment oto-deploy, pin durumu ve hata durumunu döndürür.
 
 ### U3 · Silme aksiyonlarında bekleme durumu yok
-- [ ] **Sorun:** Tehlike sekmesindeki ve Ayarlar menüsündeki Arşivle / Kalıcı sil formları onaydan sonra hiçbir geri bildirim vermiyor. Kalıcı silme saniyeler sürüyor, ikinci tıklama ikinci isteği atıyor.
+- [x] **Sorun:** Tehlike sekmesindeki ve Ayarlar menüsündeki Arşivle / Kalıcı sil formları onaydan sonra hiçbir geri bildirim vermiyor. Kalıcı silme saniyeler sürüyor, ikinci tıklama ikinci isteği atıyor.
 - **Kanıt:** `sites/show.blade.php` tehlike bölümü ve `sites/_header-actions.blade.php` silme formlarında `data-ops-pending` ve `data-pending-label` yok. Diğer tüm aksiyon formlarında var.
 - **Yapılacak:** Dört forma bekleme işareti ve etiket.
 - **Kabul:** Onaydan sonra buton kilitlenir ve "İşleniyor…" gösterir.
