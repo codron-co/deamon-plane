@@ -5,12 +5,17 @@ namespace App\Services\Sites;
 use App\Enums\SiteStatus;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use Illuminate\Support\Facades\DB;
 
 class SiteLifecycle
 {
+    public function __construct(
+        private readonly SiteLanding $landing,
+    ) {}
+
     public function activate(Site $site, ?User $actor, ?string $ip): void
     {
         if (! $site->canBeActivated()) {
@@ -33,13 +38,24 @@ class SiteLifecycle
 
     public function purge(Site $site, ?User $actor, ?string $ip): void
     {
+        // Read hosts before forceDelete cascades the site_domains rows away.
+        $hosts = $this->dnsHosts($site);
+
         $this->deleteCoolifyIfPresent($site);
 
-        DB::transaction(function () use ($site, $actor, $ip): void {
+        // Coolify is gone, so the site is going regardless: a Cloudflare failure is
+        // recorded on the audit row instead of leaving a half-purged site behind.
+        $dnsError = $this->landing->releaseHostDns($site, $hosts);
+
+        DB::transaction(function () use ($site, $actor, $ip, $hosts, $dnsError): void {
             $site->auditLogs()->create([
                 'actor_user_id' => $actor?->id,
                 'action' => 'site.purged',
                 'before' => $this->snapshot($site),
+                'after' => [
+                    'released_hosts' => $hosts,
+                    'dns_error' => $dnsError,
+                ],
                 'ip' => $ip,
             ]);
 
@@ -143,6 +159,23 @@ class SiteLifecycle
                 'ip' => $ip,
             ]);
         });
+    }
+
+    /**
+     * Operator hosts plus the temporary preview host, each of which got an origin A
+     * record from Plane. Zones are never deleted: they belong to the customer.
+     *
+     * @return list<string>
+     */
+    private function dnsHosts(Site $site): array
+    {
+        $hosts = $site->operatorHosts();
+        $temporary = CloudflareHostname::host((string) $site->temporary_domain);
+        if ($temporary !== '') {
+            $hosts[] = $temporary;
+        }
+
+        return array_values(array_unique(array_filter($hosts)));
     }
 
     private function appUuid(Site $site): ?string

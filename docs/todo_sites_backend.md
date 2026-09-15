@@ -35,7 +35,7 @@
 ## P1
 
 ### B4 · Kalıcı silme Cloudflare kayıtlarını bırakıyor
-- [ ] **Sorun:** `SiteLifecycle::purge` Coolify uygulamasını siliyor, DNS A kayıtları ve geçici preview host kaydı kalıyor.
+- [x] **Sorun:** `SiteLifecycle::purge` Coolify uygulamasını siliyor, DNS A kayıtları ve geçici preview host kaydı kalıyor.
 - **Kanıt:** `app/Services/Sites/SiteLifecycle.php` → `deleteCoolifyIfPresent` sonrası doğrudan `forceDelete`.
 - **Yapılacak:** Coolify silindikten sonra host A kayıtlarını ve preview hostunu best-effort kaldır. Zone silinmez (müşteri zone'u). Hata purge'ü durdurmaz, audit'e not düşer.
 - **Kabul:** Purge testinde host başına DNS DELETE görülür, Cloudflare hatası purge'ü engellemez.

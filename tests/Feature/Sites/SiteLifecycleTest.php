@@ -4,6 +4,8 @@ namespace Tests\Feature\Sites;
 
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
+use App\Models\AuditLog;
+use App\Models\CloudflareSetting;
 use App\Models\CoolifyConnection;
 use App\Models\Site;
 use App\Models\User;
@@ -120,6 +122,94 @@ class SiteLifecycleTest extends TestCase
                 && str_contains($request->url(), '/applications/'.self::APP)
                 && str_contains($request->url(), 'delete_volumes=true');
         });
+    }
+
+    public function test_purge_releases_cloudflare_records_of_every_host_and_the_preview(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->site([
+            'status' => SiteStatus::Active,
+            'primary_domain' => 'shop.gone.test',
+            'temporary_domain' => 'amber-harbor.codron.co',
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'shop.gone.test', 'is_primary' => true],
+            ['domain' => 'www.shop.gone.test', 'is_www' => true],
+        ]);
+        $id = $site->id;
+
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            if (str_contains($url, 'coolify.example')) {
+                return Http::response('', 200);
+            }
+
+            if ($request->method() === 'GET' && preg_match('#/client/v4/zones(\?|$)#', $url) === 1) {
+                $zones = [
+                    'gone.test' => ['id' => 'zone-gone', 'name' => 'gone.test', 'status' => 'active'],
+                    'codron.co' => ['id' => 'zone-codron', 'name' => 'codron.co', 'status' => 'active'],
+                ];
+                $name = strtolower((string) ($request->data()['name'] ?? ''));
+
+                return Http::response(['success' => true, 'result' => isset($zones[$name]) ? [$zones[$name]] : []], 200);
+            }
+
+            if ($request->method() === 'GET' && str_contains($url, '/dns_records')) {
+                $name = (string) ($request->data()['name'] ?? '');
+
+                return Http::response(['success' => true, 'result' => [['id' => 'rec-'.$name, 'type' => 'A', 'name' => $name, 'content' => '72.62.117.147']]], 200);
+            }
+
+            if ($request->method() === 'DELETE' && str_contains($url, '/dns_records/')) {
+                return Http::response(['success' => true, 'result' => ['id' => 'x']], 200);
+            }
+
+            return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->delete(route('ops.sites.purge', $site))
+            ->assertRedirect(route('ops.sites'))
+            ->assertSessionHas('status', __('sites.flash.purged'));
+
+        $this->assertDatabaseMissing('sites', ['id' => $id]);
+
+        foreach ([
+            'zone-gone/dns_records/rec-shop.gone.test',
+            'zone-gone/dns_records/rec-www.shop.gone.test',
+            'zone-codron/dns_records/rec-amber-harbor.codron.co',
+        ] as $path) {
+            Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE' && str_ends_with($request->url(), $path));
+        }
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE' && preg_match('#/zones/[^/]+$#', $request->url()) === 1);
+
+        $audit = AuditLog::query()->where('action', 'site.purged')->where('subject_id', $id)->firstOrFail();
+        $this->assertSame(['shop.gone.test', 'www.shop.gone.test', 'amber-harbor.codron.co'], $audit->after['released_hosts'] ?? null);
+        // `??` would treat a stored null as missing; check the key, then the value.
+        $this->assertArrayHasKey('dns_error', $audit->after);
+        $this->assertNull($audit->after['dns_error']);
+    }
+
+    public function test_purge_finishes_when_cloudflare_fails_after_coolify_is_gone(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->site(['status' => SiteStatus::Active, 'primary_domain' => 'shop.gone.test']);
+        $site->domains()->create(['domain' => 'shop.gone.test', 'is_primary' => true]);
+        $id = $site->id;
+
+        Http::fake(function (Request $request) {
+            return str_contains($request->url(), 'coolify.example')
+                ? Http::response('', 200)
+                : Http::response(['success' => false, 'errors' => [['message' => 'Cloudflare down']]], 500);
+        });
+
+        $this->actingAs($this->operator())
+            ->delete(route('ops.sites.purge', $site))
+            ->assertRedirect(route('ops.sites'));
+
+        $this->assertDatabaseMissing('sites', ['id' => $id]);
+        $audit = AuditLog::query()->where('action', 'site.purged')->where('subject_id', $id)->firstOrFail();
+        $this->assertNotNull($audit->after['dns_error'] ?? null);
     }
 
     public function test_purge_continues_when_coolify_app_is_already_gone(): void
@@ -240,6 +330,18 @@ class SiteLifecycleTest extends TestCase
 
         Http::assertNothingSent();
         $this->assertSame(SiteStatus::Active, $site->fresh()->status);
+    }
+
+    private function seedCloudflare(): void
+    {
+        CloudflareSetting::factory()->create([
+            'account_id' => 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
+            'api_token' => 'cf-lifecycle-token',
+            'origin_ipv4' => '72.62.117.147',
+            'wildcard_domain' => 'codron.co',
+            'is_enabled' => true,
+            'is_default' => true,
+        ]);
     }
 
     /**
