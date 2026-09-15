@@ -22,11 +22,13 @@ class SiteThemeInstallation extends Model
         'theme_id',
         'ref',
         'pinned_sha',
+        'previous_pinned_sha',
         'is_active',
         'auto_update',
         'status',
         'last_error',
         'pending_sync_after_deploy',
+        'last_sync_task_id',
         'updated_from_webhook_at',
     ];
 

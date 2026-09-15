@@ -125,12 +125,11 @@ class ThemeRolloutService
     }
 
     /**
-     * @return 'ran'|'deferred'
-     */
-    /**
      * Merge (default) adds what the package has and keeps rows the site owner
      * edited. Overwrite also replaces those edits and is never deferred, so the
      * operator sees it run against the state they confirmed.
+     *
+     * @return 'ran'|'deferred'
      */
     public function syncNow(
         SiteThemeInstallation $installation,
@@ -188,9 +187,99 @@ class ThemeRolloutService
 
         $installation->pending_sync_after_deploy = false;
         $installation->last_error = null;
+        if ($result->taskId !== null) {
+            $installation->last_sync_task_id = $result->taskId;
+        }
         $installation->save();
 
         return 'ran';
+    }
+
+    /**
+     * Asks the CMS to restore the rows the last theme sync task changed.
+     */
+    public function rollbackLastSync(SiteThemeInstallation $installation, ?User $actor, ?string $ip): void
+    {
+        $installation->loadMissing(['site', 'theme']);
+        $site = $installation->site;
+        $theme = $installation->theme;
+        $taskId = (string) $installation->last_sync_task_id;
+
+        if ($site === null || $theme === null) {
+            throw new ThemeRolloutException('Installation is missing site or theme.');
+        }
+
+        if ($taskId === '') {
+            throw new ThemeRolloutException(__('sites.theme_flash.sync_rollback_unavailable'));
+        }
+
+        $result = $this->agent->rollbackThemeSync($site, ['task_id' => $taskId]);
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => $result->ok ? 'theme.sync_rollback_succeeded' : 'theme.sync_rollback_failed',
+            'after' => [
+                'theme_id' => $theme->theme_id,
+                'task_id' => $taskId,
+                'ok' => $result->ok,
+                'error' => $result->ok ? null : $result->safeMessage,
+            ],
+            'ip' => $ip,
+        ]);
+
+        if (! $result->ok) {
+            throw new ThemeRolloutException($result->safeMessage);
+        }
+
+        $installation->last_sync_task_id = null;
+        $installation->save();
+    }
+
+    /**
+     * Puts the theme files back on the commit that ran before the last update.
+     * The two SHAs swap, so the operator can move forward again the same way.
+     */
+    public function rollbackThemeFiles(SiteThemeInstallation $installation, ?User $actor, ?string $ip): void
+    {
+        $installation->loadMissing(['site', 'theme']);
+        $site = $installation->site;
+        $theme = $installation->theme;
+        $previousSha = (string) $installation->previous_pinned_sha;
+
+        if ($site === null || $theme === null) {
+            throw new ThemeRolloutException('Installation is missing site or theme.');
+        }
+
+        if ($previousSha === '') {
+            throw new ThemeRolloutException(__('sites.theme_flash.files_rollback_unavailable'));
+        }
+
+        $this->assertMutableTheme($theme);
+
+        $result = $this->agent->updateTheme($site, $this->themePayload($theme, $installation, sha: $previousSha));
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => $result->ok ? 'theme.files_rollback_succeeded' : 'theme.files_rollback_failed',
+            'after' => [
+                'theme_id' => $theme->theme_id,
+                'from_sha' => $installation->pinned_sha,
+                'to_sha' => $previousSha,
+                'ok' => $result->ok,
+                'error' => $result->ok ? null : $result->safeMessage,
+            ],
+            'ip' => $ip,
+        ]);
+
+        if (! $result->ok) {
+            throw new ThemeRolloutException($result->safeMessage);
+        }
+
+        $installation->previous_pinned_sha = $installation->pinned_sha;
+        $installation->pinned_sha = $result->sha ?? $previousSha;
+        $installation->status = ThemeInstallationStatus::Active;
+        $installation->last_error = null;
+        $installation->save();
     }
 
     public function activate(SiteThemeInstallation $installation, ?User $actor, ?string $ip, bool $confirmed): void
@@ -332,10 +421,11 @@ class ThemeRolloutService
             return;
         }
 
-        if ($result->sha !== null) {
-            $installation->pinned_sha = $result->sha;
-        } elseif ($theme->latest_sha) {
-            $installation->pinned_sha = $theme->latest_sha;
+        $installedSha = $result->sha ?? ($theme->latest_sha ?: null);
+
+        if ($installedSha !== null && $installedSha !== $installation->pinned_sha) {
+            $installation->previous_pinned_sha = $installation->pinned_sha;
+            $installation->pinned_sha = $installedSha;
         }
 
         if ($fromWebhook) {
@@ -425,9 +515,13 @@ class ThemeRolloutService
      *
      * @return array<string, mixed>
      */
-    private function themePayload(Theme $theme, SiteThemeInstallation $installation, bool $preferLatest = false): array
-    {
-        $sha = $preferLatest
+    private function themePayload(
+        Theme $theme,
+        SiteThemeInstallation $installation,
+        bool $preferLatest = false,
+        ?string $sha = null,
+    ): array {
+        $sha ??= $preferLatest
             ? ($theme->latest_sha ?: $installation->pinned_sha)
             : ($installation->pinned_sha ?: $theme->latest_sha);
         $cloneToken = null;

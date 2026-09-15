@@ -292,6 +292,102 @@ class ThemeAssignTest extends TestCase
         $this->assertSame('overwrite', $site->auditLogs()->where('action', 'theme.sync_succeeded')->latest()->first()?->after['mode']);
     }
 
+    public function test_sync_now_remembers_the_cms_task_for_rollback(): void
+    {
+        [$site, $installation] = $this->activeInstallation();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/sync' => Http::response(['ok' => true, 'queued' => true, 'task_id' => 42], 200),
+            'https://shop.example.test/internal/control/v1/themes/sync-rollback' => Http::response(['ok' => true, 'restored' => 3], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync', [$site, $installation]))
+            ->assertRedirect();
+
+        $this->assertSame('42', $installation->fresh()->last_sync_task_id);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync-rollback', [$site, $installation]), ['confirmed' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('status', __('sites.theme_flash.sync_rollback_done'));
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/themes/sync-rollback')
+            && ($request->data()['task_id'] ?? null) === '42');
+        $this->assertNull($installation->fresh()->last_sync_task_id);
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.sync_rollback_succeeded')->exists());
+    }
+
+    public function test_sync_rollback_needs_confirmation_and_a_recorded_task(): void
+    {
+        [$site, $installation] = $this->activeInstallation();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync-rollback', [$site, $installation]), ['confirmed' => '0'])
+            ->assertSessionHas('error', __('sites.theme_flash.rollback_needs_confirm'));
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.sync-rollback', [$site, $installation]), ['confirmed' => '1'])
+            ->assertSessionHas('error', __('sites.theme_flash.sync_rollback_unavailable'));
+
+        Http::assertNothingSent();
+    }
+
+    public function test_update_keeps_the_previous_sha_and_files_rollback_swaps_back(): void
+    {
+        $site = $this->readySite();
+        $theme = Theme::factory()->publicCatalog()->create([
+            'theme_id' => 'beyazoglu',
+            'repo_full_name' => 'deamon-themes/deamon-theme-beyazoglu',
+            'latest_sha' => 'bbb222',
+        ]);
+        $installation = SiteThemeInstallation::factory()->active()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+            'ref' => 'main',
+            'pinned_sha' => 'aaa111',
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/update' => fn (Request $request) => Http::response([
+                'ok' => true,
+                'theme_id' => 'beyazoglu',
+                'sha' => $request->data()['sha'] ?? null,
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.update', [$site, $installation]))
+            ->assertRedirect();
+
+        $installation->refresh();
+        $this->assertSame('bbb222', $installation->pinned_sha);
+        $this->assertSame('aaa111', $installation->previous_pinned_sha);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.files-rollback', [$site, $installation]), ['confirmed' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('status', __('sites.theme_flash.files_rollback_done'));
+
+        $installation->refresh();
+        $this->assertSame('aaa111', $installation->pinned_sha);
+        $this->assertSame('bbb222', $installation->previous_pinned_sha);
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/themes/update')
+            && ($request->data()['sha'] ?? null) === 'aaa111');
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.files_rollback_succeeded')->exists());
+    }
+
+    public function test_files_rollback_without_a_previous_sha_is_refused(): void
+    {
+        [$site, $installation] = $this->activeInstallation();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.files-rollback', [$site, $installation]), ['confirmed' => '1'])
+            ->assertSessionHas('error', __('sites.theme_flash.files_rollback_unavailable'));
+
+        Http::assertNothingSent();
+    }
+
     public function test_sync_rejects_the_reset_mode(): void
     {
         [$site, $installation] = $this->activeInstallation();

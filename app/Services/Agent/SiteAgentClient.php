@@ -240,6 +240,16 @@ class SiteAgentClient
         return $this->postTheme($site, ControlPlaneAgentContract::themeSyncPath(), $payload);
     }
 
+    /**
+     * Restores the rows a theme sync task changed. CMS without the route answers 404.
+     *
+     * @param  array{task_id: string}  $payload
+     */
+    public function rollbackThemeSync(Site $site, array $payload): ThemeAgentResult
+    {
+        return $this->postTheme($site, ControlPlaneAgentContract::themeSyncRollbackPath(), $payload);
+    }
+
     public function listAdmins(Site $site): AdminAgentResult
     {
         return $this->requestAdmins($site, 'GET', ControlPlaneAgentContract::adminsPath());

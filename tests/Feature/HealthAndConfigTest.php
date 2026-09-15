@@ -24,6 +24,7 @@ class HealthAndConfigTest extends TestCase
         $this->assertSame('/internal/control/v1/themes/activate', config('ops.agent.theme_activate_path'));
         $this->assertSame('/internal/control/v1/themes/data-install', config('ops.agent.theme_data_install_path'));
         $this->assertSame('/internal/control/v1/themes/sync', config('ops.agent.theme_sync_path'));
+        $this->assertSame('/internal/control/v1/themes/sync-rollback', config('ops.agent.theme_sync_rollback_path'));
         $this->assertGreaterThanOrEqual(5, (int) config('ops.agent.poll_minutes'));
         $this->assertLessThanOrEqual(15, (int) config('ops.agent.poll_minutes'));
     }

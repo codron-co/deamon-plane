@@ -37,6 +37,9 @@ final class ControlPlaneAgentContract
 
     public const THEME_SYNC_PATH = '/internal/control/v1/themes/sync';
 
+    /** Restores the rows one theme sync task changed (CMS snapshot batch). */
+    public const THEME_SYNC_ROLLBACK_PATH = '/internal/control/v1/themes/sync-rollback';
+
     public const MAIL_CONFIGURE_PATH = '/internal/control/v1/mail/configure';
 
     public const PLATFORM_MAIL_CONFIGURE_PATH = '/internal/control/v1/platform-mail/configure';
@@ -126,6 +129,11 @@ final class ControlPlaneAgentContract
     public static function themeSyncPath(): string
     {
         return self::configuredPath('ops.agent.theme_sync_path', self::THEME_SYNC_PATH);
+    }
+
+    public static function themeSyncRollbackPath(): string
+    {
+        return self::configuredPath('ops.agent.theme_sync_rollback_path', self::THEME_SYNC_ROLLBACK_PATH);
     }
 
     public static function mailConfigurePath(): string

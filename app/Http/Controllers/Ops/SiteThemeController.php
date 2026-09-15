@@ -84,6 +84,42 @@ class SiteThemeController extends Controller
         });
     }
 
+    public function rollbackSync(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
+    {
+        $this->assertInstallation($site, $installation);
+        $this->authorize('assign', Theme::class);
+
+        if (! $request->boolean('confirmed')) {
+            return back()->with('error', __('sites.theme_flash.rollback_needs_confirm'));
+        }
+
+        try {
+            $rollout->rollbackLastSync($installation, $request->user(), $request->ip());
+        } catch (ThemeRolloutException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('sites.theme_flash.sync_rollback_done'));
+    }
+
+    public function rollbackFiles(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
+    {
+        $this->assertInstallation($site, $installation);
+        $this->authorize('assign', Theme::class);
+
+        if (! $request->boolean('confirmed')) {
+            return back()->with('error', __('sites.theme_flash.rollback_needs_confirm'));
+        }
+
+        try {
+            $rollout->rollbackThemeFiles($installation, $request->user(), $request->ip());
+        } catch (ThemeRolloutException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('sites.theme_flash.files_rollback_done'));
+    }
+
     public function activate(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
     {
         $this->assertInstallation($site, $installation);

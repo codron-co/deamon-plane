@@ -180,6 +180,34 @@
                                         <input type="hidden" name="confirmed" value="0">
                                         <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync_overwrite') }}</button>
                                     </form>
+                                    @if ($installation->last_sync_task_id)
+                                        <form
+                                            method="POST"
+                                            action="{{ route('ops.sites.themes.sync-rollback', [$site, $installation]) }}"
+                                            data-confirm="{{ __('sites.themes.sync_rollback_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
+                                            data-confirm-title="{{ __('sites.themes.sync_rollback_title') }}"
+                                            data-confirm-label="{{ __('sites.themes.sync_rollback') }}"
+                                            data-confirm-danger="true"
+                                        >
+                                            @csrf
+                                            <input type="hidden" name="confirmed" value="0">
+                                            <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.sync_rollback') }}</button>
+                                        </form>
+                                    @endif
+                                    @if ($installation->previous_pinned_sha)
+                                        <form
+                                            method="POST"
+                                            action="{{ route('ops.sites.themes.files-rollback', [$site, $installation]) }}"
+                                            data-confirm="{{ __('sites.themes.files_rollback_confirm', ['theme' => $installedTheme?->theme_id, 'sha' => substr($installation->previous_pinned_sha, 0, 7)]) }}"
+                                            data-confirm-title="{{ __('sites.themes.files_rollback_title') }}"
+                                            data-confirm-label="{{ __('sites.themes.files_rollback') }}"
+                                            data-confirm-danger="true"
+                                        >
+                                            @csrf
+                                            <input type="hidden" name="confirmed" value="0">
+                                            <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.files_rollback') }}</button>
+                                        </form>
+                                    @endif
                                     @if (! $installation->is_active)
                                         <form
                                             method="POST"

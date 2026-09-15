@@ -80,6 +80,8 @@ Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/reject', [SiteContr
 Route::post('/sites/{site}/themes', [SiteThemeController::class, 'assign'])->name('ops.sites.themes.assign');
 Route::post('/sites/{site}/themes/{installation}/update', [SiteThemeController::class, 'update'])->name('ops.sites.themes.update');
 Route::post('/sites/{site}/themes/{installation}/sync', [SiteThemeController::class, 'sync'])->name('ops.sites.themes.sync');
+Route::post('/sites/{site}/themes/{installation}/sync-rollback', [SiteThemeController::class, 'rollbackSync'])->name('ops.sites.themes.sync-rollback');
+Route::post('/sites/{site}/themes/{installation}/files-rollback', [SiteThemeController::class, 'rollbackFiles'])->name('ops.sites.themes.files-rollback');
 Route::post('/sites/{site}/themes/{installation}/activate', [SiteThemeController::class, 'activate'])->name('ops.sites.themes.activate');
 Route::post('/sites/{site}/themes/{installation}/auto-update', [SiteThemeController::class, 'autoUpdate'])->name('ops.sites.themes.auto-update');
 Route::get('/sites/{site}/admins/panel', [SiteAdminController::class, 'panel'])->name('ops.sites.admins.panel');

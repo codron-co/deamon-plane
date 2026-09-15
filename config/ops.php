@@ -118,6 +118,7 @@ return [
         'theme_activate_path' => '/internal/control/v1/themes/activate',
         'theme_data_install_path' => '/internal/control/v1/themes/data-install',
         'theme_sync_path' => '/internal/control/v1/themes/sync',
+        'theme_sync_rollback_path' => '/internal/control/v1/themes/sync-rollback',
         'mail_configure_path' => '/internal/control/v1/mail/configure',
         'nonce_ttl_seconds' => (int) env('CONTROL_PLANE_AGENT_NONCE_TTL', 120),
     ],
