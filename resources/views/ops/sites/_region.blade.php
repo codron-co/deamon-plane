@@ -230,86 +230,103 @@
                                     data-confirm-danger="false"
                                 >{{ __('site_ops.bulk.compose') }}</button>
                             @endif
-                            <button
-                                type="submit"
-                                class="btn btn-ghost btn-sm"
-                                formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
-                                name="enabled"
-                                value="1"
-                                data-confirm="{{ __('site_ops.bulk.confirm_auto_on', ['count' => $sites->total()]) }}"
-                                data-confirm-template="{{ __('site_ops.bulk.confirm_auto_on', ['count' => '__COUNT__']) }}"
-                                data-confirm-title="{{ __('site_ops.auto_deploy.confirm_on_title') }}"
-                                data-confirm-label="{{ __('site_ops.bulk.auto_on') }}"
-                                data-confirm-danger="false"
-                            >{{ __('site_ops.bulk.auto_on') }}</button>
-                            <button
-                                type="submit"
-                                class="btn btn-ghost btn-sm"
-                                formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
-                                name="enabled"
-                                value="0"
-                                data-confirm="{{ __('site_ops.bulk.confirm_auto_off', ['count' => $sites->total()]) }}"
-                                data-confirm-template="{{ __('site_ops.bulk.confirm_auto_off', ['count' => '__COUNT__']) }}"
-                                data-confirm-title="{{ __('site_ops.auto_deploy.confirm_off_title') }}"
-                                data-confirm-label="{{ __('site_ops.bulk.auto_off') }}"
-                                data-confirm-danger="false"
-                            >{{ __('site_ops.bulk.auto_off') }}</button>
-                            <button
-                                type="submit"
-                                class="btn btn-secondary btn-sm"
-                                formaction="{{ route('ops.sites.bulk.deploy') }}"
-                                data-confirm="{{ __('site_ops.bulk.confirm_redeploy', ['count' => $sites->total()]) }}"
-                                data-confirm-template="{{ __('site_ops.bulk.confirm_redeploy', ['count' => '__COUNT__']) }}"
-                                data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
-                                data-confirm-label="{{ __('site_ops.bulk.redeploy') }}"
-                                data-confirm-danger="true"
-                            >{{ __('site_ops.bulk.redeploy') }}</button>
-                            <button
-                                type="submit"
-                                class="btn btn-ghost btn-sm"
-                                formaction="{{ route('ops.sites.bulk.follow-head') }}"
-                                data-confirm="{{ __('site_ops.bulk.confirm_follow', ['count' => $sites->total()]) }}"
-                                data-confirm-template="{{ __('site_ops.bulk.confirm_follow', ['count' => '__COUNT__']) }}"
-                                data-confirm-title="{{ __('site_ops.pin.confirm_follow_title') }}"
-                                data-confirm-label="{{ __('site_ops.bulk.follow_head') }}"
-                                data-confirm-danger="true"
-                            >{{ __('site_ops.bulk.follow_head') }}</button>
-                            <label class="ops-bulk-channel sites-bulk-pin">
-                                <span class="visually-hidden">{{ __('site_ops.bulk.ref') }}</span>
-                                <input
-                                    type="text"
-                                    name="ref"
-                                    class="field-input ops-filter"
-                                    maxlength="64"
-                                    autocomplete="off"
-                                    spellcheck="false"
-                                    placeholder="{{ $sites->hasMorePages() ? __('site_ops.bulk.ref_explicit') : __('site_ops.bulk.ref') }}"
-                                    aria-label="{{ __('site_ops.bulk.ref') }}"
+                            {{-- Deploy and auto-deploy sweeps live in menus: eleven controls on one row overflowed and read as a wall. --}}
+                            <details class="ops-action-menu" data-ops-action-menu data-bulk-menu="deploy">
+                                <summary class="btn btn-secondary btn-sm">{{ __('site_ops.bulk.deploy_menu') }}</summary>
+                                <div class="ops-action-popover" role="menu">
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.deploy') }}"
+                                    data-confirm="{{ __('site_ops.bulk.confirm_redeploy', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('site_ops.bulk.confirm_redeploy', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
+                                    data-confirm-label="{{ __('site_ops.bulk.redeploy') }}"
+                                    data-confirm-danger="true"
+                                >{{ __('site_ops.bulk.redeploy') }}</button>
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.follow-head') }}"
+                                    data-confirm="{{ __('site_ops.bulk.confirm_follow', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('site_ops.bulk.confirm_follow', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('site_ops.pin.confirm_follow_title') }}"
+                                    data-confirm-label="{{ __('site_ops.bulk.follow_head') }}"
+                                    data-confirm-danger="true"
+                                >{{ __('site_ops.bulk.follow_head') }}</button>
+                                    <div class="ops-action-sep" role="separator"></div>
+                                <label class="ops-bulk-channel sites-bulk-pin">
+                                    <span class="visually-hidden">{{ __('site_ops.bulk.ref') }}</span>
+                                    <input
+                                        type="text"
+                                        name="ref"
+                                        class="field-input ops-filter"
+                                        maxlength="64"
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                        placeholder="{{ $sites->hasMorePages() ? __('site_ops.bulk.ref_explicit') : __('site_ops.bulk.ref') }}"
+                                        aria-label="{{ __('site_ops.bulk.ref') }}"
+                                        @if (($bulkPinCommits ?? collect())->isNotEmpty())
+                                            list="sites-bulk-pin-refs"
+                                        @endif
+                                    >
                                     @if (($bulkPinCommits ?? collect())->isNotEmpty())
-                                        list="sites-bulk-pin-refs"
+                                        <datalist id="sites-bulk-pin-refs">
+                                            @foreach ($bulkPinCommits as $commit)
+                                                <option value="{{ $commit->commit_sha }}">{{ $commit->shortSha() }}</option>
+                                            @endforeach
+                                        </datalist>
                                     @endif
-                                >
-                                @if (($bulkPinCommits ?? collect())->isNotEmpty())
-                                    <datalist id="sites-bulk-pin-refs">
-                                        @foreach ($bulkPinCommits as $commit)
-                                            <option value="{{ $commit->commit_sha }}">{{ $commit->shortSha() }}</option>
-                                        @endforeach
-                                    </datalist>
-                                @endif
-                                @if ($sites->hasMorePages())
-                                    <span class="sites-bulk-pin-hint muted">{{ __('site_ops.bulk.ref_all_hint') }}</span>
-                                @endif
-                            </label>
-                            <button
-                                type="submit"
-                                class="btn btn-ghost btn-sm"
-                                formaction="{{ route('ops.sites.bulk.pin') }}"
-                                data-confirm="{{ __('site_ops.bulk.confirm_pin', ['count' => $sites->total()]) }}"
-                                data-confirm-template="{{ __('site_ops.bulk.confirm_pin', ['count' => '__COUNT__']) }}"
-                                data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
-                                data-confirm-label="{{ __('site_ops.bulk.pin') }}"
-                                data-confirm-danger="true"
-                            >{{ __('site_ops.bulk.pin') }}</button>
+                                    @if ($sites->hasMorePages())
+                                        <span class="sites-bulk-pin-hint muted">{{ __('site_ops.bulk.ref_all_hint') }}</span>
+                                    @endif
+                                </label>
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.pin') }}"
+                                    data-confirm="{{ __('site_ops.bulk.confirm_pin', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('site_ops.bulk.confirm_pin', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
+                                    data-confirm-label="{{ __('site_ops.bulk.pin') }}"
+                                    data-confirm-danger="true"
+                                >{{ __('site_ops.bulk.pin') }}</button>
+                                </div>
+                            </details>
+                            <details class="ops-action-menu" data-ops-action-menu data-bulk-menu="auto">
+                                <summary class="btn btn-ghost btn-sm">{{ __('site_ops.bulk.auto_menu') }}</summary>
+                                <div class="ops-action-popover" role="menu">
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
+                                    name="enabled"
+                                    value="1"
+                                    data-confirm="{{ __('site_ops.bulk.confirm_auto_on', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('site_ops.bulk.confirm_auto_on', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('site_ops.auto_deploy.confirm_on_title') }}"
+                                    data-confirm-label="{{ __('site_ops.bulk.auto_on') }}"
+                                    data-confirm-danger="false"
+                                >{{ __('site_ops.bulk.auto_on') }}</button>
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.auto-deploy') }}"
+                                    name="enabled"
+                                    value="0"
+                                    data-confirm="{{ __('site_ops.bulk.confirm_auto_off', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('site_ops.bulk.confirm_auto_off', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('site_ops.auto_deploy.confirm_off_title') }}"
+                                    data-confirm-label="{{ __('site_ops.bulk.auto_off') }}"
+                                    data-confirm-danger="false"
+                                >{{ __('site_ops.bulk.auto_off') }}</button>
+                                </div>
+                            </details>
                             <button
                                 type="submit"
                                 class="btn btn-ghost btn-sm"

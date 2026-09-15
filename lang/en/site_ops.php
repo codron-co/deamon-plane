@@ -73,6 +73,8 @@ return [
         'confirm_head' => 'Rebuild :name at the branch tip (HEAD)? The site is not pinned, so Coolify takes the latest commit on :branch. Volumes are not rolled back.',
     ],
     'bulk' => [
+        'deploy_menu' => 'Deploy',
+        'auto_menu' => 'Auto-deploy',
         'selected' => 'Selected sites',
         'select_all' => 'Select all',
         'summary_page' => ':count sites selected',

@@ -46,7 +46,7 @@
 - **Kabul:** Üçüncü takma ad hatası kendi satırında görünür. Satır kaldırılınca form o değeri göndermez.
 
 ### U6 · Toplu işlem çubuğu aşırı kalabalık
-- [ ] **Sorun:** Seçim yapınca tek satırda 11 kontrol çıkıyor: dal seçimi, dal değiştir, yayına al, compose'a geç, oto deploy aç, oto deploy kapat, yeniden deploy, HEAD'i takip et, pin alanı, pin, agent secret. Dar ekranda satır taşıyor, benzer aksiyonlar ayrı butonlarda.
+- [x] **Sorun:** Seçim yapınca tek satırda 11 kontrol çıkıyor: dal seçimi, dal değiştir, yayına al, compose'a geç, oto deploy aç, oto deploy kapat, yeniden deploy, HEAD'i takip et, pin alanı, pin, agent secret. Dar ekranda satır taşıyor, benzer aksiyonlar ayrı butonlarda.
 - **Kanıt:** `sites/_region.blade.php` → `.sites-bulk-actions` grubu.
 - **Yapılacak:** Deploy aksiyonlarını (yeniden deploy, HEAD'i takip et, pin) bir "Deploy" menüsüne, oto deploy aç/kapat'ı bir "Oto deploy" menüsüne topla. Onay metinleri ve `formaction`'lar aynı kalsın.
 - **Kabul:** Çubukta en fazla 6 üst düzey kontrol kalır, tüm aksiyonlar ve onayları çalışır.

@@ -73,6 +73,8 @@ return [
         'confirm_head' => ':name dal ucu (HEAD) ile yeniden derlensin mi? Site pinli olmadığı için Coolify :branch dalının son commitini alır. Volume’lar geri sarılmaz.',
     ],
     'bulk' => [
+        'deploy_menu' => 'Deploy',
+        'auto_menu' => 'Oto deploy',
         'selected' => 'Seçili siteler',
         'select_all' => 'Tümünü seç',
         'summary_page' => ':count site seçildi',
