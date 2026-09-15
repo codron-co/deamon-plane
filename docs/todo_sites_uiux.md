@@ -58,7 +58,7 @@
 - **Kabul:** Sorunsuz satırda menü yok, sorunlu satırda aynen var.
 
 ### U8 · Agent sağlık rozeti ham hata kodu gösteriyor
-- [ ] **Sorun:** Rozet "Hatalı · timeout", "Hatalı · http_error" gibi iç kod gösteriyor.
+- [x] **Sorun:** Rozet "Hatalı · timeout", "Hatalı · http_error" gibi iç kod gösteriyor.
 - **Kanıt:** `sites/_agent-health.blade.php` → `$statusLabel = … .' · '.$reason`.
 - **Yapılacak:** Nedenleri dil anahtarına çevir, bilinmeyen kod için genel metin.
 - **Kabul:** Rozette çevrilmiş neden görünür.

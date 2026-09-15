@@ -13,7 +13,14 @@
     if (! $site->hasAgentSecret()) {
         $agentHint .= ' '.__('sites.agent.missing_hint');
     }
-    $statusLabel = __('ops.health.'.$display).($reason ? ' · '.$reason : '');
+    // Reasons are internal codes (timeout, http_error, ...): show operator copy, never the code.
+    $reasonLabel = null;
+    if ($reason !== null) {
+        $reasonLabel = \Illuminate\Support\Facades\Lang::has('sites.agent.reasons.'.$reason)
+            ? __('sites.agent.reasons.'.$reason)
+            : __('sites.agent.reasons.unknown');
+    }
+    $statusLabel = __('ops.health.'.$display).($reasonLabel ? ' · '.$reasonLabel : '');
 @endphp
 
 <article class="site-card site-operation" aria-labelledby="agent-health-heading">

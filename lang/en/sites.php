@@ -528,6 +528,16 @@ return [
         'confirm_switch' => 'Switch :site to :target? Coolify PATCHes git_branch, updates APP_ENV, and redeploys. Volumes stay. The application is not deleted.',
     ],
     'agent' => [
+        'reasons' => [
+            'timeout' => 'timed out',
+            'bad_signature' => 'signature rejected',
+            'queue_unhealthy' => 'queue not running',
+            'http_error' => 'HTTP error',
+            'rate_limited' => 'rate limited',
+            'needs_secret' => 'no secret',
+            'no_base_url' => 'no agent address',
+            'unknown' => 'unknown reason',
+        ],
         'rate_limited' => 'The CMS rate limit was hit (429). Retry in a few seconds.',
         'timeout' => 'The CMS agent timed out.',
         'failed' => 'The CMS agent request failed.',
