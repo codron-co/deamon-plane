@@ -33,6 +33,15 @@ class SitePolicy
         return $user->canWriteOps();
     }
 
+    /**
+     * Bringing an archived site back re-exposes a running Coolify app to fleet
+     * operations, so it is a Super Admin decision.
+     */
+    public function restore(User $user, Site $site): bool
+    {
+        return $user->hasRole(OpsRole::SuperAdmin->value);
+    }
+
     public function forceDelete(User $user, Site $site): bool
     {
         return $user->canWriteOps();

@@ -103,6 +103,7 @@
             <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.live.sync') }}</button>
         </form>
     @endif
+    <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.archived') }}" data-sites-archive-link>{{ __('sites.archive.link') }}</a>
     @if ($canCreate)
         <a class="btn btn-primary btn-sm" href="{{ route('ops.sites.create') }}">{{ __('sites.new') }}</a>
     @endif

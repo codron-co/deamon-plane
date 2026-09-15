@@ -924,7 +924,47 @@ class SiteController extends Controller
 
         return redirect()
             ->route('ops.sites')
-            ->with('status', __('sites.flash.archived'));
+            ->with('status', __('sites.flash.archived').' '.__('sites.archive.where'));
+    }
+
+    public function archived(Request $request): View
+    {
+        $this->authorize('viewAny', Site::class);
+
+        $sites = Site::onlyTrashed()
+            ->orderByDesc('deleted_at')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('ops.sites.archived', [
+            'sites' => $sites,
+            'canRestore' => $request->user()?->hasRole(OpsRole::SuperAdmin->value) ?? false,
+            'canPurge' => $request->user()?->canWriteOps() ?? false,
+        ]);
+    }
+
+    public function restore(Request $request, Site $site): RedirectResponse
+    {
+        $this->authorize('restore', $site);
+
+        if (! $site->trashed()) {
+            return redirect()->route('ops.sites.show', $site)->with('error', __('sites.archive.not_archived'));
+        }
+
+        DB::transaction(function () use ($request, $site): void {
+            $site->restore();
+
+            $site->auditLogs()->create([
+                'actor_user_id' => $request->user()?->id,
+                'action' => 'site.restored',
+                'after' => $this->auditSnapshot($site),
+                'ip' => $request->ip(),
+            ]);
+        });
+
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('status', __('sites.archive.restored', ['name' => $site->name]));
     }
 
     public function purge(Request $request, Site $site, SiteLifecycle $lifecycle): RedirectResponse

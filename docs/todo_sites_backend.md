@@ -81,7 +81,7 @@
 - **Kabul:** Bu yollarda `__()` dışı operatör metni kalmaz, testler çeviri anahtarıyla doğrular.
 
 ### B11 · Arşivlenen site geri alınamıyor
-- [ ] **Sorun:** Arşiv UI'dan geri döndürülemiyor, listede görünmüyor. Coolify uygulaması çalışmaya devam ediyor ama Plane'de iz yok.
+- [x] **Sorun:** Arşiv UI'dan geri döndürülemiyor, listede görünmüyor. Coolify uygulaması çalışmaya devam ediyor ama Plane'de iz yok.
 - **Kanıt:** `restore` / `onlyTrashed` kullanan route yok. `sites.flash.archived` "Coolify'e dokunulmadı" diyor.
-- **Yapılacak:** Sites listesine "Arşiv" görünümü (`?archived=1`), satırda "Geri yükle" (Super Admin). Geri yüklemede B3'teki domain satırları yeniden kurulur, domain başka sitede kullanılıyorsa 422.
+- **Yapılacak (revize):** Liste filtresine gömmek yerine ayrı `/sites/archived` sayfası. Kayıtlı görünüm sistemine dokunmaz, ve arşivli satırlar detay rotasında 404 verdiği için liste satırı olarak yanıltıcı olurdu. Satırda "Geri yükle" (Super Admin) ve "Hard Delete" (`purge` rotası `withTrashed`). B3 kararı gereği domain satırları arşivde silinmediği için geri yüklemede çakışma olmaz.
 - **Kabul:** Arşivli site listelenir, geri yüklenince normal listede döner.

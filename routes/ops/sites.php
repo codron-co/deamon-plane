@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/sites', [SiteController::class, 'index'])->name('ops.sites');
 Route::get('/sites/create', [SiteController::class, 'create'])->name('ops.sites.create');
+Route::get('/sites/archived', [SiteController::class, 'archived'])->name('ops.sites.archived');
+Route::post('/sites/{site}/restore', [SiteController::class, 'restore'])->withTrashed()->name('ops.sites.restore');
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
 Route::post('/sites/list-preferences', [SiteListPreferencesController::class, 'update'])->name('ops.sites.list-preferences');
 Route::delete('/sites/list-preferences', [SiteListPreferencesController::class, 'destroy'])->name('ops.sites.list-preferences.reset');
@@ -83,5 +85,5 @@ Route::post('/sites/{site}/admins/{remoteAdmin}/password-invite', [SiteAdminCont
 Route::post('/sites/{site}/admins/{remoteAdmin}/deactivate', [SiteAdminController::class, 'deactivate'])->name('ops.sites.admins.deactivate');
 Route::post('/sites/{site}/admins/{remoteAdmin}/activate', [SiteAdminController::class, 'activate'])->name('ops.sites.admins.activate');
 Route::delete('/sites/{site}/admins/{remoteAdmin}', [SiteAdminController::class, 'destroy'])->name('ops.sites.admins.destroy');
-Route::delete('/sites/{site}/purge', [SiteController::class, 'purge'])->name('ops.sites.purge');
+Route::delete('/sites/{site}/purge', [SiteController::class, 'purge'])->withTrashed()->name('ops.sites.purge');
 Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name('ops.sites.destroy');
