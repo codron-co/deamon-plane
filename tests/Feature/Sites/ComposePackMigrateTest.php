@@ -355,8 +355,14 @@ class ComposePackMigrateTest extends TestCase
             'https://coolify.example/api/v1/applications/'.self::APP => Http::response($this->appPayload('dockerfile', autoDeploy: true), 200),
         ]);
 
+        // The Coolify card (compose migrate included) loads after the page from its panel route.
         $this->actingAs($this->operator())
             ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-lazy-url="'.route('ops.sites.coolify-ops.panel', $site).'"', false);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.coolify-ops.panel', $site))
             ->assertOk()
             ->assertSee(__('site_ops.pack.button'), false)
             ->assertSee(__('site_ops.pack.warning'), false)
