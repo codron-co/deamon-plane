@@ -66,6 +66,7 @@
             class="ops-form"
             data-ops-pending
             data-domain-add
+            data-reload-on-success
         >
             @csrf
             <div class="site-operation-line">

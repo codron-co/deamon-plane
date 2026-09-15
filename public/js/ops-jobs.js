@@ -1036,4 +1036,19 @@
     }
 
     window.PlaneJobs = { track: track, showMessage: showMessage };
+
+    // A form that reloads the page after success (data-reload-on-success) leaves its
+    // message here so the operator still sees whether the action worked.
+    try {
+        const stashed = sessionStorage.getItem("ops.flash");
+        if (stashed) {
+            sessionStorage.removeItem("ops.flash");
+            const flash = JSON.parse(stashed);
+            if (flash && flash.message) {
+                showMessage(flash.message, flash.type || "status");
+            }
+        }
+    } catch (error) {
+        /* sessionStorage can be unavailable or hold junk */
+    }
 })();

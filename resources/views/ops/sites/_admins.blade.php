@@ -83,14 +83,14 @@
                                         </td>
                                         <td class="ops-table-actions">
                                             @if (! $passwordIsSet)
-                                                <form method="POST" action="{{ route('ops.sites.admins.password-invite', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.send_password_invite_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.send_password_invite_title') }}" data-confirm-label="{{ __('sites.admins.send_password_invite') }}">
+                                                <form method="POST" action="{{ route('ops.sites.admins.password-invite', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-reload-on-success data-confirm="{{ __('sites.admins.send_password_invite_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.send_password_invite_title') }}" data-confirm-label="{{ __('sites.admins.send_password_invite') }}">
                                                     @csrf
                                                     <input type="hidden" name="admin_email" value="{{ $adminEmail }}">
                                                     <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.admins.send_password_invite') }}</button>
                                                 </form>
                                             @endif
 
-                                            <form method="POST" action="{{ route('ops.sites.admins.password', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending>
+                                            <form method="POST" action="{{ route('ops.sites.admins.password', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-reload-on-success>
                                                 @csrf
                                                 <input type="hidden" name="password_mode" value="generate">
                                                 <input type="hidden" name="admin_email" value="{{ $adminEmail }}">
@@ -98,19 +98,19 @@
                                             </form>
 
                                             @if ($canToggleAdminActive && $isActive)
-                                                <form method="POST" action="{{ route('ops.sites.admins.deactivate', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.deactivate_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.deactivate_title') }}" data-confirm-label="{{ __('sites.admins.deactivate') }}" data-confirm-danger="true">
+                                                <form method="POST" action="{{ route('ops.sites.admins.deactivate', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-reload-on-success data-confirm="{{ __('sites.admins.deactivate_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.deactivate_title') }}" data-confirm-label="{{ __('sites.admins.deactivate') }}" data-confirm-danger="true">
                                                     @csrf
                                                     <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}" {{ $isLastActive ? 'disabled' : '' }}>{{ __('sites.admins.deactivate') }}</button>
                                                 </form>
                                             @elseif ($canToggleAdminActive)
-                                                <form method="POST" action="{{ route('ops.sites.admins.activate', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending>
+                                                <form method="POST" action="{{ route('ops.sites.admins.activate', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-reload-on-success>
                                                     @csrf
                                                     <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.admins.activate') }}</button>
                                                 </form>
                                             @endif
 
                                             @if ($canDestroyAdmin)
-                                                <form method="POST" action="{{ route('ops.sites.admins.destroy', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-confirm="{{ __('sites.admins.delete_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.delete_title') }}" data-confirm-label="{{ __('sites.admins.delete') }}" data-confirm-danger="true">
+                                                <form method="POST" action="{{ route('ops.sites.admins.destroy', [$site, $adminId]) }}" class="ops-inline-form" data-ops-pending data-reload-on-success data-confirm="{{ __('sites.admins.delete_confirm', ['email' => $adminEmail]) }}" data-confirm-title="{{ __('sites.admins.delete_title') }}" data-confirm-label="{{ __('sites.admins.delete') }}" data-confirm-danger="true">
                                                     @csrf
                                                     @method('DELETE')
                                                     <input type="hidden" name="admin_email" value="{{ $adminEmail }}">
@@ -132,7 +132,7 @@
                         <h3>{{ __('sites.admins.create_title') }}</h3>
                     </div>
                 </div>
-                <form method="POST" action="{{ route('ops.sites.admins.store', $site) }}" class="ops-form" data-ops-pending data-admin-create>
+                <form method="POST" action="{{ route('ops.sites.admins.store', $site) }}" class="ops-form" data-ops-pending data-reload-on-success data-admin-create>
                     @csrf
                     <label class="field">
                         <span>{{ __('sites.admins.fields.name') }}</span>

@@ -14,9 +14,6 @@
             return;
         }
 
-        if (form.hasAttribute("data-domain-add") && payload.ok) {
-            window.location.reload();
-        }
     });
 
     document.addEventListener("ops:ajax-success", function (event) {

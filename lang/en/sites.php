@@ -556,6 +556,8 @@ return [
             'deleted' => 'Admin deleted on the CMS.',
         ],
         'errors' => [
+            'mail_not_configured' => 'Invite mail was not sent: software mail (SMTP) is not configured on this site. Save Software mail and push it to sites, then try again.',
+            'mail_send_failed' => 'Invite mail was not sent. CMS said: :reason',
             'outdated' => 'CMS agent is too old for admin management. Deploy Deamon 1.2.13+.',
         ],
     ],

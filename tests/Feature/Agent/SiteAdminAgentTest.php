@@ -193,6 +193,95 @@ class SiteAdminAgentTest extends TestCase
         $this->assertDatabaseMissing('audit_logs', ['action' => 'site.admin.password_invite_sent']);
     }
 
+    public function test_password_invite_mail_not_configured_reaches_the_async_caller(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins/9/password-invite' => Http::response([
+                'ok' => false,
+                'error' => 'mail_not_configured',
+                'message' => 'Platform mail is not configured.',
+            ], 422),
+        ]);
+
+        // The site page posts through fetch; before the fix this answered ok:true with an empty message.
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->from(route('ops.sites.show', $site))
+            ->postJson(route('ops.sites.admins.password-invite', [$site, 9]), [
+                'admin_email' => 'invited@example.com',
+            ])
+            ->assertOk()
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('type', 'error')
+            ->assertJsonPath('message', __('sites.admins.errors.mail_not_configured'));
+
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'site.admin.password_invite_sent']);
+    }
+
+    public function test_password_invite_send_failure_carries_the_cms_reason(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins/9/password-invite' => Http::response([
+                'ok' => false,
+                'error' => 'mail_send_failed',
+                'message' => 'Please wait before retrying.',
+            ], 422),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->postJson(route('ops.sites.admins.password-invite', [$site, 9]))
+            ->assertOk()
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('message', __('sites.admins.errors.mail_send_failed', ['reason' => 'Please wait before retrying.']));
+    }
+
+    public function test_password_invite_success_reaches_the_async_caller(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins/9/password-invite' => Http::response([
+                'ok' => true,
+                'admin' => ['id' => 9, 'name' => 'Invited', 'email' => 'invited@example.com', 'is_active' => true, 'must_change_password' => true, 'password_is_set' => false, 'has_two_factor' => false, 'created_at' => now()->toIso8601String()],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->postJson(route('ops.sites.admins.password-invite', [$site, 9]))
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('type', 'status')
+            ->assertJsonPath('message', __('sites.admins.flash.password_invite_sent'));
+    }
+
+    public function test_admin_forms_reload_the_panel_after_success(): void
+    {
+        $site = $this->siteWithSecret();
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/admins' => Http::response([
+                'ok' => true,
+                'admins' => [
+                    ['id' => 9, 'name' => 'Invited', 'email' => 'invited@example.com', 'is_active' => true, 'must_change_password' => true, 'password_is_set' => false, 'has_two_factor' => false, 'created_at' => now()->toIso8601String()],
+                ],
+            ], 200),
+        ]);
+
+        $html = $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '#action="'.preg_quote(route('ops.sites.admins.password-invite', [$site, 9]), '#').'"[^>]*data-reload-on-success#',
+            $html,
+        );
+        $this->assertMatchesRegularExpression('#data-admin-create[^>]*data-reload-on-success|data-reload-on-success[^>]*data-admin-create#', $html);
+    }
+
     public function test_viewer_cannot_send_password_invite(): void
     {
         $site = $this->siteWithSecret();

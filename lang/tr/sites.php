@@ -558,6 +558,8 @@ return [
         ],
         'errors' => [
             'outdated' => 'CMS agent admin yönetimi için eski. Deamon 1.2.13+ yayınlayın.',
+            'mail_not_configured' => 'Davet maili gönderilemedi: bu sitede yazılım maili (SMTP) yapılandırılmamış. Önce Yazılım maili ayarını kaydedip sitelere aktarın, sonra tekrar deneyin.',
+            'mail_send_failed' => 'Davet maili gönderilemedi. CMS yanıtı: :reason',
         ],
     ],
     'themes' => [

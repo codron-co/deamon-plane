@@ -122,9 +122,17 @@
             }
 
             const type = payload.type || (payload.ok === false ? "error" : "status");
-            if (payload.message) {
+            const reloads = response.ok && payload.ok !== false && form.hasAttribute("data-reload-on-success");
+            if (payload.message && reloads) {
+                // The widget lives in memory; hand the message to the next page load.
+                try {
+                    sessionStorage.setItem("ops.flash", JSON.stringify({ message: payload.message, type: type }));
+                } catch (error) {
+                    window.PlaneJobs && window.PlaneJobs.showMessage(payload.message, type);
+                }
+            } else if (payload.message) {
                 window.PlaneJobs && window.PlaneJobs.showMessage(payload.message, type);
-            } else if (!response.ok) {
+            } else if (!response.ok || payload.ok === false) {
                 window.PlaneJobs && window.PlaneJobs.showMessage(requestFailed(), "error");
             }
 
@@ -132,6 +140,11 @@
                 document.dispatchEvent(new CustomEvent("ops:ajax-success", {
                     detail: { form: form, payload: payload, response: response },
                 }));
+            }
+
+            if (reloads) {
+                window.location.reload();
+                return;
             }
 
             if (payload.redirect) {
