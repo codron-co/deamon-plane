@@ -74,7 +74,7 @@
 ## P2
 
 ### U10 · Formdaki mail sunucusu seçimi stilsiz
-- [ ] **Sorun:** Diğer tüm seçimler `field-input` sınıfı taşıyor, mail sunucusu seçimi taşımıyor ve farklı görünüyor.
+- [x] **Sorun:** Diğer tüm seçimler `field-input` sınıfı taşıyor, mail sunucusu seçimi taşımıyor ve farklı görünüyor.
 - **Kanıt:** `sites/_form.blade.php` → `<select id="site_mail_server" name="mail_server_id">`.
 - **Yapılacak:** `class="field-input"`.
 - **Kabul:** Seçim diğer alanlarla aynı görünür.

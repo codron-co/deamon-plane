@@ -355,7 +355,7 @@
     <div class="field">
         <label class="field-label" for="site_mail_server">{{ __('sites.form.mail_server') }}</label>
         <p class="field-hint">{{ __('mail.select_hint') }}</p>
-        <select id="site_mail_server" name="mail_server_id" @disabled($readonly)>
+        <select id="site_mail_server" class="field-input" name="mail_server_id" @disabled($readonly)>
             <option value="">{{ __('mail.none') }}</option>
             @foreach ($mailServers ?? [] as $mailServer)
                 <option value="{{ $mailServer->id }}" @selected((string) old('mail_server_id', $site->mail_server_id) === (string) $mailServer->id)>

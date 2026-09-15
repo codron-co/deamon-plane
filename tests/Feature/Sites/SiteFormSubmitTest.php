@@ -55,6 +55,14 @@ class SiteFormSubmitTest extends TestCase
             ->assertSee('value="Keep Me"', false);
     }
 
+    public function test_mail_server_select_uses_the_shared_field_style(): void
+    {
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.create'))
+            ->assertOk()
+            ->assertSee('<select id="site_mail_server" class="field-input"', false);
+    }
+
     private function user(OpsRole $role): User
     {
         $user = User::factory()->create();
