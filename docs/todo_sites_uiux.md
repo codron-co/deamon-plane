@@ -86,7 +86,7 @@
 - **Kabul:** İki kart farklı ikon gösterir.
 
 ### U12 · Tehlike bölümü arşivden habersiz
-- [ ] **Sorun:** Açıklama "Soft Delete Plane kaydını gizler" diyor. Arşiv sayfası (B11) var ama bu bölüm oradan bahsetmiyor, operatör siteyi nerede bulacağını bilmiyor.
+- [x] **Sorun:** Açıklama "Soft Delete Plane kaydını gizler" diyor. Arşiv sayfası (B11) var ama bu bölüm oradan bahsetmiyor, operatör siteyi nerede bulacağını bilmiyor.
 - **Kanıt:** `lang/tr/sites.php` → `danger.lede`, `danger.confirm`.
 - **Yapılacak:** Metin "Arşivle" dilini kullansın ve arşiv sayfasına link versin.
 - **Kabul:** Tehlike bölümünde arşiv sayfası linki görünür.

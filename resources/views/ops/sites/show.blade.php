@@ -259,6 +259,7 @@
             <article class="site-card danger-zone">
                 <div>
                     <h3 id="site-danger-heading">{{ __('sites.danger.title') }} @include('ops.dashboard._hint', ['text' => __('sites.danger.lede')])</h3>
+                    <p class="site-note">{{ __('sites.danger.archive_hint') }} <a href="{{ route('ops.sites.archived') }}" data-danger-archive-link>{{ __('sites.archive.title') }}</a></p>
                 </div>
                 <div class="danger-zone-actions">
                     @if ($canDelete ?? false)

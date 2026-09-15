@@ -721,6 +721,7 @@ return [
     ],
     'danger' => [
         'title' => 'Danger',
+        'archive_hint' => 'Archived sites can be restored or hard-deleted from',
         'lede' => 'Soft Delete hides the Plane record and does not contact Coolify. Hard Delete destroys the Coolify application, volumes, database, and containers, then removes the Plane row permanently.',
         'button' => 'Delete site',
         'confirm_title' => 'Soft-delete site',

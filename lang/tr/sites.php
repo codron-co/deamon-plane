@@ -722,6 +722,7 @@ return [
     ],
     'danger' => [
         'title' => 'Tehlike',
+        'archive_hint' => 'Arşivlenen siteler geri yüklenebilir veya kalıcı silinebilir:',
         'lede' => 'Arşivle siteyi Arşiv sayfasına taşır ve Coolify’e dokunmaz; oradan geri yüklenebilir. Kalıcı sil Coolify uygulamasını, volume’ları, veritabanını ve container’ları yok eder, sonra Plane kaydını siler.',
         'button' => 'Siteyi sil',
         'confirm_title' => 'Site arşivlensin mi?',
