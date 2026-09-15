@@ -236,8 +236,7 @@ class SiteAppHealthInspector
             }
         }
 
-        // A filled site-kind value can still be stale (e.g. CONTROL_PLANE_HOST_ALLOWLIST written
-        // for another Plane host), which the CMS enforces. Secrets are never compared here:
+        // A filled site-kind value can still be stale (e.g. DEAMON_SITE_NAME from before a rename). Secrets are never compared here:
         // syncing a "fixed" APP_KEY would make encrypted data unreadable.
         $envSync = app(CoolifyAppEnvSync::class);
         foreach ($siteRows as $row) {

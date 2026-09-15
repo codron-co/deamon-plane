@@ -388,7 +388,7 @@ class SiteAppHealthTest extends TestCase
         config(['app.url' => 'https://plane.example.com']);
         $site = $this->composeSite();
         foreach (Channel::cases() as $channel) {
-            CoolifyEnvDefault::query()->updateOrCreate(['channel' => $channel->value, 'key' => 'CONTROL_PLANE_HOST_ALLOWLIST'], ['kind' => CoolifyEnvKind::Site, 'value' => '{{plane.host}}', 'is_secret' => false, 'sort' => 10]);
+            CoolifyEnvDefault::query()->updateOrCreate(['channel' => $channel->value, 'key' => 'DEAMON_SITE_NAME'], ['kind' => CoolifyEnvKind::Site, 'value' => '{{site.name}}', 'is_secret' => false, 'sort' => 10]);
             CoolifyEnvDefault::query()->updateOrCreate(['channel' => $channel->value, 'key' => 'APP_KEY'], ['kind' => CoolifyEnvKind::Site, 'value' => '{{site.app_key}}', 'is_secret' => true, 'sort' => 20]);
         }
 
@@ -398,7 +398,7 @@ class SiteAppHealthTest extends TestCase
             }
             if ($request->method() === 'GET' && str_contains($request->url(), '/envs')) {
                 return Http::response([
-                    ['key' => 'CONTROL_PLANE_HOST_ALLOWLIST', 'value' => 'old-plane.example.com'],
+                    ['key' => 'DEAMON_SITE_NAME', 'value' => 'Renamed Long Ago Site'],
                     ['key' => 'APP_KEY', 'value' => 'base64:a-different-key'],
                     ['key' => 'CONTROL_PLANE_AGENT_SECRET', 'value' => 'plane-agent-secret'],
                 ], 200);
@@ -412,7 +412,7 @@ class SiteAppHealthTest extends TestCase
             ->assertOk();
 
         $codes = collect($site->fresh()->appHealth()->issues)->map(fn ($issue) => $issue->code.'|'.($issue->key ?? ''))->all();
-        $this->assertContains('wrong_env|CONTROL_PLANE_HOST_ALLOWLIST', $codes);
+        $this->assertContains('wrong_env|DEAMON_SITE_NAME', $codes);
         $this->assertNotContains('wrong_env|APP_KEY', $codes);
     }
 

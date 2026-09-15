@@ -39,9 +39,6 @@ APP_ENV={{site.app_env}}
 #@secret
 CONTROL_PLANE_AGENT_SECRET={{site.agent_secret}}
 
-# Plane host allowlist: platform-mail / H-Posta çağrılarındaki plane_base_url bu host olmalı.
-CONTROL_PLANE_HOST_ALLOWLIST={{plane.host}}
-
 # Compose MySQL kullanıcı parolası (app + mysql servisine enjekte). Boşsa mysql ilk init'te çıkar.
 #@secret
 DB_PASSWORD={{generated}}

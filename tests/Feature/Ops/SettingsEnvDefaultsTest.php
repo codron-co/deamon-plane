@@ -45,10 +45,10 @@ class SettingsEnvDefaultsTest extends TestCase
             ->assertSee('MYSQL_ROOT_PASSWORD', false)
             ->assertSee('DB_PASSWORD={{generated}}', false)
             ->assertSee('APP_KEY={{site.app_key}}', false)
-            ->assertSee('CONTROL_PLANE_HOST_ALLOWLIST={{plane.host}}', false)
+            ->assertDontSee('CONTROL_PLANE_HOST_ALLOWLIST', false)
             ->getContent();
 
-        $this->assertStringContainsString('SERVICE_URL_APP={{coolify}}', $html);
+        $this->assertStringNotContainsString('SERVICE_URL_APP', $html);
         $this->assertStringNotContainsString('APP_TIMEZONE=', $html);
         $this->assertStringNotContainsString('DEAMON_PLATFORM_MAIL', $html);
         $this->assertStringNotContainsString('DEAMON_DEFAULT_ADMIN_PASSWORD', $html);

@@ -33,7 +33,7 @@ class CoolifyAppEnvSyncTest extends TestCase
         ]);
     }
 
-    public function test_channel_catalog_fills_empty_secrets_site_tokens_and_plane_host_without_service_keys(): void
+    public function test_channel_catalog_fills_empty_secrets_and_site_tokens_without_service_keys(): void
     {
         $site = $this->site();
         $this->fakeEnvs([
@@ -50,7 +50,7 @@ class CoolifyAppEnvSyncTest extends TestCase
         $this->assertContains('DEAMON_CHANNEL', $keys);
         $this->assertContains('APP_ENV', $keys);
         $this->assertContains('CONTROL_PLANE_AGENT_SECRET', $keys);
-        $this->assertContains('CONTROL_PLANE_HOST_ALLOWLIST', $keys);
+        $this->assertNotContains('CONTROL_PLANE_HOST_ALLOWLIST', $keys);
         $this->assertNotContains('APP_KEY', $keys);
         $this->assertNotContains('DEAMON_SITE_NAME', $keys);
         $this->assertNotContains('SERVICE_URL_APP', $keys);
@@ -68,7 +68,7 @@ class CoolifyAppEnvSyncTest extends TestCase
             return $map['DEAMON_CHANNEL'] === Channel::Main->value
                 && $map['APP_ENV'] === 'production'
                 && $map['CONTROL_PLANE_AGENT_SECRET'] === (string) $site->agent_secret_encrypted
-                && $map['CONTROL_PLANE_HOST_ALLOWLIST'] === 'plane.codron.co'
+                && ! array_key_exists('CONTROL_PLANE_HOST_ALLOWLIST', $map)
                 && strlen((string) $map['MYSQL_ROOT_PASSWORD']) >= 32
                 && strlen((string) $map['DB_PASSWORD']) >= 32
                 && ! array_key_exists('SERVICE_URL_APP', $map)
@@ -96,6 +96,8 @@ class CoolifyAppEnvSyncTest extends TestCase
         $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
 
         $this->assertContains('DEAMON_PLATFORM_MAIL_HOST', $keys);
+        // Removed from the CMS catalog in 1.2.25, so a site's old value is pruned.
+        $this->assertContains('CONTROL_PLANE_HOST_ALLOWLIST', $keys);
         $this->assertNotContains('SERVICE_URL_APP', $keys);
         $this->assertNotContains('APP_URL', $keys);
         $this->assertNotContains('DB_PASSWORD', $keys);

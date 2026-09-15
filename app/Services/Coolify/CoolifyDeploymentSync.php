@@ -15,7 +15,6 @@ use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\PlatformOpsMailer;
 use App\Services\Sites\DeploymentFailureText;
 use App\Services\Sites\SiteAppHealthInspector;
-use App\Services\Sites\SitePlaneAllowlistHeal;
 
 class CoolifyDeploymentSync
 {
@@ -204,7 +203,6 @@ class CoolifyDeploymentSync
 
         if ($becameFinished) {
             $this->dispatchDeferredThemeSync($site);
-            app(SitePlaneAllowlistHeal::class)->pushAfterDeploy($site);
         }
 
         if ($becameFinished || $effective === DeploymentStatus::Finished) {
