@@ -34,7 +34,7 @@
 ## P1
 
 ### U4 · Türkçe arayüzde İngilizce etiketler
-- [ ] **Sorun:** Türkçe panelde "Hard Delete", "Soft Delete", "Live Sync", "Sync" yazıyor. Aynı ekranda "Kalıcı sil" (arka plan işi) ile "Hard Delete" (menü) yan yana farklı adla geçiyor.
+- [x] **Sorun:** Türkçe panelde "Hard Delete", "Soft Delete", "Live Sync", "Sync" yazıyor. Aynı ekranda "Kalıcı sil" (arka plan işi) ile "Hard Delete" (menü) yan yana farklı adla geçiyor.
 - **Kanıt:** `lang/tr/sites.php` → `menu.soft_delete`, `menu.hard_delete`, `menu.sync`, `live.sync`, `live.confirm_title`, `danger.lede`, `danger.hard_confirm*`, `flash.live_sync_get`.
 - **Yapılacak:** Türkçe karşılıklar: Arşivle, Kalıcı sil, Canlı kontrol, Senkron. Onay ve açıklama metinleri aynı kelimeleri kullansın.
 - **Kabul:** `lang/tr` içinde bu dört İngilizce etiket kalmaz, ilgili testler çeviri anahtarıyla doğrular.
@@ -52,7 +52,7 @@
 - **Kabul:** Çubukta en fazla 6 üst düzey kontrol kalır, tüm aksiyonlar ve onayları çalışır.
 
 ### U7 · Liste satırında boş düzeltme menüsü
-- [ ] **Sorun:** Sorunsuz her satırda da "Uygulama düzeltmeleri" menüsü duruyor, açınca "Sorun yok" yazıyor. 25 satırda 25 anlamsız düğme.
+- [x] **Sorun:** Sorunsuz her satırda da "Uygulama düzeltmeleri" menüsü duruyor, açınca "Sorun yok" yazıyor. 25 satırda 25 anlamsız düğme.
 - **Kanıt:** `sites/_region.blade.php` → `@can('update')` altında menü, `$rowFixes === []` dalı yalnız etiket gösteriyor.
 - **Yapılacak:** Düzeltme yoksa menüyü render etme.
 - **Kabul:** Sorunsuz satırda menü yok, sorunlu satırda aynen var.

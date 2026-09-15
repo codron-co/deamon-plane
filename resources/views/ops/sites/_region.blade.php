@@ -92,8 +92,9 @@
                                     @php
                                         $rowFixes = \App\Services\Sites\SiteAppHealthFixer::orderedUniqueFixes($appHealth);
                                     @endphp
-                                    @can('update', $site)
-                                        <details class="ops-action-menu ops-action-menu-compact" data-ops-action-menu data-row-action>
+                                    {{-- A menu that only says "no issues" on every healthy row is noise; show it where there is a fix. --}}
+                                    @if ($rowFixes !== [] && (auth()->user()?->can('update', $site) ?? false))
+                                        <details class="ops-action-menu ops-action-menu-compact" data-ops-action-menu data-row-action data-row-fix-menu>
                                             <summary
                                                 class="btn btn-ghost btn-sm"
                                                 aria-label="{{ __('sites.app_health.fix_menu', ['name' => $site->name]) }}"
@@ -155,7 +156,7 @@
                                                 @endif
                                             </div>
                                         </details>
-                                    @endcan
+                                    @endif
                                     <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
                                     @can('update', $site)
                                         <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.edit', $site) }}">{{ __('ops.actions.edit') }}</a>
