@@ -18,7 +18,7 @@
 - **Kabul:** Hatalı gönderimde sayfa yeniden yüklenir, hata ilgili alanın altında görünür, girilen değerler korunur.
 
 ### U2 · Site detay sayfası açılırken Coolify'ı bekliyor
-- [ ] **Sorun:** Altyapı sekmesindeki Coolify kartı, şablon render edilirken Coolify API'ye senkron çağrı yapıyor. Coolify yavaşsa veya kısıtlıyorsa detay sayfası o kadar gecikiyor. B6'da admin paneli için çözülen sorunun aynısı.
+- [x] **Sorun:** Altyapı sekmesindeki Coolify kartı, şablon render edilirken Coolify API'ye senkron çağrı yapıyor. Coolify yavaşsa veya kısıtlıyorsa detay sayfası o kadar gecikiyor. B6'da admin paneli için çözülen sorunun aynısı.
 - **Kanıt:** `sites/_coolify-ops.blade.php` → `@php` içinde `CoolifyDeploySettings::snapshot($site)`.
 - **Yapılacak:** Kartı fragment uç noktasından sekme ilk açıldığında yükle (B6 deseni). Sayfa GET'i Coolify'a istek atmasın.
 - **Kabul:** Detay GET'i Coolify'a istek göndermez. Fragment oto-deploy, pin durumu ve hata durumunu döndürür.

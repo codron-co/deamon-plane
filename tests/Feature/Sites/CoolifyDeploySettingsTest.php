@@ -138,7 +138,7 @@ class CoolifyDeploySettingsTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->operator())
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.coolify-ops.panel', $site))
             ->assertOk()
             ->assertSee('deadbeef', false)
             ->assertSee(__('site_ops.pin.follow_button'), false)
@@ -153,7 +153,9 @@ class CoolifyDeploySettingsTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/pin"/', $html);
         $this->assertDoesNotMatchRegularExpression('/href="[^"]*\/sites\/[^"\/]+\/deploy"/', $html);
         $this->assertStringContainsString(route('ops.sites.deploy', $site), $html);
-        $this->assertStringContainsString(__('sites.menu.deploy'), $html);
+        // The header Deploy menu lives on the page itself, not in the card fragment.
+        $page = (string) $this->actingAs($this->operator())->get(route('ops.sites.show', $site))->assertOk()->getContent();
+        $this->assertStringContainsString(__('sites.menu.deploy'), $page);
         $this->assertStringContainsString(__('site_ops.redeploy.button'), $html);
     }
 
@@ -166,7 +168,7 @@ class CoolifyDeploySettingsTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->operator())
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.coolify-ops.panel', $site))
             ->assertOk()
             ->getContent();
 
@@ -194,7 +196,7 @@ class CoolifyDeploySettingsTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->operator())
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.coolify-ops.panel', $site))
             ->assertOk()
             ->getContent();
 
@@ -284,7 +286,7 @@ class CoolifyDeploySettingsTest extends TestCase
         ]);
 
         $this->actingAs($this->operator())
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.coolify-ops.panel', $site))
             ->assertOk()
             ->assertSee(__('site_ops.auto_deploy.status_on'), false)
             ->assertSee(__('site_ops.auto_deploy.off_button'), false)
@@ -308,7 +310,7 @@ class CoolifyDeploySettingsTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->operator())
-            ->get(route('ops.sites.show', $site))
+            ->get(route('ops.sites.coolify-ops.panel', $site))
             ->assertOk()
             ->assertSee(__('site_ops.auto_deploy.status_unknown'), false)
             ->assertSee(__('site_ops.auto_deploy.on_button'), false)
@@ -319,6 +321,37 @@ class CoolifyDeploySettingsTest extends TestCase
         $this->assertStringContainsString(route('ops.sites.follow-head', $site), $html);
         $this->assertStringContainsString(route('ops.sites.pin', $site), $html);
         $this->assertStringContainsString(route('ops.sites.deploy', $site), $html);
+    }
+
+    public function test_detail_page_does_not_call_coolify_and_points_at_the_card_panel(): void
+    {
+        $site = $this->site();
+
+        Http::fake();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee('data-lazy-url="'.route('ops.sites.coolify-ops.panel', $site).'"', false)
+            ->assertSee(__('sites.detail.panel_loading'), false);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_card_panel_reports_a_coolify_failure_inside_the_card(): void
+    {
+        $site = $this->site();
+
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response(['message' => 'Too Many Attempts.'], 500),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.coolify-ops.panel', $site))
+            ->assertOk()
+            ->assertSee('id="coolify-ops-heading"', false)
+            ->assertSee('role="alert"', false)
+            ->assertDontSee('<html', false);
     }
 
     /**

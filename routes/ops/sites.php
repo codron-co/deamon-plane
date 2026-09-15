@@ -37,6 +37,7 @@ Route::get('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'redirectG
 Route::post('/sites/bulk/app-health-fix', [SiteAppHealthController::class, 'bulkFix'])->name('ops.sites.bulk.app-health-fix');
 Route::post('/sites/bulk/agent-secret', [SiteController::class, 'bulkInjectAgentSecret'])->name('ops.sites.bulk.agent-secret');
 Route::post('/sites/bulk/purge', [SiteCoolifyOpsController::class, 'bulkPurge'])->name('ops.sites.bulk.purge');
+Route::get('/sites/{site}/coolify-ops/panel', [SiteCoolifyOpsController::class, 'panel'])->name('ops.sites.coolify-ops.panel');
 Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateCompose'])->name('ops.sites.compose');
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
 Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');

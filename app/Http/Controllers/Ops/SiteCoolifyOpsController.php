@@ -23,11 +23,42 @@ use App\Services\Sites\SiteLiveProbe;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Throwable;
 
 class SiteCoolifyOpsController extends Controller
 {
     use QueuesOpsJob;
+
+    /**
+     * The Coolify ops card for the site detail page. Loaded after the page so a slow
+     * or throttling Coolify never holds the detail page open.
+     */
+    public function panel(Request $request, Site $site, CoolifyDeploySettings $settings): Response
+    {
+        $this->authorize('view', $site);
+
+        $canOps = $request->user()?->can('update', $site) ?? false;
+        $snapshot = [];
+        if (filled($site->coolify_app_uuid) && ($canOps || $site->hasDockerfileBuildPackWarning())) {
+            try {
+                $snapshot = $settings->snapshot($site);
+            } catch (Throwable $exception) {
+                $snapshot = ['error' => $exception->getMessage()];
+            }
+        }
+
+        return response()->view('ops.sites._coolify-ops-body', [
+            'site' => $site,
+            'snapshot' => $snapshot,
+            'deployments' => $site->deployments()
+                ->orderByDesc('started_at')
+                ->orderByDesc('id')
+                ->limit(25)
+                ->get(),
+        ]);
+    }
 
     public function migrateCompose(Request $request, Site $site, ComposePackMigrator $migrator): RedirectResponse
     {

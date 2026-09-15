@@ -278,4 +278,5 @@
     <script src="{{ asset('js/sites-cloudflare.js') }}?v={{ filemtime(public_path('js/sites-cloudflare.js')) }}" defer></script>
     <script src="{{ asset('js/sites-landing.js') }}?v={{ filemtime(public_path('js/sites-landing.js')) }}" defer></script>
     <script src="{{ asset('js/sites-admins.js') }}?v={{ filemtime(public_path('js/sites-admins.js')) }}" defer></script>
+    <script src="{{ asset('js/ops-lazy-panels.js') }}?v={{ filemtime(public_path('js/ops-lazy-panels.js')) }}" defer></script>
 @endsection
