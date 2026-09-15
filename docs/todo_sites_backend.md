@@ -18,7 +18,7 @@
 - **Kabul:** Takma ad + www satırları silinir, DNS kayıt DELETE'i gider, Coolify PATCH listesinde host yok, deploy tetiklenir. Birincil için 422. Viewer 403.
 
 ### B2 · Düzenleme formundan kaldırılan takma ad Cloudflare'de kalıyor
-- [ ] **Sorun:** `SiteDomainSync::sync` yalnız `site_domains` satırını siliyor. DNS A kaydı yayında kalıyor.
+- [x] **Sorun:** `SiteDomainSync::sync` yalnız `site_domains` satırını siliyor. DNS A kaydı yayında kalıyor.
 - **Kanıt:** `app/Services/Sites/SiteDomainSync.php` → `whereNotIn('domain', $keep)->delete()`, Cloudflare çağrısı yok.
 - **Yapılacak:** Silinen hostları döndür, B1'deki DNS temizleme servisiyle kaldır.
 - **Kabul:** Formdan takma ad çıkarılınca ilgili `dns_records` DELETE'i gönderilir.

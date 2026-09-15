@@ -771,8 +771,9 @@ class SiteController extends Controller
         $previousMailServerId = $site->mail_server_id;
         $previousDomain = $site->primary_domain;
         $previousHosts = $site->operatorHosts();
+        $removedHosts = [];
 
-        DB::transaction(function () use ($request, $site, $data, $domains): void {
+        DB::transaction(function () use ($request, $site, $data, $domains, &$removedHosts): void {
             $before = $this->auditSnapshot($site);
             $domainChanged = $site->primary_domain !== $data['domain'];
 
@@ -801,6 +802,7 @@ class SiteController extends Controller
             $site->save();
 
             $domains->sync($site, $data['domain'], $data['aliases'] ?? []);
+            $removedHosts = $domains->lastRemoved;
 
             $after = $this->auditSnapshot($site->fresh() ?? $site);
 
@@ -826,6 +828,13 @@ class SiteController extends Controller
         $site->refresh();
         $message = (string) __('sites.flash.updated');
         $error = null;
+
+        // Rows dropped from the form still have Cloudflare A records; release them
+        // (best effort: the Plane change already landed).
+        $dnsError = $landing->releaseHostDns($site, $removedHosts);
+        if ($dnsError !== null) {
+            $error = __('sites.flash.domain_removed_partial', ['reason' => $dnsError]);
+        }
 
         // The form is desired state, but a host list change must reach Cloudflare and
         // Coolify like the detail-page Add domain does — otherwise the alias only exists in Plane.

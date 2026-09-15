@@ -213,6 +213,67 @@ class SiteLandingFlowTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'site.redeployed', 'subject_id' => $site->id]);
     }
 
+    public function test_edit_form_alias_removal_releases_cloudflare_records(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'cloudflare_zone_id' => 'zone-existing',
+            'cloudflare_zone_status' => 'active',
+            'coolify_app_uuid' => 'coolify-app-1',
+            'coolify_server_uuid' => 'srv_test',
+            'status' => SiteStatus::Active,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+            ['domain' => 'shop.izyem.test'],
+            ['domain' => 'www.shop.izyem.test', 'is_www' => true],
+        ]);
+
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            if (str_contains($url, 'api.cloudflare.com')) {
+                if ($request->method() === 'GET' && str_contains($url, '/dns_records')) {
+                    $name = (string) ($request->data()['name'] ?? '');
+                    $ids = ['shop.izyem.test' => 'rec-shop', 'www.shop.izyem.test' => 'rec-www-shop'];
+
+                    return Http::response([
+                        'success' => true,
+                        'result' => isset($ids[$name]) ? [['id' => $ids[$name], 'type' => 'A', 'name' => $name, 'content' => '72.62.117.147']] : [],
+                    ], 200);
+                }
+
+                return $this->cloudflareResponse($request, zonesByName: [
+                    'izyem.test' => $this->zonePayload('zone-existing', 'izyem.test', 'active'),
+                ]);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->put(route('ops.sites.update', $site), [
+                'slug' => 'izyem',
+                'name' => 'Izyem',
+                'domain' => 'izyem.test',
+                'aliases' => [],
+                'channel' => 'beta',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionMissing('error')
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $this->assertFalse($site->domains()->where('domain', 'shop.izyem.test')->exists());
+
+        foreach (['rec-shop', 'rec-www-shop'] as $recordId) {
+            Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+                && str_ends_with($request->url(), '/zones/zone-existing/dns_records/'.$recordId));
+        }
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && preg_match('#/zones/[^/]+$#', $request->url()) === 1);
+    }
+
     public function test_edit_form_without_host_change_does_not_redeploy(): void
     {
         $site = $this->draftSite([
