@@ -6,6 +6,7 @@ use App\Models\PlatformMailSetting;
 use App\Models\Site;
 use App\Services\Agent\Concerns\RetriesThrottledAgentRequests;
 use App\Services\Agent\ControlPlaneAgentContract;
+use App\Services\Sites\SitePlaneAllowlistHeal;
 use App\Support\ControlPlaneAgentSignature;
 use App\Support\PublicAppUrl;
 use Illuminate\Http\Client\ConnectionException;
@@ -91,8 +92,22 @@ final class PlatformMailConfigurer
         }
 
         if ($response->failed()) {
+            $failure = $response->json();
+            $cmsMessage = is_array($failure) && is_string($failure['message'] ?? null) ? trim($failure['message']) : null;
             $this->logFailure($site, 'http_error', $response->status());
-            $this->recordPushOutcome($site, 'http_'.$response->status());
+            if ($cmsMessage !== null) {
+                Log::warning('Platform mail configure rejected', [
+                    'site_id' => $site->id,
+                    'http_status' => $response->status(),
+                    'cms_message' => mb_substr($cmsMessage, 0, 300),
+                ]);
+            }
+
+            $allowlist = SitePlaneAllowlistHeal::isAllowlistRejection($cmsMessage);
+            $this->recordPushOutcome($site, 'http_'.$response->status().($allowlist ? '_allowlist' : ''));
+            if ($allowlist) {
+                app(SitePlaneAllowlistHeal::class)->prepare($site);
+            }
 
             return SiteMailConfigureResult::failure(
                 'Platform mail configure returned HTTP '.$response->status().'.',

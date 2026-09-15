@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Sites;
 
+use App\Enums\Channel;
+use App\Enums\CoolifyEnvKind;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Models\CoolifyConnection;
+use App\Models\CoolifyEnvDefault;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\User;
@@ -378,6 +381,39 @@ class SiteAppHealthTest extends TestCase
             ->post(route('ops.sites.auto-deploy', $site), ['enabled' => '1'])
             ->assertRedirect()
             ->assertSessionHas('error');
+    }
+
+    public function test_live_inspect_flags_a_stale_site_value_but_never_compares_secrets(): void
+    {
+        config(['app.url' => 'https://plane.example.com']);
+        $site = $this->composeSite();
+        foreach (Channel::cases() as $channel) {
+            CoolifyEnvDefault::query()->updateOrCreate(['channel' => $channel->value, 'key' => 'CONTROL_PLANE_HOST_ALLOWLIST'], ['kind' => CoolifyEnvKind::Site, 'value' => '{{plane.host}}', 'is_secret' => false, 'sort' => 10]);
+            CoolifyEnvDefault::query()->updateOrCreate(['channel' => $channel->value, 'key' => 'APP_KEY'], ['kind' => CoolifyEnvKind::Site, 'value' => '{{site.app_key}}', 'is_secret' => true, 'sort' => 20]);
+        }
+
+        Http::fake(function (Request $request) {
+            if ($request->method() === 'GET' && str_ends_with($request->url(), '/applications/'.self::APP)) {
+                return Http::response(['uuid' => self::APP, 'build_pack' => 'dockercompose', 'docker_compose_location' => '/docker-compose.coolify.yml'], 200);
+            }
+            if ($request->method() === 'GET' && str_contains($request->url(), '/envs')) {
+                return Http::response([
+                    ['key' => 'CONTROL_PLANE_HOST_ALLOWLIST', 'value' => 'old-plane.example.com'],
+                    ['key' => 'APP_KEY', 'value' => 'base64:a-different-key'],
+                    ['key' => 'CONTROL_PLANE_AGENT_SECRET', 'value' => 'plane-agent-secret'],
+                ], 200);
+            }
+
+            return Http::response(['error' => 'unexpected'], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.sites.app-health', $site))
+            ->assertOk();
+
+        $codes = collect($site->fresh()->appHealth()->issues)->map(fn ($issue) => $issue->code.'|'.($issue->key ?? ''))->all();
+        $this->assertContains('wrong_env|CONTROL_PLANE_HOST_ALLOWLIST', $codes);
+        $this->assertNotContains('wrong_env|APP_KEY', $codes);
     }
 
     private function composeSite(): Site

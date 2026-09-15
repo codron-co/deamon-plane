@@ -118,6 +118,7 @@ return [
         'needs_secret' => 'Atama kaydedildi. CMS eklentisi için site agent secret basılmalı.',
         'configure_failed' => 'Atama kaydedildi ama CMS yapılandırma çağrısı başarısız oldu.',
         'configure_queued' => 'CMS’e aktarım arka planda yapılıyor; sonucu bu bölümdeki rozet gösterir.',
+        'allowlist_redeploy_queued' => 'Plane host’u sitenin Coolify env’ine yazıldı ve yeniden deploy kuyruğa alındı. Deploy bitince mail ayarları otomatik gönderilecek.',
         'request_fulfilled' => ':email talebi karşılandı olarak işaretlendi.',
         'request_rejected' => ':email talebi reddedildi.',
         'request_already_handled' => ':email talebi zaten işlenmiş (:status). Değişiklik yapılmadı.',
@@ -125,6 +126,10 @@ return [
     'none' => 'Yok',
     'configure_state' => [
         'configured' => 'CMS’e aktarıldı',
+        'allowlist_hint' => 'CMS, Plane host’unu (:host) izin listesinde bulamadı. Plane bu değeri sitenin Coolify env’ine (CONTROL_PLANE_HOST_ALLOWLIST) yazar; CMS onu yalnız yeniden deploy sonrası okur.',
+        'resend_with_redeploy' => 'Env’i eşitle ve yeniden deploy et',
+        'resend_with_redeploy_confirm' => ':name için Coolify env’i katalogla eşitlenip uygulama yeniden deploy edilsin mi? Site kısa süre yeniden başlar. Deploy bitince mail ayarları otomatik gönderilir.',
+        'pending_after_deploy' => 'Deploy bitince mail ayarları otomatik yeniden gönderilecek.',
         'cms_said' => 'CMS yanıtı: :message',
         'failed' => 'CMS aktarımı başarısız',
         'not_pushed' => 'CMS’e henüz aktarılmadı',

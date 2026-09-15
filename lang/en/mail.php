@@ -118,6 +118,7 @@ return [
         'needs_secret' => 'Mail assignment saved. Inject the site agent secret before the CMS plugin can be enabled.',
         'configure_failed' => 'Mail assignment saved, but the CMS configure call failed.',
         'configure_queued' => 'The CMS push runs in the background; the chip in this section shows the outcome.',
+        'allowlist_redeploy_queued' => 'The Plane host was written to the site Coolify env and a redeploy is queued. Mail settings are pushed again when it finishes.',
         'request_fulfilled' => 'Marked :email as fulfilled.',
         'request_rejected' => 'Rejected the request for :email.',
         'request_already_handled' => ':email request was already handled (:status). Nothing changed.',
@@ -125,6 +126,10 @@ return [
     'none' => 'None',
     'configure_state' => [
         'configured' => 'Pushed to CMS',
+        'allowlist_hint' => 'The CMS did not find the Plane host (:host) on its allowlist. Plane writes it to the site Coolify env (CONTROL_PLANE_HOST_ALLOWLIST); the CMS reads it only after a redeploy.',
+        'resend_with_redeploy' => 'Sync env and redeploy',
+        'resend_with_redeploy_confirm' => 'Sync the Coolify env for :name with the catalog and redeploy? The site restarts briefly. Mail settings are pushed again when the deploy finishes.',
+        'pending_after_deploy' => 'Mail settings will be pushed again when the deploy finishes.',
         'cms_said' => 'CMS said: :message',
         'failed' => 'CMS push failed',
         'not_pushed' => 'Not pushed to CMS yet',

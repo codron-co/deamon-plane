@@ -218,7 +218,7 @@ class SiteAppHealthInspector
     {
         $issues = [];
 
-        [$required, $statics] = $this->catalogExpectations($site);
+        [$required, $statics, $siteRows] = $this->catalogExpectations($site);
 
         foreach ($required as $key) {
             if ($this->isBlank($envs[$key] ?? null) || $this->isPlaceholder($envs[$key] ?? null)) {
@@ -236,6 +236,18 @@ class SiteAppHealthInspector
             }
         }
 
+        // A filled site-kind value can still be stale (e.g. CONTROL_PLANE_HOST_ALLOWLIST written
+        // for another Plane host), which the CMS enforces. Secrets are never compared here:
+        // syncing a "fixed" APP_KEY would make encrypted data unreadable.
+        $envSync = app(CoolifyAppEnvSync::class);
+        foreach ($siteRows as $row) {
+            $current = trim((string) ($envs[$row->key] ?? ''));
+            $expected = $envSync->expectedSiteValue($site, $row);
+            if ($current !== '' && $expected !== null && $expected !== '' && $current !== $expected) {
+                $issues[] = new SiteAppHealthIssue('wrong_env', 'sync_env', (string) $row->key);
+            }
+        }
+
         if ($site->hasAgentSecret()) {
             $secret = trim((string) ($envs['CONTROL_PLANE_AGENT_SECRET'] ?? ''));
             if ($secret === '' || $this->isPlaceholder($secret)) {
@@ -250,12 +262,13 @@ class SiteAppHealthInspector
      * Required keys + static expectations from the channel catalog (CMS `.env.production.example`).
      * Without a synced catalog the compose secrets stay required.
      *
-     * @return array{0: list<string>, 1: array<string, string>}
+     * @return array{0: list<string>, 1: array<string, string>, 2: list<CoolifyEnvDefault>}
      */
     private function catalogExpectations(Site $site): array
     {
         $required = [];
         $statics = [];
+        $siteRows = [];
 
         try {
             $channel = app(CoolifyAppEnvSync::class)->channelFor($site);
@@ -273,6 +286,9 @@ class SiteAppHealthInspector
                 $required[] = (string) $row->key;
             } elseif ($row->kind === CoolifyEnvKind::Site && $row->key !== 'CONTROL_PLANE_AGENT_SECRET') {
                 $required[] = (string) $row->key;
+                if (! $row->is_secret) {
+                    $siteRows[] = $row;
+                }
             } elseif ($row->kind === CoolifyEnvKind::Static && filled($row->value)) {
                 $statics[(string) $row->key] = (string) $row->value;
             }
@@ -282,7 +298,7 @@ class SiteAppHealthInspector
             $required = self::COMPOSE_REQUIRED_FALLBACK;
         }
 
-        return [array_values(array_unique($required)), $statics];
+        return [array_values(array_unique($required)), $statics, $siteRows];
     }
 
     /**

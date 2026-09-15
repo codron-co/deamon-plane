@@ -5,12 +5,17 @@ namespace App\Services\Coolify;
 use App\Enums\Channel;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
+use App\Enums\SiteStatus;
 use App\Jobs\ThemeSyncAfterDeployJob;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\SiteThemeInstallation;
 use App\Services\Coolify\Dto\CoolifyDeployment;
+use App\Services\Mail\PlatformNotificationCatalog;
+use App\Services\Mail\PlatformOpsMailer;
 use App\Services\Sites\DeploymentFailureText;
+use App\Services\Sites\SiteAppHealthInspector;
+use App\Services\Sites\SitePlaneAllowlistHeal;
 
 class CoolifyDeploymentSync
 {
@@ -181,9 +186,9 @@ class CoolifyDeploymentSync
 
         if ($becameFailed) {
             try {
-                app(\App\Services\Mail\PlatformOpsMailer::class)->send(
+                app(PlatformOpsMailer::class)->send(
                     $site,
-                    \App\Services\Mail\PlatformNotificationCatalog::DEPLOY_FAILED,
+                    PlatformNotificationCatalog::DEPLOY_FAILED,
                     'Deploy başarısız',
                     sprintf(
                         "%s deploy failed.\n%s\nPlane: %s",
@@ -199,6 +204,7 @@ class CoolifyDeploymentSync
 
         if ($becameFinished) {
             $this->dispatchDeferredThemeSync($site);
+            app(SitePlaneAllowlistHeal::class)->pushAfterDeploy($site);
         }
 
         if ($becameFinished || $effective === DeploymentStatus::Finished) {
@@ -206,7 +212,7 @@ class CoolifyDeploymentSync
         }
 
         try {
-            app(\App\Services\Sites\SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);
+            app(SiteAppHealthInspector::class)->refreshLocalCached($site->fresh() ?? $site);
         } catch (\Throwable) {
             // App health cache refresh must not break deploy sync.
         }
@@ -222,17 +228,17 @@ class CoolifyDeploymentSync
     public function recoverSiteIfLatestFinished(Site $site): void
     {
         $site->refresh();
-        if ($site->status !== \App\Enums\SiteStatus::Error) {
+        if ($site->status !== SiteStatus::Error) {
             return;
         }
 
-        $latest = app(\App\Services\Sites\SiteAppHealthInspector::class)->latestDeployment($site);
+        $latest = app(SiteAppHealthInspector::class)->latestDeployment($site);
         if ($latest === null || $latest->status !== DeploymentStatus::Finished) {
             return;
         }
 
-        if ($site->canTransitionTo(\App\Enums\SiteStatus::Active)) {
-            $site->transitionTo(\App\Enums\SiteStatus::Active);
+        if ($site->canTransitionTo(SiteStatus::Active)) {
+            $site->transitionTo(SiteStatus::Active);
             $site->save();
         }
     }

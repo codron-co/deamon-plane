@@ -8,6 +8,7 @@ use App\Models\MailServer;
 use App\Models\Site;
 use App\Services\Agent\Concerns\RetriesThrottledAgentRequests;
 use App\Services\Agent\ControlPlaneAgentContract;
+use App\Services\Sites\SitePlaneAllowlistHeal;
 use App\Support\ControlPlaneAgentSignature;
 use App\Support\PublicAppUrl;
 use Illuminate\Http\Client\ConnectionException;
@@ -113,6 +114,10 @@ class SiteMailConfigurer
                 'cms_message' => $cmsMessage,
             ]);
             $this->recordOutcome($site, 'http_'.$response->status(), $cmsMessage);
+
+            if (SitePlaneAllowlistHeal::isAllowlistRejection($cmsMessage)) {
+                app(SitePlaneAllowlistHeal::class)->prepare($site);
+            }
 
             return SiteMailConfigureResult::failure(
                 $cmsMessage !== null

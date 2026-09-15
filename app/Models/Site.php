@@ -76,6 +76,7 @@ class Site extends Model
         'mail_configure_failed_at',
         'mail_configure_error',
         'mail_configure_message',
+        'mail_push_after_deploy',
         'platform_notification_overrides',
         'platform_mail_recipient',
         'platform_mail_pushed_at',
@@ -129,6 +130,7 @@ class Site extends Model
             'platform_mail_push_failed_at' => 'datetime',
             'mail_configured_at' => 'datetime',
             'mail_configure_failed_at' => 'datetime',
+            'mail_push_after_deploy' => 'boolean',
             'last_health_notify_at' => 'datetime',
         ];
     }

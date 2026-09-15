@@ -54,6 +54,17 @@
             @endif
         </p>
     @endif
+    @php
+        $allowlistRejected = $configureState === 'failed'
+            && \App\Services\Sites\SitePlaneAllowlistHeal::isAllowlistRejection($site->mail_configure_message)
+            && filled($site->coolify_app_uuid);
+    @endphp
+    @if ($allowlistRejected)
+        <p class="site-note" data-mail-allowlist-hint>{{ __('mail.configure_state.allowlist_hint', ['host' => (string) parse_url(\App\Support\PublicAppUrl::forAgents(), PHP_URL_HOST)]) }}</p>
+    @endif
+    @if ($site->mail_push_after_deploy)
+        <p class="site-note" data-mail-push-after-deploy>{{ __('mail.configure_state.pending_after_deploy') }}</p>
+    @endif
 
     @if ($canEditMail)
         @php($selectedMailId = (string) old('mail_server_id', $site->mail_server_id))
@@ -125,9 +136,20 @@
                 <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('mail.boxes.refresh') }}</button>
             </form>
             @if (in_array($configureState, ['failed', 'not_pushed'], true))
-                <form method="POST" action="{{ route('ops.sites.mail-configure', $site) }}" data-ops-pending data-mail-configure-resend>
+                <form
+                    method="POST"
+                    action="{{ route('ops.sites.mail-configure', $site) }}"
+                    data-ops-pending
+                    data-mail-configure-resend
+                    @if ($allowlistRejected)
+                        data-confirm="{{ __('mail.configure_state.resend_with_redeploy_confirm', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('mail.configure_state.resend_with_redeploy') }}"
+                        data-confirm-label="{{ __('mail.configure_state.resend_with_redeploy') }}"
+                        data-confirm-danger="false"
+                    @endif
+                >
                     @csrf
-                    <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('mail.configure_state.resend') }}</button>
+                    <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ $allowlistRejected ? __('mail.configure_state.resend_with_redeploy') : __('mail.configure_state.resend') }}</button>
                 </form>
             @endif
         @endif

@@ -31,6 +31,8 @@ use App\Services\Mail\SiteMailOrderBinder;
 use App\Services\Mail\SiteMailOrderBindResult;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
+use App\Services\Sites\ComposePackException;
+use App\Services\Sites\CoolifyDeploySettings;
 use App\Services\Sites\SiteAgentSecretInjector;
 use App\Services\Sites\SiteAgentSecretSweep;
 use App\Services\Sites\SiteAppHealthFixer;
@@ -39,6 +41,7 @@ use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLifecycleException;
+use App\Services\Sites\SitePlaneAllowlistHeal;
 use App\Services\Sites\SitePrimaryDomain;
 use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
@@ -588,7 +591,8 @@ class SiteController extends Controller
     }
 
     /**
-     * Re-push the mail binding to the CMS after a failed or missing configure.
+     * Re-push the mail binding to the CMS. When the CMS rejected Plane's host, the CMS env is
+     * stale and read only at boot: write it, redeploy, and push again when the deploy finishes.
      */
     public function resendMailConfigure(Request $request, Site $site, SiteMailConfigurer $configurer): RedirectResponse
     {
@@ -598,6 +602,29 @@ class SiteController extends Controller
             return redirect()
                 ->route('ops.sites.show', $site)
                 ->with('error', __('mail.flash.needs_secret'));
+        }
+
+        if (SitePlaneAllowlistHeal::isAllowlistRejection($site->mail_configure_message) && filled($site->coolify_app_uuid)) {
+            $keys = app(SitePlaneAllowlistHeal::class)->prepare($site);
+
+            try {
+                app(CoolifyDeploySettings::class)->redeploy($site, $request->user(), $request->ip());
+            } catch (ComposePackException $exception) {
+                return redirect()
+                    ->route('ops.sites.show', $site)
+                    ->with('error', $exception->getMessage());
+            }
+
+            $site->auditLogs()->create([
+                'actor_user_id' => $request->user()?->id,
+                'action' => 'site.mail_allowlist_healed',
+                'after' => ['env_keys' => $keys],
+                'ip' => $request->ip(),
+            ]);
+
+            return redirect()
+                ->route('ops.sites.show', $site)
+                ->with('status', __('mail.flash.allowlist_redeploy_queued'));
         }
 
         $configurer->queue($site);

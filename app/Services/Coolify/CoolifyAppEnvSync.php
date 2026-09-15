@@ -271,6 +271,16 @@ class CoolifyAppEnvSync
     }
 
     /**
+     * The value the catalog expects for a site-kind row on this site, or null when unresolvable.
+     */
+    public function expectedSiteValue(Site $site, CoolifyEnvDefault $row): ?string
+    {
+        return $row->kind === CoolifyEnvKind::Site
+            ? $this->interpolate($site, (string) ($row->value ?? ''))
+            : null;
+    }
+
+    /**
      * `{{site.*}}` / `{{plane.*}}` tokens from the CMS example → live values.
      */
     private function interpolate(Site $site, string $template): ?string
