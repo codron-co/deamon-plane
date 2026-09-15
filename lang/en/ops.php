@@ -14,6 +14,7 @@ return [
         'mail' => 'Mail',
         'mail_servers' => 'Mail servers',
         'platform_mail' => 'Product mail',
+        'deskron' => 'DeskRon support',
         'themes' => 'Themes',
         'settings' => 'Settings',
     ],

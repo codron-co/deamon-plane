@@ -14,6 +14,7 @@ return [
         'mail' => 'Posta',
         'mail_servers' => 'Posta sunucuları',
         'platform_mail' => 'Yazılım maili',
+        'deskron' => 'DeskRon destek',
         'themes' => 'Temalar',
         'settings' => 'Sistem',
     ],

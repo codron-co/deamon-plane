@@ -103,6 +103,10 @@
                         {{ __('ops.nav.platform_mail') }}
                     </a>
                 </div>
+                <a class="ops-nav-item {{ request()->routeIs('ops.deskron*') ? 'is-active' : '' }}" href="{{ route('ops.deskron.edit') }}">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 7.5a5 5 0 0 1 10 0v2.5a1.5 1.5 0 0 1-1.5 1.5H11V8h2M3 8h2v3.5H4.5A1.5 1.5 0 0 1 3 10V7.5Zm8 4v.5a1.5 1.5 0 0 1-1.5 1.5H8" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    {{ __('ops.nav.deskron') }}
+                </a>
                 <a class="ops-nav-item {{ request()->routeIs('ops.themes*') ? 'is-active' : '' }}" href="{{ route('ops.themes') }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10v9H3v-9Zm2 3h6M5 9h4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
                     {{ __('ops.nav.themes') }}

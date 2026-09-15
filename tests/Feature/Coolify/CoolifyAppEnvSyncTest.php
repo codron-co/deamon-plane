@@ -3,9 +3,11 @@
 namespace Tests\Feature\Coolify;
 
 use App\Enums\Channel;
+use App\Enums\CoolifyEnvKind;
 use App\Enums\SiteStatus;
 use App\Models\CoolifyEnvDefault;
 use App\Models\CoolifySetting;
+use App\Models\DeskronSetting;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
@@ -172,6 +174,56 @@ class CoolifyAppEnvSyncTest extends TestCase
         Http::assertSent(fn (Request $request): bool => ($this->bulkMap($request)['FEATURE_FLAG'] ?? null) === 'on');
     }
 
+    public function test_deskron_rows_are_written_from_the_plane_setting(): void
+    {
+        $this->deskronCatalogRows();
+        DeskronSetting::query()->create([
+            'application_id' => '01KDESKRONAPP',
+            'api_key' => 'dsk_master_key',
+            'webhook_secret' => 'whsec_value',
+        ]);
+
+        $site = $this->site();
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => 'filled-db-password-value-xx'],
+            ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => 'filled-root-password-value-xx'],
+        ]);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('DESKRON_API_KEY', $keys);
+        $this->assertContains('DESKRON_APPLICATION_ID', $keys);
+        $this->assertContains('DESKRON_WEBHOOK_SECRET', $keys);
+        Http::assertSent(function (Request $request): bool {
+            $map = $this->bulkMap($request);
+
+            return ($map['DESKRON_API_KEY'] ?? null) === 'dsk_master_key'
+                && ($map['DESKRON_APPLICATION_ID'] ?? null) === '01KDESKRONAPP'
+                && ($map['DESKRON_WEBHOOK_SECRET'] ?? null) === 'whsec_value';
+        });
+    }
+
+    public function test_unset_deskron_setting_keeps_a_value_already_on_the_site(): void
+    {
+        $this->deskronCatalogRows();
+
+        $site = $this->site();
+        $this->fakeEnvs([
+            ['key' => 'DESKRON_API_KEY', 'value' => 'dsk_set_by_hand', 'uuid' => 'env-deskron-key'],
+            ['key' => 'DESKRON_APPLICATION_ID', 'value' => 'HANDAPP', 'uuid' => 'env-deskron-app'],
+            ['key' => 'DB_PASSWORD', 'value' => 'filled-db-password-value-xx'],
+            ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => 'filled-root-password-value-xx'],
+        ]);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertNotContains('DESKRON_API_KEY', $keys);
+        $this->assertNotContains('DESKRON_APPLICATION_ID', $keys);
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && (str_contains($request->url(), '/envs/env-deskron-key') || str_contains($request->url(), '/envs/env-deskron-app')));
+        Http::assertNotSent(fn (Request $request): bool => array_key_exists('DESKRON_API_KEY', $this->bulkMap($request)));
+    }
+
     public function test_empty_catalog_without_github_credentials_writes_nothing(): void
     {
         CoolifyEnvDefault::query()->delete();
@@ -182,6 +234,20 @@ class CoolifyAppEnvSyncTest extends TestCase
 
         $this->assertSame([], $keys);
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH');
+    }
+
+    private function deskronCatalogRows(): void
+    {
+        foreach (['DESKRON_APPLICATION_ID' => 'application_id', 'DESKRON_API_KEY' => 'api_key', 'DESKRON_WEBHOOK_SECRET' => 'webhook_secret'] as $key => $token) {
+            CoolifyEnvDefault::query()->forChannel(Channel::Main)->where('key', $key)->delete();
+            CoolifyEnvDefault::factory()->create([
+                'channel' => Channel::Main,
+                'key' => $key,
+                'kind' => CoolifyEnvKind::Site,
+                'value' => '{{plane.deskron_'.$token.'}}',
+                'is_secret' => $key !== 'DESKRON_APPLICATION_ID',
+            ]);
+        }
     }
 
     /**
