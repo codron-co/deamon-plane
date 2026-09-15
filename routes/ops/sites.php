@@ -56,6 +56,9 @@ Route::post('/sites/{site}/provision', [SiteController::class, 'provision'])->na
 Route::post('/sites/{site}/cloudflare/zone', [SiteCloudflareController::class, 'store'])->name('ops.sites.cloudflare.zone');
 Route::post('/sites/{site}/cloudflare/dns', [SiteCloudflareController::class, 'confirmDns'])->name('ops.sites.cloudflare.dns');
 Route::post('/sites/{site}/domains', [SiteDomainController::class, 'store'])->name('ops.sites.domains.store');
+Route::delete('/sites/{site}/domains/{domain}', [SiteDomainController::class, 'destroy'])
+    ->scopeBindings()
+    ->name('ops.sites.domains.destroy');
 Route::post('/sites/{site}/channel', [SiteController::class, 'switchChannel'])->name('ops.sites.channel');
 Route::post('/sites/{site}/health', [SiteController::class, 'checkHealth'])->name('ops.sites.health');
 Route::post('/sites/{site}/publish-status', [SitePublishStatusController::class, 'update'])->name('ops.sites.publish-status');

@@ -10,6 +10,13 @@ use Illuminate\Validation\ValidationException;
 class SiteDomainSync
 {
     /**
+     * Hosts the last sync() dropped, so the caller can release their DNS.
+     *
+     * @var list<string>
+     */
+    public array $lastRemoved = [];
+
+    /**
      * @param  list<string>  $aliases
      */
     public function sync(Site $site, string $primary, array $aliases = []): void
@@ -47,6 +54,12 @@ class SiteDomainSync
         $this->assertAvailable($site, $wanted, $primaryHost, $aliases);
 
         $keep = array_keys($wanted);
+        $this->lastRemoved = $site->domains()
+            ->where('is_temporary', false)
+            ->whereNotIn('domain', $keep)
+            ->pluck('domain')
+            ->map(static fn (mixed $domain): string => (string) $domain)
+            ->all();
         $site->domains()
             ->where('is_temporary', false)
             ->whereNotIn('domain', $keep)
@@ -67,6 +80,44 @@ class SiteDomainSync
         $site->save();
         $site->unsetRelation('domains');
         $site->unsetRelation('primaryDomainRecord');
+    }
+
+    /**
+     * Remove an extra host and its www sibling. The primary host (and its www) stays:
+     * change the primary first.
+     *
+     * @return list<string> hosts whose rows were deleted
+     */
+    public function removeAlias(Site $site, string $host): array
+    {
+        $host = CloudflareHostname::normalize($host);
+        $primary = CloudflareHostname::normalize((string) $site->primary_domain);
+
+        if ($host === '' || $host === $primary || $host === CloudflareHostname::wwwHost($primary)) {
+            throw ValidationException::withMessages([
+                'domain' => __('sites.form.domain_primary_locked'),
+            ]);
+        }
+
+        // Removing "www.shop.x" alone would leave "shop.x" without the sibling every host gets.
+        $base = str_starts_with($host, 'www.') ? substr($host, 4) : $host;
+        $targets = array_values(array_unique([$base, CloudflareHostname::wwwHost($base)]));
+
+        $removed = $site->domains()
+            ->where('is_temporary', false)
+            ->whereIn('domain', $targets)
+            ->pluck('domain')
+            ->map(static fn (mixed $domain): string => (string) $domain)
+            ->all();
+
+        if ($removed === []) {
+            return [];
+        }
+
+        $site->domains()->where('is_temporary', false)->whereIn('domain', $removed)->delete();
+        $site->unsetRelation('domains');
+
+        return $removed;
     }
 
     public function addAlias(Site $site, string $alias): void

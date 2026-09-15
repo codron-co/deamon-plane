@@ -268,6 +268,60 @@ class CloudflareZoneService
         $client->deleteDnsRecord($zoneId, (string) $existing['id']);
     }
 
+    /**
+     * Delete the origin A record Plane wrote for each host. A host that is the apex of
+     * its zone only ever received the zone template, which belongs to the customer
+     * zone and is left alone, as is the zone itself and the `*` record.
+     *
+     * @param  list<string>  $hosts
+     * @return list<string> hosts whose record was deleted
+     */
+    public function removeHostRecords(CloudflareSetting $settings, array $hosts): array
+    {
+        $client = CloudflareClient::fromSettings($settings);
+        $accountId = trim((string) $settings->account_id);
+        $origin = $settings->resolvedOriginIpv4();
+        $removed = [];
+
+        foreach ($hosts as $host) {
+            // host(), not normalize(): normalize() drops a leading "www." and would look
+            // the apex record up twice, leaving every www sibling's A record behind.
+            $host = CloudflareHostname::host($host);
+            if ($host === '') {
+                continue;
+            }
+
+            try {
+                $zone = $this->findCoveringZone($client, $accountId, $host);
+                if ($zone === null) {
+                    continue;
+                }
+
+                $zoneName = (string) ($zone['name'] ?? '');
+                if (strcasecmp($host, $zoneName) === 0) {
+                    continue;
+                }
+
+                $existing = $this->findExisting(
+                    $client,
+                    (string) $zone['id'],
+                    $zoneName,
+                    $this->originA(CloudflareDnsRecord::relative($host, $zoneName), $origin),
+                );
+                if ($existing === null) {
+                    continue;
+                }
+
+                $client->deleteDnsRecord((string) $zone['id'], (string) $existing['id']);
+                $removed[] = $host;
+            } catch (CloudflareApiException $exception) {
+                throw $this->mapApiException($exception);
+            }
+        }
+
+        return $removed;
+    }
+
     public static function hostUnderZone(string $host, string $zoneName): bool
     {
         $host = CloudflareHostname::normalize($host);

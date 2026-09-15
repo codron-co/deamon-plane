@@ -43,6 +43,24 @@
                         · <span class="status-chip">{{ __('sites.detail.domain_zone_pending') }}</span>
                     @endif
                 </span>
+                @if ($canEditDomains && ! $row->is_primary && ! $row->is_temporary && $row->domain !== 'www.'.$site->primary_domain)
+                    <form
+                        method="POST"
+                        action="{{ route('ops.sites.domains.destroy', [$site, $row]) }}"
+                        class="ops-inline-form"
+                        data-ops-pending
+                        data-reload-on-success
+                        data-domain-remove
+                        data-confirm="{{ __('sites.detail.remove_domain_confirm', ['host' => $row->domain]) }}"
+                        data-confirm-title="{{ __('sites.detail.remove_domain_title') }}"
+                        data-confirm-label="{{ __('sites.detail.remove_domain') }}"
+                        data-confirm-danger="true"
+                    >
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.detail.remove_domain') }}</button>
+                    </form>
+                @endif
             </li>
         @empty
             <li class="muted">{{ $site->primary_domain ?: __('ops.none') }}</li>

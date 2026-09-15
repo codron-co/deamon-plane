@@ -463,6 +463,148 @@ class SiteLandingFlowTest extends TestCase
         });
     }
 
+    public function test_detail_remove_domain_drops_alias_and_www_releases_dns_and_redeploys(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'cloudflare_zone_id' => 'zone-existing',
+            'cloudflare_zone_status' => 'active',
+            'coolify_app_uuid' => 'coolify-app-1',
+            'coolify_server_uuid' => 'srv_test',
+            'status' => SiteStatus::Active,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+            ['domain' => 'shop.izyem.test'],
+            ['domain' => 'www.shop.izyem.test', 'is_www' => true],
+        ]);
+        $alias = $site->domains()->where('domain', 'shop.izyem.test')->firstOrFail();
+
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            if (str_contains($url, 'api.cloudflare.com')) {
+                if ($request->method() === 'GET' && str_contains($url, '/dns_records')) {
+                    $name = (string) ($request->data()['name'] ?? '');
+                    $records = [
+                        'shop.izyem.test' => [['id' => 'rec-shop', 'type' => 'A', 'name' => 'shop.izyem.test', 'content' => '72.62.117.147']],
+                        'www.shop.izyem.test' => [['id' => 'rec-www-shop', 'type' => 'A', 'name' => 'www.shop.izyem.test', 'content' => '72.62.117.147']],
+                    ];
+
+                    return Http::response(['success' => true, 'result' => $records[$name] ?? []], 200);
+                }
+
+                return $this->cloudflareResponse($request, zonesByName: [
+                    'izyem.test' => $this->zonePayload('zone-existing', 'izyem.test', 'active'),
+                ]);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->deleteJson(route('ops.sites.domains.destroy', [$site, $alias]))
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('type', 'status')
+            ->assertJsonPath('redeploy', 'redeployed');
+
+        $this->assertFalse($site->domains()->where('domain', 'shop.izyem.test')->exists());
+        $this->assertFalse($site->domains()->where('domain', 'www.shop.izyem.test')->exists());
+        $this->assertTrue($site->domains()->where('domain', 'izyem.test')->exists());
+        $this->assertTrue($site->domains()->where('domain', 'www.izyem.test')->exists());
+
+        foreach (['rec-shop', 'rec-www-shop'] as $recordId) {
+            Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+                && str_ends_with($request->url(), '/zones/zone-existing/dns_records/'.$recordId));
+        }
+
+        Http::assertSent(function (Request $request): bool {
+            $domain = data_get($request->data(), 'docker_compose_domains.0.domain');
+
+            return $request->method() === 'PATCH'
+                && str_contains((string) $request->url(), '/applications/coolify-app-1')
+                && is_string($domain)
+                && str_contains($domain, 'https://izyem.test')
+                && ! str_contains($domain, 'shop.izyem.test');
+        });
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request->url(), '/deploy'));
+
+        $this->assertDatabaseHas('audit_logs', ['action' => 'site.domain_removed', 'subject_id' => $site->id]);
+    }
+
+    public function test_primary_domain_and_its_www_cannot_be_removed(): void
+    {
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'status' => SiteStatus::Active,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+        ]);
+
+        Http::fake();
+
+        foreach (['izyem.test', 'www.izyem.test'] as $host) {
+            $row = $site->domains()->where('domain', $host)->firstOrFail();
+
+            $this->actingAs($this->user(OpsRole::Operator))
+                ->deleteJson(route('ops.sites.domains.destroy', [$site, $row]))
+                ->assertStatus(422)
+                ->assertJsonPath('ok', false)
+                ->assertJsonPath('message', __('sites.form.domain_primary_locked'));
+        }
+
+        $this->assertSame(2, $site->domains()->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_domain_from_another_site_is_not_found_and_viewer_is_forbidden(): void
+    {
+        $site = $this->draftSite(['primary_domain' => 'izyem.test']);
+        $other = $this->draftSite(['slug' => 'other', 'name' => 'Other', 'primary_domain' => 'other.test']);
+        $foreign = $other->domains()->create(['domain' => 'shop.other.test']);
+        $own = $site->domains()->create(['domain' => 'shop.izyem.test']);
+
+        Http::fake();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->deleteJson(route('ops.sites.domains.destroy', [$site, $foreign]))
+            ->assertNotFound();
+
+        $this->actingAs($this->user(OpsRole::Viewer))
+            ->deleteJson(route('ops.sites.domains.destroy', [$site, $own]))
+            ->assertForbidden();
+
+        $this->assertTrue($other->domains()->where('domain', 'shop.other.test')->exists());
+        $this->assertTrue($site->domains()->where('domain', 'shop.izyem.test')->exists());
+    }
+
+    public function test_detail_offers_remove_only_on_alias_rows(): void
+    {
+        $site = $this->draftSite(['primary_domain' => 'izyem.test']);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+            ['domain' => 'shop.izyem.test'],
+        ]);
+
+        $html = $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        $shop = $site->domains()->where('domain', 'shop.izyem.test')->firstOrFail();
+        $primary = $site->domains()->where('domain', 'izyem.test')->firstOrFail();
+        $www = $site->domains()->where('domain', 'www.izyem.test')->firstOrFail();
+
+        $this->assertStringContainsString(route('ops.sites.domains.destroy', [$site, $shop]), $html);
+        $this->assertStringNotContainsString(route('ops.sites.domains.destroy', [$site, $primary]), $html);
+        $this->assertStringNotContainsString(route('ops.sites.domains.destroy', [$site, $www]), $html);
+    }
+
     public function test_viewer_cannot_confirm_dns_or_add_domain(): void
     {
         $site = $this->draftSite();

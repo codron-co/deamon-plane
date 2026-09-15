@@ -12,7 +12,7 @@
 ## P0
 
 ### B1 · Bağlı domain silinemiyor
-- [ ] **Sorun:** Siteye domain eklenebiliyor ama tek tek kaldırılamıyor. Tek yol düzenleme formundaki takma ad satırını boşaltmak.
+- [x] **Sorun:** Siteye domain eklenebiliyor ama tek tek kaldırılamıyor. Tek yol düzenleme formundaki takma ad satırını boşaltmak.
 - **Kanıt:** `routes/ops/sites.php` içinde `POST /sites/{site}/domains` var, silme karşılığı yok. `_domains.blade.php` satırlarında aksiyon yok.
 - **Yapılacak:** `DELETE /sites/{site}/domains/{domain}`. Birincil host silinemez (önce birincili değiştir). Takma ad silinince www kardeşi de gider. Cloudflare A kaydı temizlenir, host kendi zone'undaysa zone'a dokunulmaz. Coolify bağlaması güncellenip redeploy kuyruğa alınır. Audit `site.domain_removed`. Kart satırında danger onaylı "Kaldır" butonu.
 - **Kabul:** Takma ad + www satırları silinir, DNS kayıt DELETE'i gider, Coolify PATCH listesinde host yok, deploy tetiklenir. Birincil için 422. Viewer 403.

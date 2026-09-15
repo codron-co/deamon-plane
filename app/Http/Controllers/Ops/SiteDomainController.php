@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Ops;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ops\StoreSiteDomainRequest;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteProvisionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SiteDomainController extends Controller
 {
@@ -69,6 +71,80 @@ class SiteDomainController extends Controller
         return redirect()
             ->route('ops.sites.show', $site)
             ->with('status', $message);
+    }
+
+    public function destroy(
+        Request $request,
+        Site $site,
+        SiteDomain $domain,
+        SiteDomainSync $sync,
+        SiteLanding $landing,
+    ): RedirectResponse|JsonResponse {
+        $this->authorize('update', $site);
+
+        $host = (string) $domain->domain;
+        $hostsBefore = $site->operatorHosts();
+
+        try {
+            $removed = $sync->removeAlias($site, $host);
+        } catch (ValidationException $exception) {
+            return $this->failed($request, $site, (string) collect($exception->errors())->flatten()->first(), 422);
+        }
+
+        $site->refresh();
+        $dnsError = $landing->releaseHostDns($site, $removed);
+
+        $outcome = SiteLanding::BIND_NO_APP;
+        $bindError = null;
+        try {
+            $outcome = $landing->bindAndRedeploy($site, $request->user(), $request->ip());
+        } catch (SiteProvisionException $exception) {
+            $bindError = $exception->getMessage();
+        }
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $request->user()?->id,
+            'action' => 'site.domain_removed',
+            'before' => ['hosts' => $hostsBefore],
+            'after' => [
+                'removed' => $removed,
+                'hosts' => $site->operatorHosts(),
+                'redeploy' => $outcome,
+                'dns_error' => $dnsError,
+                'coolify_error' => $bindError,
+            ],
+            'ip' => $request->ip(),
+        ]);
+
+        $message = __('sites.flash.domain_removed', ['host' => $host]).SiteLanding::bindFlashSuffix($outcome);
+        $problem = $bindError ?? $dnsError;
+
+        if ($problem !== null) {
+            $message .= ' '.__('sites.flash.domain_removed_partial', ['reason' => $problem]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => $message,
+                    'type' => 'warning',
+                    'hosts' => $site->operatorHosts(),
+                ]);
+            }
+
+            return redirect()->route('ops.sites.show', $site)->with('warning', $message);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'type' => 'status',
+                'hosts' => $site->operatorHosts(),
+                'redeploy' => $outcome,
+            ]);
+        }
+
+        return redirect()->route('ops.sites.show', $site)->with('status', $message);
     }
 
     private function failed(Request $request, Site $site, string $message, int $status = 422): RedirectResponse|JsonResponse

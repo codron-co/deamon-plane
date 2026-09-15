@@ -217,6 +217,32 @@ class SiteLanding
         }
     }
 
+    /**
+     * Best effort: a Cloudflare failure must not undo the Plane removal, so it is
+     * returned for the flash instead of thrown.
+     *
+     * @param  list<string>  $hosts
+     */
+    public function releaseHostDns(Site $site, array $hosts): ?string
+    {
+        if ($hosts === []) {
+            return null;
+        }
+
+        $settings = $this->settingsFor($site);
+        if (! $settings instanceof CloudflareSetting) {
+            return null;
+        }
+
+        try {
+            $this->zones->removeHostRecords($settings, $hosts);
+        } catch (SiteProvisionException $exception) {
+            return $exception->getMessage();
+        }
+
+        return null;
+    }
+
     public function applyAliasDns(Site $site): void
     {
         $settings = $this->settingsFor($site);
