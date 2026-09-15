@@ -75,7 +75,7 @@
 - **Kabul:** İşlenmiş isteğe ikinci POST durumu değiştirmez, audit yazmaz.
 
 ### B10 · Operatöre giden İngilizce sabit metinler
-- [ ] **Sorun:** Türkçe arayüzde İngilizce hata ve başarı mesajları çıkıyor.
+- [x] **Sorun:** Türkçe arayüzde İngilizce hata ve başarı mesajları çıkıyor.
 - **Kanıt:** `SiteController::checkHealth` ek cümlesi, `SiteThemeController` tüm flash'lar, `ChannelSwitcher` ve `SiteProvisioner::start` istisna mesajları.
 - **Yapılacak:** Lang anahtarlarına taşı (tr + en).
 - **Kabul:** Bu yollarda `__()` dışı operatör metni kalmaz, testler çeviri anahtarıyla doğrular.

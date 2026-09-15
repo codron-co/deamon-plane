@@ -58,31 +58,31 @@ class ChannelSwitcher
             : Channel::from((string) $site->channel);
 
         if ($from === $target) {
-            throw new ChannelSwitchException('Site is already on this channel.');
+            throw new ChannelSwitchException(__('sites.channel_errors.same_channel'));
         }
 
         if ($this->requiresConfirm($from, $target) && ! $confirmed) {
-            throw new ChannelSwitchException('Switching off main requires confirmation. Volumes stay; the Coolify app is not deleted.');
+            throw new ChannelSwitchException(__('sites.channel_errors.confirm_required'));
         }
 
         if ($force && $this->requiresVersionGate($from, $target) && ! $this->isSuperAdmin($actor)) {
-            throw new ChannelSwitchException('Only Super Admin can force a switch to main.');
+            throw new ChannelSwitchException(__('sites.channel_errors.force_super_admin'));
         }
 
         if (! $this->versionGateAllows($site, $from, $target, $force && $this->isSuperAdmin($actor))) {
-            throw new ChannelSwitchException('Version gate blocked the switch to main. Reported Deamon version is below the minimum. Super Admin can force.');
+            throw new ChannelSwitchException(__('sites.channel_errors.version_gate'));
         }
 
         if (in_array($site->status, [SiteStatus::Deploying, SiteStatus::Provisioning], true)) {
-            throw new ChannelSwitchException('A deploy is already in progress. Wait for it to finish before switching channel.');
+            throw new ChannelSwitchException(__('sites.channel_errors.deploy_in_progress'));
         }
 
         if (! $this->canStart($site)) {
-            throw new ChannelSwitchException('Only active or failed provisioned sites can switch channel.');
+            throw new ChannelSwitchException(__('sites.channel_errors.not_switchable'));
         }
 
         if (blank($site->coolify_app_uuid)) {
-            throw new ChannelSwitchException('Site has no Coolify application. Provision first.');
+            throw new ChannelSwitchException(__('sites.channel_errors.no_app'));
         }
 
         $this->assertCoolifyReady();
@@ -95,11 +95,11 @@ class ChannelSwitcher
             $locked = Site::query()->lockForUpdate()->findOrFail($siteId);
 
             if (in_array($locked->status, [SiteStatus::Deploying, SiteStatus::Provisioning], true)) {
-                throw new ChannelSwitchException('A deploy is already in progress. Wait for it to finish before switching channel.');
+                throw new ChannelSwitchException(__('sites.channel_errors.deploy_in_progress'));
             }
 
             if (! $this->canStart($locked)) {
-                throw new ChannelSwitchException('Only active or failed provisioned sites can switch channel.');
+                throw new ChannelSwitchException(__('sites.channel_errors.not_switchable'));
             }
 
             $before = $this->auditSnapshot($locked);

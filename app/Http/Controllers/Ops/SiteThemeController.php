@@ -39,7 +39,7 @@ class SiteThemeController extends Controller
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('status', 'Theme assign started via the CMS theme agent. Plane does not copy ZIP or PHP onto Coolify volumes.');
+        return back()->with('status', __('sites.theme_flash.assign_started'));
     }
 
     public function update(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
@@ -49,7 +49,7 @@ class SiteThemeController extends Controller
 
         $rollout->updateToLatest($installation, $request->user(), $request->ip());
 
-        return back()->with('status', 'Update to latest queued for the CMS theme agent.');
+        return back()->with('status', __('sites.theme_flash.update_queued'));
     }
 
     public function sync(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
@@ -64,8 +64,8 @@ class SiteThemeController extends Controller
         }
 
         return back()->with('status', $outcome === 'deferred'
-            ? 'Theme sync deferred until the open Coolify deploy finishes.'
-            : 'Theme sync requested on the CMS instance.');
+            ? __('sites.theme_flash.sync_deferred')
+            : __('sites.theme_flash.sync_requested'));
     }
 
     public function activate(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
@@ -83,7 +83,7 @@ class SiteThemeController extends Controller
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('status', 'Theme activated on the CMS instance.');
+        return back()->with('status', __('sites.theme_flash.activated'));
     }
 
     public function autoUpdate(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
@@ -98,8 +98,8 @@ class SiteThemeController extends Controller
         $rollout->setAutoUpdate($installation, $request->boolean('auto_update'), $request->user(), $request->ip());
 
         return back()->with('status', $request->boolean('auto_update')
-            ? 'Auto-update enabled for this installation. GitHub push will fan out an agent update.'
-            : 'Auto-update disabled (the v1 default).');
+            ? __('sites.theme_flash.auto_update_on')
+            : __('sites.theme_flash.auto_update_off'));
     }
 
     private function assertInstallation(Site $site, SiteThemeInstallation $installation): void

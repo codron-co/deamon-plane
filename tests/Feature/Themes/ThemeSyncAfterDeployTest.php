@@ -97,7 +97,7 @@ class ThemeSyncAfterDeployTest extends TestCase
         $this->actingAs($this->operator())
             ->post(route('ops.sites.themes.sync', [$site, $installation]))
             ->assertRedirect()
-            ->assertSessionHas('status', 'Theme sync requested on the CMS instance.');
+            ->assertSessionHas('status', __('sites.theme_flash.sync_requested'));
 
         $installation->refresh();
         $this->assertFalse($installation->pending_sync_after_deploy);

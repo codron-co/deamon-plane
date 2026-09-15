@@ -455,7 +455,7 @@ class SiteController extends Controller
         if ($result->status === AgentHealthStatus::NeedsSecret) {
             return redirect()
                 ->route('ops.sites.show', $site)
-                ->with('error', $result->safeMessage.' Inject CONTROL_PLANE_AGENT_SECRET on the CMS Coolify app.');
+                ->with('error', __('sites.flash.health_needs_secret'));
         }
 
         if ($result->ok) {

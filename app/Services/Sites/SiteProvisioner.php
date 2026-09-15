@@ -50,7 +50,7 @@ class SiteProvisioner
     public function start(Site $site, ?User $actor = null, ?string $ip = null): void
     {
         if (! $this->canStart($site)) {
-            throw new SiteProvisionException('Only draft or failed sites can be provisioned.');
+            throw new SiteProvisionException(__('sites.provision_errors.not_provisionable'));
         }
 
         $this->assertCloudflareReady($this->cloudflareSettingsFor($site));
@@ -68,7 +68,7 @@ class SiteProvisioner
             $locked = Site::query()->lockForUpdate()->findOrFail($siteId);
 
             if (! $this->canStart($locked)) {
-                throw new SiteProvisionException('Only draft or failed sites can be provisioned.');
+                throw new SiteProvisionException(__('sites.provision_errors.not_provisionable'));
             }
 
             $this->ensureSecrets($locked);
