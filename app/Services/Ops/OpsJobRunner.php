@@ -20,6 +20,7 @@ use App\Services\Sites\CoolifyDeploySettings;
 use App\Services\Sites\SiteAgentSecretSweep;
 use App\Services\Sites\SiteAppHealthFixer;
 use App\Services\Sites\SiteAppHealthReport;
+use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLiveProbe;
 use App\Services\Sites\SitePublishStateUpdater;
 use App\Services\Themes\ThemeCatalogSync;
@@ -43,6 +44,7 @@ class OpsJobRunner
             'sites.bulk_pin' => $this->bulkPin($job),
             'sites.bulk_app_health_fix' => $this->bulkAppHealthFix($job),
             'sites.bulk_inject_agent_secret' => $this->bulkInjectAgentSecret($job),
+            'sites.bulk_purge' => $this->bulkPurge($job),
             'sites.bulk_publish_status' => $this->bulkPublishStatus($job),
             'domains.bulk_bind' => $this->bulkBindDomains($job),
             default => throw new RuntimeException('Unknown ops job type.'),
@@ -286,6 +288,20 @@ class OpsJobRunner
         );
 
         return $sweep->summarize($result);
+    }
+
+    private function bulkPurge(OpsBackgroundJob $job): string
+    {
+        $result = app(SiteLifecycle::class)->purgeMany(
+            $this->sites($job),
+            $this->actor($job),
+            $this->ip($job),
+            function (Site $site, int $completed, int $total) use ($job): void {
+                $job->updateProgress((int) (($completed / max(1, $total)) * 100), $site->name);
+            },
+        );
+
+        return BulkResultSummary::format(__('sites.flash.bulk_purged'), $result, errorLimit: 3);
     }
 
     private function bulkAppHealthFix(OpsBackgroundJob $job): string

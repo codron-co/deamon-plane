@@ -237,7 +237,7 @@ class SiteCoolifyOpsController extends Controller
             ->with('status', __('sites.flash.live_sync_get'));
     }
 
-    public function bulkPurge(BulkSiteIdsRequest $request, SiteLifecycle $lifecycle): RedirectResponse
+    public function bulkPurge(BulkSiteIdsRequest $request, SiteLifecycle $lifecycle): RedirectResponse|JsonResponse
     {
         $sites = $this->sitesFromBulk($request);
 
@@ -247,6 +247,15 @@ class SiteCoolifyOpsController extends Controller
 
         if ($sites->isEmpty()) {
             return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        // Each purge deletes a Coolify app with its volumes; a fleet selection must not
+        // run inside one HTTP request.
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.bulk_purge', __('ops.jobs.bulk_purge'), [
+                'site_ids' => $sites->pluck('id')->all(),
+                'ip' => $request->ip(),
+            ]);
         }
 
         $result = $lifecycle->purgeMany($sites, $request->user(), $request->ip());

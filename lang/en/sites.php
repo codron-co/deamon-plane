@@ -450,6 +450,7 @@ return [
         'deactivate_blocked' => 'This site cannot be deactivated from its current status.',
         'activate_missing_app' => 'Coolify application was not found. The site was not activated.',
         'purged' => 'Site hard-deleted. Coolify application, volumes, and containers were removed.',
+        'purge_unexpected' => 'Unexpected error; see the application log.',
         'bulk_purged' => 'Hard delete',
         'live_sync_missing_domain' => 'This site has no primary domain to probe.',
         'provisioned' => 'Site provisioned. Coolify deploy finished. Use Check health to poll the CMS agent.',

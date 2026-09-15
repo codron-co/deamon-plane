@@ -451,6 +451,7 @@ return [
         'deactivate_blocked' => 'Bu site mevcut durumunda pasif edilemez.',
         'activate_missing_app' => 'Coolify uygulaması bulunamadı. Site aktif edilmedi.',
         'purged' => 'Site hard-delete edildi. Coolify uygulaması, volume’lar ve container’lar kaldırıldı.',
+        'purge_unexpected' => 'Beklenmeyen hata; ayrıntı uygulama logunda.',
         'bulk_purged' => 'Hard delete',
         'live_sync_missing_domain' => 'Bu sitede yoklanacak birincil domain yok.',
         'provisioned' => 'Site kuruldu. Coolify dağıtımı bitti. CMS agent için Check health kullanın.',

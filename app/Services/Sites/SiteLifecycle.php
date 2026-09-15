@@ -9,6 +9,7 @@ use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class SiteLifecycle
 {
@@ -65,29 +66,45 @@ class SiteLifecycle
 
     /**
      * @param  iterable<int, mixed>  $sites
+     * @param  (callable(Site, int, int): void)|null  $onProgress
      * @return array{ok: int, failed: int, errors: list<string>}
      */
-    public function purgeMany(iterable $sites, ?User $actor, ?string $ip): array
+    public function purgeMany(iterable $sites, ?User $actor, ?string $ip, ?callable $onProgress = null): array
     {
+        $list = array_values(array_filter(
+            is_array($sites) ? $sites : iterator_to_array($sites, false),
+            static fn (mixed $site): bool => $site instanceof Site,
+        ));
+        $total = count($list);
         $ok = 0;
         $failed = 0;
         $errors = [];
 
-        foreach ($sites as $site) {
-            if (! $site instanceof Site) {
-                continue;
-            }
-
+        foreach ($list as $index => $site) {
             try {
                 $this->purge($site, $actor, $ip);
                 $ok++;
-            } catch (CoolifyApiException|SiteLifecycleException $exception) {
+            } catch (Throwable $exception) {
+                // One site must not stop the sweep: an unexpected error used to abort
+                // the loop with a 500 and leave the rest of the selection untouched.
+                report($exception);
                 $failed++;
-                $errors[] = $site->name.': '.$exception->getMessage();
+                $errors[] = $site->name.': '.$this->failureText($exception);
+            }
+
+            if ($onProgress !== null) {
+                $onProgress($site, $index + 1, $total);
             }
         }
 
         return ['ok' => $ok, 'failed' => $failed, 'errors' => $errors];
+    }
+
+    private function failureText(Throwable $exception): string
+    {
+        return $exception instanceof CoolifyApiException || $exception instanceof SiteLifecycleException
+            ? $exception->getMessage()
+            : __('sites.flash.purge_unexpected');
     }
 
     private function startCoolify(Site $site): void

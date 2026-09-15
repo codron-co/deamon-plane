@@ -59,7 +59,7 @@
 - **Kabul:** Kayıt isteği agent'a senkron istek atmaz, job kuyruğa girer.
 
 ### B8 · Toplu kalıcı silme istek içinde döngü ve kırılgan
-- [ ] **Sorun:** `bulkPurge` arka plan işi açmıyor, tüm siteleri tek HTTP isteğinde siliyor. Döngü yalnız iki istisna tipini yakalıyor, beklenmeyen hata yarıda 500 veriyor.
+- [x] **Sorun:** `bulkPurge` arka plan işi açmıyor, tüm siteleri tek HTTP isteğinde siliyor. Döngü yalnız iki istisna tipini yakalıyor, beklenmeyen hata yarıda 500 veriyor.
 - **Kanıt:** `SiteCoolifyOpsController::bulkPurge`, `SiteLifecycle::purgeMany`.
 - **Yapılacak:** JSON isteğinde `sites.bulk_purge` arka plan işi. `purgeMany` her `Throwable`'ı site bazında yakalasın.
 - **Kabul:** Fetch ile toplu silme job döndürür. Bir sitedeki beklenmeyen hata diğerlerini durdurmaz.

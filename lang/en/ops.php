@@ -216,6 +216,7 @@ return [
         'bulk_pin' => 'Pin commit',
         'bulk_app_health_fix' => 'Fix App issues',
         'bulk_inject_agent_secret' => 'Generate and inject secret',
+        'bulk_purge' => 'Hard delete',
         'bulk_publish_status' => 'Publish state',
         'bulk_publish' => 'Publish',
         'bulk_unpublish' => 'Unpublish',

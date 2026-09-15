@@ -218,6 +218,7 @@ return [
         'bulk_pin' => 'Commit pin',
         'bulk_app_health_fix' => 'App hatalarını düzelt',
         'bulk_inject_agent_secret' => 'Gizli anahtar üret ve gönder',
+        'bulk_purge' => 'Kalıcı sil',
         'bulk_publish_status' => 'Yayın durumu',
         'bulk_publish' => 'Yayına al',
         'bulk_unpublish' => 'Yayından kaldır',

@@ -7,12 +7,17 @@ use App\Enums\SiteStatus;
 use App\Models\AuditLog;
 use App\Models\CloudflareSetting;
 use App\Models\CoolifyConnection;
+use App\Models\OpsBackgroundJob;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Ops\OpsJobRunner;
+use App\Services\Sites\SiteLanding;
+use App\Services\Sites\SiteLifecycle;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class SiteLifecycleTest extends TestCase
@@ -272,6 +277,62 @@ class SiteLifecycleTest extends TestCase
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'keep-app'));
     }
 
+    public function test_json_bulk_purge_queues_a_background_job(): void
+    {
+        $gone = $this->site(['name' => 'Gone', 'slug' => 'gone-json', 'primary_domain' => 'gone-json.example.test', 'coolify_app_uuid' => 'gone-json-app']);
+
+        Queue::fake();
+        Http::fake(['https://coolify.example/api/v1/applications/gone-json-app*' => Http::response('', 200)]);
+
+        $response = $this->actingAs($this->superAdmin())
+            ->postJson(route('ops.sites.bulk.purge'), ['site_ids' => [$gone->id]])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('job.type', 'sites.bulk_purge');
+
+        // Nothing is deleted inside the request.
+        $this->assertDatabaseHas('sites', ['id' => $gone->id]);
+        Http::assertNothingSent();
+
+        $job = OpsBackgroundJob::query()->findOrFail($response->json('job.id'));
+        $message = app(OpsJobRunner::class)->run($job);
+
+        $this->assertDatabaseMissing('sites', ['id' => $gone->id]);
+        $this->assertStringContainsString(__('sites.flash.bulk_purged'), $message);
+    }
+
+    public function test_bulk_purge_keeps_going_after_an_unexpected_error(): void
+    {
+        $broken = $this->site(['name' => 'Broken', 'slug' => 'broken', 'primary_domain' => 'broken.example.test', 'coolify_app_uuid' => 'broken-app']);
+        $fine = $this->site(['name' => 'Fine', 'slug' => 'fine', 'primary_domain' => 'fine.example.test', 'coolify_app_uuid' => 'fine-app']);
+
+        Http::fake(['https://coolify.example/api/v1/applications/*' => Http::response('', 200)]);
+
+        // The unexpected error comes from a collaborator, not from inside Http::fake:
+        // an exception thrown in the Guzzle handler segfaults this PHP build.
+        $landing = \Mockery::mock(SiteLanding::class);
+        $landing->shouldReceive('releaseHostDns')->andReturnUsing(function (Site $site): ?string {
+            if ($site->name === 'Broken') {
+                throw new \RuntimeException('socket exploded');
+            }
+
+            return null;
+        });
+        $this->app->instance(SiteLanding::class, $landing);
+
+        $result = app(SiteLifecycle::class)->purgeMany(
+            collect([$broken, $fine]),
+            $this->operator(),
+            '127.0.0.1',
+        );
+
+        $this->assertSame(1, $result['ok']);
+        $this->assertSame(1, $result['failed']);
+        $this->assertSame(['Broken: '.__('sites.flash.purge_unexpected')], $result['errors']);
+        $this->assertDatabaseHas('sites', ['id' => $broken->id]);
+        $this->assertDatabaseMissing('sites', ['id' => $fine->id]);
+    }
+
     public function test_live_sync_one_probes_the_site_homepage(): void
     {
         $site = $this->site([
@@ -330,6 +391,14 @@ class SiteLifecycleTest extends TestCase
 
         Http::assertNothingSent();
         $this->assertSame(SiteStatus::Active, $site->fresh()->status);
+    }
+
+    private function superAdmin(): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole(OpsRole::SuperAdmin->value);
+
+        return $user;
     }
 
     private function seedCloudflare(): void

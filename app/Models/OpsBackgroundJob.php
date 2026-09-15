@@ -29,6 +29,7 @@ class OpsBackgroundJob extends Model
         'sites.bulk_pin' => 'bulk_pin',
         'sites.bulk_app_health_fix' => 'bulk_app_health_fix',
         'sites.bulk_inject_agent_secret' => 'bulk_inject_agent_secret',
+        'sites.bulk_purge' => 'bulk_purge',
         'sites.bulk_publish_status' => 'bulk_publish_status',
         'domains.bulk_bind' => 'bulk_bind',
     ];
