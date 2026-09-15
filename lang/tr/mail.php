@@ -120,6 +120,7 @@ return [
         'configure_queued' => 'CMS’e aktarım arka planda yapılıyor; sonucu bu bölümdeki rozet gösterir.',
         'request_fulfilled' => ':email talebi karşılandı olarak işaretlendi.',
         'request_rejected' => ':email talebi reddedildi.',
+        'request_already_handled' => ':email talebi zaten işlenmiş (:status). Değişiklik yapılmadı.',
     ],
     'none' => 'Yok',
     'configure_state' => [

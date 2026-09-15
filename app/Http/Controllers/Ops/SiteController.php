@@ -731,6 +731,10 @@ class SiteController extends Controller
         $this->authorize('update', $site);
         $this->assertMailboxRequestForSite($site, $mailboxRequest);
 
+        if (! $mailboxRequest->isPending()) {
+            return $this->mailboxRequestAlreadyHandled($site, $mailboxRequest);
+        }
+
         $mailboxRequest->status = SiteMailboxRequest::STATUS_FULFILLED;
         $mailboxRequest->save();
 
@@ -750,6 +754,10 @@ class SiteController extends Controller
     {
         $this->authorize('update', $site);
         $this->assertMailboxRequestForSite($site, $mailboxRequest);
+
+        if (! $mailboxRequest->isPending()) {
+            return $this->mailboxRequestAlreadyHandled($site, $mailboxRequest);
+        }
 
         $mailboxRequest->status = SiteMailboxRequest::STATUS_REJECTED;
         $mailboxRequest->save();
@@ -1000,6 +1008,20 @@ class SiteController extends Controller
         }
 
         return ' '.implode(' ', $parts);
+    }
+
+    /**
+     * A request is decided once: a second click (double submit, stale tab) must not
+     * flip a rejected request to fulfilled or write a second audit row.
+     */
+    private function mailboxRequestAlreadyHandled(Site $site, SiteMailboxRequest $mailboxRequest): RedirectResponse
+    {
+        return redirect()
+            ->route('ops.sites.show', $site)
+            ->with('error', __('mail.flash.request_already_handled', [
+                'email' => $mailboxRequest->email(),
+                'status' => __('mail.requests.statuses.'.$mailboxRequest->status),
+            ]));
     }
 
     private function assertMailboxRequestForSite(Site $site, SiteMailboxRequest $mailboxRequest): void

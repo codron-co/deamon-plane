@@ -120,6 +120,7 @@ return [
         'configure_queued' => 'The CMS push runs in the background; the chip in this section shows the outcome.',
         'request_fulfilled' => 'Marked :email as fulfilled.',
         'request_rejected' => 'Rejected the request for :email.',
+        'request_already_handled' => ':email request was already handled (:status). Nothing changed.',
     ],
     'none' => 'None',
     'configure_state' => [

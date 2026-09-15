@@ -69,7 +69,7 @@
 ## P2
 
 ### B9 · Posta kutusu isteği durum kontrolü yok
-- [ ] **Sorun:** Reddedilmiş istek karşılandı yapılabiliyor, aynı istek iki kez işlenip çift audit yazılıyor.
+- [x] **Sorun:** Reddedilmiş istek karşılandı yapılabiliyor, aynı istek iki kez işlenip çift audit yazılıyor.
 - **Kanıt:** `SiteController::fulfillMailboxRequest` / `rejectMailboxRequest` durum okumuyor.
 - **Yapılacak:** Yalnız `pending` istek işlenir, aksi halde hata flash.
 - **Kabul:** İşlenmiş isteğe ikinci POST durumu değiştirmez, audit yazmaz.
