@@ -7,6 +7,7 @@ use App\Models\Site;
 use App\Services\Agent\Concerns\RetriesThrottledAgentRequests;
 use App\Services\Agent\ControlPlaneAgentContract;
 use App\Support\ControlPlaneAgentSignature;
+use App\Support\PublicAppUrl;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -39,7 +40,7 @@ final class PlatformMailConfigurer
         $payload = [
             'enabled' => $enabled,
             'site_id' => (string) $site->id,
-            'plane_base_url' => rtrim((string) config('app.url'), '/'),
+            'plane_base_url' => PublicAppUrl::forAgents(),
             'admin_recipient' => $this->resolver->recipientFor($site),
             'notifications' => $this->resolver->notificationsFor($site),
         ];

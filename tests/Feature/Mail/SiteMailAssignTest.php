@@ -375,6 +375,35 @@ class SiteMailAssignTest extends TestCase
         $this->assertNull($site->fresh()->mail_configure_message);
     }
 
+    public function test_configure_sends_an_https_plane_url_even_when_app_url_is_http(): void
+    {
+        config(['app.url' => 'http://plane.example.com']);
+        $server = MailServer::factory()->hostingerReady(self::TOKEN)->create();
+        $site = Site::factory()->withSecrets()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Main,
+            'primary_domain' => 'shop.example.test',
+            'agent_base_url' => 'https://shop.example.test',
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/mail/configure' => Http::response(['ok' => true], 200),
+            'https://developers.hostinger.com/api/mail/v1/orders*' => Http::response([
+                'data' => [['id' => 'OR9siteorder', 'status' => 'active', 'domain' => ['name' => 'shop.example.test']]],
+                'meta' => ['last_page' => 1],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.mail', $site), ['mail_server_id' => $server->id])
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        // The CMS answers 422 "URL must use https." to an http plane_base_url in production.
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/mail/configure')
+            && ($request->data()['plane_base_url'] ?? null) === 'https://plane.example.com');
+        $this->assertNotNull($site->fresh()->mail_configured_at);
+    }
+
     public function test_resend_without_agent_secret_is_refused(): void
     {
         $server = MailServer::factory()->hostingerReady(self::TOKEN)->create();

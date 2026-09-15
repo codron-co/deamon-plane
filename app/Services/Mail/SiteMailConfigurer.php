@@ -9,6 +9,7 @@ use App\Models\Site;
 use App\Services\Agent\Concerns\RetriesThrottledAgentRequests;
 use App\Services\Agent\ControlPlaneAgentContract;
 use App\Support\ControlPlaneAgentSignature;
+use App\Support\PublicAppUrl;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -172,7 +173,7 @@ class SiteMailConfigurer
 
     private function planeBaseUrl(): string
     {
-        return rtrim((string) config('app.url'), '/');
+        return PublicAppUrl::forAgents();
     }
 
     /**

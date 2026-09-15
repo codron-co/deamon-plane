@@ -4,6 +4,25 @@ namespace App\Support;
 
 final class PublicAppUrl
 {
+    /**
+     * The Plane URL handed to CMS sites for signed callbacks. The CMS rejects a non-https
+     * plane_base_url in production ("URL must use https."), so a public host is always
+     * sent as https even when APP_URL was injected as http behind the TLS proxy. Local
+     * and private hosts keep their scheme for development.
+     */
+    public static function forAgents(?string $url = null): string
+    {
+        $url = rtrim(trim((string) ($url ?? config('app.url'))), '/');
+        $parts = parse_url($url);
+        if (! is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'http') {
+            return $url;
+        }
+
+        $asHttps = 'https'.substr($url, strlen('http'));
+
+        return self::isPublic($asHttps) ? $asHttps : $url;
+    }
+
     public static function isPublic(?string $url = null): bool
     {
         $url = trim((string) ($url ?? config('app.url')));
