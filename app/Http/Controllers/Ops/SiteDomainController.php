@@ -8,6 +8,7 @@ use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLanding;
+use App\Services\Sites\SitePrimaryDomain;
 use App\Services\Sites\SiteProvisionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -142,6 +143,42 @@ class SiteDomainController extends Controller
                 'hosts' => $site->operatorHosts(),
                 'redeploy' => $outcome,
             ]);
+        }
+
+        return redirect()->route('ops.sites.show', $site)->with('status', $message);
+    }
+
+    public function promote(
+        Request $request,
+        Site $site,
+        SiteDomain $domain,
+        SitePrimaryDomain $primary,
+    ): RedirectResponse|JsonResponse {
+        $this->authorize('update', $site);
+
+        $host = (string) $domain->domain;
+
+        try {
+            $result = $primary->promote($site, $host, $request->user(), $request->ip());
+        } catch (ValidationException $exception) {
+            return $this->failed($request, $site, (string) collect($exception->errors())->flatten()->first(), 422);
+        }
+
+        $message = __('sites.flash.domain_promoted', ['host' => $host, 'previous' => $result['previous']])
+            .SiteLanding::bindFlashSuffix($result['outcome']);
+
+        if ($result['error'] !== null) {
+            $message .= ' '.__('sites.flash.domain_promote_partial', ['reason' => $result['error']]);
+
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => true, 'message' => $message, 'type' => 'warning', 'redeploy' => $result['outcome']]);
+            }
+
+            return redirect()->route('ops.sites.show', $site)->with('warning', $message);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'message' => $message, 'type' => 'status', 'redeploy' => $result['outcome']]);
         }
 
         return redirect()->route('ops.sites.show', $site)->with('status', $message);

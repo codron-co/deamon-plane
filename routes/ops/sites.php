@@ -62,6 +62,9 @@ Route::post('/sites/{site}/domains', [SiteDomainController::class, 'store'])->na
 Route::delete('/sites/{site}/domains/{domain}', [SiteDomainController::class, 'destroy'])
     ->scopeBindings()
     ->name('ops.sites.domains.destroy');
+Route::post('/sites/{site}/domains/{domain}/primary', [SiteDomainController::class, 'promote'])
+    ->scopeBindings()
+    ->name('ops.sites.domains.primary');
 Route::post('/sites/{site}/channel', [SiteController::class, 'switchChannel'])->name('ops.sites.channel');
 Route::post('/sites/{site}/health', [SiteController::class, 'checkHealth'])->name('ops.sites.health');
 Route::post('/sites/{site}/publish-status', [SitePublishStatusController::class, 'update'])->name('ops.sites.publish-status');

@@ -666,6 +666,159 @@ class SiteLandingFlowTest extends TestCase
         $this->assertStringNotContainsString(route('ops.sites.domains.destroy', [$site, $www]), $html);
     }
 
+    public function test_make_primary_keeps_old_primary_as_alias_rebinds_redeploys_and_moves_the_agent(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->liveSiteWithAlias('shop.izyem.test');
+
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'api.cloudflare.com')) {
+                return $this->cloudflareResponse($request, zonesByName: [
+                    'izyem.test' => $this->zonePayload('zone-existing', 'izyem.test', 'active'),
+                ]);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $row = $site->domains()->where('domain', 'shop.izyem.test')->firstOrFail();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->postJson(route('ops.sites.domains.primary', [$site, $row]))
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('redeploy', 'redeployed')
+            ->assertJsonPath('message', fn (string $message): bool => str_contains($message, __('sites.flash.domain_promoted', ['host' => 'shop.izyem.test', 'previous' => 'izyem.test'])));
+
+        $site->refresh();
+        $this->assertSame('shop.izyem.test', $site->primary_domain);
+        $this->assertSame(1, $site->domains()->where('is_primary', true)->count());
+        $this->assertTrue($site->domains()->where('domain', 'shop.izyem.test')->where('is_primary', true)->exists());
+        $this->assertTrue($site->domains()->where('domain', 'izyem.test')->where('is_primary', false)->exists());
+        $this->assertSame('https://shop.izyem.test', $site->agent_base_url);
+
+        Http::assertSent(function (Request $request): bool {
+            $domain = data_get($request->data(), 'docker_compose_domains.0.domain');
+
+            return $request->method() === 'PATCH'
+                && str_contains((string) $request->url(), '/applications/coolify-app-1')
+                && is_string($domain)
+                && str_contains($domain, 'https://shop.izyem.test')
+                && str_contains($domain, 'https://izyem.test');
+        });
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request->url(), '/deploy'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'site.domain_changed', 'subject_id' => $site->id]);
+    }
+
+    public function test_make_primary_on_a_pending_apex_waits_for_dns_and_keeps_the_agent(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->liveSiteWithAlias('cukurova.example');
+
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'api.cloudflare.com')) {
+                return $this->cloudflareResponse($request, zoneStatus: 'pending', zonesByName: [
+                    'izyem.test' => $this->zonePayload('zone-existing', 'izyem.test', 'active'),
+                ]);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $row = $site->domains()->where('domain', 'cukurova.example')->firstOrFail();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->postJson(route('ops.sites.domains.primary', [$site, $row]))
+            ->assertOk()
+            ->assertJsonPath('redeploy', 'waiting_dns');
+
+        $site->refresh();
+        $this->assertSame('cukurova.example', $site->primary_domain);
+        $this->assertSame('pending', $site->cloudflare_zone_status);
+        // Coolify still serves the old hosts until DNS confirm, so the agent stays on them.
+        $this->assertSame('https://izyem.test', $site->agent_base_url);
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH' && str_contains((string) $request->url(), '/applications/coolify-app-1'));
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/deploy'));
+    }
+
+    public function test_primary_www_and_foreign_rows_cannot_be_made_primary(): void
+    {
+        $site = $this->liveSiteWithAlias('shop.izyem.test');
+        $other = $this->draftSite(['slug' => 'other', 'name' => 'Other', 'primary_domain' => 'other.test']);
+        $foreign = $other->domains()->create(['domain' => 'shop.other.test']);
+
+        Http::fake();
+
+        foreach (['izyem.test', 'www.izyem.test', 'www.shop.izyem.test'] as $host) {
+            $row = $site->domains()->where('domain', $host)->firstOrFail();
+            $this->actingAs($this->user(OpsRole::Operator))
+                ->postJson(route('ops.sites.domains.primary', [$site, $row]))
+                ->assertStatus(422)
+                ->assertJsonPath('message', __('sites.form.domain_promote_invalid'));
+        }
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->postJson(route('ops.sites.domains.primary', [$site, $foreign]))
+            ->assertNotFound();
+
+        $row = $site->domains()->where('domain', 'shop.izyem.test')->firstOrFail();
+        $this->actingAs($this->user(OpsRole::Viewer))
+            ->postJson(route('ops.sites.domains.primary', [$site, $row]))
+            ->assertForbidden();
+
+        $this->assertSame('izyem.test', $site->fresh()->primary_domain);
+        Http::assertNothingSent();
+    }
+
+    public function test_detail_offers_make_primary_only_on_extra_non_www_rows(): void
+    {
+        $site = $this->liveSiteWithAlias('shop.izyem.test');
+        Http::fake();
+
+        $html = (string) $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->getContent();
+
+        foreach ($site->domains()->get() as $row) {
+            $url = route('ops.sites.domains.primary', [$site, $row]);
+            if ($row->domain === 'shop.izyem.test') {
+                $this->assertStringContainsString($url, $html);
+            } else {
+                $this->assertStringNotContainsString($url, $html, $row->domain);
+            }
+        }
+    }
+
+    public function test_edit_form_primary_change_moves_the_agent_after_the_bind(): void
+    {
+        $this->seedCloudflare();
+        $site = $this->liveSiteWithAlias('shop.izyem.test');
+
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'api.cloudflare.com')) {
+                return $this->cloudflareResponse($request, zonesByName: [
+                    'izyem.test' => $this->zonePayload('zone-existing', 'izyem.test', 'active'),
+                ]);
+            }
+
+            return $this->coolifyHappyPath($request);
+        });
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->put(route('ops.sites.update', $site), [
+                'slug' => 'izyem',
+                'name' => 'Izyem',
+                'domain' => 'shop.izyem.test',
+                'aliases' => ['izyem.test'],
+                'channel' => 'beta',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $this->assertSame('https://shop.izyem.test', $site->fresh()->agent_base_url);
+    }
+
     public function test_viewer_cannot_confirm_dns_or_add_domain(): void
     {
         $site = $this->draftSite();
@@ -682,6 +835,27 @@ class SiteLandingFlowTest extends TestCase
     /**
      * @param  array<string, mixed>  $overrides
      */
+    private function liveSiteWithAlias(string $alias): Site
+    {
+        $site = $this->draftSite([
+            'primary_domain' => 'izyem.test',
+            'cloudflare_zone_id' => 'zone-existing',
+            'cloudflare_zone_status' => 'active',
+            'coolify_app_uuid' => 'coolify-app-1',
+            'coolify_server_uuid' => 'srv_test',
+            'agent_base_url' => 'https://izyem.test',
+            'status' => SiteStatus::Active,
+        ]);
+        $site->domains()->createMany([
+            ['domain' => 'izyem.test', 'is_primary' => true],
+            ['domain' => 'www.izyem.test', 'is_www' => true],
+            ['domain' => $alias],
+            ['domain' => 'www.'.$alias, 'is_www' => true],
+        ]);
+
+        return $site;
+    }
+
     private function draftSite(array $overrides = []): Site
     {
         return Site::factory()->create(array_merge([

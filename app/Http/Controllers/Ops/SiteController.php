@@ -39,6 +39,7 @@ use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLifecycleException;
+use App\Services\Sites\SitePrimaryDomain;
 use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
 use App\Support\Lists\ListFragment;
@@ -848,6 +849,8 @@ class SiteController extends Controller
 
         // The form is desired state, but a host list change must reach Cloudflare and
         // Coolify like the detail-page Add domain does — otherwise the alias only exists in Plane.
+        // null = the bind was attempted and failed; the agent then stays where it answers.
+        $outcome = SiteLanding::BIND_NO_APP;
         if ($previousHosts !== $site->operatorHosts() && filled($site->coolify_app_uuid)) {
             try {
                 $landing->applyAliasDns($site);
@@ -855,8 +858,13 @@ class SiteController extends Controller
                 $message .= SiteLanding::bindFlashSuffix($outcome);
             } catch (SiteProvisionException $exception) {
                 $error = $exception->getMessage();
+                $outcome = null;
             }
             $site->refresh();
+        }
+
+        if ($outcome !== null && $previousDomain !== $site->primary_domain) {
+            app(SitePrimaryDomain::class)->followAgentBaseUrl($site, (string) $previousDomain, $outcome);
         }
 
         if ($previousMailServerId !== $site->mail_server_id) {

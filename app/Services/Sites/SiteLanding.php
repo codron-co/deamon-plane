@@ -160,7 +160,10 @@ class SiteLanding
         $this->clearTemporaryRow($site);
         $site->temporary_domain = null;
         $site->cloudflare_zone_status = $status !== '' ? $status : 'active';
-        if (filled($temp) && filled($site->agent_base_url) && str_contains((string) $site->agent_base_url, (string) $temp)) {
+        // The agent host must be one Coolify serves: the temp preview is gone, and a primary
+        // promoted while its zone was pending may have left the agent on a host no longer bound.
+        $agentHost = CloudflareHostname::host((string) (parse_url((string) $site->agent_base_url, PHP_URL_HOST) ?? ''));
+        if ($agentHost !== '' && ! in_array($agentHost, $site->operatorHosts(), true)) {
             $site->agent_base_url = 'https://'.$site->primary_domain;
         }
         $site->save();

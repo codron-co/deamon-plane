@@ -43,6 +43,23 @@
                         · <span class="status-chip">{{ __('sites.detail.domain_zone_pending') }}</span>
                     @endif
                 </span>
+                @if ($canEditDomains && ! $row->is_primary && ! $row->is_temporary && ! $row->is_www && ! str_starts_with((string) $row->domain, 'www.'))
+                    <form
+                        method="POST"
+                        action="{{ route('ops.sites.domains.primary', [$site, $row]) }}"
+                        class="ops-inline-form"
+                        data-ops-pending
+                        data-reload-on-success
+                        data-domain-promote
+                        data-confirm="{{ __('sites.detail.make_primary_confirm', ['host' => $row->domain, 'previous' => $site->primary_domain]) }}"
+                        data-confirm-title="{{ __('sites.detail.make_primary_title') }}"
+                        data-confirm-label="{{ __('sites.detail.make_primary') }}"
+                        data-confirm-danger="false"
+                    >
+                        @csrf
+                        <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.detail.make_primary') }}</button>
+                    </form>
+                @endif
                 @if ($canEditDomains && ! $row->is_primary && ! $row->is_temporary && $row->domain !== 'www.'.$site->primary_domain)
                     <form
                         method="POST"
