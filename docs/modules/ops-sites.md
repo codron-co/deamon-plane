@@ -183,6 +183,15 @@ Writes go through the signed agent (`SitePublishStateUpdater` → `SiteAgentClie
 - A CMS that answers 404 is too old for the endpoint and says so in Turkish instead of leaking an HTTP code.
 - Site detail has a **Yayın durumu** card offering only the opposite action, with a confirm (danger when unpublishing). The list has **Yayına al** / **Yayından kaldır** bulk buttons (`sites.bulk_publish_status` when queued over JSON).
 
+## Site name (Plane-owned)
+
+`sites.name` is the display name the CMS storefront, mails and SEO show. It is **Plane-owned**: the Coolify env `DEAMON_SITE_NAME` only seeds the CMS on first boot, after which Plane pushes the name over the signed agent (`SiteIdentityPusher` → `SiteAgentClient::setSiteName` → CMS `POST /internal/control/v1/site/identity`, CMS 1.2.27+). Rules:
+
+- Renaming a site in the edit form pushes immediately; the flash says whether the CMS took it.
+- Every health poll compares the CMS `site_name` with Plane's name and pushes ours on a mismatch (stale seed, cloned env). No manual fix per site.
+- A CMS older than 1.2.27 reports no `site_name` and answers 404 to the push; Plane says so in Turkish and leaves the CMS alone until it is updated.
+- Audit: `site.name_pushed`, written only when the CMS reports `changed=true`.
+
 ## App health
 
 `SiteAppHealthInspector` scores Coolify pack / compose env / domains / last deploy / agent — **only once the site is running** (`active` / `deploying` / `stopped` / `archived`). Draft and provisioning show no App-health issues. Failed provision (`error`) only surfaces `missing_app` when there is no Coolify uuid; a failed create deploy or a premature agent poll does **not** become “Tekrar deploy” / “Agent kontrol”. Domain bind (`syncCoolifyDomains`, Sync auto-rebind) waits for `Site::canBindCoolifyDomains()` (active/deploying/stopped + uuid). List **App** column: **Healthy** or **N issues**. Hover is the issue list; click copies it. Row **Fix App issues** menu runs one fix or all for that site. Header **Fix App issues** runs a category (or all) across sites that need it via `sites.bulk_app_health_fix`. Site detail shows the same issues with in-page POST fixes (`sync_env`, `migrate_compose`, `bind_domains`, `inject_secret`, `redeploy`, `check_health`, `fix=all`) — `ops-async.js` keeps the page. Coolify Sync imports app hosts into `site_domains` and auto-rebinds Plane hosts missing on Coolify (`ops.coolify.auto_rebind_domains`) when the site can bind. Fleet **Domains** (`/domains`) lists hosts with unbound filter, per-row bind, and a bulk **Coolify’e bağla** that adopts the Sites `all=1` summary contract (`domains.bulk_*`). Live Coolify inspect is cached on `last_app_health_*` and refreshed by `InspectSiteAppHealthJob` (same schedule as agent health) or **Check Coolify**. Secrets are never stored or shown. Manual / pin / HEAD deploys write a local `deployments` row so the jobs widget can follow Coolify success/failure.

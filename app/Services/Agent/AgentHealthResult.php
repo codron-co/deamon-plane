@@ -68,6 +68,9 @@ final class AgentHealthResult
                 // CMS publish state (`draft` | `published`), mirrored onto the site
                 // by SiteHealthChecker. Absent on CMS older than 1.2.x.
                 'site_status' => self::nullableString($payload['site_status'] ?? null),
+                // CMS display name (CMS 1.2.27+). SiteHealthChecker pushes Plane's name
+                // over the agent when the two drift, so a rename never needs env work.
+                'site_name' => self::nullableString($payload['site_name'] ?? null),
                 'http_status' => $httpStatus,
             ]),
         );

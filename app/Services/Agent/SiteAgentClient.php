@@ -187,6 +187,75 @@ class SiteAgentClient
         return SitePublishAgentResult::fromCmsPayload($json, $response->status());
     }
 
+    /**
+     * Sets the CMS site display name (`sites.name`). CMS 1.2.27+. Env
+     * DEAMON_SITE_NAME only seeds the name on first boot; renames go this way.
+     */
+    public function setSiteName(Site $site, string $name): SiteIdentityAgentResult
+    {
+        if (! $site->hasAgentSecret()) {
+            return SiteIdentityAgentResult::needsSecret();
+        }
+
+        $baseUrl = $site->resolvedAgentBaseUrl();
+        if ($baseUrl === null) {
+            return SiteIdentityAgentResult::failure((string) __('sites.identity.errors.no_base_url'));
+        }
+
+        $path = ControlPlaneAgentContract::siteIdentityPath();
+        $body = ControlPlaneAgentContract::encodeJson(['name' => $name]);
+        if ($body === '') {
+            return SiteIdentityAgentResult::failure((string) __('sites.identity.errors.unreadable'));
+        }
+
+        $secret = (string) $site->agent_secret_encrypted;
+        $signed = ControlPlaneAgentSignature::headers($secret, $body);
+        $timeout = max(1, (int) config('ops.agent.timeout_seconds', 10));
+
+        try {
+            $response = $this->sendWithRetry(fn (): Response => Http::timeout($timeout)
+                ->acceptJson()
+                ->withHeaders($signed['headers'])
+                ->withBody($body, 'application/json')
+                ->post($baseUrl.$path));
+        } catch (ConnectionException) {
+            $this->logIdentityFailure($site, 'timeout');
+
+            return SiteIdentityAgentResult::failure((string) __('sites.identity.errors.timeout'));
+        } catch (Throwable) {
+            $this->logIdentityFailure($site, 'http_error');
+
+            return SiteIdentityAgentResult::failure((string) __('sites.identity.errors.request'));
+        }
+
+        if ($response->failed()) {
+            $json = $response->json();
+            $result = SiteIdentityAgentResult::fromCmsError(is_array($json) ? $json : null, $response->status());
+            $this->logIdentityFailure($site, $result->errorCode ?? 'http_error', $response->status());
+
+            return $result;
+        }
+
+        $json = $response->json();
+        if (! is_array($json) || $this->payloadContainsSecret($site, $json)) {
+            $this->logIdentityFailure($site, 'http_error', $response->status());
+
+            return SiteIdentityAgentResult::failure((string) __('sites.identity.errors.unreadable'), $response->status());
+        }
+
+        return SiteIdentityAgentResult::fromCmsPayload($json, $response->status());
+    }
+
+    private function logIdentityFailure(Site $site, string $reason, ?int $httpStatus = null): void
+    {
+        Log::warning('Site identity agent call failed', [
+            'site_id' => $site->id,
+            'site_slug' => $site->slug,
+            'reason' => $reason,
+            'http_status' => $httpStatus,
+        ]);
+    }
+
     private function logPublishFailure(Site $site, string $reason, ?int $httpStatus = null): void
     {
         Log::warning('Site publish state agent call failed', [

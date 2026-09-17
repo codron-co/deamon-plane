@@ -95,6 +95,22 @@ return [
         'desc' => 'descending',
         'active' => 'Sorted by :column, :direction. Click to reverse.',
     ],
+    'identity' => [
+        'needs_secret' => 'Site name was not sent to the CMS: no agent secret or agent URL.',
+        'flash' => [
+            'pushed' => 'The new name was sent to the CMS.',
+            'not_pushed' => 'The new name could not be sent to the CMS: :reason The health check will correct it once the CMS supports the endpoint.',
+        ],
+        'errors' => [
+            'no_base_url' => 'Site has no agent base URL or primary domain.',
+            'timeout' => 'The CMS agent timed out; the CMS site name is unchanged.',
+            'request' => 'The CMS agent request failed; the CMS site name is unchanged.',
+            'signature' => 'The CMS agent rejected the signature; the CMS site name is unchanged.',
+            'unsupported_cms' => 'This CMS version cannot take the site name over the agent (1.2.27 required). Update the site.',
+            'unreadable' => 'The CMS response could not be read; the CMS site name is unchanged.',
+            'http' => 'The CMS agent returned HTTP :status; the CMS site name is unchanged.',
+        ],
+    ],
     'publish' => [
         'title' => 'Publish state',
         'hint' => 'The publish state inside the CMS. While it is draft, visitors get the coming-soon page. Plane\'s Status field is the Coolify lifecycle, not this.',

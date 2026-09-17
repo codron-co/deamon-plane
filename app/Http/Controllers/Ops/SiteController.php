@@ -36,6 +36,7 @@ use App\Services\Sites\SiteAgentSecretSweep;
 use App\Services\Sites\SiteAppHealthFixer;
 use App\Services\Sites\SiteAttacher;
 use App\Services\Sites\SiteDomainSync;
+use App\Services\Sites\SiteIdentityPusher;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLifecycleException;
@@ -781,6 +782,7 @@ class SiteController extends Controller
         $site->load(['primaryDomainRecord', 'domains']);
         $previousMailServerId = $site->mail_server_id;
         $previousDomain = $site->primary_domain;
+        $previousName = (string) $site->name;
         $previousHosts = $site->operatorHosts();
         $removedHosts = [];
 
@@ -878,6 +880,15 @@ class SiteController extends Controller
             } else {
                 $message .= $this->mailQueueSuffix($site, $bind, $configurer);
             }
+        }
+
+        // The display name is Plane's; hand the rename to the CMS over the agent so it
+        // never needs an env edit or a redeploy. A CMS that cannot take it yet is a hint, not a failure.
+        if ($previousName !== (string) $site->name && $site->canChangePublishStatus()) {
+            $identity = app(SiteIdentityPusher::class)->push($site, $request->user(), $request->ip());
+            $message .= ' '.($identity->ok
+                ? __('sites.identity.flash.pushed', ['name' => $site->name])
+                : __('sites.identity.flash.not_pushed', ['reason' => $identity->safeMessage]));
         }
 
         $redirect = redirect()

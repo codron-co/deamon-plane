@@ -24,6 +24,9 @@ final class ControlPlaneAgentContract
     /** CMS 1.2.16+: sets the publish state (`draft` | `published`). */
     public const SITE_STATUS_PATH = '/internal/control/v1/site/status';
 
+    /** CMS 1.2.27+: sets the site display name (`sites.name`) so a rename needs no env change or redeploy. */
+    public const SITE_IDENTITY_PATH = '/internal/control/v1/site/identity';
+
     public const THEME_LIST_PATH = '/internal/control/v1/themes';
 
     public const THEME_INSTALL_PATH = '/internal/control/v1/themes/install';
@@ -108,6 +111,11 @@ final class ControlPlaneAgentContract
     public static function siteStatusPath(): string
     {
         return self::configuredPath('ops.agent.site_status_path', self::SITE_STATUS_PATH);
+    }
+
+    public static function siteIdentityPath(): string
+    {
+        return self::configuredPath('ops.agent.site_identity_path', self::SITE_IDENTITY_PATH);
     }
 
     public static function themeListPath(): string

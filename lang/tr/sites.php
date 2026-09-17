@@ -96,6 +96,22 @@ return [
         'desc' => 'azalan',
         'active' => ':column kolonuna göre :direction sıralı. Yönü çevirmek için tıklayın.',
     ],
+    'identity' => [
+        'needs_secret' => 'Site adı CMS’e gönderilemedi: agent secret veya agent adresi yok.',
+        'flash' => [
+            'pushed' => 'Yeni ad CMS’e gönderildi.',
+            'not_pushed' => 'Yeni ad CMS’e gönderilemedi: :reason Sağlık kontrolü CMS bu ucu destekleyince adı kendiliğinden düzeltir.',
+        ],
+        'errors' => [
+            'no_base_url' => 'Sitenin agent adresi veya primary domain’i yok.',
+            'timeout' => 'CMS agent zaman aşımına uğradı; site adı CMS’te değişmedi.',
+            'request' => 'CMS agent isteği başarısız; site adı CMS’te değişmedi.',
+            'signature' => 'CMS agent imzayı reddetti; site adı CMS’te değişmedi.',
+            'unsupported_cms' => 'Bu CMS sürümü site adını agent’tan almıyor (1.2.27 gerekir). Siteyi güncelleyin.',
+            'unreadable' => 'CMS yanıtı okunamadı; site adı CMS’te değişmedi.',
+            'http' => 'CMS agent HTTP :status döndü; site adı CMS’te değişmedi.',
+        ],
+    ],
     'publish' => [
         'title' => 'Yayın durumu',
         'hint' => 'CMS’teki yayın durumu. Taslak iken ziyaretçiler “Yakında Açılıyoruz” sayfasını görür. Plane’in Durum alanı Coolify yaşam döngüsüdür, bu alan değildir.',

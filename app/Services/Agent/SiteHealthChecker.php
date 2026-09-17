@@ -6,12 +6,14 @@ use App\Enums\CmsPublishStatus;
 use App\Models\Site;
 use App\Services\Mail\SiteHealthMailNotifier;
 use App\Services\Sites\SiteFilterVerdict;
+use App\Services\Sites\SiteIdentityPusher;
 
 class SiteHealthChecker
 {
     public function __construct(
         private readonly SiteAgentClient $client,
         private readonly SiteHealthMailNotifier $mailNotifier,
+        private readonly SiteIdentityPusher $identity,
     ) {}
 
     public function check(Site $site): AgentHealthResult
@@ -35,6 +37,13 @@ class SiteHealthChecker
         SiteFilterVerdict::apply($site);
         $site->save();
 
+        // Plane owns the display name. A CMS that reports a different one (stale
+        // DEAMON_SITE_NAME seed, cloned env) is corrected here, on every poll, so no
+        // site has to be fixed by hand.
+        if ($result->ok) {
+            $this->identity->healFromHealth($site, $summary['site_name'] ?? null);
+        }
+
         $this->mailNotifier->afterHealthCheck($site->fresh() ?? $site, $result);
 
         return $result;
@@ -57,6 +66,7 @@ class SiteHealthChecker
             'php',
             'queue_ok',
             'site_status',
+            'site_name',
             'http_status',
         ];
 
