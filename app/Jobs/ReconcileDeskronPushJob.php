@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\DeskronSetting;
 use App\Models\Site;
+use App\Services\Deskron\DeskronConfigurer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -21,6 +22,12 @@ use Illuminate\Foundation\Queue\Queueable;
  * Retrying on a schedule removes that ordering trap. Deploy a CMS whenever you
  * like; the next pass configures it. Sites already configured are left alone —
  * a key change still pushes to everyone through DispatchDeskronPushJob.
+ *
+ * This sweep pushes inline rather than dispatching PushDeskronJob, which
+ * retries four times and then throws. A site that is simply on older code
+ * answers 405 every hour, and queueing that would bury failed_jobs under
+ * hundreds of entries a day for a condition only a deploy resolves. Here a
+ * failure just records its reason on the site and the sweep moves on.
  */
 class ReconcileDeskronPushJob implements ShouldQueue
 {
@@ -28,9 +35,10 @@ class ReconcileDeskronPushJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 120;
+    /** One pass walks every unconfigured site, each with its own agent timeout. */
+    public int $timeout = 900;
 
-    public function handle(): void
+    public function handle(DeskronConfigurer $configurer): void
     {
         if (! DeskronSetting::current()->isReady()) {
             return;
@@ -43,9 +51,9 @@ class ReconcileDeskronPushJob implements ShouldQueue
                     ->orWhereColumn('deskron_push_failed_at', '>', 'deskron_pushed_at');
             })
             ->orderBy('id')
-            ->each(function (Site $site): void {
+            ->each(function (Site $site) use ($configurer): void {
                 if ($site->hasAgentSecret()) {
-                    PushDeskronJob::dispatch((string) $site->id);
+                    $configurer->sync($site);
                 }
             });
     }
