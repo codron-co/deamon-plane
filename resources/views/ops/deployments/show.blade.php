@@ -92,6 +92,95 @@
         </article>
     </div>
 
+    @if ($diagnosis !== null)
+        @php
+            $replacements = ['uuid' => (string) ($site->coolify_app_uuid ?? ''), 'domain' => (string) ($site->primary_domain ?? '')];
+            $diagSteps = $diagnosis->steps($replacements);
+            $diagCommands = $diagnosis->commands($replacements);
+            $autoLabel = $diagnosis->autoFixLabel();
+            $offeredFixes = array_values(array_filter($diagnosis->fixes, static fn (string $fix): bool => $fix !== ($diagnosis->autoFix['fix'] ?? null) || ($diagnosis->autoFix['status'] ?? '') !== 'applied'));
+        @endphp
+        <article class="site-card ops-diagnosis" id="deployment-diagnosis" aria-labelledby="deployment-diagnosis-heading" data-diagnosis-code="{{ $diagnosis->code }}">
+            <div class="site-card-head">
+                <div>
+                    <span class="site-section-kicker">{{ __('deploy_diagnosis.kicker') }}</span>
+                    <h3 id="deployment-diagnosis-heading">{{ $diagnosis->title() }} @include('ops.dashboard._hint', ['text' => __('deploy_diagnosis.hint')])</h3>
+                </div>
+                <div class="form-actions">
+                    <span class="status-chip status-{{ $diagnosis->isUnknown() ? 'unknown' : 'error' }}">{{ __('deploy_diagnosis.services.'.$diagnosis->service) }}</span>
+                    @if ($canFix ?? false)
+                        <form method="POST" action="{{ route('ops.sites.deployments.diagnose', [$site, $deployment]) }}" data-ops-pending>
+                            @csrf
+                            <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('deploy_diagnosis.refresh') }}</button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+            <p>{{ $diagnosis->cause() }}</p>
+            @if (filled($diagnosis->evidence))
+                <p class="muted"><strong>{{ __('deploy_diagnosis.evidence') }}:</strong> <code>{{ $diagnosis->evidence }}</code></p>
+            @endif
+            <p class="ops-diagnosis-auto" data-diagnosis-auto>
+                @if ($autoLabel !== null)
+                    <strong>{{ $autoLabel }}</strong>
+                @else
+                    {{ __('deploy_diagnosis.auto_none') }}
+                @endif
+            </p>
+            @if (($canFix ?? false) && $offeredFixes !== [])
+                <div class="ops-copy-row" data-diagnosis-fixes>
+                    <span class="muted">{{ __('deploy_diagnosis.fix_buttons') }}:</span>
+                    @foreach ($offeredFixes as $fix)
+                        <form
+                            method="POST"
+                            action="{{ route('ops.sites.app-health.fix', $site) }}"
+                            data-ops-pending
+                            data-confirm="{{ __('sites.app_health.confirm_fix', ['name' => $site->name, 'label' => __('sites.app_health.fixes.'.$fix)]) }}"
+                            data-confirm-title="{{ __('sites.app_health.fixes.'.$fix) }}"
+                            data-confirm-label="{{ __('sites.app_health.fixes.'.$fix) }}"
+                            data-confirm-danger="{{ in_array($fix, ['stop_then_redeploy', 'rollback_last_good'], true) ? 'true' : 'false' }}"
+                        >
+                            @csrf
+                            <input type="hidden" name="fix" value="{{ $fix }}">
+                            <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.app_health.fixes.'.$fix) }}</button>
+                        </form>
+                    @endforeach
+                </div>
+            @endif
+            @if ($diagSteps !== [])
+                <h4>{{ __('deploy_diagnosis.steps') }}</h4>
+                <ol class="ops-diagnosis-steps">
+                    @foreach ($diagSteps as $step)
+                        <li>{{ $step }}</li>
+                    @endforeach
+                </ol>
+            @endif
+            @if ($diagCommands !== [])
+                <div class="ops-copy-row">
+                    <h4 id="deployment-commands-heading">{{ __('deploy_diagnosis.commands') }}</h4>
+                    <button type="button" class="btn btn-ghost btn-sm" data-copy-target="#deployment-commands" data-copied-label="{{ __('sites.deployments.copied') }}">{{ __('sites.deployments.copy_error') }}</button>
+                </div>
+                <pre id="deployment-commands" class="ops-pre">{{ implode("\n", $diagCommands) }}</pre>
+            @endif
+            <div class="ops-detail-section">
+                <div class="ops-copy-row">
+                    <h4 id="deployment-container-log-heading">{{ __('deploy_diagnosis.container_logs') }}</h4>
+                    @if (filled($diagnosis->containerLogs))
+                        <button type="button" class="btn btn-ghost btn-sm" data-copy-target="#deployment-container-log" data-copied-label="{{ __('sites.deployments.copied') }}">{{ __('sites.deployments.copy_logs') }}</button>
+                    @endif
+                </div>
+                @if (filled($diagnosis->containerLogs))
+                    <pre id="deployment-container-log" class="ops-pre">{{ $diagnosis->containerLogs }}</pre>
+                @elseif (filled($diagnosis->containerLogsError))
+                    <p class="muted">{{ __('deploy_diagnosis.container_logs_missing', ['reason' => $diagnosis->containerLogsError]) }}</p>
+                @else
+                    <p class="muted">{{ __('deploy_diagnosis.container_logs_pending') }}</p>
+                @endif
+            </div>
+            <p class="muted"><small>{{ __('deploy_diagnosis.runbook', ['code' => $diagnosis->code]) }}</small></p>
+        </article>
+    @endif
+
     <div class="site-overview-grid">
         <article class="site-card">
             <div class="site-card-head">

@@ -2,6 +2,14 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Deploy failure diagnosis + automatic safe fixes (2026-09-19)
+
+- Status: **committed on `alpha`**. Trigger: WetSan (`alaibjmbwyug8jpj1uigndk1`) failing since 2026-09-10 with `dependency failed to start: container mysql-… exited (1)` and the operator asking why Plane only shows the raw Coolify dump; Bizim Usta / Çınar Oto / Çukurova Profil on the placeholder page with a "finished" deploy.
+- `DeploymentFailureClassifier` (24 codes, ordered container-evidence → git/registry → host → app → compose symptom → build → Coolify/Plane) + `DeploymentDiagnoser` (Coolify `GET /applications/{uuid}/logs`, redaction, 8 KB tail, one `AUTO_SAFE` fix with a 24 h repeat guard) + `DiagnoseDeploymentJob` from the `Deployment::saved` hook. Column `deployments.diagnosis` (json). UI: Teşhis card on deploy detail, headline on list/widget/report, `deploy_diagnosed` / `app_not_running` App-health issues, fixes `restart_app` / `sync_deployments` / `stop_then_redeploy` / `rollback_last_good` / `follow_head`. Agent health: `proxy_fallback` when the CodRon placeholder answers. Coolify client: `restartApplication`, `getApplicationLogs`.
+- Config `ops.diagnosis.*` (`OPS_DIAGNOSIS_ENABLED`, `OPS_DIAGNOSIS_AUTO_FIX`, log lines/bytes, repeat window); phpunit disables the job, tests opt in.
+- Server access stays outside Plane: every manual code carries paste-ready `docker` commands for whoever has SSH. Roadmap and volume rules: [../runbooks/deploy-failure-triage.md](../runbooks/deploy-failure-triage.md). CMS side (1.2.29): compose `restart: on-failure:3` so a crashed container comes back without a reboot stampede.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md), [../modules/coolify-client.md](../modules/coolify-client.md). Tests: `DeploymentFailureClassifierTest` (11), `DeploymentDiagnosisTest` (8).
+
 ## Coolify env catalog from CMS `.env.production.example` per branch (2026-09-14)
 
 - Status: **code** (Deamon Git + prune). Build-pack catalogs (`dockercompose` / `dockerfile`) and in-Plane editing are gone; `coolify_env_defaults` is keyed by git **channel**. Source per channel is `coolify_env_catalog_sources` (repo, commit, fetched_at, last_error).

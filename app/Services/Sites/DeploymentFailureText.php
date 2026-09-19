@@ -96,6 +96,32 @@ final class DeploymentFailureText
             $lines[] = 'Coolify deployment UUID: '.$deployment->coolify_deployment_uuid;
         }
 
+        // The diagnosis travels with the report so whoever gets the paste (developer,
+        // AI, the person with server access) sees the conclusion and the commands.
+        $diagnosis = $deployment->diagnosis();
+        if ($diagnosis !== null) {
+            $replacements = [
+                'uuid' => (string) ($site instanceof Site ? $site->coolify_app_uuid : ''),
+                'domain' => (string) ($site instanceof Site ? $site->primary_domain : ''),
+            ];
+            $lines[] = '';
+            $lines[] = __('deploy_diagnosis.title').': '.$diagnosis->code.' — '.$diagnosis->title();
+            $lines[] = __('deploy_diagnosis.cause').': '.$diagnosis->cause();
+            if (filled($diagnosis->evidence)) {
+                $lines[] = __('deploy_diagnosis.evidence').': '.$diagnosis->evidence;
+            }
+            $auto = $diagnosis->autoFixLabel();
+            if ($auto !== null) {
+                $lines[] = $auto;
+            }
+            foreach ($diagnosis->steps($replacements) as $index => $step) {
+                $lines[] = ($index + 1).'. '.$step;
+            }
+            foreach ($diagnosis->commands($replacements) as $command) {
+                $lines[] = '$ '.$command;
+            }
+        }
+
         $body = implode("\n", $lines);
 
         if (filled($deployment->error_message)) {
@@ -104,6 +130,10 @@ final class DeploymentFailureText
 
         if (filled($deployment->log_excerpt)) {
             $body .= "\n\nLogs:\n".$deployment->log_excerpt;
+        }
+
+        if ($diagnosis !== null && filled($diagnosis->containerLogs)) {
+            $body .= "\n\n".__('deploy_diagnosis.container_logs').":\n".$diagnosis->containerLogs;
         }
 
         return trim($body)."\n";

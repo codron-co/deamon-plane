@@ -165,6 +165,7 @@ return [
         'refreshed' => 'App health refreshed.',
         'fixed' => 'Fix sent. App health refreshed.',
         'unknown_fix' => 'Unknown App fix.',
+        'no_last_good' => 'This site has no finished deployment on record; there is no version to roll back to.',
         'bulk' => 'Fix App issues',
         'bulk_empty' => 'No sites need that App fix.',
         'bulk_done' => 'App fixes: :ok ok, :failed failed.',
@@ -191,6 +192,8 @@ return [
             'domain_unbound' => 'Coolify is missing Plane domain :key (and possibly others).',
             'agent_unhealthy' => 'CMS agent health is failing (non-JSON 200, 404, signature, or timeout).',
             'coolify_unreachable' => 'Coolify could not be queried for this app.',
+            'app_not_running' => 'The app container is not running: the proxy serves the CodRon placeholder page (restart: no, so it will not come back on its own).',
+            'deploy_diagnosed' => 'Latest deploy failed: :key',
             'unknown' => 'App health reported an unknown issue.',
         ],
         'fixes' => [
@@ -200,6 +203,11 @@ return [
             'redeploy' => 'Redeploy',
             'check_health' => 'Check agent',
             'bind_domains' => 'Bind domains',
+            'restart_app' => 'Restart',
+            'sync_deployments' => 'Sync from Coolify',
+            'rollback_last_good' => 'Roll back to last good',
+            'follow_head' => 'Follow HEAD',
+            'stop_then_redeploy' => 'Stop and redeploy',
         ],
     ],
     'live' => [

@@ -48,6 +48,12 @@ final class SiteAppHealthIssue
             'wrong_env' => __('sites.app_health.issues.wrong_env', $replace),
             'missing_agent_secret' => __('sites.app_health.issues.missing_agent_secret'),
             'deploy_failed' => __('sites.app_health.issues.deploy_failed'),
+            // key = diagnosis code; the title comes from the diagnosis catalog so the
+            // row says "MySQL exited" instead of the generic "deploy failed".
+            'deploy_diagnosed' => __('sites.app_health.issues.deploy_diagnosed', [
+                'key' => __('deploy_diagnosis.codes.'.($this->key ?? 'unknown').'.title', ['exit' => '?', 'container' => '']),
+            ]),
+            'app_not_running' => __('sites.app_health.issues.app_not_running'),
             'domain_unbound' => __('sites.app_health.issues.domain_unbound', $replace),
             'agent_unhealthy' => __('sites.app_health.issues.agent_unhealthy'),
             'coolify_unreachable' => __('sites.app_health.issues.coolify_unreachable'),
@@ -74,4 +80,4 @@ final class SiteAppHealthIssue
 
         return $trimmed === '' ? null : $trimmed;
     }
-};
+}

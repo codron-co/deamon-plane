@@ -47,14 +47,15 @@
                     @foreach ($deployments as $deployment)
                         <tr data-href="{{ route('ops.sites.deployments.show', [$site, $deployment]) }}" tabindex="0">
                             <td class="deployments-col-status">
+                                @php($headline = $deployment->failureHeadline())
                                 <span
                                     class="status-chip status-{{ $deployment->status->value }}"
                                     @if (filled($deployment->error_message))
                                         title="{{ $deployment->error_message }}"
                                     @endif
                                 >{{ $deployment->status->label() }}</span>
-                                @if (filled($deployment->error_message))
-                                    <div class="site-slug deployments-error-clip">{{ $deployment->error_message }}</div>
+                                @if ($headline !== null)
+                                    <div class="site-slug deployments-error-clip" data-deployment-headline>{{ $headline }}</div>
                                 @endif
                             </td>
                             <td class="deployments-col-branch"><span class="branch-chip">{{ $deployment->channel->value }}</span></td>

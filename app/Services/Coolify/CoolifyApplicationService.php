@@ -193,6 +193,16 @@ class CoolifyApplicationService
         $this->client->stopApplication($uuid);
     }
 
+    public function restartApplication(string $uuid): void
+    {
+        $this->client->restartApplication($uuid);
+    }
+
+    public function getApplicationLogs(string $uuid, int $lines = 200): string
+    {
+        return $this->client->getApplicationLogs($uuid, $lines);
+    }
+
     public function cancelDeployment(string $deploymentUuid): void
     {
         $this->client->cancelDeployment($deploymentUuid);

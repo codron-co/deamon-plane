@@ -98,6 +98,15 @@ class SiteAgentClient
         if (! is_array($json)) {
             $looksLikePage = str_contains(strtolower((string) $response->header('Content-Type')), 'text/html')
                 || str_starts_with(ltrim($response->body()), '<');
+            if ($looksLikePage && self::isProxyFallbackPage($response->body())) {
+                $this->logFailure($site, AgentHealthReason::ProxyFallback, $response->status());
+
+                return AgentHealthResult::failure(
+                    AgentHealthReason::ProxyFallback,
+                    'The proxy served the CodRon placeholder page: no running container answers for this host. Restart the app in Coolify.',
+                    $response->status(),
+                );
+            }
             $reason = $looksLikePage ? AgentHealthReason::AgentNotRegistered : AgentHealthReason::HttpError;
             $this->logFailure($site, $reason, $response->status());
 
@@ -663,5 +672,22 @@ class SiteAgentClient
             'reason' => $reason,
             'http_status' => $httpStatus,
         ]);
+    }
+
+    /**
+     * The host-level fallback page Coolify's proxy serves when no container claims a
+     * host. Matched on wording, not markup, so a restyle does not break detection.
+     */
+    public static function isProxyFallbackPage(string $body): bool
+    {
+        $haystack = strtolower($body);
+
+        foreach (['your domain is ready', 'connected to codron infrastructure', 'will appear here as soon as it is deployed'] as $needle) {
+            if (str_contains($haystack, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

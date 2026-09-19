@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\Channel;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
+use App\Jobs\DiagnoseDeploymentJob;
+use App\Services\Sites\Diagnosis\DeploymentDiagnosis;
 use Carbon\CarbonImmutable;
 use Database\Factories\DeploymentFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +33,7 @@ class Deployment extends Model
         'finished_at',
         'log_excerpt',
         'error_message',
+        'diagnosis',
         'requested_by',
     ];
 
@@ -45,7 +48,48 @@ class Deployment extends Model
             'status' => DeploymentStatus::class,
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'diagnosis' => 'array',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Every path that fails a deployment (poll, webhook, sync, provisioner,
+        // channel switch) ends in a save, so the diagnosis hangs off the model
+        // instead of each caller remembering to ask for it.
+        static::saved(static function (Deployment $deployment): void {
+            if ($deployment->status !== DeploymentStatus::Failed) {
+                return;
+            }
+            if (! $deployment->wasChanged('status') && ! $deployment->wasRecentlyCreated) {
+                return;
+            }
+            if ($deployment->diagnosis !== null) {
+                return;
+            }
+
+            DiagnoseDeploymentJob::dispatch($deployment->id)->afterCommit();
+        });
+    }
+
+    public function diagnosis(): ?DeploymentDiagnosis
+    {
+        $raw = $this->diagnosis;
+
+        return is_array($raw) && $raw !== [] ? DeploymentDiagnosis::fromArray($raw) : null;
+    }
+
+    /**
+     * The short failure title the widget, the list row and the ops mail lead with.
+     */
+    public function failureHeadline(): ?string
+    {
+        $diagnosis = $this->diagnosis();
+        if ($diagnosis !== null && ! $diagnosis->isUnknown()) {
+            return $diagnosis->title();
+        }
+
+        return filled($this->error_message) ? trim((string) $this->error_message) : null;
     }
 
     public function site(): BelongsTo
@@ -116,9 +160,7 @@ class Deployment extends Model
         $kind = __('ops.jobs.deployment');
         $subject = trim((string) ($site?->name ?? ''));
         $statusLabel = $this->status?->label() ?? '';
-        $detail = filled($this->error_message)
-            ? trim((string) $this->error_message)
-            : ($this->trigger?->label() ?? '');
+        $detail = $this->failureHeadline() ?? ($this->trigger?->label() ?? '');
 
         $message = trim(implode(' · ', array_filter([$detail, $statusLabel], static fn (string $part): bool => $part !== '')));
 

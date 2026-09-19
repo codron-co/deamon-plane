@@ -23,4 +23,10 @@ final class AgentHealthReason
      * CONTROL_PLANE_AGENT_SECRET is set, so the request fell through to the site frontend.
      */
     public const AgentNotRegistered = 'agent_not_registered';
+
+    /**
+     * The proxy answered with the CodRon placeholder page: no running container claims
+     * this host. The app crashed (restart: no) or never started; the CMS is not involved.
+     */
+    public const ProxyFallback = 'proxy_fallback';
 }

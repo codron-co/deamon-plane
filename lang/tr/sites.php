@@ -166,6 +166,7 @@ return [
         'refreshed' => 'App sağlığı yenilendi.',
         'fixed' => 'Düzeltme gönderildi. App sağlığı yenilendi.',
         'unknown_fix' => 'Bilinmeyen App düzeltmesi.',
+        'no_last_good' => 'Bu sitede başarıyla bitmiş bir deploy kaydı yok; geri dönülecek sürüm bulunamadı.',
         'bulk' => 'App hatalarını düzelt',
         'bulk_empty' => 'Bu App düzeltmesine ihtiyaç duyan site yok.',
         'bulk_done' => 'App düzeltmeleri: :ok tamam, :failed hata.',
@@ -192,6 +193,8 @@ return [
             'domain_unbound' => 'Coolify’de Plane domaini yok: :key (başkaları da eksik olabilir).',
             'agent_unhealthy' => 'CMS agent health başarısız (JSON olmayan 200, 404, imza veya zaman aşımı).',
             'coolify_unreachable' => 'Bu app için Coolify sorgulanamadı.',
+            'app_not_running' => 'Uygulama konteyneri çalışmıyor: proxy CodRon yedek sayfasını gösteriyor (restart: no olduğu için kendiliğinden geri gelmez).',
+            'deploy_diagnosed' => 'Son deploy başarısız: :key',
             'unknown' => 'App sağlığı bilinmeyen bir sorun bildirdi.',
         ],
         'fixes' => [
@@ -201,6 +204,11 @@ return [
             'redeploy' => 'Tekrar deploy',
             'check_health' => 'Agent kontrol',
             'bind_domains' => 'Domain bağla',
+            'restart_app' => 'Yeniden başlat',
+            'sync_deployments' => 'Coolify’den senkronla',
+            'rollback_last_good' => 'Son çalışan sürüme dön',
+            'follow_head' => 'HEAD’i takip et',
+            'stop_then_redeploy' => 'Durdur ve tekrar deploy',
         ],
     ],
     'live' => [

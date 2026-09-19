@@ -2,12 +2,15 @@
 
 namespace App\Services\Sites;
 
+use App\Enums\DeploymentStatus;
+use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Agent\SiteHealthChecker;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Coolify\CoolifyDeploymentSync;
 use App\Services\Ops\BulkResultSummary;
 use App\Services\Ops\PacedFanout;
 use Carbon\CarbonImmutable;
@@ -27,6 +30,11 @@ class SiteAppHealthFixer
         'sync_env',
         'bind_domains',
         'inject_secret',
+        'sync_deployments',
+        'restart_app',
+        'stop_then_redeploy',
+        'rollback_last_good',
+        'follow_head',
         'redeploy',
         'check_health',
     ];
@@ -141,6 +149,11 @@ class SiteAppHealthFixer
                 'redeploy' => $this->deploys->redeploy($site, $actor, $ip),
                 'check_health' => $this->health->check($site),
                 'bind_domains' => $this->bindDomains($site),
+                'restart_app' => $this->restartApp($site, $actor, $ip),
+                'sync_deployments' => $this->syncDeployments($site),
+                'stop_then_redeploy' => $this->stopThenRedeploy($site, $actor, $ip),
+                'rollback_last_good' => $this->rollbackLastGood($site, $actor, $ip),
+                'follow_head' => $this->deploys->followHead($site, $actor, $ip),
                 default => throw new InvalidArgumentException(__('sites.app_health.unknown_fix')),
             };
         } catch (ComposePackException|SiteProvisionException|CoolifyApiException $exception) {
@@ -279,5 +292,77 @@ class SiteAppHealthFixer
         } catch (SiteProvisionException $exception) {
             throw new SiteAppHealthException($exception->getMessage(), (int) $exception->getCode(), $exception);
         }
+    }
+
+    /**
+     * Restart the compose containers in place (no rebuild). This is the recovery for
+     * a container that crashed under `restart: no` and left the proxy on the
+     * placeholder page.
+     */
+    private function restartApp(Site $site, ?User $actor, ?string $ip): void
+    {
+        $uuid = $this->requireApp($site);
+
+        CoolifyApplicationService::forSite($site)->restartApplication($uuid);
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => 'site.app_restarted',
+            'after' => ['coolify_app_uuid' => $uuid],
+            'ip' => $ip,
+        ]);
+    }
+
+    /**
+     * Pull the last deployments from Coolify: a poll timeout or a 429 leaves a row
+     * marked failed while Coolify may have finished.
+     */
+    private function syncDeployments(Site $site): void
+    {
+        $this->requireApp($site);
+
+        $coolify = CoolifyApplicationService::forSite($site);
+        app(CoolifyDeploymentSync::class)->sync($site, $coolify);
+        app(CoolifyDeploymentSync::class)->recoverSiteIfLatestFinished($site);
+    }
+
+    private function stopThenRedeploy(Site $site, ?User $actor, ?string $ip): void
+    {
+        $uuid = $this->requireApp($site);
+
+        CoolifyApplicationService::forSite($site)->stopApplication($uuid);
+        $this->deploys->redeploy($site, $actor, $ip);
+    }
+
+    /**
+     * Pin the newest commit that finished on this site. Offered, never automatic:
+     * moving a site off HEAD is an operator decision.
+     */
+    private function rollbackLastGood(Site $site, ?User $actor, ?string $ip): void
+    {
+        $this->requireApp($site);
+
+        $lastGood = $site->deployments()
+            ->where('status', DeploymentStatus::Finished)
+            ->whereNotNull('commit_sha')
+            ->orderByDesc('finished_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $lastGood instanceof Deployment || blank($lastGood->commit_sha)) {
+            throw new SiteAppHealthException(__('sites.app_health.no_last_good'));
+        }
+
+        $this->deploys->pin($site, (string) $lastGood->commit_sha, $actor, $ip);
+    }
+
+    private function requireApp(Site $site): string
+    {
+        $uuid = trim((string) $site->coolify_app_uuid);
+        if ($uuid === '') {
+            throw new SiteAppHealthException(__('site_ops.pack.missing_app'));
+        }
+
+        return $uuid;
     }
 }

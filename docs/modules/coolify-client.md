@@ -68,6 +68,8 @@ Existing `coolify_settings` row is copied into the first connection on migrate (
 | `listEnvironments($projectUuid)` | `GET /projects/{uuid}/environments` | 404 → nested `environments` on `GET /projects/{uuid}` |
 | `listGithubApps()` | `GET /github-apps` | `null` on 404/405 (hybrid). **Not** Plane’s theme-catalog GitHub App |
 | `listPrivateKeys()` | `GET /security/keys` | Deploy keys |
+| `restartApplication($uuid)` | `POST /applications/{uuid}/restart` | App-health fix `restart_app`: brings a crashed compose service (`restart: no`) back without a rebuild |
+| `getApplicationLogs($uuid, $lines)` | `GET /applications/{uuid}/logs?lines=` | Deploy diagnosis: container log tail; `{logs: string}` or a per-container list, flattened with `===== name =====` headers |
 
 If `GET /github-apps` is missing, UI shows a hybrid note: pick a deploy key from `/security/keys`, or Super Admin pastes a Coolify GitHub App UUID in the collapsed advanced field. Link: [Coolify GitHub Apps API](https://github.com/coollabsio/coolify/blob/v4.x/routes/api.php) (`GET /github-apps` exists on current v4.x; older 4.3 instances may 404).
 

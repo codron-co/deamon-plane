@@ -17,6 +17,7 @@ final class SiteAppHealthReport
         'dockerfile_pack',
         'missing_agent_secret',
         'deploy_failed',
+        'deploy_diagnosed',
         'agent_unhealthy',
     ];
 

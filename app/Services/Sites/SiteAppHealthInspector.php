@@ -41,7 +41,7 @@ class SiteAppHealthInspector
                 $app = $coolify->getApp((string) $site->coolify_app_uuid);
                 $buildPack = $app->buildPack;
                 $composeLocation = $app->dockerComposeLocation;
-                $issues = $this->mergeIssues($issues, $this->livePackIssues($app));
+                $issues = $this->mergeIssues($issues, $this->livePackIssues($app, $site));
 
                 if ($app->isComposePack()) {
                     $envs = $this->envMap($coolify->listEnvs((string) $site->coolify_app_uuid));
@@ -137,17 +137,39 @@ class SiteAppHealthInspector
         $latest = $this->latestDeployment($site);
 
         if ($latest?->status === DeploymentStatus::Failed) {
-            $issues[] = new SiteAppHealthIssue(
-                'deploy_failed',
-                filled($site->coolify_app_uuid) ? 'redeploy' : null,
-            );
+            $issues[] = $this->failedDeployIssue($site, $latest);
         }
 
-        if ($site->hasAgentSecret() && $this->agentHealth->isAgentFailing($site)) {
+        // The proxy is serving the placeholder page for this host: the container is
+        // down, not the agent. Restart is the fix, not "check agent".
+        if ($this->agentHealth->isProxyFallback($site)) {
+            $issues[] = new SiteAppHealthIssue(
+                'app_not_running',
+                filled($site->coolify_app_uuid) ? 'restart_app' : null,
+            );
+        } elseif ($site->hasAgentSecret() && $this->agentHealth->isAgentFailing($site)) {
             $issues[] = new SiteAppHealthIssue('agent_unhealthy', 'check_health');
         }
 
         return $issues;
+    }
+
+    /**
+     * A diagnosed failure names itself (code as key) and offers the first fix the
+     * classifier allows; an undiagnosed one keeps the generic redeploy.
+     */
+    private function failedDeployIssue(Site $site, Deployment $latest): SiteAppHealthIssue
+    {
+        $diagnosis = $latest->diagnosis();
+        $hasApp = filled($site->coolify_app_uuid);
+
+        if ($diagnosis === null || $diagnosis->isUnknown()) {
+            return new SiteAppHealthIssue('deploy_failed', $hasApp ? 'redeploy' : null);
+        }
+
+        $fix = $diagnosis->fixes[0] ?? null;
+
+        return new SiteAppHealthIssue('deploy_diagnosed', $hasApp ? $fix : null, $diagnosis->code);
     }
 
     /**
@@ -191,7 +213,7 @@ class SiteAppHealthInspector
     /**
      * @return list<SiteAppHealthIssue>
      */
-    private function livePackIssues(CoolifyApplication $app): array
+    private function livePackIssues(CoolifyApplication $app, Site $site): array
     {
         $issues = [];
 
@@ -207,7 +229,30 @@ class SiteAppHealthInspector
             }
         }
 
+        // Coolify reports the compose stack as `exited:unhealthy` / `degraded:*` when a
+        // container died under `restart: no`. A deliberately stopped site is not an issue.
+        $status = $site->status instanceof SiteStatus ? $site->status : SiteStatus::tryFrom((string) $site->status);
+        if ($status !== SiteStatus::Stopped && self::looksDown($app->status)) {
+            $issues[] = new SiteAppHealthIssue('app_not_running', 'restart_app');
+        }
+
         return $issues;
+    }
+
+    public static function looksDown(?string $coolifyStatus): bool
+    {
+        $status = strtolower(trim((string) $coolifyStatus));
+        if ($status === '') {
+            return false;
+        }
+
+        foreach (['exited', 'degraded', 'crashed', 'dead', 'restarting'] as $token) {
+            if (str_contains($status, $token)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

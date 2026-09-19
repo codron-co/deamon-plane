@@ -292,6 +292,55 @@ class CoolifyClient
         $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/stop');
     }
 
+    /**
+     * Restart the running containers without a rebuild. A crashed compose service
+     * (restart: no) comes back this way in seconds instead of a full deploy.
+     */
+    public function restartApplication(string $uuid): void
+    {
+        $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/restart');
+    }
+
+    /**
+     * Tail of the application's container logs (`GET /applications/{uuid}/logs`).
+     * Coolify returns `{ logs: string }`; older builds answer with a list of
+     * `{ name, logs }` per container, which is flattened with a header per container.
+     */
+    public function getApplicationLogs(string $uuid, int $lines = 200): string
+    {
+        $json = $this->request('GET', '/applications/'.$this->assertUuid($uuid).'/logs', [
+            'lines' => max(1, min(2000, $lines)),
+        ]);
+
+        $logs = is_array($json) ? ($json['logs'] ?? $json['data'] ?? $json) : $json;
+
+        if (is_string($logs)) {
+            return $logs;
+        }
+
+        if (! is_array($logs)) {
+            return '';
+        }
+
+        $parts = [];
+        foreach ($logs as $entry) {
+            if (is_string($entry)) {
+                $parts[] = $entry;
+
+                continue;
+            }
+            if (! is_array($entry)) {
+                continue;
+            }
+            $name = trim((string) ($entry['name'] ?? $entry['container'] ?? ''));
+            $body = $entry['logs'] ?? $entry['output'] ?? '';
+            $body = is_array($body) ? implode("\n", array_map('strval', $body)) : (string) $body;
+            $parts[] = ($name !== '' ? "===== {$name} =====\n" : '').$body;
+        }
+
+        return implode("\n", $parts);
+    }
+
     public function cancelDeployment(string $deploymentUuid): void
     {
         $this->request('POST', '/deployments/'.$this->assertUuid($deploymentUuid).'/cancel');

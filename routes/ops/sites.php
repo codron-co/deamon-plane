@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Ops\DeploymentDiagnosisController;
 use App\Http\Controllers\Ops\DeploymentShowController;
 use App\Http\Controllers\Ops\SiteAdminController;
 use App\Http\Controllers\Ops\SiteAppHealthController;
@@ -53,6 +54,9 @@ Route::get('/sites/{site}', SiteDetailController::class)->name('ops.sites.show')
 Route::get('/sites/{site}/deployments/{deployment}', DeploymentShowController::class)
     ->scopeBindings()
     ->name('ops.sites.deployments.show');
+Route::post('/sites/{site}/deployments/{deployment}/diagnose', DeploymentDiagnosisController::class)
+    ->scopeBindings()
+    ->name('ops.sites.deployments.diagnose');
 Route::get('/sites/{site}/edit', [SiteController::class, 'edit'])->name('ops.sites.edit');
 Route::put('/sites/{site}', [SiteController::class, 'update'])->name('ops.sites.update');
 Route::post('/sites/{site}/provision', [SiteController::class, 'provision'])->name('ops.sites.provision');

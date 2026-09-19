@@ -22,6 +22,8 @@ class DeploymentShowController extends Controller
         return view('ops.deployments.show', [
             'site' => $site,
             'deployment' => $deployment,
+            'diagnosis' => $deployment->diagnosis(),
+            'canFix' => $request->user()?->can('update', $site) ?? false,
             'pasteable' => DeploymentFailureText::pasteable($deployment),
             'coolifyAppUrl' => $site->coolifyUiUrl(),
         ]);

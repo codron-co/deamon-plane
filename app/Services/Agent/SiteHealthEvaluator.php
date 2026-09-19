@@ -36,6 +36,7 @@ class SiteHealthEvaluator
             AgentHealthReason::QueueUnhealthy,
             AgentHealthReason::HttpError,
             AgentHealthReason::AgentNotRegistered,
+            AgentHealthReason::ProxyFallback,
         ], true)) {
             return true;
         }
@@ -49,6 +50,17 @@ class SiteHealthEvaluator
         }
 
         return $this->isStale($site);
+    }
+
+    /**
+     * The last health poll hit the proxy placeholder page: the container is down.
+     */
+    public function isProxyFallback(Site $site): bool
+    {
+        $payload = $this->payload($site);
+
+        return ($payload['reason'] ?? null) === AgentHealthReason::ProxyFallback
+            && ! $this->isStale($site);
     }
 
     public function isStale(Site $site): bool

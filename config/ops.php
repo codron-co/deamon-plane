@@ -208,6 +208,21 @@ return [
     |
     */
 
+    /*
+    | Failed-deploy diagnosis. Every Failed deployment row is classified
+    | (DeploymentFailureClassifier); codes whose evidence lives in the container log
+    | pull `GET /applications/{uuid}/logs`. `auto_fix` lets Plane run the single safe
+    | fix a code allows (env sync, restart, resync, redeploy) at most once per failure
+    | streak inside `repeat_window_hours`; nothing in that set deletes data.
+    */
+    'diagnosis' => [
+        'enabled' => filter_var(env('OPS_DIAGNOSIS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'auto_fix' => filter_var(env('OPS_DIAGNOSIS_AUTO_FIX', true), FILTER_VALIDATE_BOOLEAN),
+        'log_lines' => (int) env('OPS_DIAGNOSIS_LOG_LINES', 200),
+        'container_logs_bytes' => (int) env('OPS_DIAGNOSIS_LOG_BYTES', 8000),
+        'repeat_window_hours' => (int) env('OPS_DIAGNOSIS_REPEAT_HOURS', 24),
+    ],
+
     'import' => [
         'customer_repo_needle' => 'codron-co/deamon',
         'exclude_repo_needles' => [
