@@ -228,3 +228,33 @@ test("confirmOpen is true only for a visible confirm modal", function () {
         },
     }), true);
 });
+
+test("moveColumnKey swaps one step and never passes a locked key", function () {
+    const keys = ["site", "domain", "publish", "live"];
+    const locked = ["site"];
+
+    assert.deepEqual(contracts.moveColumnKey(keys, "publish", -1, locked), ["site", "publish", "domain", "live"]);
+    assert.deepEqual(contracts.moveColumnKey(keys, "publish", 1, locked), ["site", "domain", "live", "publish"]);
+    // Nothing moves above the identity column, and the column itself never moves.
+    assert.deepEqual(contracts.moveColumnKey(keys, "domain", -1, locked), keys);
+    assert.deepEqual(contracts.moveColumnKey(keys, "site", 1, locked), keys);
+    // Edges and unknown keys are no-ops.
+    assert.deepEqual(contracts.moveColumnKey(keys, "live", 1, locked), keys);
+    assert.deepEqual(contracts.moveColumnKey(keys, "nope", -1, locked), keys);
+    // The input is never mutated.
+    assert.deepEqual(keys, ["site", "domain", "publish", "live"]);
+});
+
+test("pickerColumnOrder puts saved columns first and keeps the rest in place", function () {
+    const current = ["site", "domain", "publish", "live", "mail", "updated"];
+
+    assert.deepEqual(
+        contracts.pickerColumnOrder(current, ["site", "updated", "domain"]),
+        ["site", "updated", "domain", "publish", "live", "mail"]
+    );
+    // Keys the picker does not know are ignored.
+    assert.deepEqual(
+        contracts.pickerColumnOrder(current, ["site", "ghost", "live"]),
+        ["site", "live", "domain", "publish", "mail", "updated"]
+    );
+});

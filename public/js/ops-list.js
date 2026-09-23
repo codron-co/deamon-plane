@@ -87,6 +87,118 @@
     };
 
     /**
+     * Column order lives in the picker's DOM order: the form posts `columns[]`
+     * in that order. The move buttons stay hidden until this script runs, so a
+     * page without JavaScript simply posts the order it was rendered in.
+     */
+    const pickerItems = function (list) {
+        return Array.prototype.slice.call(list.querySelectorAll(":scope > [data-ops-column-key]"));
+    };
+
+    const pickerKeys = function (list) {
+        return pickerItems(list).map(function (item) {
+            return item.getAttribute("data-ops-column-key");
+        });
+    };
+
+    const lockedPickerKeys = function (list) {
+        return pickerItems(list)
+            .filter(function (item) {
+                return item.hasAttribute("data-ops-column-locked");
+            })
+            .map(function (item) {
+                return item.getAttribute("data-ops-column-key");
+            });
+    };
+
+    const refreshPickerButtons = function (list) {
+        const keys = pickerKeys(list);
+        const locked = lockedPickerKeys(list);
+        pickerItems(list).forEach(function (item) {
+            const key = item.getAttribute("data-ops-column-key");
+            item.querySelectorAll("[data-ops-column-move]").forEach(function (button) {
+                const delta = Number(button.getAttribute("data-ops-column-move"));
+                const next = contracts.moveColumnKey(keys, key, delta, locked);
+                button.disabled = next.join(",") === keys.join(",");
+            });
+        });
+    };
+
+    const applyPickerOrder = function (list, order) {
+        const byKey = {};
+        pickerItems(list).forEach(function (item) {
+            byKey[item.getAttribute("data-ops-column-key")] = item;
+        });
+        order.forEach(function (key) {
+            if (byKey[key]) {
+                list.appendChild(byKey[key]);
+            }
+        });
+        refreshPickerButtons(list);
+    };
+
+    const syncPickerOrder = function (root, columns) {
+        root.querySelectorAll("[data-ops-columns-list]").forEach(function (list) {
+            applyPickerOrder(list, contracts.pickerColumnOrder(pickerKeys(list), columns));
+        });
+    };
+
+    roots.forEach(function (root) {
+        root.querySelectorAll("[data-ops-columns-list]").forEach(function (list) {
+            list.querySelectorAll("[data-ops-column-move-group]").forEach(function (group) {
+                group.hidden = false;
+            });
+            const picker = list.closest("[data-ops-columns-picker]");
+            const hint = picker ? picker.querySelector("[data-ops-columns-order-hint]") : null;
+            if (hint) {
+                hint.hidden = false;
+            }
+            refreshPickerButtons(list);
+        });
+    });
+
+    document.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-ops-column-move]");
+        if (!button) {
+            return;
+        }
+        const list = button.closest("[data-ops-columns-list]");
+        const item = button.closest("[data-ops-column-key]");
+        if (!list || !item) {
+            return;
+        }
+
+        event.preventDefault();
+        const key = item.getAttribute("data-ops-column-key");
+        const delta = Number(button.getAttribute("data-ops-column-move"));
+        const keys = pickerKeys(list);
+        const next = contracts.moveColumnKey(keys, key, delta, lockedPickerKeys(list));
+        if (next.join(",") === keys.join(",")) {
+            return;
+        }
+
+        applyPickerOrder(list, next);
+
+        // Keep the keyboard on the row that moved; at an edge the pressed button
+        // is now disabled, so hand focus to its sibling.
+        const target = button.disabled
+            ? item.querySelector("[data-ops-column-move]:not([disabled])")
+            : button;
+        if (target) {
+            target.focus();
+        }
+
+        const picker = list.closest("[data-ops-columns-picker]");
+        const status = picker ? picker.querySelector("[data-ops-columns-status]") : null;
+        const template = list.getAttribute("data-moved-template") || "";
+        if (status && template) {
+            status.textContent = template
+                .replace("__COLUMN__", item.getAttribute("data-ops-column-label") || key)
+                .replace("__POSITION__", String(next.indexOf(key) + 1));
+        }
+    });
+
+    /**
      * Bulk actions that target "everything matching the current filter" carry that
      * filter in hidden inputs outside the region, including the page header.
      */
@@ -106,6 +218,7 @@
                     input.checked = columns.indexOf(input.value) !== -1;
                 }
             });
+            syncPickerOrder(root, columns);
         }
 
         const form = root.querySelector("[data-ops-saved-view-form]");
@@ -334,6 +447,7 @@
                     input.checked = payload.columns.indexOf(input.value) !== -1;
                 }
             });
+            syncPickerOrder(root, payload.columns);
         }
 
         const menu = form.closest("details[open]");

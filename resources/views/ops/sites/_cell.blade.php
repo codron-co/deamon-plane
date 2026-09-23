@@ -191,6 +191,101 @@
         </td>
         @break
 
+    @case ('last_deploy')
+        <td>
+            @php
+                /** @var \App\Models\Deployment|null $deployment */
+                $deployment = $site->latestDeployment;
+            @endphp
+            @if ($deployment === null)
+                <span class="muted">{{ __('sites.cells.deploy_none') }}</span>
+            @else
+                @php
+                    $deployFailure = $deployment->status === \App\Enums\DeploymentStatus::Failed ? $deployment->failureHeadline() : null;
+                    $deploySha = $deployment->shortSha();
+                @endphp
+                <div class="ops-fresh-cell plane-deploy-cell">
+                    <span
+                        class="status-chip status-{{ $deployment->status->value }}"
+                        data-last-deploy-chip
+                        @if (filled($deployFailure)) title="{{ $deployFailure }}" @endif
+                    >{{ $deployment->status->label() }}</span>
+                    <x-ops.freshness :at="$deployment->finished_at ?? $deployment->started_at ?? $deployment->created_at" :mark-stale="false" />
+                    @if ($deploySha !== '')
+                        <code class="plane-sha" title="{{ __('sites.cells.deploy_commit', ['sha' => substr((string) $deployment->commit_sha, 0, 12)]) }}">{{ $deploySha }}</code>
+                    @endif
+                </div>
+            @endif
+        </td>
+        @break
+
+    @case ('server')
+        <td>
+            @php
+                /** @var \App\Models\CoolifyServer|null $coolifyServer */
+                $coolifyServer = $site->relationLoaded('coolifyServer') ? $site->getRelation('coolifyServer') : null;
+                $serverUuid = trim((string) $site->coolify_server_uuid);
+            @endphp
+            @if ($coolifyServer !== null)
+                <span
+                    class="plane-server"
+                    title="{{ __('sites.cells.server_title', ['connection' => $coolifyServer->connection?->name ?? __('ops.none'), 'uuid' => $coolifyServer->uuid]) }}"
+                >{{ $coolifyServer->label() }}</span>
+            @elseif ($serverUuid !== '')
+                <code class="plane-sha is-muted" title="{{ __('sites.cells.server_missing', ['uuid' => $serverUuid]) }}">{{ \Illuminate\Support\Str::limit($serverUuid, 8, '…') }}</code>
+            @else
+                <span class="muted">{{ __('ops.none') }}</span>
+            @endif
+        </td>
+        @break
+
+    @case ('auto_deploy')
+        <td>
+            @if ($site->coolify_deploy_settings_at === null || $site->coolify_auto_deploy === null)
+                <span class="plane-muted-state" title="{{ __('sites.cells.auto_unknown_hint') }}">{{ __('sites.cells.auto_unknown') }}</span>
+            @else
+                @php
+                    $autoAsOf = __('sites.cells.auto_as_of', ['time' => $site->coolify_deploy_settings_at->diffForHumans()]);
+                    $pinnedSha = trim((string) $site->coolify_pinned_sha);
+                @endphp
+                <div class="ops-fresh-cell">
+                    <span
+                        class="status-chip status-{{ $site->coolify_auto_deploy ? 'ok' : 'unknown' }}"
+                        data-auto-deploy-chip
+                        title="{{ $autoAsOf }}"
+                    >{{ $site->coolify_auto_deploy ? __('sites.cells.auto_on') : __('sites.cells.auto_off') }}</span>
+                    @if ($pinnedSha !== '')
+                        <code class="plane-sha is-pinned" title="{{ __('sites.cells.pinned', ['sha' => $pinnedSha]) }}">
+                            <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M9.5 2.5l4 4-2 1-2.5 2.5.5 3-1 1-3-3-3.5 3.5M5.5 9.5l-3-3 1-1 3 .5L9 3.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                            <span class="visually-hidden">{{ __('sites.cells.pinned', ['sha' => '']) }}</span>{{ substr($pinnedSha, 0, 7) }}
+                        </code>
+                    @endif
+                </div>
+            @endif
+        </td>
+        @break
+
+    @case ('mail')
+        <td>
+            @php
+                $mailServerName = $site->relationLoaded('mailServer') ? $site->mailServer?->name : null;
+                $mailBindingCount = (int) ($site->mail_bindings_count ?? 0);
+            @endphp
+            @if ($mailServerName === null && $mailBindingCount === 0)
+                <span class="muted">{{ __('ops.none') }}</span>
+            @else
+                <span class="plane-ref @if ($mailBindingCount === 0) is-unknown @endif" data-mail-cell>
+                    @if ($mailServerName !== null)
+                        <span class="plane-ref-branch">{{ $mailServerName }}</span>
+                    @endif
+                    <span class="plane-ref-version">{{ $mailBindingCount === 0
+                        ? __('sites.cells.mail_unbound')
+                        : trans_choice('sites.cells.mail_domains', $mailBindingCount, ['count' => $mailBindingCount]) }}</span>
+                </span>
+            @endif
+        </td>
+        @break
+
     @case ('health')
         <td><x-ops.freshness :at="$site->last_health_at" /></td>
         @break

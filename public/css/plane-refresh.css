@@ -1155,3 +1155,97 @@ details[open] > summary.btn-secondary {
         animation: none;
     }
 }
+
+/* -------------------------------------------- Sites: optional list cells */
+.plane-deploy-cell {
+    flex-wrap: nowrap;
+}
+
+.plane-sha {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    white-space: nowrap;
+}
+
+.plane-sha.is-muted {
+    border-style: dashed;
+    background: transparent;
+    color: var(--text-faint);
+}
+
+.plane-sha.is-pinned {
+    color: var(--text);
+}
+
+.plane-server {
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* ------------------------------------------ Columns picker: row ordering */
+.ops-columns-item {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ops-columns-item > .ops-columns-option {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.ops-columns-move {
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 2px;
+}
+
+.ops-columns-move[hidden] {
+    display: none;
+}
+
+.ops-columns-move-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.ops-columns-move-btn:hover:not(:disabled) {
+    border-color: var(--border);
+    background: var(--surface-overlay);
+    color: var(--text);
+}
+
+.ops-columns-move-btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
+.ops-columns-move-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.ops-columns-popover {
+    min-width: 17rem;
+}

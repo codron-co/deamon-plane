@@ -377,8 +377,53 @@
         return url.pathname + url.search + url.hash;
     };
 
+    /**
+     * Column picker order after moving `key` one step (`delta` -1 / +1).
+     * Locked keys never move and nothing may pass them, so the identity column
+     * stays first. Returns the input order unchanged when the move is impossible.
+     */
+    const moveColumnKey = function (keys, key, delta, lockedKeys) {
+        const locked = lockedKeys || [];
+        const order = keys.slice();
+        const from = order.indexOf(key);
+        const to = from + (delta < 0 ? -1 : 1);
+        if (from === -1 || locked.indexOf(key) !== -1 || to < 0 || to >= order.length) {
+            return order;
+        }
+        if (locked.indexOf(order[to]) !== -1) {
+            return order;
+        }
+
+        order[from] = order[to];
+        order[to] = key;
+
+        return order;
+    };
+
+    /**
+     * Picker order that matches a saved layout: the visible keys in their saved
+     * order first, then every other key in its current relative order.
+     */
+    const pickerColumnOrder = function (currentKeys, visibleKeys) {
+        const order = [];
+        visibleKeys.forEach(function (key) {
+            if (currentKeys.indexOf(key) !== -1 && order.indexOf(key) === -1) {
+                order.push(key);
+            }
+        });
+        currentKeys.forEach(function (key) {
+            if (order.indexOf(key) === -1) {
+                order.push(key);
+            }
+        });
+
+        return order;
+    };
+
     return {
         toolbarUrl: toolbarUrl,
+        moveColumnKey: moveColumnKey,
+        pickerColumnOrder: pickerColumnOrder,
         jobRowKey: jobRowKey,
         diffJobRows: diffJobRows,
         jobStateSignature: jobStateSignature,

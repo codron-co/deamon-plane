@@ -43,6 +43,8 @@ class CoolifyDeploySettings
             return $empty;
         }
 
+        $this->remember($site, $app->autoDeployState(), $app->gitCommitSha());
+
         return [
             'build_pack' => $app->buildPack,
             'is_auto_deploy' => $app->autoDeployState(),
@@ -73,6 +75,8 @@ class CoolifyDeploySettings
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
+        $this->remember($site, $enabled, $app->gitCommitSha());
+
         $this->audit($site, $actor, $ip, 'site.auto_deploy_updated', [
             'is_auto_deploy' => $enabled,
         ]);
@@ -97,6 +101,8 @@ class CoolifyDeploySettings
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
+
+        $this->remember($site, false, $ref);
 
         $this->audit($site, $actor, $ip, 'site.git_pinned', [
             'git_commit_sha' => $ref,
@@ -123,6 +129,8 @@ class CoolifyDeploySettings
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
+
+        $this->remember($site, true, CoolifyApplication::HEAD_REF);
 
         $this->audit($site, $actor, $ip, 'site.git_follow_head', [
             'git_commit_sha' => null,
@@ -241,6 +249,33 @@ class CoolifyDeploySettings
         } catch (CoolifyDeployBusyException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         }
+    }
+
+    /**
+     * Mirrors the switch and the pinned commit onto the site row, so the Sites
+     * list can show them without one Coolify call per row. Written without
+     * touching `updated_at`: learning a setting is not an edit to the site.
+     * A response without `git_commit_sha` keeps the last known pin.
+     */
+    private function remember(Site $site, ?bool $autoDeploy, ?string $sha): void
+    {
+        if ($autoDeploy === null || ! $site->exists) {
+            return;
+        }
+
+        $values = [
+            'coolify_auto_deploy' => $autoDeploy,
+            'coolify_deploy_settings_at' => now(),
+        ];
+        if ($sha !== null) {
+            $sha = trim($sha);
+            $values['coolify_pinned_sha'] = $sha === '' || CoolifyApplication::isHeadRef($sha)
+                ? null
+                : mb_substr($sha, 0, 64);
+        }
+
+        Site::query()->toBase()->where('id', $site->getKey())->update($values);
+        $site->forceFill($values)->syncOriginalAttributes(array_keys($values));
     }
 
     /**

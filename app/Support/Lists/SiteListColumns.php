@@ -32,12 +32,17 @@ final class SiteListColumns
         'app' => ['sort' => null, 'default' => true],
         'live' => ['sort' => 'last_live_http_status', 'default' => true],
         'theme' => ['sort' => null, 'default' => true],
+        'last_deploy' => ['sort' => null, 'default' => true],
+        'server' => ['sort' => null, 'default' => false],
+        'auto_deploy' => ['sort' => 'coolify_auto_deploy', 'default' => false],
+        'mail' => ['sort' => null, 'default' => false],
         'health' => ['sort' => 'last_health_at', 'default' => false],
         'updated' => ['sort' => 'updated_at', 'default' => false],
     ];
 
     /**
-     * Catalogue order is render order.
+     * Catalogue order is the default render order and the order hidden columns
+     * are offered in; an operator's own order overrides it.
      *
      * @return list<string>
      */
@@ -83,8 +88,10 @@ final class SiteListColumns
     }
 
     /**
-     * Drops unknown keys, forces the locked ones back in, and restores catalogue
-     * order so a hand-edited payload cannot produce an empty or shuffled table.
+     * Drops unknown and repeated keys and forces the locked ones back in at the
+     * front, so a hand-edited payload cannot produce an empty table or push the
+     * row link off to the side. The requested order is otherwise kept: it is
+     * the operator's column order.
      *
      * @param  iterable<mixed>  $keys
      * @return list<string>
@@ -102,13 +109,25 @@ final class SiteListColumns
             return self::defaults();
         }
 
-        foreach (self::LOCKED as $locked) {
-            $requested[$locked] = true;
+        $ordered = self::LOCKED;
+        foreach (array_keys($requested) as $key) {
+            if (! self::isLocked($key)) {
+                $ordered[] = $key;
+            }
         }
 
-        return array_values(array_filter(
-            self::keys(),
-            static fn (string $key): bool => isset($requested[$key]),
-        ));
+        return $ordered;
+    }
+
+    /**
+     * Picker order: the visible columns as the operator arranged them, then the
+     * hidden ones in catalogue order.
+     *
+     * @param  list<string>  $visible
+     * @return list<string>
+     */
+    public static function pickerOrder(array $visible): array
+    {
+        return array_values(array_unique([...self::sanitize($visible), ...self::keys()]));
     }
 }

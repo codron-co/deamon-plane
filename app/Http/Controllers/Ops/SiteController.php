@@ -16,6 +16,7 @@ use App\Http\Requests\Ops\SwitchSiteChannelRequest;
 use App\Http\Requests\Ops\UpdateSiteRequest;
 use App\Jobs\PushPlatformMailJob;
 use App\Models\CoolifyConnection;
+use App\Models\CoolifyServer;
 use App\Models\Deployment;
 use App\Models\MailServer;
 use App\Models\Site;
@@ -122,8 +123,16 @@ class SiteController extends Controller
             $query->with('domains');
         }
 
+        // Optional columns load their data only when shown, and in one query each.
+        if ($listView->shows('mail')) {
+            $query->with('mailServer:id,name')->withCount('mailBindings');
+        }
+
         $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
         $sites = $listView->applySort($query)->paginate(25)->withQueryString();
+        if ($listView->shows('server')) {
+            $this->attachCoolifyServers($sites->getCollection());
+        }
         $activeFilters = $this->activeListFilters($search, $channel, $status, $publish, $deploy, $deployFilters, $agent, $pack, $health, $app, $theme);
         $bulkPinCommits = $this->bulkPinSuggestions($sites);
 
@@ -251,6 +260,32 @@ class SiteController extends Controller
             'app_issues' => Site::query()->withAppIssues()->count(),
             'git_themes' => Site::query()->matchingListFilters(theme: 'git')->count(),
         ];
+    }
+
+    /**
+     * A server uuid is only unique inside its Coolify connection, so this is not
+     * a plain belongsTo: one query for the page, matched on connection + uuid.
+     *
+     * @param  Collection<int, Site>  $sites
+     */
+    private function attachCoolifyServers(Collection $sites): void
+    {
+        $uuids = $sites->pluck('coolify_server_uuid')->filter(fn ($uuid): bool => filled($uuid))->unique()->values();
+        $servers = $uuids->isEmpty()
+            ? collect()
+            : CoolifyServer::query()
+                ->with('connection:id,name')
+                ->whereIn('uuid', $uuids->all())
+                ->get(['id', 'coolify_connection_id', 'uuid', 'name']);
+
+        foreach ($sites as $site) {
+            $uuid = (string) $site->coolify_server_uuid;
+            $candidates = $servers->where('uuid', $uuid);
+            $server = $candidates->firstWhere('coolify_connection_id', $site->coolify_connection_id)
+                ?? ($site->coolify_connection_id === null ? $candidates->first() : null);
+
+            $site->setRelation('coolifyServer', $server);
+        }
     }
 
     /**

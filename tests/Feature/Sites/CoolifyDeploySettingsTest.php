@@ -54,6 +54,11 @@ class CoolifyDeploySettingsTest extends TestCase
                 && ! array_key_exists('fqdn', $body);
         });
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
+
+        // The Sites list reads the switch from the row, not from Coolify per row.
+        $fresh = $site->fresh();
+        $this->assertTrue($fresh->coolify_auto_deploy);
+        $this->assertNotNull($fresh->coolify_deploy_settings_at);
     }
 
     public function test_pin_sets_sha_turns_auto_deploy_off_and_deploys(): void
@@ -93,6 +98,10 @@ class CoolifyDeploySettingsTest extends TestCase
                 && str_contains($request->url(), '/deploy')
                 && str_contains($request->url(), 'uuid='.self::APP);
         });
+
+        $fresh = $site->fresh();
+        $this->assertFalse($fresh->coolify_auto_deploy);
+        $this->assertSame('abc1234', $fresh->coolify_pinned_sha);
     }
 
     public function test_follow_head_clears_pin_enables_auto_deploy_and_deploys(): void
@@ -127,6 +136,10 @@ class CoolifyDeploySettingsTest extends TestCase
                 && ($body['is_auto_deploy_enabled'] ?? null) === true
                 && ! array_key_exists('is_auto_deploy', $body);
         });
+
+        $fresh = $site->fresh();
+        $this->assertTrue($fresh->coolify_auto_deploy);
+        $this->assertNull($fresh->coolify_pinned_sha, 'Following HEAD is not a pin.');
     }
 
     public function test_show_does_not_link_get_for_post_only_ops(): void

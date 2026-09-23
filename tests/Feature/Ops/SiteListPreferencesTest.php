@@ -166,7 +166,7 @@ class SiteListPreferencesTest extends TestCase
 
         $columns = $user->fresh()->listPreference(SiteListColumns::LIST_KEY)['columns'];
         $this->assertContains('site', $columns, 'The identity column carries the row link and stays visible.');
-        // Catalogue order is restored regardless of the order posted.
+        // The locked column is forced back in at the front; the posted order is kept.
         $this->assertSame(['site', 'publish', 'live'], $columns);
     }
 
