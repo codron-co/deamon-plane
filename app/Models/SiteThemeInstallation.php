@@ -27,6 +27,7 @@ class SiteThemeInstallation extends Model
         'auto_update',
         'status',
         'last_error',
+        'customized_files',
         'pending_sync_after_deploy',
         'last_sync_task_id',
         'updated_from_webhook_at',
@@ -43,6 +44,7 @@ class SiteThemeInstallation extends Model
             'pending_sync_after_deploy' => 'boolean',
             'status' => ThemeInstallationStatus::class,
             'updated_from_webhook_at' => 'datetime',
+            'customized_files' => 'array',
         ];
     }
 

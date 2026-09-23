@@ -65,6 +65,8 @@ CMS `auto_update` is always `false` in agent JSON. Opt-in lives on Plane `site_t
 
 Site → **Themes** tab: assign (confirm modal when activating), Update to latest, Sync now (merge), Overwrite (danger confirm), Roll back sync (when `last_sync_task_id` is set), Roll back theme (when `previous_pinned_sha` is set), Activate, auto-update toggle (default **off**).
 
+Theme file customizations (CMS 1.2.32+): update keeps files the site edited (admin file editor) and answers `customizations: {kept, conflicts}`. Plane stores it on `site_theme_installations.customized_files` and the Themes tab lists conflicts (files both sides changed; the site version stayed, the theme change was not applied). On an older or unknown CMS the Update confirm turns into a danger warning that site-edited theme files get overwritten. Files rollback (previous SHA) goes through the same update, so it keeps them too.
+
 Update sends the catalog `latest_sha`; the installation `pinned_sha` is only a fallback. Before this, update re-sent the pin, so auto-update and Update to latest re-installed the first commit forever.
 
 Allowlist/public/private enforced in `ThemeVisibilityGate`.

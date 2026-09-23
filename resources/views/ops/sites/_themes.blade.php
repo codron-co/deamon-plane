@@ -21,6 +21,9 @@
     $editSafeSync = $site->supportsEditSafeThemeSync();
     $editSafeVersion = \App\Services\Agent\ControlPlaneAgentContract::THEME_SYNC_EDIT_SAFE_VERSION;
     $reportedCms = $site->reportedDeamonVersion() ?? __('ops.unknown');
+    // CMS < 1.2.31 (or unknown): update replaces theme files the site edited.
+    $keepsFileCustomizations = $site->keepsThemeFileCustomizationsOnUpdate();
+    $keepsFileCustomizationsVersion = \App\Services\Agent\ControlPlaneAgentContract::THEME_UPDATE_KEEPS_CUSTOMIZATIONS_VERSION;
 @endphp
 
 <section class="site-theme-section" aria-labelledby="site-themes-heading">
@@ -144,6 +147,20 @@
                                 @if ($installation->last_error)
                                     <div class="site-slug">{{ $installation->last_error }}</div>
                                 @endif
+                                @php($customizedFiles = is_array($installation->customized_files) ? $installation->customized_files : [])
+                                @if (! empty($customizedFiles['kept']))
+                                    <div class="site-slug" data-theme-customized-kept>{{ __('sites.themes.customized_kept', ['count' => count($customizedFiles['kept'])]) }}</div>
+                                @endif
+                                @if (! empty($customizedFiles['conflicts']))
+                                    <details class="site-slug" data-theme-customized-conflicts>
+                                        <summary>{{ __('sites.themes.customized_conflicts', ['count' => count($customizedFiles['conflicts'])]) }}</summary>
+                                        <ul>
+                                            @foreach ($customizedFiles['conflicts'] as $path)
+                                                <li><code>{{ $path }}</code></li>
+                                            @endforeach
+                                        </ul>
+                                    </details>
+                                @endif
                             </td>
                             <td>{{ $installation->is_active ? __('ops.yes') : __('ops.no') }}</td>
                             <td>{{ $installation->auto_update ? __('ops.on') : __('ops.off') }}</td>
@@ -152,10 +169,12 @@
                                     <form
                                         method="POST"
                                         action="{{ route('ops.sites.themes.update', [$site, $installation]) }}"
-                                        data-confirm="{{ __('sites.themes.update_confirm', ['theme' => $installedTheme?->theme_id]) }}"
+                                        data-confirm="{{ $keepsFileCustomizations
+                                            ? __('sites.themes.update_confirm', ['theme' => $installedTheme?->theme_id])
+                                            : __('sites.themes.update_confirm_legacy', ['theme' => $installedTheme?->theme_id, 'version' => $keepsFileCustomizationsVersion, 'reported' => $reportedCms]) }}"
                                         data-confirm-title="{{ __('sites.themes.update_title') }}"
                                         data-confirm-label="{{ __('sites.themes.update_latest') }}"
-                                        data-confirm-danger="false"
+                                        data-confirm-danger="{{ $keepsFileCustomizations ? 'false' : 'true' }}"
                                     >
                                         @csrf
                                         <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.update_latest') }}</button>

@@ -449,6 +449,12 @@ class ThemeRolloutService
             $installation->updated_from_webhook_at = now();
         }
 
+        // CMS 1.2.31+ keeps theme files the site edited and lists them; older CMS
+        // omits the key, so keep whatever an earlier update reported.
+        if ($result->customizations !== null) {
+            $installation->customized_files = $result->customizations;
+        }
+
         $installation->status = ThemeInstallationStatus::Active;
         $installation->last_error = null;
         $installation->save();
@@ -456,7 +462,10 @@ class ThemeRolloutService
         $site->auditLogs()->create([
             'actor_user_id' => $actor?->id,
             'action' => $fromWebhook ? 'theme.webhook_updated' : 'theme.update_succeeded',
-            'after' => $this->auditSnapshot($installation->fresh() ?? $installation, $theme),
+            'after' => [
+                ...$this->auditSnapshot($installation->fresh() ?? $installation, $theme),
+                'customizations' => $result->customizations,
+            ],
             'ip' => $ip,
         ]);
 

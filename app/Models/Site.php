@@ -660,6 +660,24 @@ class Site extends Model
         );
     }
 
+    /**
+     * True when the reported CMS keeps site-edited theme files on `/themes/update`.
+     * Unknown version counts as old, same as supportsEditSafeThemeSync().
+     */
+    public function keepsThemeFileCustomizationsOnUpdate(): bool
+    {
+        $reported = $this->reportedDeamonVersion();
+        if ($reported === null) {
+            return false;
+        }
+
+        return version_compare(
+            ltrim($reported, 'vV'),
+            ControlPlaneAgentContract::THEME_UPDATE_KEEPS_CUSTOMIZATIONS_VERSION,
+            '>=',
+        );
+    }
+
     public function reportedDeamonVersion(): ?string
     {
         $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];

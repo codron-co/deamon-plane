@@ -377,6 +377,58 @@ class ThemeAssignTest extends TestCase
         $this->assertTrue($site->auditLogs()->where('action', 'theme.files_rollback_succeeded')->exists());
     }
 
+    public function test_update_records_the_theme_files_the_cms_kept_and_shows_them(): void
+    {
+        [$site, $installation] = $this->activeInstallation(cmsVersion: '1.2.31');
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/themes/update' => Http::response([
+                'ok' => true,
+                'theme_id' => 'izyem',
+                'sha' => 'ccc333',
+                'customizations' => [
+                    'kept' => ['views/pages/about.blade.php'],
+                    'conflicts' => ['assets/css/app.css'],
+                ],
+            ], 200),
+            'https://shop.example.test/*' => Http::response('<html></html>', 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.themes.update', [$site, $installation]))
+            ->assertRedirect();
+
+        $this->assertSame([
+            'kept' => ['views/pages/about.blade.php'],
+            'conflicts' => ['assets/css/app.css'],
+        ], $installation->refresh()->customized_files);
+
+        $audit = $site->auditLogs()->where('action', 'theme.update_succeeded')->latest('id')->first();
+        $this->assertSame(['assets/css/app.css'], $audit?->after['customizations']['conflicts'] ?? null);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee(__('sites.themes.customized_kept', ['count' => 1]), false)
+            ->assertSee(__('sites.themes.customized_conflicts', ['count' => 1]), false)
+            ->assertSee('assets/css/app.css', false)
+            ->assertSee(e(__('sites.themes.update_confirm', ['theme' => 'izyem'])), false);
+    }
+
+    public function test_update_confirm_warns_that_an_old_cms_overwrites_theme_file_edits(): void
+    {
+        [$site] = $this->activeInstallation(cmsVersion: '1.2.30');
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee(e(__('sites.themes.update_confirm_legacy', [
+                'theme' => 'izyem',
+                'version' => '1.2.31',
+                'reported' => '1.2.30',
+            ])), false);
+    }
+
     public function test_files_rollback_without_a_previous_sha_is_refused(): void
     {
         [$site, $installation] = $this->activeInstallation();
@@ -661,8 +713,8 @@ class ThemeAssignTest extends TestCase
             'last_health_payload' => [
                 'ok' => true,
                 'active_theme_id' => 'izyem',
-                // A CMS that keeps site edits, so the card offers the safe merge copy.
-                'deamon_version' => '1.2.21',
+                // A CMS that keeps site edits and file customizations, so the card offers the safe copy.
+                'deamon_version' => '1.2.31',
             ],
         ]);
         $theme = Theme::factory()->publicCatalog()->create([

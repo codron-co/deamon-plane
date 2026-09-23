@@ -16,6 +16,8 @@ final class ThemeAgentResult
         public readonly bool $autoUpdate = false,
         public readonly bool $queued = false,
         public readonly ?string $taskId = null,
+        /** @var array{kept: list<string>, conflicts: list<string>}|null */
+        public readonly ?array $customizations = null,
     ) {}
 
     public static function success(
@@ -26,6 +28,7 @@ final class ThemeAgentResult
         ?string $activeThemeId = null,
         bool $queued = false,
         ?string $taskId = null,
+        ?array $customizations = null,
     ): self {
         return new self(
             true,
@@ -39,6 +42,7 @@ final class ThemeAgentResult
             false,
             $queued,
             $taskId,
+            $customizations,
         );
     }
 
@@ -72,7 +76,27 @@ final class ThemeAgentResult
             $activeThemeId,
             $queued,
             $taskId,
+            self::customizations($payload['customizations'] ?? null),
         );
+    }
+
+    /**
+     * @return array{kept: list<string>, conflicts: list<string>}|null
+     */
+    private static function customizations(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $paths = static fn (mixed $list): array => is_array($list)
+            ? array_values(array_filter($list, static fn (mixed $path): bool => is_string($path) && $path !== ''))
+            : [];
+
+        return [
+            'kept' => $paths($value['kept'] ?? null),
+            'conflicts' => $paths($value['conflicts'] ?? null),
+        ];
     }
 
     public static function fromCmsError(?array $payload, int $httpStatus): self
