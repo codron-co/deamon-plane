@@ -98,6 +98,42 @@
         return true;
     };
 
+    /**
+     * Escape in a list search box: clear a filled box (the toolbar re-queries on
+     * `input`), or step out of an empty one so the bare-key shortcuts work again.
+     *
+     * @param {EventTarget|null} node
+     */
+    const escapeListSearch = (node) => {
+        if (! (node instanceof HTMLInputElement) || node.name !== 'q' || ! node.closest('[data-ops-list-toolbar]')) {
+            return false;
+        }
+
+        if (contracts.searchEscapeAction(node.value) === 'clear') {
+            node.value = '';
+            node.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+            node.blur();
+        }
+
+        return true;
+    };
+
+    /**
+     * `f` flips the filter panel of the list on screen, when that list has one.
+     */
+    const toggleListFilters = () => {
+        const toggle = document.querySelector('[data-ops-shortcut-filters]');
+        if (! (toggle instanceof HTMLElement) || toggle.closest('[hidden]') || toggle.hasAttribute('disabled')) {
+            return false;
+        }
+
+        toggle.click();
+        toggle.focus();
+
+        return true;
+    };
+
     overlay.querySelectorAll('[data-ops-shortcuts-close]').forEach((trigger) => {
         trigger.addEventListener('click', close);
     });
@@ -154,7 +190,17 @@
             return;
         }
 
-        if (confirmOpen() || isTyping(document.activeElement)) {
+        if (confirmOpen()) {
+            return;
+        }
+
+        if (event.key === 'Escape' && escapeListSearch(document.activeElement)) {
+            event.preventDefault();
+
+            return;
+        }
+
+        if (isTyping(document.activeElement)) {
             return;
         }
 
@@ -183,6 +229,14 @@
         if (event.key === '?') {
             event.preventDefault();
             open();
+
+            return;
+        }
+
+        if (key === 'f') {
+            if (toggleListFilters()) {
+                event.preventDefault();
+            }
 
             return;
         }

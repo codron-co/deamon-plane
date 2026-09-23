@@ -2,9 +2,9 @@
     "use strict";
 
     /**
-     * Sites filter panel: open/close with a remembered preference, and keep the
-     * active-filter badge and quick-filter segment in step with the list URL after
-     * every in-place region update.
+     * Sites filter panel: open/close with a remembered preference, keep the
+     * active-filter badge in step with the list URL after every in-place region
+     * update, and swap in the preset segment the region brought along.
      */
     const root = document.querySelector("[data-sites-list]");
     if (!root) {
@@ -16,7 +16,7 @@
     const toggle = root.querySelector("[data-sites-filter-toggle]");
     const panel = root.querySelector("[data-sites-filter-panel]");
     const count = root.querySelector("[data-sites-filter-count]");
-    const quickLinks = Array.prototype.slice.call(root.querySelectorAll("[data-sites-quick-params]"));
+    const contracts = window.PlaneOpsContracts;
 
     const readStored = function () {
         try {
@@ -53,14 +53,74 @@
         return active;
     };
 
-    const sameFilters = function (left, right) {
-        const leftKeys = Object.keys(left);
-        if (leftKeys.length !== Object.keys(right).length) {
-            return false;
+    /**
+     * The segment scrolls sideways instead of wrapping the toolbar; a fade marks
+     * each edge that hides more presets, and the active one is kept in view.
+     */
+    const watchSegment = function () {
+        const wrap = root.querySelector("[data-sites-segment-wrap]");
+        const strip = wrap ? wrap.querySelector("[data-sites-segment]") : null;
+        if (!wrap || !strip || !contracts || typeof contracts.scrollEdges !== "function") {
+            return;
         }
-        return leftKeys.every(function (key) {
-            return right[key] === left[key];
-        });
+
+        const edges = function () {
+            const state = contracts.scrollEdges(strip.scrollLeft, strip.scrollWidth, strip.clientWidth);
+            wrap.classList.toggle("has-more-start", state.start);
+            wrap.classList.toggle("has-more-end", state.end);
+        };
+
+        const active = strip.querySelector(".plane-segment-item.is-active");
+        if (active && strip.scrollWidth > strip.clientWidth) {
+            // The strip is position: relative, so offsetLeft is measured from its edge.
+            const from = active.offsetLeft;
+            const to = from + active.offsetWidth;
+            if (from < strip.scrollLeft || to > strip.scrollLeft + strip.clientWidth) {
+                strip.scrollLeft = Math.max(0, from - 24);
+            }
+        }
+
+        strip.addEventListener("scroll", edges, { passive: true });
+        if (typeof window.ResizeObserver === "function") {
+            new window.ResizeObserver(edges).observe(strip);
+        } else {
+            window.addEventListener("resize", edges);
+        }
+        edges();
+    };
+
+    /** A fetched region carries the server-marked segment; move it into the toolbar. */
+    const swapSegment = function () {
+        const next = root.querySelector("[data-ops-list-region] template[data-sites-segment-next]");
+        const current = root.querySelector("[data-sites-segment-wrap]");
+        if (!next) {
+            return;
+        }
+        const fresh = next.content.querySelector("[data-sites-segment-wrap]");
+        next.remove();
+        if (!current || !fresh) {
+            return;
+        }
+
+        // Keep keyboard focus on the same preset when the operator used one.
+        const focused = document.activeElement && current.contains(document.activeElement)
+            ? document.activeElement.getAttribute("data-ops-list-view")
+            : null;
+        const scrollLeft = (current.querySelector("[data-sites-segment]") || {}).scrollLeft || 0;
+
+        current.replaceWith(fresh);
+        const strip = fresh.querySelector("[data-sites-segment]");
+        if (strip) {
+            strip.scrollLeft = scrollLeft;
+        }
+        watchSegment();
+
+        if (focused) {
+            const again = fresh.querySelector("[data-ops-list-view=\"" + focused.replace(/"/g, "") + "\"]");
+            if (again) {
+                again.focus();
+            }
+        }
     };
 
     const sync = function (href) {
@@ -77,22 +137,6 @@
         if (toggle) {
             toggle.classList.toggle("is-active", panelCount > 0);
         }
-
-        quickLinks.forEach(function (link) {
-            let params = {};
-            try {
-                params = JSON.parse(link.getAttribute("data-sites-quick-params") || "{}");
-            } catch (error) {
-                params = {};
-            }
-            const on = sameFilters(active, params);
-            link.classList.toggle("is-active", on);
-            if (on) {
-                link.setAttribute("aria-current", "true");
-            } else {
-                link.removeAttribute("aria-current");
-            }
-        });
     };
 
     if (toggle && panel) {
@@ -111,7 +155,10 @@
         });
     }
 
+    watchSegment();
+
     root.addEventListener("ops:list-updated", function (event) {
+        swapSegment();
         sync(event.detail && event.detail.url);
     });
 

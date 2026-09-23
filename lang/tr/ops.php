@@ -76,6 +76,9 @@ return [
         'help' => 'Bu pencereyi aç / kapat',
         'dismiss' => 'Pencereyi kapat',
         'typing_note' => 'Bir alana yazarken veya onay penceresi açıkken kısayollar çalışmaz.',
+        'list_group' => 'Siteler listesi',
+        'filters' => 'Filtre panelini aç / kapat',
+        'clear_search' => 'Arama kutusundayken: aramayı temizle, boşsa kutudan çık',
     ],
     'palette' => [
         'title' => 'Hızlı atla',

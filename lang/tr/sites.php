@@ -95,6 +95,7 @@ return [
         'quick_unhealthy' => 'Sağlıksız',
         'quick_failed' => 'Başarısız dağıtım',
         'quick_git' => 'Git teması',
+        'segment_label' => 'Hızlı filtreler ve görünümler',
         'result_count' => ':count site',
     ],
     'app_states' => [
@@ -138,6 +139,7 @@ return [
         'deleted' => 'Görünüm silindi.',
         'limit' => 'En fazla :max kayıtlı görünüm olabilir. Birini silin veya aynı adı tekrar kaydedin.',
         'delete' => 'Görünümü sil',
+        'delete_confirm' => '":name" görünümü silinsin mi? Filtreler ve siteler etkilenmez.',
         'empty_name' => 'Görünüme bir ad verin.',
     ],
     'columns_picker' => [
@@ -313,6 +315,10 @@ return [
     'bulk_danger' => [
         'trigger' => 'Tehlikeli işlemler',
         'label' => 'Geri alınamaz',
+    ],
+    'row_actions' => [
+        'check' => 'Durumu kontrol et',
+        'redeploy' => 'Yeniden dağıt',
     ],
     'menu' => [
         'sync' => 'Senkron',

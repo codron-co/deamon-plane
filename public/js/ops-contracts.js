@@ -207,6 +207,28 @@
         return Object.prototype.hasOwnProperty.call(TYPING_TAGS, tag);
     };
 
+    /**
+     * Escape inside a list search box: a filled box is cleared first (and the
+     * list re-queried); an empty one hands focus back to the page.
+     */
+    const searchEscapeAction = function (value) {
+        return String(value == null ? "" : value).trim() === "" ? "blur" : "clear";
+    };
+
+    /**
+     * Which edges of a horizontally scrolling strip hide more items, so the
+     * fade only shows where there is something to scroll to.
+     */
+    const scrollEdges = function (scrollLeft, scrollWidth, clientWidth) {
+        const left = Math.max(0, Number(scrollLeft) || 0);
+        const hidden = (Number(scrollWidth) || 0) - (Number(clientWidth) || 0);
+        if (hidden <= 1) {
+            return { start: false, end: false };
+        }
+
+        return { start: left > 1, end: left < hidden - 1 };
+    };
+
     const isFailedStatus = function (status) {
         return status === "failed";
     };
@@ -433,6 +455,8 @@
         CONFIRM_MODAL_SELECTOR: CONFIRM_MODAL_SELECTOR,
         confirmOpen: confirmOpen,
         isTyping: isTyping,
+        searchEscapeAction: searchEscapeAction,
+        scrollEdges: scrollEdges,
         isFailedStatus: isFailedStatus,
         jobsIndexUrl: jobsIndexUrl,
         textMatches: textMatches,

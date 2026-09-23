@@ -159,14 +159,6 @@
             'agent' => [__('sites.filter_agent'), $agentFilters ?? [], false, false],
             'pack' => [__('sites.filter_pack'), $packOptions, false, false],
         ];
-
-        $quickFilters = [
-            'all' => [__('sites.filter_panel.quick_all'), \App\Support\Lists\SiteSavedViews::clearUrl(), []],
-            'unhealthy' => [__('sites.filter_panel.quick_unhealthy'), route('ops.sites', ['health' => 'unhealthy']), ['health' => 'unhealthy']],
-            'failed' => [__('sites.filter_panel.quick_failed'), route('ops.sites', ['deploy' => 'failed']), ['deploy' => 'failed']],
-            'git' => [__('sites.filter_panel.quick_git'), route('ops.sites', ['theme' => 'git']), ['theme' => 'git']],
-        ];
-        $currentFilters = array_filter($filterValues + ['q' => $search], static fn (string $value): bool => $value !== '');
     @endphp
 
     <div class="sites-page" data-ops-list data-sites-list>
@@ -209,18 +201,7 @@
                     </label>
                 </form>
 
-                <nav class="plane-segment" aria-label="{{ __('sites.filter_panel.quick_label') }}" data-sites-quick>
-                    @foreach ($quickFilters as $quickKey => [$quickLabel, $quickUrl, $quickParams])
-                        @php $quickActive = $currentFilters == $quickParams; @endphp
-                        <a
-                            class="plane-segment-item @if ($quickActive) is-active @endif"
-                            href="{{ $quickUrl }}"
-                            data-ops-list-view="quick-{{ $quickKey }}"
-                            data-sites-quick-params="{{ json_encode((object) $quickParams) }}"
-                            @if ($quickActive) aria-current="true" @endif
-                        >{{ $quickLabel }}</a>
-                    @endforeach
-                </nav>
+                @include('ops.sites._segment')
 
                 <span class="plane-toolbar-sep" aria-hidden="true"></span>
 
@@ -230,6 +211,8 @@
                     aria-expanded="false"
                     aria-controls="sites-filter-panel"
                     data-sites-filter-toggle
+                    data-ops-shortcut-filters
+                    aria-keyshortcuts="F"
                 >
                     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                     <span>{{ __('sites.filter_panel.toggle') }}</span>

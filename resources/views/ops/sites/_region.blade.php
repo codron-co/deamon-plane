@@ -3,9 +3,13 @@
             data-ops-list-columns="{{ implode(',', $listView->columns) }}"
             data-ops-list-sort="{{ $listView->sortKey }}:{{ $listView->sortDirection }}"
         ></span>
-        @isset($savedViews)
-            @include('ops.sites._saved-views')
-        @endisset
+        {{--
+            The preset segment lives in the toolbar, outside this region. A fetched region
+            carries a fresh copy so saves, deletes and the active mark follow the swap.
+        --}}
+        @if (isset($savedViews) && \App\Support\Lists\ListFragment::wanted(request()))
+            <template data-sites-segment-next>@include('ops.sites._segment')</template>
+        @endif
         @if ($sites->isEmpty() && ! $filtersActive)
             <div class="empty-panel">
                 <h2>{{ __('sites.empty.title') }}</h2>
@@ -157,6 +161,13 @@
                                         <summary class="plane-more" aria-label="{{ __('ops.actions.more_for', ['name' => $site->name]) }}">
                                             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/></svg>
                                         </summary>
+                                        @php
+                                            // Same gates as the detail page header: a redeploy needs a Coolify app,
+                                            // and the Coolify link is only offered when a real UI URL resolves.
+                                            $rowCanCheck = auth()->user()?->can('checkHealth', $site) ?? false;
+                                            $rowCanDeploy = (auth()->user()?->can('update', $site) ?? false) && filled($site->coolify_app_uuid);
+                                            $rowCoolifyUrl = filled($site->coolify_app_uuid) ? $site->coolifyUiUrl() : null;
+                                        @endphp
                                         <div class="ops-action-popover" role="menu">
                                             <a class="ops-menu-button" role="menuitem" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
                                             @can('update', $site)
@@ -164,6 +175,41 @@
                                             @endcan
                                             @if (filled($site->primary_domain))
                                                 <a class="ops-menu-button" role="menuitem" href="https://{{ $site->primary_domain }}" target="_blank" rel="noopener noreferrer">{{ __('sites.columns.open_live', ['domain' => $site->primary_domain]) }}</a>
+                                            @endif
+                                            @if (filled($rowCoolifyUrl))
+                                                <a class="ops-menu-button" role="menuitem" href="{{ $rowCoolifyUrl }}" target="_blank" rel="noopener noreferrer" data-row-coolify>{{ __('sites.menu.open_coolify') }}</a>
+                                            @endif
+                                            @if ($rowCanCheck || $rowCanDeploy)
+                                                <div class="ops-action-sep" role="separator"></div>
+                                            @endif
+                                            @if ($rowCanCheck)
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('ops.sites.health', $site) }}"
+                                                    data-ops-pending
+                                                    data-ops-list-refresh
+                                                    data-row-health
+                                                >
+                                                    @csrf
+                                                    <input type="hidden" name="return" value="list">
+                                                    <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.row_actions.check') }}</button>
+                                                </form>
+                                            @endif
+                                            @if ($rowCanDeploy)
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('ops.sites.deploy', $site) }}"
+                                                    data-ops-pending
+                                                    data-ops-list-refresh
+                                                    data-row-redeploy
+                                                    data-confirm="{{ __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
+                                                    data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
+                                                    data-confirm-label="{{ __('sites.menu.redeploy') }}"
+                                                    data-confirm-danger="false"
+                                                >
+                                                    @csrf
+                                                    <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('site_ops.redeploy.working') }}">{{ __('sites.row_actions.redeploy') }}</button>
+                                                </form>
                                             @endif
                                         </div>
                                     </details>

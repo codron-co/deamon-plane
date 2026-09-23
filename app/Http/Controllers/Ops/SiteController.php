@@ -138,7 +138,7 @@ class SiteController extends Controller
         $listView->rememberSort($request->user());
 
         $query = Site::query()
-            ->with(['activeThemeInstallation.theme', 'latestDeployment'])
+            ->with(['activeThemeInstallation.theme', 'latestDeployment', 'coolifyConnection'])
             ->matchingListFilters(...SiteSavedViews::scopeArguments($savedViews->filters));
 
         // A search reaches alias hosts, so a matched row must be able to say which host
@@ -154,6 +154,17 @@ class SiteController extends Controller
 
         $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
         $sites = $listView->applySort($query)->paginate(25)->withQueryString();
+        // Rows without their own connection link to Coolify through the default one;
+        // resolve it once per page instead of once per row in coolifyUiUrl().
+        $unbound = $sites->getCollection()->filter(
+            fn (Site $site): bool => $site->coolify_connection_id === null && filled($site->coolify_app_uuid),
+        );
+        if ($unbound->isNotEmpty()) {
+            $defaultConnection = CoolifyConnection::default();
+            if ($defaultConnection !== null) {
+                $unbound->each(fn (Site $site) => $site->setRelation('coolifyConnection', $defaultConnection));
+            }
+        }
         if ($listView->shows('server')) {
             $this->attachCoolifyServers($sites->getCollection());
         }
@@ -647,10 +658,13 @@ class SiteController extends Controller
 
         $result = $checker->check($site);
 
+        // The Sites row menu asks to stay on the list it was sent from; the detail page lands on itself.
+        $redirect = $request->input('return') === 'list'
+            ? redirect()->back(fallback: route('ops.sites'))
+            : redirect()->route('ops.sites.show', $site);
+
         if ($result->status === AgentHealthStatus::NeedsSecret) {
-            return redirect()
-                ->route('ops.sites.show', $site)
-                ->with('error', __('sites.flash.health_needs_secret'));
+            return $redirect->with('error', __('sites.flash.health_needs_secret'));
         }
 
         if ($result->ok) {
@@ -658,14 +672,10 @@ class SiteController extends Controller
                 ? __('sites.flash.health_ok_version', ['version' => $result->deamonVersion])
                 : __('sites.flash.health_ok');
 
-            return redirect()
-                ->route('ops.sites.show', $site)
-                ->with('status', $status);
+            return $redirect->with('status', $status);
         }
 
-        return redirect()
-            ->route('ops.sites.show', $site)
-            ->with('error', $result->safeMessage);
+        return $redirect->with('error', $result->safeMessage);
     }
 
     public function injectAgentSecret(Request $request, Site $site, SiteAgentSecretInjector $injector, SiteMailOrderBinder $binder, SiteMailConfigurer $configurer): RedirectResponse

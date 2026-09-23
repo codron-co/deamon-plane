@@ -76,6 +76,9 @@ return [
         'help' => 'Open / close this panel',
         'dismiss' => 'Close the panel',
         'typing_note' => 'Shortcuts stay off while you type in a field or a confirm dialog is open.',
+        'list_group' => 'Sites list',
+        'filters' => 'Open / close the filter panel',
+        'clear_search' => 'In the search box: clear it, or leave it when empty',
     ],
     'palette' => [
         'title' => 'Quick jump',

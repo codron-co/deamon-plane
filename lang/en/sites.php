@@ -95,6 +95,7 @@ return [
         'quick_unhealthy' => 'Unhealthy',
         'quick_failed' => 'Failed deploys',
         'quick_git' => 'Git theme',
+        'segment_label' => 'Quick filters and views',
         'result_count' => ':count sites',
     ],
     'app_states' => [
@@ -137,6 +138,7 @@ return [
         'deleted' => 'View deleted.',
         'limit' => 'You can keep at most :max saved views. Delete one or save over the same name.',
         'delete' => 'Delete view',
+        'delete_confirm' => 'Delete the ":name" view? Filters and sites are not affected.',
         'empty_name' => 'Give the view a name.',
     ],
     'columns_picker' => [
@@ -312,6 +314,10 @@ return [
     'bulk_danger' => [
         'trigger' => 'Destructive actions',
         'label' => 'Cannot be undone',
+    ],
+    'row_actions' => [
+        'check' => 'Check status',
+        'redeploy' => 'Redeploy',
     ],
     'menu' => [
         'sync' => 'Sync',

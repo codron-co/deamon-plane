@@ -50,6 +50,21 @@
             </li>
         </ul>
 
+        {{-- Only listed where they act: the overlay never promises a key that does nothing. --}}
+        @if (request()->routeIs('ops.sites'))
+            <h3 class="ops-shortcuts-group">{{ __('ops.shortcuts.list_group') }}</h3>
+            <ul class="ops-shortcuts-list" data-ops-shortcuts-list="sites">
+                <li data-ops-shortcuts-key="f">
+                    <span class="ops-shortcuts-keys"><kbd>f</kbd></span>
+                    <span>{{ __('ops.shortcuts.filters') }}</span>
+                </li>
+                <li data-ops-shortcuts-key="Escape">
+                    <span class="ops-shortcuts-keys"><kbd>Esc</kbd></span>
+                    <span>{{ __('ops.shortcuts.clear_search') }}</span>
+                </li>
+            </ul>
+        @endif
+
         <p class="ops-shortcuts-foot">{{ __('ops.shortcuts.typing_note') }}</p>
     </div>
 </div>

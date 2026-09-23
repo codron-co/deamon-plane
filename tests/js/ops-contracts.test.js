@@ -258,3 +258,19 @@ test("pickerColumnOrder puts saved columns first and keeps the rest in place", f
         ["site", "live", "domain", "publish", "mail", "updated"]
     );
 });
+
+test("searchEscapeAction clears a filled search box and blurs an empty one", function () {
+    assert.equal(contracts.searchEscapeAction("acme"), "clear");
+    assert.equal(contracts.searchEscapeAction("  x "), "clear");
+    assert.equal(contracts.searchEscapeAction(""), "blur");
+    assert.equal(contracts.searchEscapeAction("   "), "blur");
+    assert.equal(contracts.searchEscapeAction(null), "blur");
+});
+
+test("scrollEdges only reports the edges that hide items", function () {
+    assert.deepEqual(contracts.scrollEdges(0, 300, 300), { start: false, end: false });
+    assert.deepEqual(contracts.scrollEdges(0, 500, 300), { start: false, end: true });
+    assert.deepEqual(contracts.scrollEdges(100, 500, 300), { start: true, end: true });
+    assert.deepEqual(contracts.scrollEdges(200, 500, 300), { start: true, end: false });
+    assert.deepEqual(contracts.scrollEdges(NaN, undefined, 300), { start: false, end: false });
+});
