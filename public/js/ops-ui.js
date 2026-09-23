@@ -1115,8 +1115,11 @@
                 });
             }
 
-            // Selects and checkboxes alike: a filter the operator changed applies at once.
-            form.querySelectorAll("[data-ops-list-filter]").forEach(function (control) {
+            // Selects, checkboxes and radios alike: a filter the operator changed applies at once.
+            // form.elements also reaches controls tied in with a form="" attribute.
+            Array.prototype.filter.call(form.elements, function (control) {
+                return control.matches("[data-ops-list-filter]");
+            }).forEach(function (control) {
                 control.addEventListener("change", function () {
                     if (form.dataset.opsListSyncing === "1") {
                         return;

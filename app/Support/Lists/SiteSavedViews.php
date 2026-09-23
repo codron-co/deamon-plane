@@ -20,7 +20,7 @@ final class SiteSavedViews
 
     public const ALL = 'all';
 
-    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app'];
+    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app', 'theme'];
 
     /** @var list<string> */
     public const BUILTIN_IDS = ['all', 'error', 'unpublished', 'dockerfile'];
@@ -56,6 +56,7 @@ final class SiteSavedViews
             'pack' => (string) $request->query('pack', ''),
             'health' => (string) $request->query('health', ''),
             'app' => (string) $request->query('app', ''),
+            'theme' => (string) $request->query('theme', ''),
         ]);
 
         if ($queryView === self::ALL) {
@@ -237,6 +238,7 @@ final class SiteSavedViews
         $pack = (string) ($raw['pack'] ?? '');
         $health = (string) ($raw['health'] ?? '');
         $app = (string) ($raw['app'] ?? '');
+        $theme = (string) ($raw['theme'] ?? '');
 
         $filters = [
             'q' => $q,
@@ -248,6 +250,7 @@ final class SiteSavedViews
             'pack' => in_array($pack, Site::PACK_FILTERS, true) ? $pack : '',
             'health' => in_array($health, Site::HEALTH_FILTERS, true) ? $health : '',
             'app' => in_array($app, Site::APP_FILTERS, true) ? $app : '',
+            'theme' => in_array($theme, Site::THEME_FILTERS, true) ? $theme : '',
         ];
 
         return array_filter($filters, static fn (string $value): bool => $value !== '');

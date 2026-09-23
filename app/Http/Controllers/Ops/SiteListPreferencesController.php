@@ -64,6 +64,7 @@ class SiteListPreferencesController extends Controller
             'pack' => ['sometimes', 'nullable', 'string', 'max:32'],
             'health' => ['sometimes', 'nullable', 'string', 'max:32'],
             'app' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'theme' => ['sometimes', 'nullable', 'string', 'max:32'],
             'columns' => ['sometimes', 'array'],
             'columns.*' => ['string', 'max:32'],
             'sort_key' => ['sometimes', 'nullable', 'string', 'max:32'],

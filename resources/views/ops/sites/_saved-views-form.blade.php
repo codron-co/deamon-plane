@@ -39,6 +39,7 @@
             <input type="hidden" name="pack" value="{{ $pack ?? '' }}">
             <input type="hidden" name="health" value="{{ $health ?? '' }}">
             <input type="hidden" name="app" value="{{ $app ?? '' }}">
+            <input type="hidden" name="theme" value="{{ $theme ?? '' }}">
             <input type="hidden" name="sort_key" value="{{ $listView->sortKey }}">
             <input type="hidden" name="sort_dir" value="{{ $listView->sortDirection }}">
             @foreach ($listView->columns as $columnKey)

@@ -34,6 +34,7 @@ class BulkSiteIdsRequest extends FormRequest
             'filter_pack' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_health' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_app' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_theme' => ['sometimes', 'nullable', 'string', 'max:32'],
         ];
     }
 }

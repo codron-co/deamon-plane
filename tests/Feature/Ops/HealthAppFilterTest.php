@@ -362,8 +362,8 @@ class HealthAppFilterTest extends TestCase
             ->get(route('ops.sites', ['health' => 'unhealthy']))
             ->assertOk()
             ->assertSee('Sağlıksız', false)
-            ->assertSee('Tüm sağlık durumları', false)
-            ->assertDontSee('All health states', false);
+            ->assertSee('<legend class="plane-filter-label">Sağlık</legend>', false)
+            ->assertDontSee('<legend class="plane-filter-label">Health</legend>', false);
 
         $this->actingAs($user)
             ->get(route('ops.sites', ['app' => 'issues']))

@@ -80,6 +80,7 @@ class SiteController extends Controller
         $pack = $savedViews->filters['pack'] ?? '';
         $health = $savedViews->filters['health'] ?? '';
         $app = $savedViews->filters['app'] ?? '';
+        $theme = $savedViews->filters['theme'] ?? '';
 
         $allowedChannels = config('ops.channels', []);
         $publishFilters = [...CmsPublishStatus::values(), 'unknown'];
@@ -103,13 +104,17 @@ class SiteController extends Controller
         foreach (Site::APP_FILTERS as $appOption) {
             $appFilters[$appOption] = (string) __('sites.app_states.'.$appOption);
         }
+        $themeFilters = [];
+        foreach (Site::THEME_FILTERS as $themeOption) {
+            $themeFilters[$themeOption] = (string) __('sites.theme_states.'.$themeOption);
+        }
 
         $listView = SiteListView::resolve($request, $request->user(), $savedViews);
         $listView->rememberSort($request->user());
 
         $query = Site::query()
             ->with(['activeThemeInstallation.theme', 'latestDeployment'])
-            ->matchingListFilters($search, $channel, $status, $publish, $deploy, $agent, $pack, $health, $app);
+            ->matchingListFilters($search, $channel, $status, $publish, $deploy, $agent, $pack, $health, $app, $theme);
 
         // A search reaches alias hosts, so a matched row must be able to say which host
         // matched. Only loaded while searching: one extra query instead of 25.
@@ -119,7 +124,7 @@ class SiteController extends Controller
 
         $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
         $sites = $listView->applySort($query)->paginate(25)->withQueryString();
-        $activeFilters = $this->activeListFilters($search, $channel, $status, $publish, $deploy, $deployFilters, $agent, $pack, $health, $app);
+        $activeFilters = $this->activeListFilters($search, $channel, $status, $publish, $deploy, $deployFilters, $agent, $pack, $health, $app, $theme);
         $bulkPinCommits = $this->bulkPinSuggestions($sites);
 
         /*
@@ -132,6 +137,9 @@ class SiteController extends Controller
             $appHealthCounts = app(SiteAppHealthFixer::class)->cachedCategoryCounts();
         }
 
+        // Summary tiles sit above the toolbar, so a region re-render never needs them.
+        $summary = ListFragment::wanted($request) ? null : $this->listSummary();
+
         return ListFragment::respond($request, 'ops.sites.index', 'ops.sites._region', [
             'sites' => $sites,
             'search' => $search,
@@ -143,6 +151,7 @@ class SiteController extends Controller
             'pack' => $pack,
             'health' => $health,
             'app' => $app,
+            'theme' => $theme,
             'savedViews' => $savedViews,
             'channels' => $allowedChannels,
             'statuses' => SiteStatus::values(),
@@ -151,6 +160,8 @@ class SiteController extends Controller
             'agentFilters' => $agentFilters,
             'healthFilters' => $healthFilters,
             'appFilters' => $appFilters,
+            'themeFilters' => $themeFilters,
+            'summary' => $summary,
             'listView' => $listView,
             'filtersActive' => $activeFilters !== [],
             'activeFilters' => $activeFilters,
@@ -172,7 +183,7 @@ class SiteController extends Controller
      * @param  array<string, string>  $deployFilters  Deploy filter key => operator-facing label.
      * @return list<array{key: string, label: string, value: string, url: string}>
      */
-    private function activeListFilters(string $search, string $channel, string $status, string $publish, string $deploy = '', array $deployFilters = [], string $agent = '', string $pack = '', string $health = '', string $app = ''): array
+    private function activeListFilters(string $search, string $channel, string $status, string $publish, string $deploy = '', array $deployFilters = [], string $agent = '', string $pack = '', string $health = '', string $app = '', string $theme = ''): array
     {
         $applied = array_filter([
             'q' => $search,
@@ -184,6 +195,7 @@ class SiteController extends Controller
             'pack' => $pack,
             'health' => $health,
             'app' => $app,
+            'theme' => $theme,
         ], static fn (string $value): bool => $value !== '');
 
         $labels = [
@@ -196,6 +208,7 @@ class SiteController extends Controller
             'pack' => __('sites.filter_pack'),
             'health' => __('sites.filter_health'),
             'app' => __('sites.filter_app'),
+            'theme' => __('sites.filter_theme'),
         ];
 
         $displayed = [
@@ -208,6 +221,7 @@ class SiteController extends Controller
             'pack' => $pack === '' ? '' : __('sites.pack_states.'.$pack),
             'health' => $health === '' ? '' : __('sites.health_states.'.$health),
             'app' => $app === '' ? '' : __('sites.app_states.'.$app),
+            'theme' => $theme === '' ? '' : __('sites.theme_states.'.$theme),
         ];
 
         $chips = [];
@@ -221,6 +235,22 @@ class SiteController extends Controller
         }
 
         return $chips;
+    }
+
+    /**
+     * Fleet-wide counts behind the summary tiles; each tile links to the filter that lists them.
+     *
+     * @return array{total: int, unhealthy: int, failed_deploys: int, app_issues: int, git_themes: int}
+     */
+    private function listSummary(): array
+    {
+        return [
+            'total' => Site::query()->count(),
+            'unhealthy' => Site::query()->unhealthy()->count(),
+            'failed_deploys' => Site::query()->matchingListFilters(deploy: 'failed')->count(),
+            'app_issues' => Site::query()->withAppIssues()->count(),
+            'git_themes' => Site::query()->matchingListFilters(theme: 'git')->count(),
+        ];
     }
 
     /**
@@ -540,6 +570,7 @@ class SiteController extends Controller
                     (string) $request->input('filter_pack', ''),
                     (string) $request->input('filter_health', ''),
                     (string) $request->input('filter_app', ''),
+                    (string) $request->input('filter_theme', ''),
                 )
                 ->orderBy('name')
                 ->get();

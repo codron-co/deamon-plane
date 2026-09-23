@@ -127,6 +127,7 @@ class SiteAppHealthController extends Controller
                     (string) $request->input('filter_pack', ''),
                     (string) $request->input('filter_health', ''),
                     (string) $request->input('filter_app', ''),
+                    (string) $request->input('filter_theme', ''),
                 )
                 ->orderBy('name')
                 ->get();

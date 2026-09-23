@@ -721,6 +721,47 @@ class Site extends Model
         return $this->reportedActiveThemeId() !== null ? 'health' : null;
     }
 
+    /**
+     * What the Sites list shows beside a Git theme: the catalog tag when the pin is
+     * the tagged head, a version-shaped ref as is, otherwise ref plus short SHA.
+     */
+    public function activeThemeVersionLabel(): ?string
+    {
+        $installation = $this->activeThemeInstallation;
+        if ($installation === null) {
+            return null;
+        }
+
+        $theme = $installation->theme;
+        $sha = trim((string) $installation->pinned_sha);
+        $ref = trim((string) $installation->ref);
+
+        if ($theme !== null && filled($theme->latest_tag) && $sha !== '' && $sha === (string) $theme->latest_sha) {
+            return (string) $theme->latest_tag;
+        }
+
+        if (preg_match('/^v?\d+(\.\d+)*/', $ref) === 1) {
+            return $ref;
+        }
+
+        if ($sha !== '') {
+            return ($ref !== '' ? $ref.'@' : '').substr($sha, 0, 7);
+        }
+
+        return $ref !== '' ? $ref : null;
+    }
+
+    /**
+     * The catalog head moved past the commit this site is pinned to.
+     */
+    public function hasThemeUpdate(): bool
+    {
+        $installation = $this->activeThemeInstallation;
+        $latest = (string) ($installation?->theme?->latest_sha ?? '');
+
+        return $latest !== '' && $latest !== (string) $installation?->pinned_sha;
+    }
+
     public function healthReportedThemeId(): ?string
     {
         $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
@@ -776,6 +817,15 @@ class Site extends Model
     public const APP_FILTERS = ['issues'];
 
     /**
+     * Theme-source list filters. `git` is a Plane-managed install from the Git
+     * catalog, `outdated` the subset whose pinned commit trails the catalog head,
+     * `reported` a theme the CMS reports that Plane did not install, `none` no theme.
+     *
+     * @var list<string>
+     */
+    public const THEME_FILTERS = ['git', 'outdated', 'reported', 'none'];
+
+    /**
      * Coolify fleet import writes this marker into notes when build_pack is dockerfile.
      */
     public function hasDockerfileBuildPackWarning(): bool
@@ -796,7 +846,7 @@ class Site extends Model
      * @param  Builder<Site>  $query
      * @return Builder<Site>
      */
-    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = '', string $publish = '', string $deploy = '', string $agent = '', string $pack = '', string $health = '', string $app = ''): Builder
+    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = '', string $publish = '', string $deploy = '', string $agent = '', string $pack = '', string $health = '', string $app = '', string $theme = ''): Builder
     {
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
@@ -807,6 +857,7 @@ class Site extends Model
         $pack = in_array($pack, self::PACK_FILTERS, true) ? $pack : '';
         $health = in_array($health, self::HEALTH_FILTERS, true) ? $health : '';
         $app = in_array($app, self::APP_FILTERS, true) ? $app : '';
+        $theme = in_array($theme, self::THEME_FILTERS, true) ? $theme : '';
 
         if ($search !== '') {
             $term = addcslashes($search, '%_\\');
@@ -864,6 +915,26 @@ class Site extends Model
 
         if ($app === 'issues') {
             $query->withAppIssues();
+        }
+
+        if ($theme === 'git') {
+            $query->whereHas('activeThemeInstallation');
+        } elseif ($theme === 'outdated') {
+            $query->whereHas('activeThemeInstallation', static function (Builder $installation): void {
+                $installation->whereHas('theme', static function (Builder $themes): void {
+                    $themes->whereNotNull('themes.latest_sha')
+                        ->where(static function (Builder $behind): void {
+                            $behind->whereNull('site_theme_installations.pinned_sha')
+                                ->orWhereColumn('themes.latest_sha', '!=', 'site_theme_installations.pinned_sha');
+                        });
+                });
+            });
+        } elseif ($theme === 'reported') {
+            $query->whereDoesntHave('activeThemeInstallation')
+                ->whereNotNull('last_health_payload->active_theme_id');
+        } elseif ($theme === 'none') {
+            $query->whereDoesntHave('activeThemeInstallation')
+                ->whereNull('last_health_payload->active_theme_id');
         }
 
         return $query;

@@ -35,18 +35,14 @@
                 </div>
             </div>
         @else
+            @include('ops.partials.filter-chips', [
+                'chips' => $activeFilters ?? [],
+                'label' => __('sites.empty.filters_label'),
+            ])
             <form method="POST" class="sites-bulk" id="sites-bulk-form" data-ops-bulk>
                 @csrf
                 <input type="hidden" name="confirmed" value="0">
-                <input type="hidden" name="filter_q" value="{{ $search }}">
-                <input type="hidden" name="filter_channel" value="{{ $channel }}">
-                <input type="hidden" name="filter_status" value="{{ $status }}">
-                <input type="hidden" name="filter_publish" value="{{ $publish }}">
-                <input type="hidden" name="filter_deploy" value="{{ $deploy ?? '' }}">
-                <input type="hidden" name="filter_agent" value="{{ $agent ?? '' }}">
-                <input type="hidden" name="filter_pack" value="{{ $pack ?? '' }}">
-                <input type="hidden" name="filter_health" value="{{ $health ?? '' }}">
-                <input type="hidden" name="filter_app" value="{{ $app ?? '' }}">
+                @include('ops.sites._filter-hidden')
             <div class="sites-table-wrap">
                 <table class="ops-table">
                     <thead>
@@ -157,10 +153,20 @@
                                             </div>
                                         </details>
                                     @endif
-                                    <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
-                                    @can('update', $site)
-                                        <a class="btn btn-ghost btn-sm" href="{{ route('ops.sites.edit', $site) }}">{{ __('ops.actions.edit') }}</a>
-                                    @endcan
+                                    <details class="ops-action-menu ops-action-menu-compact plane-row-menu" data-ops-action-menu data-row-action>
+                                        <summary class="plane-more" aria-label="{{ __('ops.actions.more_for', ['name' => $site->name]) }}">
+                                            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/></svg>
+                                        </summary>
+                                        <div class="ops-action-popover" role="menu">
+                                            <a class="ops-menu-button" role="menuitem" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
+                                            @can('update', $site)
+                                                <a class="ops-menu-button" role="menuitem" href="{{ route('ops.sites.edit', $site) }}">{{ __('ops.actions.edit') }}</a>
+                                            @endcan
+                                            @if (filled($site->primary_domain))
+                                                <a class="ops-menu-button" role="menuitem" href="https://{{ $site->primary_domain }}" target="_blank" rel="noopener noreferrer">{{ __('sites.columns.open_live', ['domain' => $site->primary_domain]) }}</a>
+                                            @endif
+                                        </div>
+                                    </details>
                                 </td>
                             </tr>
                         @endforeach

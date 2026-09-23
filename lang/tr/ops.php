@@ -39,6 +39,7 @@ return [
         'viewer' => 'İzleyici',
     ],
     'actions' => [
+        'more_for' => ':name işlemleri',
         'save' => 'Kaydet',
         'save_changes' => 'Değişiklikleri kaydet',
         'cancel' => 'Vazgeç',

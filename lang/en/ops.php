@@ -39,6 +39,7 @@ return [
         'viewer' => 'Viewer',
     ],
     'actions' => [
+        'more_for' => 'Actions for :name',
         'save' => 'Save',
         'save_changes' => 'Save changes',
         'cancel' => 'Cancel',

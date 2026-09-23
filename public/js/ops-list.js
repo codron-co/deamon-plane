@@ -65,7 +65,10 @@
             }
 
             if (control.type === "checkbox" || control.type === "radio") {
-                control.checked = values.indexOf(control.value) !== -1;
+                // A radio set's empty "All" option stands for the absent parameter.
+                control.checked = values.length
+                    ? values.indexOf(control.value) !== -1
+                    : control.type === "radio" && control.value === "";
                 return;
             }
 
@@ -111,7 +114,7 @@
         }
 
         const params = url.searchParams;
-        ["q", "channel", "status", "publish", "deploy", "agent", "pack"].forEach(function (name) {
+        ["q", "channel", "status", "publish", "deploy", "agent", "pack", "health", "app", "theme"].forEach(function (name) {
             const input = form.querySelector("input[name='" + name + "']");
             if (input) {
                 input.value = params.get(name) || "";
@@ -219,6 +222,7 @@
             syncToolbar(root, url);
             syncFilterInputs(url);
             syncLayoutFromRegion(root, region, url);
+            root.dispatchEvent(new CustomEvent("ops:list-updated", { detail: { url: url.href } }));
 
             if (window.PlaneUI && typeof window.PlaneUI.refresh === "function") {
                 window.PlaneUI.refresh(region);

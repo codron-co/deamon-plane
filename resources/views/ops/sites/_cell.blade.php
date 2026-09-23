@@ -52,10 +52,17 @@
 
     @case ('repo_branch')
         <td>
-            <div class="branch-version" aria-label="{{ __('sites.columns.repo_branch') }}">
-                <span class="branch-chip">{{ $site->channel->value }}</span>
-                <span class="version-chip">{{ $reportedVersion ?: __('sites.version_unknown') }}</span>
-            </div>
+            {{-- Branch and the version it runs read as one fact, so they share one pill. --}}
+            <span
+                class="plane-ref @if (! $reportedVersion) is-unknown @endif"
+                title="{{ __('sites.repo_branch_version', ['branch' => $site->channel->value, 'version' => $reportedVersion ?: __('sites.version_unknown')]) }}"
+            >
+                <span class="plane-ref-branch branch-chip">
+                    <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><circle cx="5" cy="3.5" r="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="5" cy="12.5" r="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="5.5" r="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5 5v6M11 7c0 2.5-2.5 3-6 4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                    {{ $site->channel->value }}
+                </span>
+                <span class="plane-ref-version version-chip">{{ $reportedVersion ?: __('sites.version_unknown') }}</span>
+            </span>
         </td>
         @break
 
@@ -108,7 +115,33 @@
         @break
 
     @case ('theme')
-        <td class="muted">{{ $site->reportedActiveThemeId() ?: __('ops.none') }}</td>
+        <td>
+            @php
+                $themeLabel = $site->reportedActiveThemeId();
+                $themeIsGit = $site->activeThemeInstallation !== null;
+                $themeVersion = $themeIsGit ? $site->activeThemeVersionLabel() : null;
+            @endphp
+            @if ($themeLabel === null)
+                <span class="muted">{{ __('ops.none') }}</span>
+            @elseif ($themeIsGit)
+                <span class="plane-theme is-git" title="{{ __('sites.theme_git') }}">
+                    @include('ops.sites._git-icon')
+                    <span class="plane-theme-name">{{ $site->activeThemeInstallation->theme?->displayName() ?? $themeLabel }}</span>
+                    @if ($themeVersion !== null)
+                        <span class="plane-theme-version">{{ $themeVersion }}</span>
+                    @endif
+                    @if ($site->hasThemeUpdate())
+                        <span class="plane-theme-update" title="{{ __('sites.theme_update_available') }}">
+                            <span class="visually-hidden">{{ __('sites.theme_update_available') }}</span>
+                        </span>
+                    @endif
+                </span>
+            @else
+                <span class="plane-theme" title="{{ __('sites.theme_reported_hint') }}">
+                    <span class="plane-theme-name">{{ $themeLabel }}</span>
+                </span>
+            @endif
+        </td>
         @break
 
     @case ('health')
