@@ -92,7 +92,7 @@ final class ControlPlaneAgentContract
      * First CMS whose `/themes/update` keeps theme files the site edited (admin file
      * editor) and reports them as `customizations`. Older CMS replaces the whole theme root.
      */
-    public const THEME_UPDATE_KEEPS_CUSTOMIZATIONS_VERSION = '1.2.31';
+    public const THEME_UPDATE_KEEPS_CUSTOMIZATIONS_VERSION = '1.2.32';
 
     public const JSON_ENCODE_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 

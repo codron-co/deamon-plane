@@ -21,7 +21,7 @@
     $editSafeSync = $site->supportsEditSafeThemeSync();
     $editSafeVersion = \App\Services\Agent\ControlPlaneAgentContract::THEME_SYNC_EDIT_SAFE_VERSION;
     $reportedCms = $site->reportedDeamonVersion() ?? __('ops.unknown');
-    // CMS < 1.2.31 (or unknown): update replaces theme files the site edited.
+    // CMS < 1.2.32 (or unknown): update replaces theme files the site edited.
     $keepsFileCustomizations = $site->keepsThemeFileCustomizationsOnUpdate();
     $keepsFileCustomizationsVersion = \App\Services\Agent\ControlPlaneAgentContract::THEME_UPDATE_KEEPS_CUSTOMIZATIONS_VERSION;
 @endphp

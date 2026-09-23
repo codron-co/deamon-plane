@@ -379,7 +379,7 @@ class ThemeAssignTest extends TestCase
 
     public function test_update_records_the_theme_files_the_cms_kept_and_shows_them(): void
     {
-        [$site, $installation] = $this->activeInstallation(cmsVersion: '1.2.31');
+        [$site, $installation] = $this->activeInstallation(cmsVersion: '1.2.32');
 
         Http::fake([
             'https://shop.example.test/internal/control/v1/themes/update' => Http::response([
@@ -417,15 +417,15 @@ class ThemeAssignTest extends TestCase
 
     public function test_update_confirm_warns_that_an_old_cms_overwrites_theme_file_edits(): void
     {
-        [$site] = $this->activeInstallation(cmsVersion: '1.2.30');
+        [$site] = $this->activeInstallation(cmsVersion: '1.2.31');
 
         $this->actingAs($this->operator())
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee(e(__('sites.themes.update_confirm_legacy', [
                 'theme' => 'izyem',
-                'version' => '1.2.31',
-                'reported' => '1.2.30',
+                'version' => '1.2.32',
+                'reported' => '1.2.31',
             ])), false);
     }
 
@@ -714,7 +714,7 @@ class ThemeAssignTest extends TestCase
                 'ok' => true,
                 'active_theme_id' => 'izyem',
                 // A CMS that keeps site edits and file customizations, so the card offers the safe copy.
-                'deamon_version' => '1.2.31',
+                'deamon_version' => '1.2.32',
             ],
         ]);
         $theme = Theme::factory()->publicCatalog()->create([
