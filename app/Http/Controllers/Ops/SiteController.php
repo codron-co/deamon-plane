@@ -42,6 +42,7 @@ use App\Services\Sites\SiteIdentityPusher;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLifecycleException;
+use App\Services\Sites\SiteListSummary;
 use App\Services\Sites\SitePrimaryDomain;
 use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
@@ -189,7 +190,13 @@ class SiteController extends Controller
         }
 
         // Summary tiles sit above the toolbar, so a region re-render never needs them.
-        $summary = ListFragment::wanted($request) ? null : $this->listSummary();
+        $summary = null;
+        $summaryTrend = null;
+        if (! ListFragment::wanted($request)) {
+            $summaryService = app(SiteListSummary::class);
+            $summary = $summaryService->counts();
+            $summaryTrend = $summaryService->trend($summary);
+        }
 
         return ListFragment::respond($request, 'ops.sites.index', 'ops.sites._region', [
             'sites' => $sites,
@@ -223,6 +230,7 @@ class SiteController extends Controller
             'serverFilters' => $serverFilters,
             'staleFilters' => $staleFilters,
             'summary' => $summary,
+            'summaryTrend' => $summaryTrend,
             'listView' => $listView,
             'filtersActive' => $activeFilters !== [],
             'activeFilters' => $activeFilters,
@@ -383,22 +391,6 @@ class SiteController extends Controller
         }
 
         return $options;
-    }
-
-    /**
-     * Fleet-wide counts behind the summary tiles; each tile links to the filter that lists them.
-     *
-     * @return array{total: int, unhealthy: int, failed_deploys: int, app_issues: int, git_themes: int}
-     */
-    private function listSummary(): array
-    {
-        return [
-            'total' => Site::query()->count(),
-            'unhealthy' => Site::query()->unhealthy()->count(),
-            'failed_deploys' => Site::query()->matchingListFilters(deploy: 'failed')->count(),
-            'app_issues' => Site::query()->withAppIssues()->count(),
-            'git_themes' => Site::query()->matchingListFilters(theme: 'git')->count(),
-        ];
     }
 
     /**

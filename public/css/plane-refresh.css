@@ -628,6 +628,27 @@ details[open] > summary.btn-secondary {
     color: var(--accent-text);
 }
 
+/* Change since the previous day's snapshot; arrow + words, tone is secondary. */
+.plane-metric-trend {
+    display: block;
+    margin-top: 8px;
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.plane-metric-trend.is-bad {
+    color: var(--danger-text);
+}
+
+.plane-metric-trend.is-good {
+    color: var(--success-text);
+}
+
 /* ---------------------------------------------------- Sites: workspace card */
 .plane-workspace {
     border: 1px solid var(--border);

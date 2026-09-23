@@ -185,6 +185,29 @@
                                 <span>{{ __('sites.summary.of_total', ['count' => $summary[$tile['key']], 'total' => $summary['total']]) }}</span>
                             @endif
                         </span>
+                        @php
+                            $delta = $summaryTrend['deltas'][$tile['key']] ?? null;
+                        @endphp
+                        @if ($delta !== null)
+                            @php
+                                $direction = $delta > 0 ? 'up' : ($delta < 0 ? 'down' : 'same');
+                                $problem = in_array($tile['key'], \App\Services\Sites\SiteListSummary::PROBLEM_KEYS, true);
+                                $trendTone = match (true) {
+                                    $direction === 'same' || ! $problem => 'neutral',
+                                    $direction === 'up' => 'bad',
+                                    default => 'good',
+                                };
+                                $suffix = $summaryTrend['yesterday'] ? '' : '_since';
+                                $trendArgs = [
+                                    'count' => abs($delta),
+                                    'date' => \Carbon\CarbonImmutable::parse($summaryTrend['date'])->format(__('sites.summary.trend.date_format')),
+                                ];
+                            @endphp
+                            <span class="plane-metric-trend is-{{ $direction }} is-{{ $trendTone }}" data-summary-trend="{{ $tile['key'] }}">
+                                <span aria-hidden="true">{{ ['up' => '▲', 'down' => '▼', 'same' => '='][$direction] }} {{ __('sites.summary.trend.'.$direction.$suffix, $trendArgs) }}</span>
+                                <span class="visually-hidden">{{ __('sites.summary.trend.sr_'.$direction.$suffix, $trendArgs) }}</span>
+                            </span>
+                        @endif
                     </a>
                 @endforeach
             </section>

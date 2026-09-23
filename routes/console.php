@@ -32,3 +32,11 @@ Schedule::job(new ReconcileDeskronPushJob)
     ->hourly()
     ->name('ops-deskron-push-reconcile')
     ->withoutOverlapping();
+
+// Sites summary tiles show the change since the previous day. Late evening so
+// the row reflects the day's end state; an upsert, so a manual run is harmless.
+Schedule::command('ops:snapshot-fleet')
+    ->dailyAt('23:50')
+    ->timezone(config('app.timezone'))
+    ->name('ops-snapshot-fleet')
+    ->withoutOverlapping();
