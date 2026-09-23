@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr" data-theme="dark">
+<html lang="tr" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -17,7 +17,7 @@
       --text: #f0f0f2;
       --muted: #a0a0a9;
       --faint: #696970;
-      --accent: #7c83f5;
+      --accent: #5b5ce2;
       --accent-soft: rgba(124, 131, 245, .12);
       --green: #5ac78b;
       --green-soft: rgba(90, 199, 139, .10);
@@ -26,26 +26,27 @@
       --red: #ef7078;
       --red-soft: rgba(239, 112, 120, .10);
       --blue: #65a9ed;
-      --radius-sm: 6px;
-      --radius: 10px;
-      --sidebar-w: 228px;
+      --radius-sm: 8px;
+      --radius: 14px;
+      --sidebar-w: 244px;
       --ease-out: cubic-bezier(.23, 1, .32, 1);
       --shadow-menu: 0 18px 50px rgba(0, 0, 0, .42);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     html[data-theme="light"] {
-      --bg: #f7f7f8;
-      --sidebar: #fbfbfc;
+      --bg: #f5f6f8;
+      --sidebar: #ffffff;
       --surface: #fff;
-      --surface-2: #f3f3f5;
-      --surface-3: #ededf0;
-      --line: #e2e2e6;
-      --line-strong: #cacacf;
-      --text: #171719;
-      --muted: #62626b;
-      --faint: #96969e;
-      --accent-soft: rgba(96, 104, 222, .09);
+      --surface-2: #f7f7fa;
+      --surface-3: #efeff5;
+      --line: #e7e7ec;
+      --line-strong: #d0d0d9;
+      --text: #1f2028;
+      --muted: #666773;
+      --faint: #94959f;
+      --accent: #5b5ce2;
+      --accent-soft: rgba(91, 92, 226, .09);
       --green-soft: rgba(34, 139, 82, .08);
       --amber-soft: rgba(175, 118, 0, .08);
       --red-soft: rgba(202, 48, 58, .07);
@@ -53,12 +54,12 @@
       --amber: #a96f00;
       --red: #ca303a;
       --blue: #2d79bf;
-      --shadow-menu: 0 18px 50px rgba(25, 25, 30, .13);
+      --shadow-menu: 0 20px 60px rgba(28, 29, 44, .14);
     }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); }
-    body { font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    body { font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
     button, input, select { font: inherit; }
     button, a { -webkit-tap-highlight-color: transparent; }
     button { color: inherit; }
@@ -69,17 +70,17 @@
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     .app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100dvh; }
-    .sidebar { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; padding: 14px 12px 12px; border-right: 1px solid var(--line); background: var(--sidebar); z-index: 20; }
+    .sidebar { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; padding: 18px 14px 14px; border-right: 1px solid var(--line); background: var(--sidebar); z-index: 20; }
     .brand { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 8px; }
-    .brand-mark { position: relative; width: 22px; height: 22px; border-radius: 7px; background: var(--accent); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+    .brand-mark { position: relative; width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(145deg, #7778ef, var(--accent)); box-shadow: 0 7px 18px rgba(91,92,226,.22), inset 0 0 0 1px rgba(255,255,255,.22); }
     .brand-mark::after { position: absolute; inset: 5px; border: 1.5px solid #fff; border-top-color: transparent; border-radius: 50%; content: ""; transform: rotate(28deg); }
-    .brand strong { display: block; font-size: 13px; letter-spacing: -.01em; }
+    .brand strong { display: block; font-size: 14px; letter-spacing: -.015em; }
     .brand small { display: block; color: var(--faint); font-size: 10px; }
     .nav { display: grid; gap: 2px; margin-top: 17px; }
     .nav-label { padding: 0 9px 7px; color: var(--faint); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
-    .nav-item { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 9px; border-radius: 7px; color: var(--muted); font-weight: 500; }
+    .nav-item { display: flex; align-items: center; gap: 11px; min-height: 40px; padding: 0 11px; border-radius: 9px; color: var(--muted); font-weight: 550; }
     .nav-item:hover { color: var(--text); background: var(--surface); }
-    .nav-item.active { color: var(--text); background: var(--surface-2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.025); }
+    .nav-item.active { color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(91,92,226,.06); }
     .nav-item .count { margin-left: auto; color: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }
     .sidebar-foot { position: relative; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
     .user-trigger { display: flex; align-items: center; width: 100%; min-height: 42px; gap: 9px; padding: 5px 7px; border: 0; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; }
@@ -92,17 +93,17 @@
     .user-trigger .chevron { margin-left: auto; width: 14px; color: var(--faint); }
 
     .main { min-width: 0; }
-    .topbar { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 28px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(18px); }
+    .topbar { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between; height: 68px; padding: 0 32px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 91%, transparent); backdrop-filter: blur(20px); }
     .top-title { display: flex; align-items: center; gap: 11px; min-width: 0; }
-    .top-title h1 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+    .top-title h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
     .top-title .total { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
     .mobile-menu { display: none; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
     .top-actions { display: flex; align-items: center; gap: 8px; }
     .key { display: inline-flex; align-items: center; height: 18px; margin-left: 8px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--faint); font-size: 9px; }
-    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font-weight: 600; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--ease-out); }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); font-weight: 650; cursor: pointer; box-shadow: 0 1px 2px rgba(24,25,35,.025); transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--ease-out), box-shadow 150ms ease; }
     .button:hover { border-color: var(--line-strong); color: var(--text); background: var(--surface-2); }
     .button:active { transform: scale(.975); }
-    .button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .button.primary { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 7px 18px rgba(91,92,226,.2); }
     .button.primary:hover { filter: brightness(1.07); }
     .button.icon-only { width: 34px; padding: 0; }
     .button.icon-only.active { border-color: color-mix(in srgb, var(--accent) 48%, var(--line)); background: var(--accent-soft); color: var(--text); }
@@ -127,15 +128,15 @@
     .quick-count.warning { background: var(--amber-soft); color: var(--amber); }
     .quick-count.danger { background: var(--red-soft); color: var(--red); }
 
-    .content { width: 100%; max-width: 1680px; margin: 0 auto; padding: 26px 30px 56px; }
+    .content { width: 100%; max-width: 1680px; margin: 0 auto; padding: 34px 36px 64px; }
     .intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-bottom: 22px; }
-    .intro h2 { margin: 0; font-size: clamp(21px, 2vw, 28px); line-height: 1.2; letter-spacing: -.035em; }
-    .intro p { max-width: 620px; margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .intro h2 { margin: 0; font-size: clamp(24px, 2.2vw, 32px); line-height: 1.18; letter-spacing: -.04em; }
+    .intro p { max-width: 680px; margin: 9px 0 0; color: var(--muted); font-size: 13px; }
     .sync { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; padding-top: 8px; color: var(--faint); font-size: 10px; }
     .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
 
-    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
-    .metric { position: relative; min-width: 0; padding: 16px 18px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric { position: relative; min-width: 0; padding: 18px 19px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: 0 4px 18px rgba(28,29,44,.035); }
     .metric + .metric { border-left: 1px solid var(--line); }
     .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--faint); font-size: 10px; font-weight: 600; }
     .metric-value { display: flex; align-items: baseline; gap: 8px; margin-top: 9px; }
@@ -145,7 +146,7 @@
     .metric.danger .metric-value strong, .metric.danger .metric-top svg { color: var(--red); }
     .metric.success .metric-value strong, .metric.success .metric-top svg { color: var(--green); }
 
-    .workspace { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: clip; }
+    .workspace { margin-top: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 8px 30px rgba(28,29,44,.045); overflow: clip; }
     .toolbar { display: flex; align-items: center; gap: 9px; min-height: 59px; padding: 11px 13px; border-bottom: 1px solid var(--line); }
     .search { position: relative; flex: 1 1 300px; max-width: 410px; }
     .search svg { position: absolute; top: 50%; left: 11px; width: 15px; color: var(--faint); transform: translateY(-50%); pointer-events: none; }
@@ -168,6 +169,26 @@
     .filter-option:hover { border-color: var(--line-strong); color: var(--text); }
     .filter-option.active { border-color: color-mix(in srgb, var(--accent) 52%, var(--line)); background: var(--accent-soft); color: var(--text); }
     .filter-reset { white-space: nowrap; }
+    .column-panel { display: grid; grid-template-columns: minmax(220px, .75fr) minmax(0, 1.7fr); gap: 24px; padding: 18px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+    .column-panel[hidden] { display: none; }
+    .column-intro h3 { margin: 0; font-size: 13px; letter-spacing: -.015em; }
+    .column-intro p { margin: 5px 0 0; color: var(--faint); font-size: 10px; }
+    .column-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .column-option { display: flex; align-items: center; gap: 9px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); cursor: pointer; }
+    .column-option:hover { border-color: var(--line-strong); color: var(--text); }
+    .column-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .column-switch { position: relative; width: 28px; height: 17px; flex: 0 0 auto; border-radius: 999px; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-strong); transition: background-color 160ms ease; }
+    .column-switch::after { position: absolute; top: 3px; left: 3px; width: 11px; height: 11px; border-radius: 50%; background: var(--faint); content: ""; transition: transform 180ms var(--ease-out), background-color 160ms ease; }
+    .column-option input:checked + .column-switch { background: var(--accent); box-shadow: none; }
+    .column-option input:checked + .column-switch::after { background: #fff; transform: translateX(11px); }
+    .column-option input:focus-visible + .column-switch { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .column-option.required { cursor: default; opacity: .65; }
+    .column-option.required .column-switch { background: var(--accent-soft); }
+    table.hide-health th:nth-child(3), table.hide-health td:nth-child(3),
+    table.hide-publish th:nth-child(4), table.hide-publish td:nth-child(4),
+    table.hide-branch th:nth-child(5), table.hide-branch td:nth-child(5),
+    table.hide-version th:nth-child(6), table.hide-version td:nth-child(6),
+    table.hide-checked th:nth-child(7), table.hide-checked td:nth-child(7) { display: none !important; }
 
     .bulkbar { display: none; align-items: center; gap: 8px; min-height: 48px; padding: 8px 13px; border-bottom: 1px solid var(--line); background: var(--accent-soft); }
     .bulkbar.visible { display: flex; }
@@ -247,6 +268,7 @@
       .search { max-width: none; }
       .view-switch { margin-left: auto; }
       .filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .column-panel { grid-template-columns: 1fr; gap: 14px; }
       .workspace.card-view tbody { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
@@ -271,6 +293,7 @@
       .filter-button { flex: 1; }
       .toolbar-separator, .view-switch { display: none; }
       .filter-panel { grid-template-columns: 1fr; gap: 13px; }
+      .column-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .workspace.card-view .table-wrap { padding: 10px; }
       .workspace.card-view tbody { grid-template-columns: 1fr; }
       .table-wrap { overflow: visible; }
@@ -299,6 +322,7 @@
       .metric-value { margin: 0; }
       .filter-button:nth-of-type(3) { display: none; }
       .button.primary .button-label { display: none; }
+      .column-options { grid-template-columns: 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -390,6 +414,7 @@
             <button class="button filter-button" type="button" data-filter="healthy">Sağlıklı <span>49</span></button>
             <div class="toolbar-separator"></div>
             <button class="button icon-only" id="filterToggle" type="button" aria-label="Ayrıntılı filtreleri aç" aria-expanded="false" aria-controls="filterPanel" title="Ayrıntılı filtreler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button>
+            <button class="button icon-only" id="columnToggle" type="button" aria-label="Sütunları özelleştir" aria-expanded="false" aria-controls="columnPanel" title="Sütunları özelleştir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4zM9 5v14M15 5v14"/></svg></button>
             <div class="view-switch" aria-label="Görünüm"><button class="active" type="button" data-view="list" aria-label="Liste görünümü" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg></button><button type="button" data-view="card" aria-label="Kart görünümü" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button></div>
           </div>
 
@@ -398,6 +423,18 @@
             <div class="filter-group"><span class="filter-group-label">Site sağlığı</span><div class="filter-options"><button class="filter-option active" type="button" data-advanced-filter="health" data-value="all">Tümü</button><button class="filter-option" type="button" data-advanced-filter="health" data-value="healthy">Sağlıklı</button><button class="filter-option" type="button" data-advanced-filter="health" data-value="unhealthy">Sorunlu</button><button class="filter-option" type="button" data-advanced-filter="health" data-value="stale">Kontrol gecikmiş</button></div></div>
             <div class="filter-group"><span class="filter-group-label">Son yayın</span><div class="filter-options"><button class="filter-option active" type="button" data-advanced-filter="publish" data-value="all">Tümü</button><button class="filter-option" type="button" data-advanced-filter="publish" data-value="success">Başarılı</button><button class="filter-option" type="button" data-advanced-filter="publish" data-value="failed">Başarısız</button></div></div>
             <button class="button filter-reset" id="filterReset" type="button">Filtreleri temizle</button>
+          </div>
+
+          <div class="column-panel" id="columnPanel" hidden>
+            <div class="column-intro"><h3>Tabloyu size göre düzenleyin</h3><p>Görmek istediğiniz bilgileri seçin. Tercihiniz bu tarayıcıda otomatik olarak saklanır.</p></div>
+            <div class="column-options" role="group" aria-label="Görünür sütunlar">
+              <label class="column-option required"><input type="checkbox" checked disabled><span class="column-switch"></span><span>Site</span></label>
+              <label class="column-option"><input type="checkbox" data-column="health" checked><span class="column-switch"></span><span>Site sağlığı</span></label>
+              <label class="column-option"><input type="checkbox" data-column="publish" checked><span class="column-switch"></span><span>Son yayın</span></label>
+              <label class="column-option"><input type="checkbox" data-column="branch" checked><span class="column-switch"></span><span>Repo dalı</span></label>
+              <label class="column-option"><input type="checkbox" data-column="version" checked><span class="column-switch"></span><span>Sürüm</span></label>
+              <label class="column-option"><input type="checkbox" data-column="checked" checked><span class="column-switch"></span><span>Son kontrol</span></label>
+            </div>
           </div>
 
           <div class="bulkbar" id="bulkbar"><strong><span id="selectionCount">0</span> site seçildi</strong><button class="button" type="button" data-toast="Site kontrolleri sıraya alındı">Durumu kontrol et</button><button class="button" type="button" data-toast="Yeniden başlatma işlemi sıraya alındı">Yeniden başlat</button><button class="button" type="button" data-toast="Yayın işlemi sıraya alındı">Yeniden yayınla</button></div>
@@ -436,9 +473,13 @@
       const viewButtons = [...document.querySelectorAll('[data-view]')];
       const checks = [...document.querySelectorAll('.row-check')];
       const workspace = document.querySelector('.workspace');
+      const table = document.querySelector('.workspace table');
       const filterToggle = document.querySelector('#filterToggle');
       const filterPanel = document.querySelector('#filterPanel');
       const filterReset = document.querySelector('#filterReset');
+      const columnToggle = document.querySelector('#columnToggle');
+      const columnPanel = document.querySelector('#columnPanel');
+      const columnInputs = [...document.querySelectorAll('[data-column]')];
       const quickActionsTrigger = document.querySelector('#quickActionsTrigger');
       const quickActionsMenu = document.querySelector('#quickActionsMenu');
       const selectAll = document.querySelector('#selectAll');
@@ -508,6 +549,20 @@
         toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
       }
 
+      function applyColumnPreferences(preferences) {
+        columnInputs.forEach(input => {
+          const visible = preferences[input.dataset.column] !== false;
+          input.checked = visible;
+          table.classList.toggle(`hide-${input.dataset.column}`, !visible);
+        });
+      }
+
+      try {
+        applyColumnPreferences(JSON.parse(localStorage.getItem('plane-site-columns') || '{}'));
+      } catch (_) {
+        applyColumnPreferences({});
+      }
+
       filters.forEach(button => button.addEventListener('click', () => {
         activeFilter = button.dataset.filter;
         filters.forEach(item => item.classList.toggle('active', item === button));
@@ -524,7 +579,21 @@
         const open = filterPanel.hidden;
         filterPanel.hidden = !open;
         filterToggle.setAttribute('aria-expanded', String(open));
+        columnPanel.hidden = true;
+        columnToggle.setAttribute('aria-expanded', 'false');
       });
+      columnToggle.addEventListener('click', () => {
+        const open = columnPanel.hidden;
+        columnPanel.hidden = !open;
+        columnToggle.setAttribute('aria-expanded', String(open));
+        filterPanel.hidden = true;
+        filterToggle.setAttribute('aria-expanded', 'false');
+      });
+      columnInputs.forEach(input => input.addEventListener('change', () => {
+        const preferences = Object.fromEntries(columnInputs.map(item => [item.dataset.column, item.checked]));
+        applyColumnPreferences(preferences);
+        try { localStorage.setItem('plane-site-columns', JSON.stringify(preferences)); } catch (_) {}
+      }));
       filterReset.addEventListener('click', () => {
         Object.keys(activeAdvanced).forEach(group => activeAdvanced[group] = 'all');
         advancedFilters.forEach(item => item.classList.toggle('active', item.dataset.value === 'all'));
@@ -593,7 +662,14 @@
       scrim.addEventListener('click', () => { body.classList.remove('nav-open'); mobileMenu.setAttribute('aria-expanded', 'false'); });
       document.addEventListener('click', event => { if (!event.target.closest('#rowMenu,#userMenu,#userTrigger,#quickActionsMenu,#quickActionsTrigger,.more')) closeMenus(); });
       document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') { closeMenus(); body.classList.remove('nav-open'); }
+        if (event.key === 'Escape') {
+          closeMenus();
+          body.classList.remove('nav-open');
+          filterPanel.hidden = true;
+          columnPanel.hidden = true;
+          filterToggle.setAttribute('aria-expanded', 'false');
+          columnToggle.setAttribute('aria-expanded', 'false');
+        }
         if (event.key === '/' && !event.target.matches('input,textarea')) { event.preventDefault(); search.focus(); }
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); search.focus(); }
       });
