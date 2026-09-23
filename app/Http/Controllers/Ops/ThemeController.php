@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
 use App\Models\GithubSetting;
 use App\Models\Site;
+use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
 use App\Models\ThemeGitConnection;
 use App\Services\GitHub\GitHubApiException;
@@ -17,6 +18,7 @@ use App\Services\Themes\ThemeCatalogSync;
 use App\Support\Lists\ListFragment;
 use App\Support\PublicAppUrl;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,7 +49,11 @@ class ThemeController extends Controller
             ->orderBy('account_login')
             ->get();
 
-        $themes = $query->withCount(['installations', 'accessEntries'])->paginate(25)->withQueryString();
+        $themes = $query->withCount([
+            'installations',
+            'accessEntries',
+            'installations as outdated_installs_count' => static fn (Builder $installations) => $installations->behindCatalog(),
+        ])->paginate(25)->withQueryString();
         $activeFilters = $this->activeListFilters($search, $visibility);
 
         return ListFragment::respond($request, 'ops.themes.index', 'ops.themes._region', [
@@ -58,6 +64,8 @@ class ThemeController extends Controller
             'filtersActive' => $activeFilters !== [],
             'activeFilters' => $activeFilters,
             'totalThemes' => $themes->total() > 0 ? $themes->total() : Theme::query()->count(),
+            // The tiles sit outside the swapped region; a keystroke must not recount them.
+            'summary' => ListFragment::wanted($request) ? null : $this->catalogSummary(),
             'connections' => $connections,
             'hasGithubApp' => GithubSetting::current()->hasManifestApp(),
             'appUrlIsPublic' => PublicAppUrl::isPublic(),
@@ -66,6 +74,34 @@ class ThemeController extends Controller
             'canSync' => $request->user()?->can('sync', Theme::class) ?? false,
             'canWriteGit' => $request->user()?->can('create', ThemeGitConnection::class) ?? false,
         ]);
+    }
+
+    /**
+     * Catalog-wide counts behind the Themes tiles: a fixed handful of queries,
+     * independent of the page size.
+     *
+     * @return array{total: int, visibility: array<string, int>, installs: int, outdated: int}
+     */
+    private function catalogSummary(): array
+    {
+        $byVisibility = Theme::query()
+            ->selectRaw('visibility, COUNT(*) as aggregate')
+            ->groupBy('visibility')
+            ->pluck('aggregate', 'visibility');
+
+        $visibility = [];
+        foreach (ThemeVisibility::values() as $value) {
+            $visibility[$value] = (int) ($byVisibility[$value] ?? 0);
+        }
+
+        return [
+            'total' => array_sum($visibility),
+            'visibility' => $visibility,
+            'installs' => SiteThemeInstallation::query()->where('is_active', true)->count(),
+            'outdated' => Theme::query()
+                ->whereHas('installations', static fn (Builder $installations) => $installations->behindCatalog())
+                ->count(),
+        ];
     }
 
     /**

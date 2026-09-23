@@ -179,7 +179,7 @@
                 <span class="muted">{{ __('ops.none') }}</span>
             @elseif ($themeIsGit)
                 <span class="plane-theme is-git" title="{{ __('sites.theme_git') }}">
-                    @include('ops.sites._git-icon')
+                    <x-ops.git-icon />
                     <span class="plane-theme-name">{{ $site->activeThemeInstallation->theme?->displayName() ?? $themeLabel }}</span>
                     @if ($themeVersion !== null)
                         <span class="plane-theme-version">{{ $themeVersion }}</span>

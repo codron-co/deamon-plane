@@ -12,6 +12,14 @@ return [
     'filter_search' => 'Arama',
     'filter_visibility' => 'Görünürlük',
     'all_visibilities' => 'Tüm görünürlükler',
+    'latest_unknown' => 'Henüz sürüm yok',
+    'outdated_link' => ':theme kullanan :count site son commit’in gerisinde',
+    'summary' => [
+        'label' => 'Tema kataloğu özeti',
+        'total' => 'Katalog temaları',
+        'installs' => 'Etkin kurulumlar',
+        'outdated' => 'Geride site olan temalar',
+    ],
     'empty' => [
         'title' => 'Henüz katalog teması yok',
         'hint' => 'Temalar altında bir GitHub kaynağı ekleyin, sonra katalogu yenileyin.',
@@ -30,6 +38,10 @@ return [
         'min' => 'Min Deamon',
         'sha' => 'SHA',
         'installs' => 'Kurulum',
+        'installed_sites' => 'Kurulu siteler',
+        'outdated' => 'Güncel olmayan',
+        'ref_latest' => 'Varsayılan ref · Son sürüm',
+        'actions' => 'İşlemler',
     ],
     'sync_state' => [
         'never' => 'Hiç senkronlanmadı',

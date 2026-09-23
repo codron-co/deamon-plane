@@ -6,6 +6,14 @@ return [
     'search' => 'Search domains',
     'filter_search' => 'Search',
     'filter_unbound' => 'Unbound only',
+    'filter_label' => 'Coolify binding',
+    'summary' => [
+        'label' => 'Domain registry summary',
+        'total' => 'Domains',
+        'bound' => 'Bound on Coolify',
+        'unbound' => 'Unbound',
+        'temporary' => 'Temporary hosts',
+    ],
     'clear' => 'Clear filters',
     'pagination' => 'Domains pagination',
     'columns' => [

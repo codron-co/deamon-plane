@@ -12,6 +12,14 @@ return [
     'filter_search' => 'Search',
     'filter_visibility' => 'Visibility',
     'all_visibilities' => 'All visibilities',
+    'latest_unknown' => 'No release yet',
+    'outdated_link' => ':count sites on :theme are behind the latest commit',
+    'summary' => [
+        'label' => 'Theme catalog summary',
+        'total' => 'Catalog themes',
+        'installs' => 'Active installs',
+        'outdated' => 'Themes with sites behind',
+    ],
     'empty' => [
         'title' => 'No catalog themes yet',
         'hint' => 'Add a GitHub source under Themes, then refresh the catalog.',
@@ -30,6 +38,10 @@ return [
         'min' => 'Min Deamon',
         'sha' => 'SHA',
         'installs' => 'Installs',
+        'installed_sites' => 'Installed sites',
+        'outdated' => 'Outdated',
+        'ref_latest' => 'Default ref · Latest',
+        'actions' => 'Actions',
     ],
     'sync_state' => [
         'never' => 'Never synced',

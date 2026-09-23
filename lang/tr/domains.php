@@ -6,6 +6,14 @@ return [
     'search' => 'Domain ara',
     'filter_search' => 'Arama',
     'filter_unbound' => 'Yalnızca bağlı olmayan',
+    'filter_label' => 'Coolify bağlantısı',
+    'summary' => [
+        'label' => 'Domain kaydı özeti',
+        'total' => 'Domainler',
+        'bound' => 'Coolify’e bağlı',
+        'unbound' => 'Bağlı değil',
+        'temporary' => 'Geçici hostlar',
+    ],
     'clear' => 'Filtreleri temizle',
     'pagination' => 'Domain sayfalama',
     'columns' => [

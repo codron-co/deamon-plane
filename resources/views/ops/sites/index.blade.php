@@ -172,45 +172,23 @@
                     ['key' => 'git_themes', 'tone' => 'accent', 'url' => route('ops.sites', ['theme' => 'git']), 'icon' => 'M5 3.5v6M5 9.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM11 4.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM11 7.5c0 2-2.5 2-6 3'],
                 ];
             @endphp
-            <section class="plane-metrics" aria-label="{{ __('sites.summary.label') }}">
+            <x-ops.metrics :label="__('sites.summary.label')">
                 @foreach ($tiles as $tile)
-                    <a class="plane-metric is-{{ $tile['tone'] }}" href="{{ $tile['url'] }}" data-ops-list-view="summary-{{ $tile['key'] }}">
-                        <span class="plane-metric-top">
-                            <span>{{ __('sites.summary.'.$tile['key']) }}</span>
-                            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="{{ $tile['icon'] }}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </span>
-                        <span class="plane-metric-value">
-                            <strong>{{ $summary[$tile['key']] }}</strong>
-                            @if ($tile['key'] !== 'total' && $summary['total'] > 0)
-                                <span>{{ __('sites.summary.of_total', ['count' => $summary[$tile['key']], 'total' => $summary['total']]) }}</span>
-                            @endif
-                        </span>
-                        @php
-                            $delta = $summaryTrend['deltas'][$tile['key']] ?? null;
-                        @endphp
-                        @if ($delta !== null)
-                            @php
-                                $direction = $delta > 0 ? 'up' : ($delta < 0 ? 'down' : 'same');
-                                $problem = in_array($tile['key'], \App\Services\Sites\SiteListSummary::PROBLEM_KEYS, true);
-                                $trendTone = match (true) {
-                                    $direction === 'same' || ! $problem => 'neutral',
-                                    $direction === 'up' => 'bad',
-                                    default => 'good',
-                                };
-                                $suffix = $summaryTrend['yesterday'] ? '' : '_since';
-                                $trendArgs = [
-                                    'count' => abs($delta),
-                                    'date' => \Carbon\CarbonImmutable::parse($summaryTrend['date'])->format(__('sites.summary.trend.date_format')),
-                                ];
-                            @endphp
-                            <span class="plane-metric-trend is-{{ $direction }} is-{{ $trendTone }}" data-summary-trend="{{ $tile['key'] }}">
-                                <span aria-hidden="true">{{ ['up' => '▲', 'down' => '▼', 'same' => '='][$direction] }} {{ __('sites.summary.trend.'.$direction.$suffix, $trendArgs) }}</span>
-                                <span class="visually-hidden">{{ __('sites.summary.trend.sr_'.$direction.$suffix, $trendArgs) }}</span>
-                            </span>
-                        @endif
-                    </a>
+                    <x-ops.metric
+                        :label="__('sites.summary.'.$tile['key'])"
+                        :value="$summary[$tile['key']]"
+                        :tone="$tile['tone']"
+                        :href="$tile['url']"
+                        :icon="$tile['icon']"
+                        :detail="$tile['key'] !== 'total' && $summary['total'] > 0 ? __('sites.summary.of_total', ['count' => $summary[$tile['key']], 'total' => $summary['total']]) : null"
+                        :trend-key="$tile['key']"
+                        :delta="$summaryTrend['deltas'][$tile['key']] ?? null"
+                        :problem="in_array($tile['key'], \App\Services\Sites\SiteListSummary::PROBLEM_KEYS, true)"
+                        :trend="$summaryTrend ?? null"
+                        data-ops-list-view="summary-{{ $tile['key'] }}"
+                    />
                 @endforeach
-            </section>
+            </x-ops.metrics>
         @endif
 
         {{-- The layout lives outside the fetched region, so in-place list updates keep it. --}}
@@ -218,11 +196,7 @@
             {{-- The column picker posts its own form, so it sits beside the GET filter form, never inside it. --}}
             <div class="ops-list-toolbar-row plane-toolbar">
                 <form method="GET" action="{{ route('ops.sites') }}" id="sites-list-filters" class="ops-list-toolbar" data-ops-list-toolbar>
-                    <label class="ops-search plane-search">
-                        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m10.5 10.5 3 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-                        <span class="visually-hidden">{{ __('sites.search') }}</span>
-                        <input type="search" name="q" value="{{ $search }}" placeholder="{{ __('sites.search_placeholder') }}" autocomplete="off">
-                    </label>
+                    <x-ops.search :label="__('sites.search')" :value="$search" :placeholder="__('sites.search_placeholder')" />
                 </form>
 
                 @include('ops.sites._segment')
@@ -285,7 +259,7 @@
                                 <label class="plane-filter-option @if ($mono) is-mono @endif">
                                     <input type="radio" name="{{ $filterName }}" value="{{ $optionValue }}" form="sites-list-filters" data-ops-list-filter @checked($filterValues[$filterName] === (string) $optionValue)>
                                     @if ($filterName === 'theme' && in_array($optionValue, ['git', 'outdated'], true))
-                                        @include('ops.sites._git-icon')
+                                        <x-ops.git-icon />
                                     @endif
                                     <span>{{ $optionLabel }}</span>
                                 </label>

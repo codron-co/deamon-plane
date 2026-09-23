@@ -555,7 +555,8 @@ details[open] > summary.btn-secondary {
 /* ------------------------------------------------------ Sites: summary row */
 .plane-metrics {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    /* Five tiles by default; x-ops.metrics sets the count for other rows. */
+    grid-template-columns: repeat(var(--plane-metric-columns, 5), minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 20px;
 }
@@ -626,6 +627,13 @@ details[open] > summary.btn-secondary {
 .plane-metric.is-accent svg,
 .plane-metric.is-accent .plane-metric-value strong {
     color: var(--accent-text);
+}
+
+/* A tile without its own link (it may hold links and hints inside) does not lift. */
+.plane-metric.is-static:hover,
+article.plane-metric:hover {
+    border-color: var(--border);
+    transform: none;
 }
 
 /* Change since the previous day's snapshot; arrow + words, tone is secondary. */
@@ -1126,6 +1134,122 @@ details[open] > summary.btn-secondary {
     border-color: var(--border);
     background: var(--surface-hover);
     color: var(--text);
+}
+
+/* ------------------------------------- Shared: radio quick-filter segment */
+/* x-ops.segment: the same strip as the Sites presets, built from radios the
+   list toolbar posts. :has() marks the checked one, so an in-place list update
+   (which re-checks the radios) needs no extra script. */
+.plane-segment-radios {
+    margin: 0;
+    border: 0;
+    min-inline-size: 0;
+}
+
+.plane-segment-radios .plane-segment-item {
+    position: relative;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.plane-segment-radios .plane-segment-item input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.plane-segment-radios .plane-segment-item:has(input:checked) {
+    background: var(--surface-raised);
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(20, 20, 30, 0.12), inset 0 0 0 1px var(--border);
+}
+
+.plane-segment-radios .plane-segment-item:has(input:focus-visible) {
+    box-shadow: inset 0 0 0 2px var(--focus);
+}
+
+.plane-segment-count {
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.ops-table th.ops-num-col,
+.ops-table td.ops-num-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------- Fleet: snapshot as tiles */
+.fleet-metrics .plane-metric-top > svg {
+    order: 2;
+    flex: 0 0 auto;
+}
+
+.fleet-metrics .kpi-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.fleet-metrics .kpi-value {
+    margin: 10px 0 0;
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.fleet-metrics .kpi-value.kpi-value-sm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    min-height: 26px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: 0;
+    word-break: normal;
+}
+
+.fleet-metrics .kpi-card.is-quiet .kpi-value,
+.fleet-metrics .plane-metric.is-success svg {
+    color: var(--success-text);
+}
+
+.fleet-metrics .kpi-card.is-alert.is-warning .kpi-value {
+    color: var(--warning-text);
+}
+
+.fleet-metrics .plane-metric > .kpi-link {
+    margin-top: 8px;
+}
+
+.fleet-branch-counts .branch-chip {
+    color: var(--text-muted);
+}
+
+.fleet-branch-counts .branch-chip:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+
+.fleet-metrics + .site-section-heading {
+    margin-top: 4px;
+}
+
+.plane-workspace .fleet-body {
+    margin: 0;
+    padding: 16px;
 }
 
 /* ------------------------------------------------------------ responsive */

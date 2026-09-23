@@ -43,6 +43,10 @@
         </div>
     </div>
 @else
+    @include('ops.partials.filter-chips', [
+        'chips' => $activeFilters ?? [],
+        'label' => __('domains.empty.filters_label'),
+    ])
     @if ($canWrite ?? false)
     <form method="POST" class="sites-bulk" id="domains-bulk-form" data-ops-bulk>
         @csrf

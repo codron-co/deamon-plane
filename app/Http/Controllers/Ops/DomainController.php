@@ -54,6 +54,8 @@ class DomainController extends Controller
             'filtersActive' => $activeFilters !== [],
             'activeFilters' => $activeFilters,
             'totalDomains' => $domains->total() > 0 ? $domains->total() : SiteDomain::query()->count(),
+            // The tiles sit outside the swapped region; a keystroke must not recount them.
+            'summary' => ListFragment::wanted($request) ? null : $this->registrySummary(),
         ]);
     }
 
@@ -228,6 +230,30 @@ class DomainController extends Controller
         $ids = $request->validated('domain_ids') ?? [];
 
         return SiteDomain::query()->with('site')->whereIn('id', $ids)->orderBy('domain')->get();
+    }
+
+    /**
+     * Registry-wide counts behind the Domains tiles, in one aggregate query.
+     * `unbound` uses the list filter's own rule (not verified, not temporary).
+     *
+     * @return array{total: int, bound: int, unbound: int, temporary: int}
+     */
+    private function registrySummary(): array
+    {
+        $row = SiteDomain::query()
+            ->toBase()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN verified_at IS NOT NULL THEN 1 ELSE 0 END) as bound')
+            ->selectRaw('SUM(CASE WHEN verified_at IS NULL AND is_temporary = ? THEN 1 ELSE 0 END) as unbound', [false])
+            ->selectRaw('SUM(CASE WHEN is_temporary = ? THEN 1 ELSE 0 END) as temporary', [true])
+            ->first();
+
+        return [
+            'total' => (int) ($row->total ?? 0),
+            'bound' => (int) ($row->bound ?? 0),
+            'unbound' => (int) ($row->unbound ?? 0),
+            'temporary' => (int) ($row->temporary ?? 0),
+        ];
     }
 
     /**
