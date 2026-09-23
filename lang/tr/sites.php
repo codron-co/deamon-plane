@@ -196,6 +196,8 @@ return [
         'refresh' => 'Coolify’den kontrol et',
         'copy' => 'Detayı kopyala',
         'copy_named' => ':name App sorunlarını kopyala',
+        'issues_named' => ':name App sorunları: :label',
+        'issues_title' => ':name — App sorunları',
         'copied' => 'Kopyalandı',
         'refreshed' => 'App sağlığı yenilendi.',
         'fixed' => 'Düzeltme gönderildi. App sağlığı yenilendi.',
@@ -249,6 +251,7 @@ return [
     'live' => [
         'sync' => 'Canlı kontrol',
         'down' => 'Yok',
+        'not_checked' => 'Kontrol edilmedi',
         'confirm_title' => 'Canlı kontrol yapılsın mı?',
         'confirm' => 'Her sitenin ana sayfası public domain’den GET edilsin mi? HTTP durumu ve canlı HTML’deki favicon href kaydedilir. Coolify ve secret’lar değişmez.',
         'confirm_selected' => 'Seçili sitelerin ana sayfası public domain’den GET edilsin mi? HTTP durumu ve canlı favicon href kaydedilir.',

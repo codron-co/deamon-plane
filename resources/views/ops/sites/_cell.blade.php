@@ -76,9 +76,8 @@
                         title="{{ __('sites.publish.unknown_hint') }}"
                     @endif
                 >{{ $site->publishLabel() }}</span>
-                @if ($site->publishStatus() === null)
-                    <x-ops.freshness :at="null" :missing="__('ops.unknown')" />
-                @else
+                {{-- An unknown state has no age worth showing; the chip already says "unknown". --}}
+                @if ($site->publishStatus() !== null)
                     <x-ops.freshness :at="$site->cms_site_status_at" :missing="__('ops.unknown')" />
                 @endif
             </div>
@@ -93,24 +92,72 @@
 
     @case ('app')
         <td>
-            <button
-                type="button"
-                class="status-chip status-{{ $appHealthView['tone'] === 'ok' ? 'ok' : ($appHealthView['tone'] === 'error' ? 'error' : 'unknown') }}"
-                data-app-health-copy
-                data-row-action
-                data-copy-text="{{ $appHealthView['copy_text'] }}"
-                title="{{ $appHealthView['copy_text'] }}"
-                aria-label="{{ __('sites.app_health.copy_named', ['name' => $site->name]) }}"
-            >{{ $appHealthView['label'] }}</button>
+            @php
+                $appTone = $appHealthView['tone'] === 'ok' ? 'ok' : ($appHealthView['tone'] === 'error' ? 'error' : 'unknown');
+                $appPopId = 'app-health-pop-'.$site->id;
+            @endphp
+            @if ($appHealthView['issues'] === [])
+                <button
+                    type="button"
+                    class="status-chip status-{{ $appTone }}"
+                    data-app-health-copy
+                    data-row-action
+                    data-copy-text="{{ $appHealthView['copy_text'] }}"
+                    title="{{ $appHealthView['copy_text'] }}"
+                    aria-label="{{ __('sites.app_health.copy_named', ['name' => $site->name]) }}"
+                >{{ $appHealthView['label'] }}</button>
+            @else
+                {{-- The chip lists the issues; copying is one action inside, not the whole point. --}}
+                <div class="app-health-pop" data-app-health-pop data-row-action>
+                    <button
+                        type="button"
+                        class="status-chip status-{{ $appTone }} app-health-pop-trigger"
+                        data-app-health-trigger
+                        aria-haspopup="dialog"
+                        aria-expanded="false"
+                        aria-controls="{{ $appPopId }}"
+                        aria-label="{{ __('sites.app_health.issues_named', ['name' => $site->name, 'label' => $appHealthView['label']]) }}"
+                    >{{ $appHealthView['label'] }}</button>
+                    <div
+                        class="app-health-popover"
+                        id="{{ $appPopId }}"
+                        role="dialog"
+                        aria-label="{{ __('sites.app_health.issues_title', ['name' => $site->name]) }}"
+                        data-app-health-popover
+                        hidden
+                    >
+                        <p class="app-health-popover-title">{{ __('sites.app_health.issues_title', ['name' => $site->name]) }}</p>
+                        <ul class="app-health-popover-list" data-app-health-pop-list>
+                            @foreach ($appHealthView['issues'] as $issue)
+                                <li>{{ $issue['message'] }}</li>
+                            @endforeach
+                        </ul>
+                        <div class="app-health-popover-actions">
+                            <button
+                                type="button"
+                                class="btn btn-ghost btn-sm"
+                                data-app-health-copy
+                                data-copy-text="{{ $appHealthView['copy_text'] }}"
+                                aria-label="{{ __('sites.app_health.copy_named', ['name' => $site->name]) }}"
+                            >{{ __('sites.app_health.copy') }}</button>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </td>
         @break
 
     @case ('live')
         <td>
-            <div class="ops-fresh-cell">
-                <span class="status-chip status-{{ $site->liveHttpTone() }}" data-live-chip>{{ $site->liveHttpLabel() }}</span>
-                <x-ops.freshness :at="$site->last_live_checked_at" />
-            </div>
+            @if ($site->last_live_checked_at === null)
+                {{-- Never probed: one quiet state instead of an empty chip plus "never". --}}
+                <span class="plane-muted-state" data-live-chip data-live-unchecked>{{ __('sites.live.not_checked') }}</span>
+            @else
+                <div class="ops-fresh-cell">
+                    <span class="status-chip status-{{ $site->liveHttpTone() }}" data-live-chip>{{ $site->liveHttpLabel() }}</span>
+                    <x-ops.freshness :at="$site->last_live_checked_at" />
+                </div>
+            @endif
         </td>
         @break
 

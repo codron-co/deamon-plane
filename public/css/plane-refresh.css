@@ -1058,3 +1058,100 @@ details[open] > summary.btn-secondary {
         transform: none;
     }
 }
+
+/* ---------------------------------------------------- sites cell states */
+/* Never-checked live probe: one quiet label instead of an empty chip + "never". */
+.plane-muted-state {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 9px;
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    color: var(--text-faint);
+    font-size: 11.5px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* App issues chip + popover (positioned fixed by ops-app-health.js). */
+.app-health-pop {
+    display: inline-flex;
+}
+
+.app-health-pop-trigger {
+    cursor: pointer;
+}
+
+.app-health-pop.is-open .app-health-pop-trigger {
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.app-health-popover {
+    position: fixed;
+    z-index: 60;
+    width: max-content;
+    min-width: 15rem;
+    max-width: min(24rem, calc(100vw - 16px));
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 11px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-popover);
+    color: var(--text);
+    font-size: 12.5px;
+    white-space: normal;
+    cursor: default;
+    animation: app-health-pop-in 120ms var(--ease-out, ease-out);
+}
+
+.app-health-popover[hidden] {
+    display: none;
+}
+
+.app-health-popover-title {
+    margin: 0 0 6px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.app-health-popover-list {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0 0 0 16px;
+    line-height: 1.4;
+}
+
+.app-health-popover-list li::marker {
+    color: var(--danger-text);
+}
+
+.app-health-popover-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+@keyframes app-health-pop-in {
+    from {
+        opacity: 0;
+        transform: translateY(-2px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-health-popover {
+        animation: none;
+    }
+}

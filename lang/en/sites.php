@@ -195,6 +195,8 @@ return [
         'refresh' => 'Check Coolify',
         'copy' => 'Copy details',
         'copy_named' => 'Copy App issues for :name',
+        'issues_named' => 'App issues for :name: :label',
+        'issues_title' => ':name — App issues',
         'copied' => 'Copied',
         'refreshed' => 'App health refreshed.',
         'fixed' => 'Fix sent. App health refreshed.',
@@ -248,6 +250,7 @@ return [
     'live' => [
         'sync' => 'Live Sync',
         'down' => 'Down',
+        'not_checked' => 'Not checked',
         'confirm_title' => 'Live Sync?',
         'confirm' => 'GET every site homepage from its public domain? This stores HTTP status and the favicon href from the live HTML. Coolify and secrets are not changed.',
         'confirm_selected' => 'GET the selected site homepages from their public domains? This stores HTTP status and the live favicon href.',
