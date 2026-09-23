@@ -25,7 +25,7 @@
                     data-confirm="{{ __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
                     data-confirm-label="{{ __('sites.menu.redeploy') }}"
-                    data-confirm-danger="false"
+                    data-confirm-danger="true"
                 >
                     @csrf
                     <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('site_ops.redeploy.working') }}">{{ __('sites.menu.redeploy') }}</button>

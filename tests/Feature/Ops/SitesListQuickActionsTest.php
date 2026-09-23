@@ -47,13 +47,13 @@ class SitesListQuickActionsTest extends TestCase
         $this->assertStringContainsString('href="'.e($coolifyUrl).'"', $menu);
         $this->assertStringContainsString(e(__('sites.menu.open_coolify')), $menu);
 
-        // The redeploy form keeps the detail page's confirmation, word for word.
+        // The redeploy form keeps the detail page's confirmation, word for word, as a danger confirm.
         $this->assertMatchesRegularExpression(
             '/<form\s+method="POST"\s+action="'.preg_quote(route('ops.sites.deploy', $site), '/').'"[^>]*'
             .'data-confirm="'.preg_quote(e(__('site_ops.redeploy.confirm', ['name' => $site->name])), '/').'"[^>]*'
             .'data-confirm-title="'.preg_quote(e(__('site_ops.redeploy.confirm_title')), '/').'"[^>]*'
             .'data-confirm-label="'.preg_quote(e(__('sites.menu.redeploy')), '/').'"[^>]*'
-            .'data-confirm-danger="false"/',
+            .'data-confirm-danger="true"/',
             $menu,
         );
         $this->assertStringContainsString('data-row-action', $html);
