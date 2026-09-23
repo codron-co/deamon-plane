@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Siteler — Deamon Plane UI Concept</title>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --sidebar: #0d0d0f;
+      --surface: #111113;
+      --surface-2: #17171a;
+      --surface-3: #1d1d21;
+      --line: #27272b;
+      --line-strong: #36363c;
+      --text: #f0f0f2;
+      --muted: #a0a0a9;
+      --faint: #696970;
+      --accent: #7c83f5;
+      --accent-soft: rgba(124, 131, 245, .12);
+      --green: #5ac78b;
+      --green-soft: rgba(90, 199, 139, .10);
+      --amber: #e9b949;
+      --amber-soft: rgba(233, 185, 73, .10);
+      --red: #ef7078;
+      --red-soft: rgba(239, 112, 120, .10);
+      --blue: #65a9ed;
+      --radius-sm: 6px;
+      --radius: 10px;
+      --sidebar-w: 228px;
+      --ease-out: cubic-bezier(.23, 1, .32, 1);
+      --shadow-menu: 0 18px 50px rgba(0, 0, 0, .42);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f7f7f8;
+      --sidebar: #fbfbfc;
+      --surface: #fff;
+      --surface-2: #f3f3f5;
+      --surface-3: #ededf0;
+      --line: #e2e2e6;
+      --line-strong: #cacacf;
+      --text: #171719;
+      --muted: #62626b;
+      --faint: #96969e;
+      --accent-soft: rgba(96, 104, 222, .09);
+      --green-soft: rgba(34, 139, 82, .08);
+      --amber-soft: rgba(175, 118, 0, .08);
+      --red-soft: rgba(202, 48, 58, .07);
+      --green: #238b52;
+      --amber: #a96f00;
+      --red: #ca303a;
+      --blue: #2d79bf;
+      --shadow-menu: 0 18px 50px rgba(25, 25, 30, .13);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); }
+    body { font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    button, input, select { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { color: inherit; }
+    a { color: inherit; text-decoration: none; }
+    svg { display: block; width: 17px; height: 17px; }
+    .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100dvh; }
+    .sidebar { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; padding: 14px 12px 12px; border-right: 1px solid var(--line); background: var(--sidebar); z-index: 20; }
+    .brand { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 8px; }
+    .brand-mark { position: relative; width: 22px; height: 22px; border-radius: 7px; background: var(--accent); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+    .brand-mark::after { position: absolute; inset: 5px; border: 1.5px solid #fff; border-top-color: transparent; border-radius: 50%; content: ""; transform: rotate(28deg); }
+    .brand strong { display: block; font-size: 13px; letter-spacing: -.01em; }
+    .brand small { display: block; color: var(--faint); font-size: 10px; }
+    .nav { display: grid; gap: 2px; margin-top: 17px; }
+    .nav-label { padding: 0 9px 7px; color: var(--faint); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+    .nav-item { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 9px; border-radius: 7px; color: var(--muted); font-weight: 500; }
+    .nav-item:hover { color: var(--text); background: var(--surface); }
+    .nav-item.active { color: var(--text); background: var(--surface-2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.025); }
+    .nav-item .count { margin-left: auto; color: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .sidebar-foot { position: relative; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
+    .user-trigger { display: flex; align-items: center; width: 100%; min-height: 42px; gap: 9px; padding: 5px 7px; border: 0; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; }
+    .user-trigger:hover { background: var(--surface); }
+    .avatar { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border-radius: 8px; background: var(--surface-3); color: var(--muted); font-size: 10px; font-weight: 700; }
+    .user-copy { min-width: 0; }
+    .user-copy strong, .user-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-copy strong { font-size: 11px; }
+    .user-copy span { color: var(--faint); font-size: 9px; }
+    .user-trigger .chevron { margin-left: auto; width: 14px; color: var(--faint); }
+
+    .main { min-width: 0; }
+    .topbar { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 28px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(18px); }
+    .top-title { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .top-title h1 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+    .top-title .total { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .mobile-menu { display: none; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .key { display: inline-flex; align-items: center; height: 18px; margin-left: 8px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--faint); font-size: 9px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font-weight: 600; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--ease-out); }
+    .button:hover { border-color: var(--line-strong); color: var(--text); background: var(--surface-2); }
+    .button:active { transform: scale(.975); }
+    .button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .button.primary:hover { filter: brightness(1.07); }
+    .button.icon-only { width: 34px; padding: 0; }
+    .button.icon-only.active { border-color: color-mix(in srgb, var(--accent) 48%, var(--line)); background: var(--accent-soft); color: var(--text); }
+    .quick-action-wrap { position: relative; }
+    .quick-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: min(350px, calc(100vw - 30px)); padding: 6px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-2); box-shadow: var(--shadow-menu); transform: translateY(-5px) scale(.985); transform-origin: top right; opacity: 0; visibility: hidden; transition: transform 170ms var(--ease-out), opacity 170ms var(--ease-out), visibility 170ms; }
+    .quick-popover.open { transform: translateY(0) scale(1); opacity: 1; visibility: visible; }
+    .quick-head { padding: 9px 10px 8px; }
+    .quick-head strong, .quick-head span { display: block; }
+    .quick-head strong { font-size: 11px; }
+    .quick-head span { margin-top: 2px; color: var(--faint); font-size: 9px; }
+    .quick-section { padding: 5px 0; border-top: 1px solid var(--line); }
+    .quick-label { display: block; padding: 4px 10px 6px; color: var(--faint); font-size: 8px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .quick-item { display: flex; align-items: center; width: 100%; min-height: 42px; gap: 10px; padding: 6px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; }
+    .quick-item:hover { background: var(--surface-3); color: var(--text); }
+    .quick-icon { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); }
+    .quick-icon svg { width: 14px; height: 14px; }
+    .quick-copy { min-width: 0; }
+    .quick-copy strong, .quick-copy small { display: block; }
+    .quick-copy strong { color: var(--text); font-size: 10px; font-weight: 650; }
+    .quick-copy small { margin-top: 1px; color: var(--faint); font-size: 9px; }
+    .quick-count { display: grid; place-items: center; min-width: 22px; height: 20px; margin-left: auto; padding: 0 6px; border-radius: 999px; background: var(--surface-3); color: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+    .quick-count.warning { background: var(--amber-soft); color: var(--amber); }
+    .quick-count.danger { background: var(--red-soft); color: var(--red); }
+
+    .content { width: 100%; max-width: 1680px; margin: 0 auto; padding: 26px 30px 56px; }
+    .intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-bottom: 22px; }
+    .intro h2 { margin: 0; font-size: clamp(21px, 2vw, 28px); line-height: 1.2; letter-spacing: -.035em; }
+    .intro p { max-width: 620px; margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .sync { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; padding-top: 8px; color: var(--faint); font-size: 10px; }
+    .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+    .metric { position: relative; min-width: 0; padding: 16px 18px; }
+    .metric + .metric { border-left: 1px solid var(--line); }
+    .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--faint); font-size: 10px; font-weight: 600; }
+    .metric-value { display: flex; align-items: baseline; gap: 8px; margin-top: 9px; }
+    .metric-value strong { font-size: 23px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .metric-value span { color: var(--muted); font-size: 10px; }
+    .metric.warning .metric-value strong, .metric.warning .metric-top svg { color: var(--amber); }
+    .metric.danger .metric-value strong, .metric.danger .metric-top svg { color: var(--red); }
+    .metric.success .metric-value strong, .metric.success .metric-top svg { color: var(--green); }
+
+    .workspace { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: clip; }
+    .toolbar { display: flex; align-items: center; gap: 9px; min-height: 59px; padding: 11px 13px; border-bottom: 1px solid var(--line); }
+    .search { position: relative; flex: 1 1 300px; max-width: 410px; }
+    .search svg { position: absolute; top: 50%; left: 11px; width: 15px; color: var(--faint); transform: translateY(-50%); pointer-events: none; }
+    .search input { width: 100%; height: 34px; padding: 0 38px 0 34px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--text); outline: none; }
+    .search input::placeholder { color: var(--faint); }
+    .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .search .key { position: absolute; top: 8px; right: 8px; margin: 0; }
+    .filter-button { white-space: nowrap; }
+    .filter-button.active { border-color: color-mix(in srgb, var(--accent) 48%, var(--line)); background: var(--accent-soft); color: var(--text); }
+    .toolbar-separator { width: 1px; height: 22px; margin: 0 2px; background: var(--line); }
+    .view-switch { display: flex; padding: 2px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); }
+    .view-switch button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--faint); cursor: pointer; }
+    .view-switch button.active { background: var(--surface-3); color: var(--text); }
+    .filter-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 18px; align-items: end; padding: 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+    .filter-panel[hidden] { display: none; }
+    .filter-group { min-width: 0; }
+    .filter-group-label { display: block; margin-bottom: 7px; color: var(--faint); font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+    .filter-options { display: flex; flex-wrap: wrap; gap: 5px; }
+    .filter-option { min-height: 30px; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); font-size: 10px; cursor: pointer; }
+    .filter-option:hover { border-color: var(--line-strong); color: var(--text); }
+    .filter-option.active { border-color: color-mix(in srgb, var(--accent) 52%, var(--line)); background: var(--accent-soft); color: var(--text); }
+    .filter-reset { white-space: nowrap; }
+
+    .bulkbar { display: none; align-items: center; gap: 8px; min-height: 48px; padding: 8px 13px; border-bottom: 1px solid var(--line); background: var(--accent-soft); }
+    .bulkbar.visible { display: flex; }
+    .bulkbar strong { margin-right: auto; font-size: 11px; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 940px; border-collapse: collapse; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    th { height: 38px; padding-top: 8px; padding-bottom: 8px; background: var(--surface-2); color: var(--faint); font-size: 9px; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; white-space: nowrap; }
+    tbody tr { cursor: pointer; transition: background-color 120ms ease; }
+    tbody tr:hover { background: var(--surface-2); }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr.selected { background: var(--accent-soft); }
+    .checkbox { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+    .site { display: flex; align-items: center; gap: 10px; min-width: 210px; }
+    .site-mark { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 750; }
+    .site strong, .site small { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .site strong { font-size: 11px; font-weight: 650; }
+    .site small { margin-top: 2px; color: var(--faint); font-size: 9px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; min-height: 23px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 9px; font-weight: 650; white-space: nowrap; }
+    .status::before { width: 5px; height: 5px; border-radius: 50%; background: currentColor; content: ""; }
+    .status.ok { border-color: color-mix(in srgb, var(--green) 24%, var(--line)); background: var(--green-soft); color: var(--green); }
+    .status.warn { border-color: color-mix(in srgb, var(--amber) 24%, var(--line)); background: var(--amber-soft); color: var(--amber); }
+    .status.error { border-color: color-mix(in srgb, var(--red) 24%, var(--line)); background: var(--red-soft); color: var(--red); }
+    .branch { display: inline-flex; padding: 3px 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2); color: var(--muted); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .version { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .version.unknown { color: var(--faint); }
+    .time { color: var(--faint); font-size: 10px; white-space: nowrap; }
+    .row-actions { position: relative; text-align: right; }
+    .more { display: inline-grid; place-items: center; width: 29px; height: 29px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--faint); cursor: pointer; }
+    .more:hover, .more[aria-expanded="true"] { border-color: var(--line); background: var(--surface-3); color: var(--text); }
+
+    .table-footer { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 9px 13px; border-top: 1px solid var(--line); color: var(--faint); font-size: 10px; }
+    .pagination { display: flex; align-items: center; gap: 4px; }
+    .page-button { display: grid; place-items: center; min-width: 29px; height: 29px; padding: 0 7px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+    .page-button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+
+    .workspace.card-view .table-wrap { padding: 14px; }
+    .workspace.card-view table, .workspace.card-view tbody { display: block; min-width: 0; }
+    .workspace.card-view thead { display: none; }
+    .workspace.card-view tbody { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .workspace.card-view tbody tr { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 13px 16px; min-width: 0; padding: 15px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); }
+    .workspace.card-view tbody tr:hover { border-color: var(--line-strong); background: var(--surface-2); }
+    .workspace.card-view tbody td { display: block; min-width: 0; padding: 0; border: 0; }
+    .workspace.card-view tbody td:first-child { position: absolute; top: 18px; right: 43px; }
+    .workspace.card-view tbody td:nth-child(2) { grid-column: 1 / -1; padding-right: 62px; }
+    .workspace.card-view tbody td:nth-child(n+3):nth-child(-n+7)::before { display: block; margin-bottom: 5px; color: var(--faint); font-size: 8px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .workspace.card-view tbody td:nth-child(3)::before { content: "Site sağlığı"; }
+    .workspace.card-view tbody td:nth-child(4)::before { content: "Yayın durumu"; }
+    .workspace.card-view tbody td:nth-child(5)::before { content: "Repo dalı"; }
+    .workspace.card-view tbody td:nth-child(6)::before { content: "Sürüm"; }
+    .workspace.card-view tbody td:nth-child(7)::before { content: "Son kontrol"; }
+    .workspace.card-view tbody td:last-child { position: absolute; top: 12px; right: 10px; }
+
+    .menu { position: fixed; z-index: 50; display: grid; width: 190px; padding: 5px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface-2); box-shadow: var(--shadow-menu); transform: translateY(-4px) scale(.98); transform-origin: top right; opacity: 0; visibility: hidden; transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), visibility 160ms; }
+    .menu.open { transform: translateY(0) scale(1); opacity: 1; visibility: visible; }
+    .menu button { display: flex; align-items: center; gap: 9px; min-height: 32px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; }
+    .menu button:hover { background: var(--surface-3); color: var(--text); }
+    .menu button.danger { color: var(--red); }
+    .menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--line); }
+
+    .user-menu { position: absolute; left: 4px; right: 4px; bottom: 52px; z-index: 40; display: grid; padding: 6px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-2); box-shadow: var(--shadow-menu); transform: translateY(5px) scale(.98); transform-origin: bottom center; opacity: 0; visibility: hidden; transition: transform 170ms var(--ease-out), opacity 170ms var(--ease-out), visibility 170ms; }
+    .user-menu.open { transform: translateY(0) scale(1); opacity: 1; visibility: visible; }
+    .user-menu button { display: flex; align-items: center; justify-content: space-between; min-height: 34px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; }
+    .user-menu button:hover { background: var(--surface-3); color: var(--text); }
+
+    .scrim { position: fixed; inset: 0; z-index: 18; display: none; background: rgba(0,0,0,.5); opacity: 0; transition: opacity 180ms var(--ease-out); }
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index: 70; display: flex; align-items: center; gap: 9px; max-width: min(380px, calc(100vw - 30px)); padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface-2); box-shadow: var(--shadow-menu); color: var(--text); transform: translateY(12px); opacity: 0; pointer-events: none; transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out); }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast svg { color: var(--green); }
+
+    @media (max-width: 1100px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .metric:nth-child(4) { border-top: 1px solid var(--line); }
+      .toolbar { flex-wrap: wrap; }
+      .search { max-width: none; }
+      .view-switch { margin-left: auto; }
+      .filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workspace.card-view tbody { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .app { display: block; }
+      .sidebar { position: fixed; left: 0; width: min(84vw, 280px); transform: translateX(-102%); transition: transform 220ms var(--ease-out); box-shadow: var(--shadow-menu); }
+      body.nav-open .sidebar { transform: translateX(0); }
+      body.nav-open .scrim { display: block; opacity: 1; }
+      .topbar { padding: 0 15px; }
+      .mobile-menu { display: grid; }
+      .top-actions .button:not(.primary) { display: none; }
+      .quick-action-wrap > .button { display: inline-flex !important; width: 36px; padding: 0; }
+      .quick-action-wrap > .button .button-label, .quick-action-wrap > .button .chevron-text { display: none; }
+      .content { padding: 21px 15px 42px; }
+      .intro { display: block; }
+      .sync { padding-top: 12px; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+      .metric { padding: 14px; }
+      .metric-value strong { font-size: 20px; }
+      .toolbar { align-items: stretch; }
+      .search { flex-basis: 100%; }
+      .filter-button { flex: 1; }
+      .toolbar-separator, .view-switch { display: none; }
+      .filter-panel { grid-template-columns: 1fr; gap: 13px; }
+      .workspace.card-view .table-wrap { padding: 10px; }
+      .workspace.card-view tbody { grid-template-columns: 1fr; }
+      .table-wrap { overflow: visible; }
+      table, tbody { display: block; min-width: 0; }
+      thead { display: none; }
+      tbody tr { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 14px 44px 14px 14px; border-bottom: 1px solid var(--line); }
+      tbody tr:last-child { border-bottom: 0; }
+      tbody td { display: block; padding: 0; border: 0; }
+      tbody td:first-child { position: absolute; top: 21px; right: 14px; }
+      tbody td:nth-child(2) { grid-column: 1 / -1; }
+      tbody td:nth-child(3) { grid-column: 1; }
+      tbody td:nth-child(4) { grid-column: 2; text-align: right; }
+      tbody td:nth-child(5), tbody td:nth-child(6), tbody td:nth-child(7) { display: none; }
+      tbody td:last-child { position: absolute; top: 54px; right: 11px; display: block; }
+      .site strong { font-size: 12px; }
+      .table-footer { gap: 12px; }
+      .table-footer > span { max-width: 130px; }
+      .page-button:nth-child(n+4):not(:last-child) { display: none; }
+      .menu { position: fixed; right: 12px !important; left: auto !important; }
+    }
+
+    @media (max-width: 440px) {
+      .metrics { grid-template-columns: 1fr; }
+      .metric + .metric, .metric:nth-child(3), .metric:nth-child(4) { border-top: 1px solid var(--line); border-left: 0; }
+      .metric { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+      .metric-value { margin: 0; }
+      .filter-button:nth-of-type(3) { display: none; }
+      .button.primary .button-label { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Birincil navigasyon">
+      <a class="brand" href="#" aria-label="Plane ana sayfa">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span><strong>Plane</strong><small>Deamon operations</small></span>
+      </a>
+
+      <nav class="nav">
+        <span class="nav-label">Yönetim</span>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="18" width="7" height="3" rx="1"/></svg>Genel Bakış</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 8v4l2.5 1.5"/><circle cx="12" cy="12" r="8.5"/></svg>İşlem Geçmişi</a>
+        <a class="nav-item active" href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V8l8-4 8 4v12H4Z"/><path d="M9 20v-6h6v6"/></svg>Siteler <span class="count">68</span></a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 17.5a3.5 3.5 0 0 1-.4-7A6 6 0 0 1 16 8.3a4.5 4.5 0 1 1 1.5 8.7H5Z"/></svg>Coolify</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 18h12a4 4 0 0 0 .8-7.9A7 7 0 0 0 5 12a3 3 0 0 0 1 6Z"/></svg>Cloudflare</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>Temalar</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>Ayarlar</a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="user-menu" id="userMenu" role="menu">
+          <button type="button" role="menuitem">Hesabım <span>↗</span></button>
+          <button type="button" id="themeToggle" role="menuitem">Görünüm <span id="themeLabel">Koyu</span></button>
+          <button type="button" role="menuitem">Dil <span>TR</span></button>
+          <button type="button" role="menuitem">Oturumu kapat</button>
+        </div>
+        <button class="user-trigger" id="userTrigger" type="button" aria-expanded="false" aria-controls="userMenu">
+          <span class="avatar">SA</span>
+          <span class="user-copy"><strong>Super Admin</strong><span>super@codron.co</span></span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 14 5-5 5 5"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="top-title">
+          <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Menüyü aç" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          <h1>Siteler</h1><span class="total">68 kayıt</span>
+        </div>
+        <div class="top-actions">
+          <div class="quick-action-wrap">
+            <button class="button" id="quickActionsTrigger" type="button" aria-expanded="false" aria-controls="quickActionsMenu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 2 5 14h6l-1 8 8-12h-6l1-8Z"/></svg><span class="button-label">Hızlı İşlemler</span><span class="chevron-text">⌄</span></button>
+            <div class="quick-popover" id="quickActionsMenu" role="menu">
+              <div class="quick-head"><strong>Hızlı İşlemler</strong><span>Birden fazla siteyi etkileyen operasyonlar</span></div>
+              <div class="quick-section"><span class="quick-label">Sorunları düzelt</span>
+                <button class="quick-item" type="button" role="menuitem" data-toast="18 site için yeniden başlatma işlemi sıraya alındı"><span class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7v5h-5"/><path d="M18.5 17a8 8 0 1 1 1.1-8"/></svg></span><span class="quick-copy"><strong>Sorunlu siteleri yeniden başlat</strong><small>Uygulama yanıt vermeyen siteler</small></span><span class="quick-count warning">18</span></button>
+                <button class="quick-item" type="button" role="menuitem" data-toast="Başarısız yayın yeniden başlatıldı"><span class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m8 5 8 7-8 7V5Z"/></svg></span><span class="quick-copy"><strong>Başarısız yayını yeniden çalıştır</strong><small>Son yayın işlemi hata veren site</small></span><span class="quick-count danger">1</span></button>
+                <button class="quick-item" type="button" role="menuitem" data-toast="Site durum kontrolü başlatıldı"><span class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h3l2-5 4 10 2-5h5"/></svg></span><span class="quick-copy"><strong>Site durumunu yeniden kontrol et</strong><small>Güncel sağlık bilgisini al</small></span><span class="quick-count">1</span></button>
+                <button class="quick-item" type="button" role="menuitem" data-toast="Tüm uygun düzeltmeler sıraya alındı"><span class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 6 4 4M5 19l5-5 7-7-4-4-7 7-1 9Z"/></svg></span><span class="quick-copy"><strong>Tüm uygun düzeltmeleri çalıştır</strong><small>Sorun türüne göre gerekli işlemleri uygula</small></span></button>
+              </div>
+              <div class="quick-section"><span class="quick-label">Bilgileri güncelle</span>
+                <button class="quick-item" type="button" role="menuitem" data-toast="Coolify bilgileri eşitleniyor"><span class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.5 8A7 7 0 0 1 19 10M17.5 16A7 7 0 0 1 5 14"/></svg></span><span class="quick-copy"><strong>Coolify bilgilerini eşitle</strong><small>Uygulama ve son yayın bilgilerini yenile</small></span></button>
+                <button class="quick-item" type="button" role="menuitem" data-toast="Canlı siteler kontrol ediliyor"><span class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="quick-copy"><strong>Canlı siteleri kontrol et</strong><small>Alan adı ve HTTP yanıtlarını doğrula</small></span></button>
+                <button class="quick-item" type="button" role="menuitem" data-toast="Arşivlenmiş siteler açılıyor"><span class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v13H4zM3 4h18v3H3zM9 11h6"/></svg></span><span class="quick-copy"><strong>Arşivlenmiş siteleri görüntüle</strong><small>Aktif listeden kaldırılmış kayıtlar</small></span></button>
+              </div>
+            </div>
+          </div>
+          <button class="button" type="button" id="quickSearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>Site ara <span class="key">⌘ K</span></button>
+          <button class="button primary" type="button" id="newSite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span class="button-label">Yeni site</span></button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="intro" aria-labelledby="page-heading">
+          <div><h2 id="page-heading">Tüm siteleri tek ekrandan yönetin.</h2><p>Sitelerin çalışma durumunu, son yayın sonucunu ve kullanılan repo dalını izleyin. Sorunlu kayıtları hızla bulun ve gerekli işlemleri toplu olarak başlatın.</p></div>
+          <div class="sync"><span class="sync-dot"></span>Coolify ile senkron · az önce</div>
+        </section>
+
+        <section class="metrics" aria-label="Site özeti">
+          <article class="metric"><div class="metric-top"><span>Toplam site</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V8l8-4 8 4v12H4Z"/></svg></div><div class="metric-value"><strong>68</strong><span>6 bağlantıda</span></div></article>
+          <article class="metric success"><div class="metric-top"><span>Sağlıklı</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/></svg></div><div class="metric-value"><strong>49</strong><span>sitelerin %72'si</span></div></article>
+          <article class="metric warning"><div class="metric-top"><span>Kontrol gerekiyor</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 8v5M12 17h.01"/><path d="M10.3 4.9 3 18a2 2 0 0 0 1.7 3h14.6a2 2 0 0 0 1.7-3L13.7 4.9a2 2 0 0 0-3.4 0Z"/></svg></div><div class="metric-value"><strong>18</strong><span>site sorunu</span></div></article>
+          <article class="metric danger"><div class="metric-top"><span>Başarısız yayın</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg></div><div class="metric-value"><strong>1</strong><span>yeniden denenebilir</span></div></article>
+        </section>
+
+        <section class="workspace" aria-label="Site listesi">
+          <div class="toolbar">
+            <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="siteSearch" type="search" placeholder="Site, alan adı veya sürüm ara…" autocomplete="off"><span class="key">/</span></label>
+            <button class="button filter-button active" type="button" data-filter="all">Tümü <span>68</span></button>
+            <button class="button filter-button" type="button" data-filter="attention">Kontrol gereken <span>19</span></button>
+            <button class="button filter-button" type="button" data-filter="healthy">Sağlıklı <span>49</span></button>
+            <div class="toolbar-separator"></div>
+            <button class="button icon-only" id="filterToggle" type="button" aria-label="Ayrıntılı filtreleri aç" aria-expanded="false" aria-controls="filterPanel" title="Ayrıntılı filtreler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button>
+            <div class="view-switch" aria-label="Görünüm"><button class="active" type="button" data-view="list" aria-label="Liste görünümü" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg></button><button type="button" data-view="card" aria-label="Kart görünümü" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button></div>
+          </div>
+
+          <div class="filter-panel" id="filterPanel" hidden>
+            <div class="filter-group"><span class="filter-group-label">Repo dalı</span><div class="filter-options"><button class="filter-option active" type="button" data-advanced-filter="channel" data-value="all">Tümü</button><button class="filter-option" type="button" data-advanced-filter="channel" data-value="main">main</button><button class="filter-option" type="button" data-advanced-filter="channel" data-value="beta">beta</button><button class="filter-option" type="button" data-advanced-filter="channel" data-value="alpha">alpha</button></div></div>
+            <div class="filter-group"><span class="filter-group-label">Site sağlığı</span><div class="filter-options"><button class="filter-option active" type="button" data-advanced-filter="health" data-value="all">Tümü</button><button class="filter-option" type="button" data-advanced-filter="health" data-value="healthy">Sağlıklı</button><button class="filter-option" type="button" data-advanced-filter="health" data-value="unhealthy">Sorunlu</button><button class="filter-option" type="button" data-advanced-filter="health" data-value="stale">Kontrol gecikmiş</button></div></div>
+            <div class="filter-group"><span class="filter-group-label">Son yayın</span><div class="filter-options"><button class="filter-option active" type="button" data-advanced-filter="publish" data-value="all">Tümü</button><button class="filter-option" type="button" data-advanced-filter="publish" data-value="success">Başarılı</button><button class="filter-option" type="button" data-advanced-filter="publish" data-value="failed">Başarısız</button></div></div>
+            <button class="button filter-reset" id="filterReset" type="button">Filtreleri temizle</button>
+          </div>
+
+          <div class="bulkbar" id="bulkbar"><strong><span id="selectionCount">0</span> site seçildi</strong><button class="button" type="button" data-toast="Site kontrolleri sıraya alındı">Durumu kontrol et</button><button class="button" type="button" data-toast="Yeniden başlatma işlemi sıraya alındı">Yeniden başlat</button><button class="button" type="button" data-toast="Yayın işlemi sıraya alındı">Yeniden yayınla</button></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th><input class="checkbox" id="selectAll" type="checkbox" aria-label="Tüm siteleri seç"></th><th>Site</th><th>Site sağlığı</th><th>Son yayın</th><th>Repo dalı</th><th>Sürüm</th><th>Son kontrol</th><th><span class="visually-hidden">İşlemler</span></th></tr></thead>
+              <tbody id="siteRows">
+                <tr data-state="attention" data-search="adanapelet.com.tr adanapelet alpha bilinmiyor"><td><input class="checkbox row-check" type="checkbox" aria-label="adanapelet.com.tr seç"></td><td><div class="site"><span class="site-mark">AP</span><span><strong>adanapelet.com.tr</strong><small>adanapelet · Coolify</small></span></div></td><td><span class="status error">Sağlıksız</span></td><td><span class="status ok">Başarılı</span></td><td><span class="branch">alpha</span></td><td><span class="version unknown">Bilinmiyor</span></td><td><span class="time">1 dk önce</span></td><td class="row-actions"><button class="more" type="button" aria-label="adanapelet.com.tr işlemleri" aria-expanded="false">•••</button></td></tr>
+                <tr data-state="healthy" data-search="beyazel.com.tr beyazel main v1.4.2"><td><input class="checkbox row-check" type="checkbox" aria-label="beyazel.com.tr seç"></td><td><div class="site"><span class="site-mark">BY</span><span><strong>beyazel.com.tr</strong><small>beyazel · Coolify</small></span></div></td><td><span class="status ok">Sağlıklı</span></td><td><span class="status ok">Başarılı</span></td><td><span class="branch">main</span></td><td><span class="version">v1.4.2</span></td><td><span class="time">3 dk önce</span></td><td class="row-actions"><button class="more" type="button" aria-label="beyazel.com.tr işlemleri" aria-expanded="false">•••</button></td></tr>
+                <tr data-state="attention" data-search="bisemtiyatro.com bisem tiyatro alpha v1.4.1"><td><input class="checkbox row-check" type="checkbox" aria-label="bisemtiyatro.com seç"></td><td><div class="site"><span class="site-mark">BT</span><span><strong>bisemtiyatro.com</strong><small>bisem-tiyatro · Coolify</small></span></div></td><td><span class="status warn">Eski kontrol</span></td><td><span class="status ok">Başarılı</span></td><td><span class="branch">alpha</span></td><td><span class="version">v1.4.1</span></td><td><span class="time">2 sa önce</span></td><td class="row-actions"><button class="more" type="button" aria-label="bisemtiyatro.com işlemleri" aria-expanded="false">•••</button></td></tr>
+                <tr data-state="attention" data-search="kodzer.com.tr kodzer main v1.4.2 hata"><td><input class="checkbox row-check" type="checkbox" aria-label="kodzer.com.tr seç"></td><td><div class="site"><span class="site-mark">KZ</span><span><strong>kodzer.com.tr</strong><small>kodzer · Coolify</small></span></div></td><td><span class="status ok">Sağlıklı</span></td><td><span class="status error">Hatalı</span></td><td><span class="branch">main</span></td><td><span class="version">v1.4.2</span></td><td><span class="time">8 dk önce</span></td><td class="row-actions"><button class="more" type="button" aria-label="kodzer.com.tr işlemleri" aria-expanded="false">•••</button></td></tr>
+                <tr data-state="healthy" data-search="akdenizfiltre.com akdeniz filtre beta v1.4.2"><td><input class="checkbox row-check" type="checkbox" aria-label="akdenizfiltre.com seç"></td><td><div class="site"><span class="site-mark">AF</span><span><strong>akdenizfiltre.com</strong><small>akdeniz-filtre · Coolify</small></span></div></td><td><span class="status ok">Sağlıklı</span></td><td><span class="status ok">Başarılı</span></td><td><span class="branch">beta</span></td><td><span class="version">v1.4.2</span></td><td><span class="time">12 dk önce</span></td><td class="row-actions"><button class="more" type="button" aria-label="akdenizfiltre.com işlemleri" aria-expanded="false">•••</button></td></tr>
+                <tr data-state="healthy" data-search="avolife.com avolife main v1.4.2"><td><input class="checkbox row-check" type="checkbox" aria-label="avolife.com seç"></td><td><div class="site"><span class="site-mark">AV</span><span><strong>avolife.com</strong><small>avolife · Coolify</small></span></div></td><td><span class="status ok">Sağlıklı</span></td><td><span class="status ok">Başarılı</span></td><td><span class="branch">main</span></td><td><span class="version">v1.4.2</span></td><td><span class="time">18 dk önce</span></td><td class="row-actions"><button class="more" type="button" aria-label="avolife.com işlemleri" aria-expanded="false">•••</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <footer class="table-footer"><span id="resultCount">68 siteden 6 örnek gösteriliyor</span><nav class="pagination" aria-label="Sayfalama"><button class="page-button" type="button" aria-label="Önceki sayfa">‹</button><button class="page-button active" type="button" aria-current="page">1</button><button class="page-button" type="button">2</button><button class="page-button" type="button">3</button><button class="page-button" type="button">…</button><button class="page-button" type="button">12</button><button class="page-button" type="button" aria-label="Sonraki sayfa">›</button></nav></footer>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="menu" id="rowMenu" role="menu"><button type="button" role="menuitem">Site ayrıntılarını aç</button><button type="button" role="menuitem">Durumu yeniden kontrol et</button><button type="button" role="menuitem">Coolify'de görüntüle</button><hr><button class="danger" type="button" role="menuitem">Siteyi arşivle</button></div>
+  <div class="toast" id="toast" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg><span id="toastText">İşlem tamamlandı</span></div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const body = document.body;
+      const search = document.querySelector('#siteSearch');
+      const rows = [...document.querySelectorAll('#siteRows tr')];
+      const filters = [...document.querySelectorAll('[data-filter]')];
+      const advancedFilters = [...document.querySelectorAll('[data-advanced-filter]')];
+      const viewButtons = [...document.querySelectorAll('[data-view]')];
+      const checks = [...document.querySelectorAll('.row-check')];
+      const workspace = document.querySelector('.workspace');
+      const filterToggle = document.querySelector('#filterToggle');
+      const filterPanel = document.querySelector('#filterPanel');
+      const filterReset = document.querySelector('#filterReset');
+      const quickActionsTrigger = document.querySelector('#quickActionsTrigger');
+      const quickActionsMenu = document.querySelector('#quickActionsMenu');
+      const selectAll = document.querySelector('#selectAll');
+      const bulkbar = document.querySelector('#bulkbar');
+      const selectionCount = document.querySelector('#selectionCount');
+      const resultCount = document.querySelector('#resultCount');
+      const rowMenu = document.querySelector('#rowMenu');
+      const userMenu = document.querySelector('#userMenu');
+      const userTrigger = document.querySelector('#userTrigger');
+      const mobileMenu = document.querySelector('#mobileMenu');
+      const scrim = document.querySelector('#scrim');
+      const toast = document.querySelector('#toast');
+      const toastText = document.querySelector('#toastText');
+      let activeFilter = 'all';
+      const activeAdvanced = { channel: 'all', health: 'all', publish: 'all' };
+      let toastTimer;
+
+      const visibleRows = () => rows.filter(row => row.style.display !== 'none');
+
+      function applyFilters() {
+        const term = search.value.trim().toLocaleLowerCase('tr');
+        let count = 0;
+        rows.forEach(row => {
+          const matchesState = activeFilter === 'all' || row.dataset.state === activeFilter;
+          const matchesSearch = !term || row.dataset.search.toLocaleLowerCase('tr').includes(term);
+          const channel = row.children[4].textContent.trim().toLocaleLowerCase('tr');
+          const healthText = row.children[2].textContent.trim().toLocaleLowerCase('tr');
+          const publishText = row.children[3].textContent.trim().toLocaleLowerCase('tr');
+          const health = healthText.includes('sağlıksız') ? 'unhealthy' : healthText.includes('eski') ? 'stale' : 'healthy';
+          const publish = publishText.includes('hatalı') ? 'failed' : 'success';
+          const matchesChannel = activeAdvanced.channel === 'all' || channel === activeAdvanced.channel;
+          const matchesHealth = activeAdvanced.health === 'all' || health === activeAdvanced.health;
+          const matchesPublish = activeAdvanced.publish === 'all' || publish === activeAdvanced.publish;
+          const visible = matchesState && matchesSearch && matchesChannel && matchesHealth && matchesPublish;
+          row.style.display = visible ? '' : 'none';
+          if (visible) count++;
+        });
+        const hasAdvancedFilter = Object.values(activeAdvanced).some(value => value !== 'all');
+        resultCount.textContent = term || activeFilter !== 'all' || hasAdvancedFilter ? `${count} eşleşme gösteriliyor` : '68 siteden 6 örnek gösteriliyor';
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+      }
+
+      function updateSelection() {
+        const selected = checks.filter(check => check.checked);
+        selectionCount.textContent = selected.length;
+        bulkbar.classList.toggle('visible', selected.length > 0);
+        rows.forEach(row => row.classList.toggle('selected', row.querySelector('.row-check').checked));
+        const visibleChecks = visibleRows().map(row => row.querySelector('.row-check'));
+        selectAll.checked = visibleChecks.length > 0 && visibleChecks.every(check => check.checked);
+        selectAll.indeterminate = visibleChecks.some(check => check.checked) && !selectAll.checked;
+      }
+
+      function closeMenus() {
+        rowMenu.classList.remove('open');
+        document.querySelectorAll('.more[aria-expanded="true"]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+        userMenu.classList.remove('open');
+        userTrigger.setAttribute('aria-expanded', 'false');
+        quickActionsMenu.classList.remove('open');
+        quickActionsTrigger.setAttribute('aria-expanded', 'false');
+      }
+
+      function showToast(message) {
+        toastText.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+      }
+
+      filters.forEach(button => button.addEventListener('click', () => {
+        activeFilter = button.dataset.filter;
+        filters.forEach(item => item.classList.toggle('active', item === button));
+        applyFilters();
+      }));
+      advancedFilters.forEach(button => button.addEventListener('click', () => {
+        const group = button.dataset.advancedFilter;
+        activeAdvanced[group] = button.dataset.value;
+        advancedFilters.filter(item => item.dataset.advancedFilter === group).forEach(item => item.classList.toggle('active', item === button));
+        filterToggle.classList.toggle('active', Object.values(activeAdvanced).some(value => value !== 'all'));
+        applyFilters();
+      }));
+      filterToggle.addEventListener('click', () => {
+        const open = filterPanel.hidden;
+        filterPanel.hidden = !open;
+        filterToggle.setAttribute('aria-expanded', String(open));
+      });
+      filterReset.addEventListener('click', () => {
+        Object.keys(activeAdvanced).forEach(group => activeAdvanced[group] = 'all');
+        advancedFilters.forEach(item => item.classList.toggle('active', item.dataset.value === 'all'));
+        filterToggle.classList.remove('active');
+        applyFilters();
+      });
+      viewButtons.forEach(button => button.addEventListener('click', () => {
+        const cardView = button.dataset.view === 'card';
+        workspace.classList.toggle('card-view', cardView);
+        viewButtons.forEach(item => {
+          const active = item === button;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+      }));
+      search.addEventListener('input', applyFilters);
+      checks.forEach(check => check.addEventListener('change', updateSelection));
+      selectAll.addEventListener('change', () => { visibleRows().forEach(row => row.querySelector('.row-check').checked = selectAll.checked); updateSelection(); });
+
+      rows.forEach(row => {
+        row.tabIndex = 0;
+        row.addEventListener('click', event => {
+          if (event.target.closest('button,input')) return;
+          showToast(`${row.querySelector('.site strong').textContent} detayına gidiliyor`);
+        });
+        row.addEventListener('keydown', event => { if (event.key === 'Enter') row.click(); });
+      });
+
+      document.querySelectorAll('.more').forEach(button => button.addEventListener('click', event => {
+        event.stopPropagation();
+        const wasOpen = button.getAttribute('aria-expanded') === 'true';
+        closeMenus();
+        if (wasOpen) return;
+        const rect = button.getBoundingClientRect();
+        rowMenu.style.top = `${Math.min(rect.bottom + 6, window.innerHeight - 170)}px`;
+        rowMenu.style.left = `${Math.max(12, rect.right - 190)}px`;
+        rowMenu.classList.add('open');
+        button.setAttribute('aria-expanded', 'true');
+      }));
+
+      userTrigger.addEventListener('click', event => {
+        event.stopPropagation();
+        const open = !userMenu.classList.contains('open');
+        closeMenus();
+        userMenu.classList.toggle('open', open);
+        userTrigger.setAttribute('aria-expanded', String(open));
+      });
+
+      quickActionsTrigger.addEventListener('click', event => {
+        event.stopPropagation();
+        const open = !quickActionsMenu.classList.contains('open');
+        closeMenus();
+        quickActionsMenu.classList.toggle('open', open);
+        quickActionsTrigger.setAttribute('aria-expanded', String(open));
+      });
+
+      document.querySelector('#themeToggle').addEventListener('click', () => {
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.querySelector('#themeLabel').textContent = root.dataset.theme === 'dark' ? 'Koyu' : 'Açık';
+        try { localStorage.setItem('plane-demo-theme', root.dataset.theme); } catch (_) {}
+      });
+      try { const saved = localStorage.getItem('plane-demo-theme'); if (saved) root.dataset.theme = saved; } catch (_) {}
+      document.querySelector('#themeLabel').textContent = root.dataset.theme === 'dark' ? 'Koyu' : 'Açık';
+
+      mobileMenu.addEventListener('click', () => { body.classList.add('nav-open'); mobileMenu.setAttribute('aria-expanded', 'true'); });
+      scrim.addEventListener('click', () => { body.classList.remove('nav-open'); mobileMenu.setAttribute('aria-expanded', 'false'); });
+      document.addEventListener('click', event => { if (!event.target.closest('#rowMenu,#userMenu,#userTrigger,#quickActionsMenu,#quickActionsTrigger,.more')) closeMenus(); });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { closeMenus(); body.classList.remove('nav-open'); }
+        if (event.key === '/' && !event.target.matches('input,textarea')) { event.preventDefault(); search.focus(); }
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); search.focus(); }
+      });
+      document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => { showToast(button.dataset.toast); closeMenus(); }));
+      document.querySelector('#newSite').addEventListener('click', () => showToast('Yeni site formu açılıyor'));
+      document.querySelector('#quickSearch').addEventListener('click', () => search.focus());
+      rowMenu.querySelectorAll('button').forEach(button => button.addEventListener('click', () => { showToast(button.textContent.trim()); closeMenus(); }));
+    })();
+  </script>
+</body>
+</html>
