@@ -12,6 +12,7 @@ use App\Models\Theme;
 use App\Models\User;
 use App\Services\Agent\ControlPlaneAgentContract;
 use App\Services\Agent\SiteAgentClient;
+use App\Services\Agent\SiteHealthChecker;
 use App\Services\Agent\ThemeAgentResult;
 use App\Services\GitHub\GitHubAppClient;
 use App\Services\GitHub\GitHubCredentialsException;
@@ -24,6 +25,7 @@ class ThemeRolloutService
         private readonly ThemeVersionGate $versions = new ThemeVersionGate,
         private readonly SiteAgentClient $agent = new SiteAgentClient,
         private readonly GitHubAppClient $github = new GitHubAppClient,
+        private readonly ThemeSmokeCheck $smoke = new ThemeSmokeCheck,
     ) {}
 
     /**
@@ -33,6 +35,15 @@ class ThemeRolloutService
     {
         $this->visibility->assertAssignable($theme, $site);
         $this->assertMutableTheme($theme);
+
+        // theme.json minimum_deamon_version: a theme built for a newer CMS calls core
+        // views and routes this site does not have yet. Refuse before anything moves.
+        if ($this->versions->shouldSkip($site, $theme)) {
+            throw new ThemeRolloutException(__('sites.theme_flash.cms_too_old', [
+                'minimum' => (string) $theme->minimum_deamon_version,
+                'reported' => (string) $site->reportedDeamonVersion(),
+            ]));
+        }
 
         $activate = (bool) ($options['activate'] ?? false);
         if ($activate && ! ($options['confirmed'] ?? false)) {
@@ -191,6 +202,10 @@ class ThemeRolloutService
             $installation->last_sync_task_id = $result->taskId;
         }
         $installation->save();
+
+        if (! $this->guardStorefront($installation, $site, $theme, 'sync', $actor, $ip)) {
+            throw new ThemeRolloutException((string) $installation->last_error);
+        }
 
         return 'ran';
     }
@@ -382,6 +397,8 @@ class ThemeRolloutService
             'after' => $this->auditSnapshot($installation->fresh() ?? $installation, $theme),
             'ip' => $ip,
         ]);
+
+        $this->guardStorefront($installation, $site, $theme, 'install', $actor, $ip);
     }
 
     public function performUpdate(SiteThemeInstallation $installation, ?User $actor, ?string $ip, bool $fromWebhook = false): void
@@ -442,6 +459,96 @@ class ThemeRolloutService
             'after' => $this->auditSnapshot($installation->fresh() ?? $installation, $theme),
             'ip' => $ip,
         ]);
+
+        $this->guardStorefront($installation, $site, $theme, 'update', $actor, $ip);
+    }
+
+    /**
+     * The agent reporting success does not mean the storefront renders: moonagro's
+     * new theme installed cleanly and /timeline 500'd on a core partial the CMS
+     * volume lacked. GET the pages; on a 5xx decide whose fault it is.
+     *
+     * - The CMS reports its core theme stale → not this theme. The health poll
+     *   restarts the app (CoreThemeHealer); the theme change stays.
+     * - Otherwise undo what just ran: an update goes back to the previous commit,
+     *   a sync restores the rows it changed. A first install has nothing to go back
+     *   to, so it only turns red with the failing pages.
+     *
+     * Only the active theme renders the storefront, so an inactive install is not checked.
+     *
+     * @param  'install'|'update'|'sync'  $change
+     */
+    private function guardStorefront(
+        SiteThemeInstallation $installation,
+        Site $site,
+        Theme $theme,
+        string $change,
+        ?User $actor,
+        ?string $ip,
+    ): bool {
+        $installation->refresh();
+        if (! $installation->is_active || $installation->status === ThemeInstallationStatus::Error) {
+            return true;
+        }
+
+        $smoke = $this->smoke->run($site, $theme);
+        if (! $smoke->failed()) {
+            return true;
+        }
+
+        $health = app(SiteHealthChecker::class)->check($site);
+        $coreStale = ($health->summary['core_theme_in_sync'] ?? null) === false;
+        $rolledBack = $coreStale ? null : $this->rollbackAfterSmoke($installation, $change, $actor, $ip);
+
+        $message = match (true) {
+            $coreStale => __('sites.theme_flash.smoke_core_stale', ['pages' => $smoke->summary()]),
+            $rolledBack !== null => __('sites.theme_flash.smoke_rolled_back_'.$rolledBack, ['pages' => $smoke->summary()]),
+            default => __('sites.theme_flash.smoke_failed', ['pages' => $smoke->summary()]),
+        };
+
+        $installation->refresh();
+        $installation->status = ThemeInstallationStatus::Error;
+        $installation->last_error = $message;
+        $installation->save();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => 'theme.smoke_failed',
+            'after' => [
+                'theme_id' => $theme->theme_id,
+                'change' => $change,
+                'failures' => $smoke->failures,
+                'core_theme_stale' => $coreStale,
+                'rolled_back' => $rolledBack,
+            ],
+            'ip' => $ip,
+        ]);
+
+        return false;
+    }
+
+    /**
+     * @return 'files'|'sync'|null what was undone
+     */
+    private function rollbackAfterSmoke(SiteThemeInstallation $installation, string $change, ?User $actor, ?string $ip): ?string
+    {
+        try {
+            if ($change === 'update' && filled($installation->previous_pinned_sha)) {
+                $this->rollbackThemeFiles($installation, $actor, $ip);
+
+                return 'files';
+            }
+
+            if ($change === 'sync' && filled($installation->last_sync_task_id)) {
+                $this->rollbackLastSync($installation, $actor, $ip);
+
+                return 'sync';
+            }
+        } catch (ThemeRolloutException) {
+            // The rollback's own audit row names why; the smoke failure still stands.
+        }
+
+        return null;
     }
 
     /**

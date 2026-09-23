@@ -37,5 +37,6 @@
         <env name="DEAMON_COMPOSE_FILE" value="/docker-compose.coolify.yml"/>
         <!-- Diagnosis runs synchronously on every failed deployment row; tests opt in per case. -->
         <env name="OPS_DIAGNOSIS_ENABLED" value="false"/>
+        <env name="OPS_THEME_SMOKE_ENABLED" value="false"/>
     </php>
 </phpunit>

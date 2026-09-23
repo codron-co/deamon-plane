@@ -63,6 +63,18 @@ class SiteHealthEvaluator
             && ! $this->isStale($site);
     }
 
+    /**
+     * The CMS reported its core theme (themes/default on the volume) older than the
+     * image it runs, from a fresh poll. Core views may 500 until the app restarts.
+     */
+    public function isCoreThemeStale(Site $site): bool
+    {
+        $payload = $this->payload($site);
+
+        return ($payload['core_theme_in_sync'] ?? null) === false
+            && ! $this->isStale($site);
+    }
+
     public function isStale(Site $site): bool
     {
         if (! $site->hasAgentSecret() || $site->last_health_at === null) {

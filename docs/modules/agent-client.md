@@ -17,6 +17,7 @@ Expected JSON (no secrets):
 | `queue_ok` | `false` counts as fleet **unhealthy** |
 | `site_name` | CMS display name (CMS 1.2.27+). Compared with Plane's `sites.name`; a mismatch triggers `SiteIdentityPusher`. |
 | `site_status` | CMS publish state (`draft` \| `published`). Absent on CMS < 1.2.x. Mirrored onto `sites.cms_site_status` |
+| `core_theme.in_sync` | CMS 1.2.30+. Stored as `core_theme_in_sync`. `false` = `themes/default` on the volume is older than the image seed (core:: views may 500). App health shows `core_theme_stale` (**Yeniden başlat**) and `CoreThemeHealer` restarts the app through Coolify once per `ops.agent.core_theme_restart_window_hours` (default 6); the entrypoint then refreshes the copy. Audit `site.core_theme_restarted` / `site.core_theme_restart_failed`. Off: `OPS_CORE_THEME_AUTO_RESTART=false`. |
 
 `sites.agent_base_url` is preferred. If empty, Plane uses `https://{primary_domain}`.
 

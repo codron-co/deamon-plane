@@ -28,6 +28,7 @@ class Theme extends Model
         'default_ref',
         'visibility',
         'minimum_deamon_version',
+        'smoke_paths',
         'latest_sha',
         'latest_tag',
         'last_synced_at',
@@ -43,6 +44,7 @@ class Theme extends Model
         return [
             'visibility' => ThemeVisibility::class,
             'last_synced_at' => 'datetime',
+            'smoke_paths' => 'array',
         ];
     }
 

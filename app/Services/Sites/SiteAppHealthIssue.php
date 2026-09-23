@@ -54,6 +54,7 @@ final class SiteAppHealthIssue
                 'key' => __('deploy_diagnosis.codes.'.($this->key ?? 'unknown').'.title', ['exit' => '?', 'container' => '']),
             ]),
             'app_not_running' => __('sites.app_health.issues.app_not_running'),
+            'core_theme_stale' => __('sites.app_health.issues.core_theme_stale'),
             'domain_unbound' => __('sites.app_health.issues.domain_unbound', $replace),
             'agent_unhealthy' => __('sites.app_health.issues.agent_unhealthy'),
             'coolify_unreachable' => __('sites.app_health.issues.coolify_unreachable'),

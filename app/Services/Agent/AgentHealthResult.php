@@ -71,6 +71,9 @@ final class AgentHealthResult
                 // CMS display name (CMS 1.2.27+). SiteHealthChecker pushes Plane's name
                 // over the agent when the two drift, so a rename never needs env work.
                 'site_name' => self::nullableString($payload['site_name'] ?? null),
+                // CMS 1.2.30+: false = themes/default on the volume is older than the
+                // image seed, so core:: views this CMS needs may be missing. Restart heals it.
+                'core_theme_in_sync' => self::nullableBool(is_array($payload['core_theme'] ?? null) ? ($payload['core_theme']['in_sync'] ?? null) : null),
                 'http_status' => $httpStatus,
             ]),
         );

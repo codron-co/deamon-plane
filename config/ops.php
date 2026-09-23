@@ -39,6 +39,12 @@ return [
         'auto_update_default' => false,
         'fanout_concurrency' => (int) env('GITHUB_THEME_FANOUT_CONCURRENCY', 3),
         'manifest_paths' => ['theme.json', 'theme/theme.json'],
+        // After install / update / sync Plane GETs "/" + theme.json `smoke_paths`; a 5xx
+        // (not 503 maintenance) rolls the change back (ThemeSmokeCheck).
+        'smoke' => [
+            'enabled' => filter_var(env('OPS_THEME_SMOKE_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+            'timeout' => (int) env('OPS_THEME_SMOKE_TIMEOUT', 15),
+        ],
     ],
 
     'github' => [
@@ -105,6 +111,10 @@ return [
         'timeout_seconds' => (int) env('CONTROL_PLANE_AGENT_TIMEOUT', 10),
         'poll_minutes' => (int) env('CONTROL_PLANE_AGENT_POLL_MINUTES', 10),
         'stale_after_minutes' => (int) env('CONTROL_PLANE_AGENT_STALE_MINUTES', 30),
+        // Health reports core_theme.in_sync=false (CMS 1.2.30+): restart the app so the
+        // entrypoint refreshes themes/default from the image; once per window per site.
+        'core_theme_auto_restart' => filter_var(env('OPS_CORE_THEME_AUTO_RESTART', true), FILTER_VALIDATE_BOOLEAN),
+        'core_theme_restart_window_hours' => (int) env('OPS_CORE_THEME_RESTART_HOURS', 6),
         // CMS routes are Laravel-throttled; a rollout hitting one CMS repeatedly gets 429.
         'retry' => [
             'max_attempts' => (int) env('CONTROL_PLANE_AGENT_RETRY_ATTEMPTS', 2),

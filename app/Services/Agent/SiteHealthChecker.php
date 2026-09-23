@@ -14,6 +14,7 @@ class SiteHealthChecker
         private readonly SiteAgentClient $client,
         private readonly SiteHealthMailNotifier $mailNotifier,
         private readonly SiteIdentityPusher $identity,
+        private readonly CoreThemeHealer $coreTheme,
     ) {}
 
     public function check(Site $site): AgentHealthResult
@@ -42,6 +43,7 @@ class SiteHealthChecker
         // site has to be fixed by hand.
         if ($result->ok) {
             $this->identity->healFromHealth($site, $summary['site_name'] ?? null);
+            $this->coreTheme->healFromHealth($site, $summary);
         }
 
         $this->mailNotifier->afterHealthCheck($site->fresh() ?? $site, $result);
@@ -67,6 +69,7 @@ class SiteHealthChecker
             'queue_ok',
             'site_status',
             'site_name',
+            'core_theme_in_sync',
             'http_status',
         ];
 

@@ -151,6 +151,16 @@ class SiteAppHealthInspector
             $issues[] = new SiteAppHealthIssue('agent_unhealthy', 'check_health');
         }
 
+        // themes/default on the volume is older than the CMS image: core:: pages can
+        // 500. The health poll already restarts once (CoreThemeHealer); this row stays
+        // until a poll reports the copy in sync.
+        if ($this->agentHealth->isCoreThemeStale($site)) {
+            $issues[] = new SiteAppHealthIssue(
+                'core_theme_stale',
+                filled($site->coolify_app_uuid) ? 'restart_app' : null,
+            );
+        }
+
         return $issues;
     }
 

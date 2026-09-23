@@ -197,6 +197,7 @@ class ThemeCatalogSync
         $theme->repo_full_name = $repo['full_name'];
         $theme->default_ref = $ref;
         $theme->minimum_deamon_version = $manifest?->minimumDeamonVersion ?? $theme->minimum_deamon_version;
+        $theme->smoke_paths = $manifest !== null ? $manifest->smokePaths : $theme->smoke_paths;
         $theme->description = $manifest?->description ?? $theme->description;
         $theme->latest_sha = $sha ?? $theme->latest_sha;
         $theme->last_synced_at = Carbon::now();

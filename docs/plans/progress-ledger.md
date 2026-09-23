@@ -2,6 +2,13 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Stale core theme + storefront smoke guard (2026-09-23)
+
+- Status: **committed on `alpha`**. Trigger: moonagro.com `/timeline` 500 (`View [partials.timeline.feed] not found`) after the new theme was installed. Root cause in the CMS: `themes/default` on the persistent volume was only seeded when missing, so the August copy never got the timeline partials.
+- CMS 1.2.30 (`codron-co/deamon` alpha `f429410d`): Dockerfile stamps the seed (`.seed-stamp`), entrypoint `sync_default_theme_from_seed` refreshes a drifted copy on boot, health reports `core_theme`.
+- Plane: `core_theme_in_sync` in the health summary, `CoreThemeHealer` (auto restart, 6 h guard), App-health `core_theme_stale`; `ThemeSmokeCheck` after install/update/sync with automatic files/sync rollback; assign refused below `minimum_deamon_version`; `themes.smoke_paths` from `theme.json`. premium-moonagro declares `/timeline`.
+- Docs: [../modules/theme-catalog.md](../modules/theme-catalog.md), [../modules/agent-client.md](../modules/agent-client.md). Tests: `ThemeStorefrontGuardTest` (8).
+
 ## Deploy failure diagnosis + automatic safe fixes (2026-09-19)
 
 - Status: **committed on `alpha`**. Trigger: WetSan (`alaibjmbwyug8jpj1uigndk1`) failing since 2026-09-10 with `dependency failed to start: container mysql-… exited (1)` and the operator asking why Plane only shows the raw Coolify dump; Bizim Usta / Çınar Oto / Çukurova Profil on the placeholder page with a "finished" deploy.
