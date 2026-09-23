@@ -227,7 +227,7 @@
         }
 
         const params = url.searchParams;
-        ["q", "channel", "status", "publish", "deploy", "agent", "pack", "health", "app", "theme"].forEach(function (name) {
+        ["q", "channel", "status", "publish", "deploy", "agent", "pack", "health", "app", "theme", "theme_id", "cms", "auto_deploy", "server", "stale"].forEach(function (name) {
             const input = form.querySelector("input[name='" + name + "']");
             if (input) {
                 input.value = params.get(name) || "";

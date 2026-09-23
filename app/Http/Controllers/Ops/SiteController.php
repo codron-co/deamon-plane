@@ -21,6 +21,7 @@ use App\Models\Deployment;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\SiteMailboxRequest;
+use App\Models\Theme;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\SiteHealthChecker;
 use App\Services\Cloudflare\CloudflareAccounts;
@@ -82,6 +83,11 @@ class SiteController extends Controller
         $health = $savedViews->filters['health'] ?? '';
         $app = $savedViews->filters['app'] ?? '';
         $theme = $savedViews->filters['theme'] ?? '';
+        $themeId = $savedViews->filters['theme_id'] ?? '';
+        $cms = $savedViews->filters['cms'] ?? '';
+        $autoDeploy = $savedViews->filters['auto_deploy'] ?? '';
+        $server = $savedViews->filters['server'] ?? '';
+        $stale = $savedViews->filters['stale'] ?? '';
 
         $allowedChannels = config('ops.channels', []);
         $publishFilters = [...CmsPublishStatus::values(), 'unknown'];
@@ -109,13 +115,31 @@ class SiteController extends Controller
         foreach (Site::THEME_FILTERS as $themeOption) {
             $themeFilters[$themeOption] = (string) __('sites.theme_states.'.$themeOption);
         }
+        $autoDeployFilters = [];
+        foreach (Site::AUTO_DEPLOY_FILTERS as $autoDeployOption) {
+            $autoDeployFilters[$autoDeployOption] = (string) __('sites.auto_deploy_states.'.$autoDeployOption);
+        }
+        $staleFilters = [];
+        foreach (Site::STALE_FILTERS as $staleOption) {
+            $staleFilters[$staleOption] = (string) __('sites.stale_states.'.$staleOption, ['hours' => Site::STALE_HEALTH_HOURS]);
+        }
+
+        /*
+         * Theme / CMS options read the whole fleet's payloads, and server options the
+         * server table. The panel only renders on a full page, and a region response
+         * only needs them to label an active chip, so a keystroke re-query skips them.
+         */
+        $fullPage = ! ListFragment::wanted($request);
+        $themeIdFilters = $fullPage || $themeId !== '' ? $this->themeIdFilterOptions($themeId) : [];
+        $cmsFilters = $fullPage || $cms !== '' ? $this->cmsFilterOptions() : [];
+        $serverFilters = $fullPage || $server !== '' ? $this->serverFilterOptions($server) : [];
 
         $listView = SiteListView::resolve($request, $request->user(), $savedViews);
         $listView->rememberSort($request->user());
 
         $query = Site::query()
             ->with(['activeThemeInstallation.theme', 'latestDeployment'])
-            ->matchingListFilters($search, $channel, $status, $publish, $deploy, $agent, $pack, $health, $app, $theme);
+            ->matchingListFilters(...SiteSavedViews::scopeArguments($savedViews->filters));
 
         // A search reaches alias hosts, so a matched row must be able to say which host
         // matched. Only loaded while searching: one extra query instead of 25.
@@ -133,7 +157,14 @@ class SiteController extends Controller
         if ($listView->shows('server')) {
             $this->attachCoolifyServers($sites->getCollection());
         }
-        $activeFilters = $this->activeListFilters($search, $channel, $status, $publish, $deploy, $deployFilters, $agent, $pack, $health, $app, $theme);
+        $activeFilters = $this->activeListFilters($savedViews->filters, [
+            'deploy' => $deployFilters,
+            'theme_id' => $themeIdFilters,
+            'cms' => $cmsFilters,
+            'auto_deploy' => $autoDeployFilters,
+            'server' => $serverFilters,
+            'stale' => $staleFilters,
+        ]);
         $bulkPinCommits = $this->bulkPinSuggestions($sites);
 
         /*
@@ -161,6 +192,11 @@ class SiteController extends Controller
             'health' => $health,
             'app' => $app,
             'theme' => $theme,
+            'themeId' => $themeId,
+            'cms' => $cms,
+            'autoDeploy' => $autoDeploy,
+            'server' => $server,
+            'stale' => $stale,
             'savedViews' => $savedViews,
             'channels' => $allowedChannels,
             'statuses' => SiteStatus::values(),
@@ -170,6 +206,11 @@ class SiteController extends Controller
             'healthFilters' => $healthFilters,
             'appFilters' => $appFilters,
             'themeFilters' => $themeFilters,
+            'themeIdFilters' => $themeIdFilters,
+            'cmsFilters' => $cmsFilters,
+            'autoDeployFilters' => $autoDeployFilters,
+            'serverFilters' => $serverFilters,
+            'staleFilters' => $staleFilters,
             'summary' => $summary,
             'listView' => $listView,
             'filtersActive' => $activeFilters !== [],
@@ -189,23 +230,16 @@ class SiteController extends Controller
      * The filters currently narrowing the list, each with the URL that drops only
      * that one. Empty when the operator is looking at the whole fleet.
      *
-     * @param  array<string, string>  $deployFilters  Deploy filter key => operator-facing label.
+     * @param  array<string, string>  $filters  Sanitized filters keyed like SiteSavedViews::FILTER_KEYS.
+     * @param  array<string, array<string, string>>  $optionLabels  Filter key => value => operator-facing label.
      * @return list<array{key: string, label: string, value: string, url: string}>
      */
-    private function activeListFilters(string $search, string $channel, string $status, string $publish, string $deploy = '', array $deployFilters = [], string $agent = '', string $pack = '', string $health = '', string $app = '', string $theme = ''): array
+    private function activeListFilters(array $filters, array $optionLabels = []): array
     {
-        $applied = array_filter([
-            'q' => $search,
-            'channel' => $channel,
-            'status' => $status,
-            'publish' => $publish,
-            'deploy' => $deploy,
-            'agent' => $agent,
-            'pack' => $pack,
-            'health' => $health,
-            'app' => $app,
-            'theme' => $theme,
-        ], static fn (string $value): bool => $value !== '');
+        $applied = array_filter(
+            array_intersect_key($filters, array_flip(SiteSavedViews::FILTER_KEYS)),
+            static fn (string $value): bool => $value !== '',
+        );
 
         $labels = [
             'q' => __('sites.filter_search'),
@@ -218,32 +252,126 @@ class SiteController extends Controller
             'health' => __('sites.filter_health'),
             'app' => __('sites.filter_app'),
             'theme' => __('sites.filter_theme'),
+            'theme_id' => __('sites.filter_theme_id'),
+            'cms' => __('sites.filter_cms'),
+            'auto_deploy' => __('sites.filter_auto_deploy'),
+            'server' => __('sites.filter_server'),
+            'stale' => __('sites.filter_stale'),
         ];
 
-        $displayed = [
-            'q' => $search,
-            'channel' => $channel,
-            'status' => $status === '' ? '' : __('ops.site_status.'.$status),
-            'publish' => $publish === '' ? '' : __('sites.publish.states.'.$publish),
-            'deploy' => $deployFilters[$deploy] ?? '',
-            'agent' => $agent === '' ? '' : __('sites.agent_states.'.$agent),
-            'pack' => $pack === '' ? '' : __('sites.pack_states.'.$pack),
-            'health' => $health === '' ? '' : __('sites.health_states.'.$health),
-            'app' => $app === '' ? '' : __('sites.app_states.'.$app),
-            'theme' => $theme === '' ? '' : __('sites.theme_states.'.$theme),
+        $translated = [
+            'status' => 'ops.site_status.',
+            'publish' => 'sites.publish.states.',
+            'agent' => 'sites.agent_states.',
+            'pack' => 'sites.pack_states.',
+            'health' => 'sites.health_states.',
+            'app' => 'sites.app_states.',
+            'theme' => 'sites.theme_states.',
         ];
 
         $chips = [];
         foreach ($applied as $key => $value) {
+            $display = match (true) {
+                isset($optionLabels[$key]) => $optionLabels[$key][$value] ?? $value,
+                isset($translated[$key]) => (string) __($translated[$key].$value),
+                default => $value,
+            };
+
             $chips[] = [
                 'key' => $key,
-                'label' => $labels[$key],
-                'value' => $displayed[$key],
+                'label' => $labels[$key] ?? $key,
+                'value' => $display,
                 'url' => SiteSavedViews::withoutFilter($applied, $key),
             ];
         }
 
         return $chips;
+    }
+
+    /**
+     * Catalog themes first, then theme ids only a CMS reports. The selected id stays
+     * listed even when nothing reports it any more, so the select can show it.
+     *
+     * @return array<string, string>
+     */
+    private function themeIdFilterOptions(string $selected): array
+    {
+        $options = [];
+        foreach (Theme::query()->orderBy('name')->get(['theme_id', 'name']) as $theme) {
+            $id = (string) $theme->theme_id;
+            $name = trim((string) $theme->name);
+            $options[$id] = $name !== '' && $name !== $id ? $name.' ('.$id.')' : $id;
+        }
+
+        $reported = Site::query()
+            ->whereNotNull('last_health_payload->active_theme_id')
+            ->select('last_health_payload->active_theme_id as reported_theme_id')
+            ->distinct()
+            ->pluck('reported_theme_id');
+        foreach ($reported as $id) {
+            $id = is_string($id) ? trim($id) : '';
+            if ($id !== '' && ! isset($options[$id]) && preg_match(Site::THEME_ID_FILTER_PATTERN, $id) === 1) {
+                $options[$id] = (string) __('sites.theme_id_reported_option', ['theme' => $id]);
+            }
+        }
+
+        if ($selected !== '' && ! isset($options[$selected])) {
+            $options[$selected] = $selected;
+        }
+
+        return $options;
+    }
+
+    /**
+     * The outdated label names the baseline: one version when the fleet runs a
+     * single branch, otherwise "behind its branch" since each branch has its own.
+     *
+     * @return array<string, string>
+     */
+    private function cmsFilterOptions(): array
+    {
+        $baselines = Site::reportedDeamonVersions()['newest_by_channel'];
+        $single = count($baselines) === 1 ? reset($baselines) : null;
+
+        return [
+            'outdated' => $single === null
+                ? (string) __('sites.cms_states.outdated')
+                : (string) __('sites.cms_states.outdated_version', ['version' => $single]),
+            'unknown' => (string) __('sites.cms_states.unknown'),
+        ];
+    }
+
+    /**
+     * Keyed by server uuid. With more than one Coolify connection the label says
+     * which one, since two instances may name their servers alike.
+     *
+     * @return array<string, string>
+     */
+    private function serverFilterOptions(string $selected): array
+    {
+        $servers = CoolifyServer::query()
+            ->with('connection:id,name')
+            ->orderBy('name')
+            ->get(['id', 'coolify_connection_id', 'uuid', 'name']);
+        $multiConnection = $servers->pluck('coolify_connection_id')->unique()->count() > 1;
+
+        $options = [];
+        foreach ($servers as $server) {
+            $uuid = (string) $server->uuid;
+            if ($uuid === '' || isset($options[$uuid]) || preg_match(Site::SERVER_FILTER_PATTERN, $uuid) !== 1) {
+                continue;
+            }
+            $connection = trim((string) $server->connection?->name);
+            $options[$uuid] = $multiConnection && $connection !== ''
+                ? $server->label().' · '.$connection
+                : $server->label();
+        }
+
+        if ($selected !== '' && ! isset($options[$selected])) {
+            $options[$selected] = $selected;
+        }
+
+        return $options;
     }
 
     /**
@@ -595,18 +723,7 @@ class SiteController extends Controller
     {
         if ($request->boolean('all')) {
             return Site::query()
-                ->matchingListFilters(
-                    trim((string) $request->input('filter_q', '')),
-                    (string) $request->input('filter_channel', ''),
-                    (string) $request->input('filter_status', ''),
-                    (string) $request->input('filter_publish', ''),
-                    (string) $request->input('filter_deploy', ''),
-                    (string) $request->input('filter_agent', ''),
-                    (string) $request->input('filter_pack', ''),
-                    (string) $request->input('filter_health', ''),
-                    (string) $request->input('filter_app', ''),
-                    (string) $request->input('filter_theme', ''),
-                )
+                ->matchingListFilters(...SiteSavedViews::bulkScopeArguments($request))
                 ->orderBy('name')
                 ->get();
         }

@@ -12,6 +12,7 @@ use App\Services\Ops\BulkResultSummary;
 use App\Services\Ops\PacedFanout;
 use App\Services\Sites\SitePublishException;
 use App\Services\Sites\SitePublishStateUpdater;
+use App\Support\Lists\SiteSavedViews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -94,18 +95,7 @@ class SitePublishStatusController extends Controller
     {
         if ($request->boolean('all')) {
             return Site::query()
-                ->matchingListFilters(
-                    trim((string) $request->input('filter_q', '')),
-                    (string) $request->input('filter_channel', ''),
-                    (string) $request->input('filter_status', ''),
-                    (string) $request->input('filter_publish', ''),
-                    (string) $request->input('filter_deploy', ''),
-                    (string) $request->input('filter_agent', ''),
-                    (string) $request->input('filter_pack', ''),
-                    (string) $request->input('filter_health', ''),
-                    (string) $request->input('filter_app', ''),
-                    (string) $request->input('filter_theme', ''),
-                )
+                ->matchingListFilters(...SiteSavedViews::bulkScopeArguments($request))
                 ->orderBy('name')
                 ->get();
         }

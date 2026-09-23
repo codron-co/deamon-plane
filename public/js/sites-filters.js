@@ -12,7 +12,7 @@
     }
 
     const STORAGE_KEY = "plane-sites-filter-panel";
-    const FILTER_KEYS = ["channel", "status", "publish", "theme", "health", "app", "deploy", "agent", "pack"];
+    const FILTER_KEYS = ["channel", "status", "publish", "theme", "theme_id", "cms", "health", "stale", "app", "deploy", "auto_deploy", "server", "agent", "pack"];
     const toggle = root.querySelector("[data-sites-filter-toggle]");
     const panel = root.querySelector("[data-sites-filter-panel]");
     const count = root.querySelector("[data-sites-filter-count]");

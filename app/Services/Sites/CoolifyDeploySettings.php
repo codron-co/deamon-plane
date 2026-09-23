@@ -259,6 +259,20 @@ class CoolifyDeploySettings
      */
     private function remember(Site $site, ?bool $autoDeploy, ?string $sha): void
     {
+        self::mirrorOntoSite($site, $autoDeploy, $sha);
+    }
+
+    /**
+     * Same mirror from a GET application someone else already fetched (the
+     * Coolify site / inventory sync), so the list stays fresh without an extra call.
+     */
+    public static function mirrorFromApplication(Site $site, CoolifyApplication $app): void
+    {
+        self::mirrorOntoSite($site, $app->autoDeployState(), $app->gitCommitSha());
+    }
+
+    private static function mirrorOntoSite(Site $site, ?bool $autoDeploy, ?string $sha): void
+    {
         if ($autoDeploy === null || ! $site->exists) {
             return;
         }

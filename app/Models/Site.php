@@ -831,6 +831,43 @@ class Site extends Model
     public const THEME_FILTERS = ['git', 'outdated', 'reported', 'none'];
 
     /**
+     * A single catalog theme id (`themes.theme_id`) or a CMS-reported
+     * `active_theme_id`. Free-form, so only the shape is checked.
+     */
+    public const THEME_ID_FILTER_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/';
+
+    /**
+     * CMS-version list filters. `outdated` is a reported Deamon version below the
+     * newest version reported anywhere in the fleet; `unknown` no version reported.
+     *
+     * @var list<string>
+     */
+    public const CMS_FILTERS = ['outdated', 'unknown'];
+
+    /**
+     * Coolify auto-deploy mirror filters (`sites.coolify_auto_deploy`, null is
+     * unknown). `pinned` is a site Coolify builds from a fixed commit.
+     *
+     * @var list<string>
+     */
+    public const AUTO_DEPLOY_FILTERS = ['on', 'off', 'unknown', 'pinned'];
+
+    /**
+     * A Coolify server uuid (`sites.coolify_server_uuid`).
+     */
+    public const SERVER_FILTER_PATTERN = '/^[A-Za-z0-9_-]{1,64}$/';
+
+    /**
+     * Health-freshness list filters. `stale` is no signed health result, or none
+     * newer than STALE_HEALTH_HOURS.
+     *
+     * @var list<string>
+     */
+    public const STALE_FILTERS = ['stale'];
+
+    public const STALE_HEALTH_HOURS = 24;
+
+    /**
      * Coolify fleet import writes this marker into notes when build_pack is dockerfile.
      */
     public function hasDockerfileBuildPackWarning(): bool
@@ -851,8 +888,24 @@ class Site extends Model
      * @param  Builder<Site>  $query
      * @return Builder<Site>
      */
-    public function scopeMatchingListFilters(Builder $query, string $search = '', string $channel = '', string $status = '', string $publish = '', string $deploy = '', string $agent = '', string $pack = '', string $health = '', string $app = '', string $theme = ''): Builder
-    {
+    public function scopeMatchingListFilters(
+        Builder $query,
+        string $search = '',
+        string $channel = '',
+        string $status = '',
+        string $publish = '',
+        string $deploy = '',
+        string $agent = '',
+        string $pack = '',
+        string $health = '',
+        string $app = '',
+        string $theme = '',
+        string $themeId = '',
+        string $cms = '',
+        string $autoDeploy = '',
+        string $server = '',
+        string $stale = '',
+    ): Builder {
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
         $status = in_array($status, SiteStatus::values(), true) ? $status : '';
@@ -863,6 +916,11 @@ class Site extends Model
         $health = in_array($health, self::HEALTH_FILTERS, true) ? $health : '';
         $app = in_array($app, self::APP_FILTERS, true) ? $app : '';
         $theme = in_array($theme, self::THEME_FILTERS, true) ? $theme : '';
+        $themeId = preg_match(self::THEME_ID_FILTER_PATTERN, $themeId) === 1 ? $themeId : '';
+        $cms = in_array($cms, self::CMS_FILTERS, true) ? $cms : '';
+        $autoDeploy = in_array($autoDeploy, self::AUTO_DEPLOY_FILTERS, true) ? $autoDeploy : '';
+        $server = preg_match(self::SERVER_FILTER_PATTERN, $server) === 1 ? $server : '';
+        $stale = in_array($stale, self::STALE_FILTERS, true) ? $stale : '';
 
         if ($search !== '') {
             $term = addcslashes($search, '%_\\');
@@ -942,7 +1000,109 @@ class Site extends Model
                 ->whereNull('last_health_payload->active_theme_id');
         }
 
+        if ($themeId !== '') {
+            // Either source counts: the Plane install, or what the CMS says is active.
+            $query->where(static function (Builder $uses) use ($themeId): void {
+                $uses->whereHas('activeThemeInstallation.theme', static function (Builder $themes) use ($themeId): void {
+                    $themes->where('themes.theme_id', $themeId);
+                })->orWhere('last_health_payload->active_theme_id', $themeId);
+            });
+        }
+
+        if ($cms !== '') {
+            $query->whereIn('id', self::idsMatchingCmsFilter($cms));
+        }
+
+        if ($autoDeploy === 'on') {
+            $query->where('coolify_auto_deploy', true);
+        } elseif ($autoDeploy === 'off') {
+            $query->where('coolify_auto_deploy', false);
+        } elseif ($autoDeploy === 'unknown') {
+            $query->whereNull('coolify_auto_deploy');
+        } elseif ($autoDeploy === 'pinned') {
+            $query->whereNotNull('coolify_pinned_sha');
+        }
+
+        if ($server !== '') {
+            // Coolify server uuids are random per instance, so the uuid alone
+            // identifies the server even with several Coolify connections.
+            $query->where('coolify_server_uuid', $server);
+        }
+
+        if ($stale === 'stale') {
+            $query->where(static function (Builder $old): void {
+                $old->whereNull('last_health_at')
+                    ->orWhere('last_health_at', '<', now()->subHours(self::STALE_HEALTH_HOURS));
+            });
+        }
+
         return $query;
+    }
+
+    /**
+     * Reported Deamon version per site plus the newest one in the fleet, from a
+     * single query. The version sits in a JSON string ("1.2.32", "v1.2.32"), so
+     * SQL cannot order it; `version_compare` in PHP can. Reads the same payload
+     * keys as reportedDeamonVersion(), so the filter agrees with the version pill.
+     *
+     * @return array{newest: ?string, versions: array<string, ?string>}
+     */
+    public static function reportedDeamonVersions(): array
+    {
+        $versions = [];
+        $channels = [];
+        $newest = null;
+        $newestByChannel = [];
+
+        foreach (self::query()->get(['id', 'channel', 'last_health_payload']) as $site) {
+            $version = $site->reportedDeamonVersion();
+            $version = $version === null ? null : ltrim($version, 'vV');
+            $channel = (string) ($site->channel?->value ?? $site->channel ?? '');
+            $versions[(string) $site->getKey()] = $version;
+            $channels[(string) $site->getKey()] = $channel;
+
+            if ($version === null) {
+                continue;
+            }
+            if ($newest === null || version_compare($version, $newest, '>')) {
+                $newest = $version;
+            }
+            if (! isset($newestByChannel[$channel]) || version_compare($version, $newestByChannel[$channel], '>')) {
+                $newestByChannel[$channel] = $version;
+            }
+        }
+
+        return [
+            'newest' => $newest,
+            'newest_by_channel' => $newestByChannel,
+            'versions' => $versions,
+            'channels' => $channels,
+        ];
+    }
+
+    /**
+     * `outdated` compares each site with the newest version on its own branch:
+     * an alpha release must not mark every main site as behind.
+     *
+     * @return list<string>
+     */
+    private static function idsMatchingCmsFilter(string $cms): array
+    {
+        $fleet = self::reportedDeamonVersions();
+
+        $ids = [];
+        foreach ($fleet['versions'] as $id => $version) {
+            $baseline = $fleet['newest_by_channel'][$fleet['channels'][$id]] ?? null;
+            $matches = $cms === 'unknown'
+                ? $version === null
+                : $version !== null && $baseline !== null && version_compare($version, $baseline, '<');
+
+            if ($matches) {
+                $ids[] = (string) $id;
+            }
+        }
+
+        return $ids;
     }
 
     /**

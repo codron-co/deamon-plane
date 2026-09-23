@@ -10,6 +10,7 @@ use App\Services\Sites\SiteAppHealthException;
 use App\Services\Sites\SiteAppHealthFixer;
 use App\Services\Sites\SiteAppHealthInspector;
 use App\Services\Sites\SiteAppHealthReport;
+use App\Support\Lists\SiteSavedViews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -117,18 +118,7 @@ class SiteAppHealthController extends Controller
         if ($request->boolean('all')) {
             return Site::query()
                 ->with('latestDeployment')
-                ->matchingListFilters(
-                    trim((string) $request->input('filter_q', '')),
-                    (string) $request->input('filter_channel', ''),
-                    (string) $request->input('filter_status', ''),
-                    (string) $request->input('filter_publish', ''),
-                    (string) $request->input('filter_deploy', ''),
-                    (string) $request->input('filter_agent', ''),
-                    (string) $request->input('filter_pack', ''),
-                    (string) $request->input('filter_health', ''),
-                    (string) $request->input('filter_app', ''),
-                    (string) $request->input('filter_theme', ''),
-                )
+                ->matchingListFilters(...SiteSavedViews::bulkScopeArguments($request))
                 ->orderBy('name')
                 ->get();
         }

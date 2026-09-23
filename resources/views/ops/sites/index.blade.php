@@ -115,11 +115,16 @@
             'status' => $status,
             'publish' => $publish,
             'theme' => $theme ?? '',
+            'theme_id' => $themeId ?? '',
+            'cms' => $cms ?? '',
             'health' => $health ?? '',
+            'stale' => $stale ?? '',
             'app' => $app ?? '',
             'deploy' => $deploy ?? '',
             'agent' => $agent ?? '',
             'pack' => $pack ?? '',
+            'auto_deploy' => $autoDeploy ?? '',
+            'server' => $server ?? '',
         ];
         $activeFilterCount = count(array_filter($filterValues, static fn (string $value): bool => $value !== ''));
 
@@ -136,17 +141,23 @@
             $packOptions[$packOption] = __('sites.pack_states.'.$packOption);
         }
 
-        // Chip groups, most-used first. Every group is one radio set posted by the toolbar form.
+        // Groups, most-used first, each posted by the toolbar form. Short sets are one radio
+        // chip row; open-ended sets (a theme, a server) are a Plane select.
         $filterGroups = [
-            'channel' => [__('sites.filter_branch'), array_combine($channels, $channels), true],
-            'theme' => [__('sites.filter_theme'), $themeFilters ?? [], false],
-            'status' => [__('sites.filter_status'), $statusOptions, false],
-            'publish' => [__('sites.filter_publish'), $publishOptions, false],
-            'health' => [__('sites.filter_health'), $healthFilters ?? [], false],
-            'app' => [__('sites.filter_app'), $appFilters ?? [], false],
-            'deploy' => [__('sites.filter_deploy'), $deployFilters, false],
-            'agent' => [__('sites.filter_agent'), $agentFilters ?? [], false],
-            'pack' => [__('sites.filter_pack'), $packOptions, false],
+            'channel' => [__('sites.filter_branch'), array_combine($channels, $channels), true, false],
+            'theme' => [__('sites.filter_theme'), $themeFilters ?? [], false, false],
+            'theme_id' => [__('sites.filter_theme_id'), $themeIdFilters ?? [], false, true],
+            'cms' => [__('sites.filter_cms'), $cmsFilters ?? [], false, false],
+            'status' => [__('sites.filter_status'), $statusOptions, false, false],
+            'publish' => [__('sites.filter_publish'), $publishOptions, false, false],
+            'health' => [__('sites.filter_health'), $healthFilters ?? [], false, false],
+            'stale' => [__('sites.filter_stale'), $staleFilters ?? [], false, false],
+            'app' => [__('sites.filter_app'), $appFilters ?? [], false, false],
+            'deploy' => [__('sites.filter_deploy'), $deployFilters, false, false],
+            'auto_deploy' => [__('sites.filter_auto_deploy'), $autoDeployFilters ?? [], false, false],
+            'server' => [__('sites.filter_server'), $serverFilters ?? [], false, true],
+            'agent' => [__('sites.filter_agent'), $agentFilters ?? [], false, false],
+            'pack' => [__('sites.filter_pack'), $packOptions, false, false],
         ];
 
         $quickFilters = [
@@ -229,8 +240,32 @@
             </div>
 
             <div class="plane-filter-panel" id="sites-filter-panel" data-sites-filter-panel hidden>
-                @foreach ($filterGroups as $filterName => [$groupLabel, $groupOptions, $mono])
+                @foreach ($filterGroups as $filterName => [$groupLabel, $groupOptions, $mono, $asSelect])
                     @continue($groupOptions === [])
+                    @if ($asSelect)
+                        @php $selectId = 'sites-filter-'.str_replace('_', '-', $filterName); @endphp
+                        <div class="plane-filter-group">
+                            <label class="plane-filter-label" for="{{ $selectId }}">{{ $groupLabel }}</label>
+                            <select
+                                id="{{ $selectId }}"
+                                name="{{ $filterName }}"
+                                class="field-input ops-filter plane-filter-select"
+                                form="sites-list-filters"
+                                data-ops-list-filter
+                                @if (count($groupOptions) > 8)
+                                    data-ops-select-search
+                                    data-ops-select-search-placeholder="{{ __('sites.filter_panel.search_options') }}"
+                                    data-ops-select-empty="{{ __('sites.filter_panel.no_options') }}"
+                                @endif
+                            >
+                                <option value="" @selected($filterValues[$filterName] === '')>{{ __('sites.filter_panel.all') }}</option>
+                                @foreach ($groupOptions as $optionValue => $optionLabel)
+                                    <option value="{{ $optionValue }}" @selected($filterValues[$filterName] === (string) $optionValue)>{{ $optionLabel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @continue
+                    @endif
                     <fieldset class="plane-filter-group">
                         <legend class="plane-filter-label">{{ $groupLabel }}</legend>
                         <div class="plane-filter-options">

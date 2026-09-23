@@ -34,6 +34,11 @@ class BulkSitePublishStatusRequest extends FormRequest
             'filter_health' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_app' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_theme' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_theme_id' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'filter_cms' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_auto_deploy' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_server' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'filter_stale' => ['sometimes', 'nullable', 'string', 'max:32'],
         ];
     }
 }

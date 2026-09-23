@@ -20,7 +20,18 @@ final class SiteSavedViews
 
     public const ALL = 'all';
 
-    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app', 'theme'];
+    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app', 'theme', 'theme_id', 'cms', 'auto_deploy', 'server', 'stale'];
+
+    /**
+     * Filter key => Site::scopeMatchingListFilters() argument name, where they differ.
+     *
+     * @var array<string, string>
+     */
+    private const SCOPE_ARGUMENTS = [
+        'q' => 'search',
+        'theme_id' => 'themeId',
+        'auto_deploy' => 'autoDeploy',
+    ];
 
     /** @var list<string> */
     public const BUILTIN_IDS = ['all', 'error', 'unpublished', 'dockerfile'];
@@ -57,6 +68,11 @@ final class SiteSavedViews
             'health' => (string) $request->query('health', ''),
             'app' => (string) $request->query('app', ''),
             'theme' => (string) $request->query('theme', ''),
+            'theme_id' => (string) $request->query('theme_id', ''),
+            'cms' => (string) $request->query('cms', ''),
+            'auto_deploy' => (string) $request->query('auto_deploy', ''),
+            'server' => (string) $request->query('server', ''),
+            'stale' => (string) $request->query('stale', ''),
         ]);
 
         if ($queryView === self::ALL) {
@@ -239,6 +255,11 @@ final class SiteSavedViews
         $health = (string) ($raw['health'] ?? '');
         $app = (string) ($raw['app'] ?? '');
         $theme = (string) ($raw['theme'] ?? '');
+        $themeId = trim((string) ($raw['theme_id'] ?? ''));
+        $cms = (string) ($raw['cms'] ?? '');
+        $autoDeploy = (string) ($raw['auto_deploy'] ?? '');
+        $server = trim((string) ($raw['server'] ?? ''));
+        $stale = (string) ($raw['stale'] ?? '');
 
         $filters = [
             'q' => $q,
@@ -251,9 +272,47 @@ final class SiteSavedViews
             'health' => in_array($health, Site::HEALTH_FILTERS, true) ? $health : '',
             'app' => in_array($app, Site::APP_FILTERS, true) ? $app : '',
             'theme' => in_array($theme, Site::THEME_FILTERS, true) ? $theme : '',
+            'theme_id' => preg_match(Site::THEME_ID_FILTER_PATTERN, $themeId) === 1 ? $themeId : '',
+            'cms' => in_array($cms, Site::CMS_FILTERS, true) ? $cms : '',
+            'auto_deploy' => in_array($autoDeploy, Site::AUTO_DEPLOY_FILTERS, true) ? $autoDeploy : '',
+            'server' => preg_match(Site::SERVER_FILTER_PATTERN, $server) === 1 ? $server : '',
+            'stale' => in_array($stale, Site::STALE_FILTERS, true) ? $stale : '',
         ];
 
         return array_filter($filters, static fn (string $value): bool => $value !== '');
+    }
+
+    /**
+     * Named arguments for Site::scopeMatchingListFilters() from a filter map
+     * keyed like FILTER_KEYS. Unknown keys are dropped; the scope validates values.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, string>
+     */
+    public static function scopeArguments(array $filters): array
+    {
+        $arguments = [];
+        foreach (self::FILTER_KEYS as $key) {
+            $value = $filters[$key] ?? '';
+            $arguments[self::SCOPE_ARGUMENTS[$key] ?? $key] = is_string($value) ? trim($value) : '';
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * Bulk "all matching" requests carry the list filter as `filter_*` inputs.
+     *
+     * @return array<string, string>
+     */
+    public static function bulkScopeArguments(Request $request): array
+    {
+        $filters = [];
+        foreach (self::FILTER_KEYS as $key) {
+            $filters[$key] = (string) $request->input('filter_'.$key, '');
+        }
+
+        return self::scopeArguments($filters);
     }
 
     /**

@@ -40,6 +40,11 @@
             <input type="hidden" name="health" value="{{ $health ?? '' }}">
             <input type="hidden" name="app" value="{{ $app ?? '' }}">
             <input type="hidden" name="theme" value="{{ $theme ?? '' }}">
+            <input type="hidden" name="theme_id" value="{{ $themeId ?? '' }}">
+            <input type="hidden" name="cms" value="{{ $cms ?? '' }}">
+            <input type="hidden" name="auto_deploy" value="{{ $autoDeploy ?? '' }}">
+            <input type="hidden" name="server" value="{{ $server ?? '' }}">
+            <input type="hidden" name="stale" value="{{ $stale ?? '' }}">
             <input type="hidden" name="sort_key" value="{{ $listView->sortKey }}">
             <input type="hidden" name="sort_dir" value="{{ $listView->sortDirection }}">
             @foreach ($listView->columns as $columnKey)

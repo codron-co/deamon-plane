@@ -9,3 +9,8 @@
 <input type="hidden" name="filter_health" value="{{ $health ?? '' }}">
 <input type="hidden" name="filter_app" value="{{ $app ?? '' }}">
 <input type="hidden" name="filter_theme" value="{{ $theme ?? '' }}">
+<input type="hidden" name="filter_theme_id" value="{{ $themeId ?? '' }}">
+<input type="hidden" name="filter_cms" value="{{ $cms ?? '' }}">
+<input type="hidden" name="filter_auto_deploy" value="{{ $autoDeploy ?? '' }}">
+<input type="hidden" name="filter_server" value="{{ $server ?? '' }}">
+<input type="hidden" name="filter_stale" value="{{ $stale ?? '' }}">

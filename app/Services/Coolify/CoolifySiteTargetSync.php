@@ -8,6 +8,7 @@ use App\Enums\SiteStatus;
 use App\Models\CoolifyConnection;
 use App\Models\Site;
 use App\Services\Coolify\Dto\CoolifyApplication;
+use App\Services\Sites\CoolifyDeploySettings;
 use Throwable;
 
 class CoolifySiteTargetSync
@@ -101,6 +102,11 @@ class CoolifySiteTargetSync
         if (! $busy) {
             $this->applyChannel($site, $app->gitBranch);
         }
+
+        // The GET application already carries the auto-deploy switch and pinned
+        // commit; mirror them for the Sites list. Its own write, no `updated_at`,
+        // and not counted as a target change.
+        CoolifyDeploySettings::mirrorFromApplication($site, $app);
 
         if (! $site->isDirty()) {
             return false;

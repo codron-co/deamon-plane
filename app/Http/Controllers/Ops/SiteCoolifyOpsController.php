@@ -20,6 +20,7 @@ use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
 use App\Services\Sites\SiteLifecycle;
 use App\Services\Sites\SiteLiveProbe;
+use App\Support\Lists\SiteSavedViews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -518,18 +519,7 @@ class SiteCoolifyOpsController extends Controller
 
         if ($request->boolean('all')) {
             return Site::query()
-                ->matchingListFilters(
-                    trim((string) $request->input('filter_q', '')),
-                    (string) $request->input('filter_channel', ''),
-                    (string) $request->input('filter_status', ''),
-                    (string) $request->input('filter_publish', ''),
-                    (string) $request->input('filter_deploy', ''),
-                    (string) $request->input('filter_agent', ''),
-                    (string) $request->input('filter_pack', ''),
-                    (string) $request->input('filter_health', ''),
-                    (string) $request->input('filter_app', ''),
-                    (string) $request->input('filter_theme', ''),
-                )
+                ->matchingListFilters(...SiteSavedViews::bulkScopeArguments($request))
                 ->orderBy('name')
                 ->get();
         }
