@@ -157,6 +157,92 @@
 
     watchSegment();
 
+    /**
+     * List / compact / cards. The server renders the account's stored mode on the
+     * workspace (outside the fetched region, so in-place updates keep it); a click
+     * flips that attribute at once and saves it. A save that fails is parked in
+     * localStorage and replayed on the next load, so the choice is not lost.
+     */
+    const VIEW_PENDING_KEY = "plane-sites-view-pending";
+    const VIEW_MODES = ["list", "compact", "cards"];
+    const workspace = root.querySelector("[data-sites-view]");
+    const viewSwitch = root.querySelector("[data-sites-view-switch]");
+
+    const pendingView = function (mode) {
+        try {
+            if (mode === undefined) {
+                return window.localStorage.getItem(VIEW_PENDING_KEY);
+            }
+            if (mode === null) {
+                window.localStorage.removeItem(VIEW_PENDING_KEY);
+            } else {
+                window.localStorage.setItem(VIEW_PENDING_KEY, mode);
+            }
+        } catch (error) {
+            /* Storage is only the retry buffer; the account copy stays the source of truth. */
+        }
+        return null;
+    };
+
+    const applyView = function (mode) {
+        if (!workspace || VIEW_MODES.indexOf(mode) === -1) {
+            return;
+        }
+        workspace.setAttribute("data-sites-view", mode);
+        viewSwitch.querySelectorAll("[data-sites-view-option]").forEach(function (button) {
+            button.setAttribute("aria-pressed", button.getAttribute("data-sites-view-option") === mode ? "true" : "false");
+        });
+    };
+
+    const saveView = function (mode) {
+        const body = new FormData(viewSwitch);
+        body.set("mode", mode);
+        pendingView(mode);
+        window.fetch(viewSwitch.action, {
+            method: "POST",
+            body: body,
+            credentials: "same-origin",
+            headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" },
+        }).then(function (response) {
+            if (response.ok && pendingView() === mode) {
+                pendingView(null);
+            }
+        }).catch(function () {
+            /* Left pending: the next page load applies and retries it. */
+        });
+    };
+
+    if (workspace && viewSwitch && typeof window.fetch === "function") {
+        const parked = pendingView();
+        if (parked && VIEW_MODES.indexOf(parked) !== -1 && parked !== workspace.getAttribute("data-sites-view")) {
+            applyView(parked);
+            saveView(parked);
+        } else if (parked) {
+            pendingView(null);
+        }
+
+        viewSwitch.addEventListener("submit", function (event) {
+            const button = event.submitter;
+            const mode = button ? button.getAttribute("data-sites-view-option") : null;
+            if (!mode || VIEW_MODES.indexOf(mode) === -1) {
+                return;
+            }
+            event.preventDefault();
+            if (workspace.getAttribute("data-sites-view") === mode) {
+                return;
+            }
+
+            applyView(mode);
+            saveView(mode);
+
+            const status = viewSwitch.querySelector("[data-sites-view-status]");
+            const template = viewSwitch.getAttribute("data-saved-template") || "";
+            if (status && template !== "") {
+                status.textContent = template.replace("__MODE__", button.getAttribute("title") || mode);
+            }
+        });
+    }
+
     root.addEventListener("ops:list-updated", function (event) {
         swapSegment();
         sync(event.detail && event.detail.url);

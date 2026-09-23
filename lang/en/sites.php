@@ -155,6 +155,13 @@ return [
         'move_down' => 'Move :column down',
         'moved' => ':column moved to position :position.',
     ],
+    'view_mode' => [
+        'label' => 'View',
+        'list' => 'List view',
+        'compact' => 'Compact view',
+        'cards' => 'Card view',
+        'saved' => ':mode selected.',
+    ],
     'cells' => [
         'deploy_none' => 'No deploys',
         'deploy_commit' => 'Commit :sha',

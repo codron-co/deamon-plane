@@ -190,7 +190,8 @@
             </section>
         @endif
 
-        <section class="plane-workspace">
+        {{-- The layout lives outside the fetched region, so in-place list updates keep it. --}}
+        <section class="plane-workspace" data-sites-view="{{ $listView->mode }}">
             {{-- The column picker posts its own form, so it sits beside the GET filter form, never inside it. --}}
             <div class="ops-list-toolbar-row plane-toolbar">
                 <form method="GET" action="{{ route('ops.sites') }}" id="sites-list-filters" class="ops-list-toolbar" data-ops-list-toolbar>
@@ -219,6 +220,7 @@
                     <span class="plane-count" data-sites-filter-count @if ($activeFilterCount === 0) hidden @endif>{{ $activeFilterCount }}</span>
                 </button>
                 @include('ops.sites._columns-picker')
+                @include('ops.sites._view-switch')
                 @include('ops.sites._saved-views-form')
             </div>
 

@@ -1200,6 +1200,13 @@ details[open] > summary.btn-secondary {
     display: inline-flex;
 }
 
+/* ops.css gives button chips pre-line wrapping for multi-line copy text; a count chip stays on one line. */
+button.status-chip.app-health-pop-trigger,
+.ops-table button.status-chip {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .app-health-pop-trigger {
     cursor: pointer;
 }
@@ -1379,4 +1386,508 @@ details[open] > summary.btn-secondary {
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+}
+
+/* ------------------------------------------ Sites: view switch + layouts */
+/* List is the plain table. Compact tightens it; cards turn the same table
+   markup into a grid, so checkboxes, row links and row menus keep working.
+   The mode is an attribute on the workspace, outside the fetched region. */
+.plane-view-switch {
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 2px;
+    margin: 0;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-base);
+}
+
+.plane-view-switch-btn {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.plane-view-switch-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.plane-view-switch-btn[aria-pressed="true"] {
+    background: var(--surface-hover);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.plane-view-switch-btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
+.site-card-domain {
+    display: none;
+}
+
+/* Compact: one line per row; secondary lines (slug, ages) are dropped.
+   Desktop only: phones always get cards. */
+@media (min-width: 761px) {
+    .plane-workspace[data-sites-view="compact"] .ops-table {
+        font-size: 12.5px;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .ops-table th,
+    .plane-workspace[data-sites-view="compact"] .ops-table td {
+        padding-top: 5px;
+        padding-bottom: 5px;
+        white-space: nowrap;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .ops-table thead th {
+        height: 32px;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .ops-table th.ops-th-sortable {
+        padding: 0;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .ops-sort-link {
+        padding: 7px 14px;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .site-slug,
+    .plane-workspace[data-sites-view="compact"] td:not([data-col="health"]):not([data-col="updated"]) .ops-freshness {
+        display: none;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .ops-fresh-cell {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .site-identity-mark.is-compact {
+        width: 22px;
+        height: 22px;
+        flex-basis: 22px;
+        border-radius: 6px;
+        font-size: 10px;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .status-chip {
+        height: 21px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    .plane-workspace[data-sites-view="compact"] .plane-more {
+        width: 26px;
+        height: 26px;
+    }
+}
+
+/* Cards: three across, two on medium screens. */
+@media (min-width: 761px) {
+    .plane-workspace[data-sites-view="cards"] .sites-table-wrap {
+        overflow: visible;
+        padding: 14px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table,
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    /* The header row becomes a strip: select-all plus the sortable columns as chips. */
+    .plane-workspace[data-sites-view="cards"] .ops-table thead {
+        display: block;
+        margin-bottom: 12px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table thead tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table thead th {
+        display: none;
+        height: auto;
+        padding: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table thead th.ops-check-col,
+    .plane-workspace[data-sites-view="cards"] .ops-table thead th.ops-th-sortable {
+        display: block;
+        width: auto;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table thead th.ops-check-col {
+        padding: 0 6px 0 3px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table thead .ops-sort-link {
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-overlay);
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table thead .ops-sort-link.is-sorted {
+        border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+        color: var(--accent-text);
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody {
+        display: grid;
+        grid-template-columns: repeat(var(--sites-card-cols, 3), minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody tr {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        gap: 12px 14px;
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface-base);
+        transition: border-color 120ms ease, background-color 120ms ease;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody tr:hover,
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody tr:focus-within {
+        border-color: var(--border-strong);
+        background: var(--surface-overlay);
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody tr:has(input[type="checkbox"]:checked) {
+        border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+        background: var(--accent-soft);
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody tr:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+    }
+
+    /* Cells are placed by what they are (data-col), never by position: columns are
+       reordered and hidden per operator. Identity, status chips, branch, theme, rest. */
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td {
+        display: block;
+        order: 4;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 5px;
+        color: var(--text-faint);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="site"] {
+        grid-column: 1 / -1;
+        order: 0;
+        padding-right: 30px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="site"]::before {
+        content: none;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="domain"],
+    .plane-workspace[data-sites-view="cards"] .site-slug {
+        display: none;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .site-card-domain {
+        display: block;
+        overflow: hidden;
+        color: var(--text-muted);
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 11.5px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .plane-workspace[data-sites-view="cards"] td[data-col="site"] .site-identity-mark.is-compact {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+        border-radius: 9px;
+        font-size: 13px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] td[data-col="site"] .site-name {
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="status"],
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="publish"],
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="app"],
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="live"] {
+        order: 1;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="repo_branch"] {
+        order: 2;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="theme"] {
+        order: 3;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="select"] {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+    }
+
+    .plane-workspace[data-sites-view="cards"] .ops-table tbody td[data-col="actions"] {
+        display: flex;
+        grid-column: 1 / -1;
+        order: 6;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 4px;
+        width: auto;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+    }
+}
+
+@media (max-width: 1360px) {
+    .plane-workspace {
+        --sites-card-cols: 2;
+    }
+}
+
+/* Phones: the table would scroll sideways, so every mode renders as cards and
+   the switch, with nothing left to switch, is hidden. */
+@media (max-width: 760px) {
+    .plane-workspace {
+        --sites-card-cols: 1;
+    }
+
+    .plane-view-switch {
+        display: none;
+    }
+
+    .plane-workspace[data-sites-view] .sites-table-wrap {
+        overflow: visible;
+        padding: 14px;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table,
+    .plane-workspace[data-sites-view] .ops-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    /* The header row becomes a strip: select-all plus the sortable columns as chips. */
+    .plane-workspace[data-sites-view] .ops-table thead {
+        display: block;
+        margin-bottom: 12px;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table thead tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table thead th {
+        display: none;
+        height: auto;
+        padding: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table thead th.ops-check-col,
+    .plane-workspace[data-sites-view] .ops-table thead th.ops-th-sortable {
+        display: block;
+        width: auto;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table thead th.ops-check-col {
+        padding: 0 6px 0 3px;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table thead .ops-sort-link {
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-overlay);
+    }
+
+    .plane-workspace[data-sites-view] .ops-table thead .ops-sort-link.is-sorted {
+        border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+        color: var(--accent-text);
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody {
+        display: grid;
+        grid-template-columns: repeat(var(--sites-card-cols, 3), minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody tr {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        gap: 12px 14px;
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface-base);
+        transition: border-color 120ms ease, background-color 120ms ease;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody tr:hover,
+    .plane-workspace[data-sites-view] .ops-table tbody tr:focus-within {
+        border-color: var(--border-strong);
+        background: var(--surface-overlay);
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody tr:has(input[type="checkbox"]:checked) {
+        border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+        background: var(--accent-soft);
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody tr:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+    }
+
+    /* Cells are placed by what they are (data-col), never by position: columns are
+       reordered and hidden per operator. Identity, status chips, branch, theme, rest. */
+    .plane-workspace[data-sites-view] .ops-table tbody td {
+        display: block;
+        order: 4;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 5px;
+        color: var(--text-faint);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="site"] {
+        grid-column: 1 / -1;
+        order: 0;
+        padding-right: 30px;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="site"]::before {
+        content: none;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="domain"],
+    .plane-workspace[data-sites-view] .site-slug {
+        display: none;
+    }
+
+    .plane-workspace[data-sites-view] .site-card-domain {
+        display: block;
+        overflow: hidden;
+        color: var(--text-muted);
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 11.5px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .plane-workspace[data-sites-view] td[data-col="site"] .site-identity-mark.is-compact {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+        border-radius: 9px;
+        font-size: 13px;
+    }
+
+    .plane-workspace[data-sites-view] td[data-col="site"] .site-name {
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="status"],
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="publish"],
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="app"],
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="live"] {
+        order: 1;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="repo_branch"] {
+        order: 2;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="theme"] {
+        order: 3;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="select"] {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+    }
+
+    .plane-workspace[data-sites-view] .ops-table tbody td[data-col="actions"] {
+        display: flex;
+        grid-column: 1 / -1;
+        order: 6;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 4px;
+        width: auto;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+    }
+
+    .plane-workspace[data-sites-view] .sites-table-wrap {
+        padding: 10px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plane-view-switch-btn,
+    .plane-workspace[data-sites-view] .ops-table tbody tr {
+        transition: none;
+    }
 }

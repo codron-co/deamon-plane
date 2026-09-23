@@ -15,6 +15,11 @@ final class SiteListView
 {
     public const DIRECTIONS = ['asc', 'desc'];
 
+    /** How the rows are laid out: the full table, a denser table, or a card grid. */
+    public const MODES = ['list', 'compact', 'cards'];
+
+    public const DEFAULT_MODE = 'list';
+
     /**
      * @param  list<string>  $columns
      */
@@ -23,6 +28,7 @@ final class SiteListView
         public readonly string $sortKey,
         public readonly string $sortDirection,
         private readonly bool $sortFromQuery,
+        public readonly string $mode = self::DEFAULT_MODE,
     ) {}
 
     public static function resolve(Request $request, ?User $user, ?SiteSavedViews $views = null): self
@@ -59,7 +65,16 @@ final class SiteListView
             $direction = SiteListColumns::DEFAULT_SORT_DIRECTION;
         }
 
-        return new self($columns, $key, $direction, $fromQuery);
+        return new self($columns, $key, $direction, $fromQuery, self::mode($stored['mode'] ?? null));
+    }
+
+    /**
+     * Unknown or missing layouts fall back to the table, so a stale preference
+     * can never leave the list without a way to render.
+     */
+    public static function mode(mixed $mode): string
+    {
+        return is_string($mode) && in_array($mode, self::MODES, true) ? $mode : self::DEFAULT_MODE;
     }
 
     public function shows(string $key): bool

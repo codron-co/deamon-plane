@@ -156,6 +156,13 @@ return [
         'move_down' => ':column kolonunu aşağı taşı',
         'moved' => ':column, :position. sıraya taşındı.',
     ],
+    'view_mode' => [
+        'label' => 'Görünüm',
+        'list' => 'Liste görünümü',
+        'compact' => 'Sıkı görünüm',
+        'cards' => 'Kart görünümü',
+        'saved' => ':mode seçildi.',
+    ],
     'cells' => [
         'deploy_none' => 'Deploy yok',
         'deploy_commit' => 'Commit :sha',

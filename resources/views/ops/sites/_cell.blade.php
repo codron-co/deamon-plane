@@ -1,11 +1,14 @@
 @php
     /** @var \App\Models\Site $site */
     /** @var string $column */
+    // data-col / data-label let the compact and card layouts style a cell by what it
+    // is, not by its position: the operator reorders and hides columns.
+    $cellLabel = \App\Support\Lists\SiteListColumns::label($column);
 @endphp
 
 @switch ($column)
     @case ('site')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             <div class="site-name-row">
                 <div
                     class="site-identity-mark is-compact"
@@ -26,6 +29,10 @@
                         @endif
                     </div>
                     <div class="site-slug">{{ $site->slug }}</div>
+                    {{-- The card layout drops the domain column into the identity block; the table keeps its own column. --}}
+                    @if (filled($site->primary_domain))
+                        <div class="site-card-domain">{{ $site->primary_domain }}</div>
+                    @endif
                     @if (($searchMatch ?? null) !== null)
                         <div class="site-search-match">{{ __('sites.search_match.'.$searchMatch['type'], ['value' => $searchMatch['value']]) }}</div>
                     @endif
@@ -35,7 +42,7 @@
         @break
 
     @case ('domain')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @if (filled($site->primary_domain))
                 <a
                     class="ops-domain-link"
@@ -51,7 +58,7 @@
         @break
 
     @case ('repo_branch')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             {{-- Branch and the version it runs read as one fact, so they share one pill. --}}
             <span
                 class="plane-ref @if (! $reportedVersion) is-unknown @endif"
@@ -67,7 +74,7 @@
         @break
 
     @case ('publish')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             <div class="ops-fresh-cell">
                 <span
                     class="status-chip status-{{ $site->publishTone() }}"
@@ -85,13 +92,13 @@
         @break
 
     @case ('status')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             <span class="status-chip status-{{ $site->status->value }}" @if (filled($failure)) title="{{ $failure }}" @endif>{{ $site->status->label() }}</span>
         </td>
         @break
 
     @case ('app')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @php
                 $appTone = $appHealthView['tone'] === 'ok' ? 'ok' : ($appHealthView['tone'] === 'error' ? 'error' : 'unknown');
                 $appPopId = 'app-health-pop-'.$site->id;
@@ -148,7 +155,7 @@
         @break
 
     @case ('live')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @if ($site->last_live_checked_at === null)
                 {{-- Never probed: one quiet state instead of an empty chip plus "never". --}}
                 <span class="plane-muted-state" data-live-chip data-live-unchecked>{{ __('sites.live.not_checked') }}</span>
@@ -162,7 +169,7 @@
         @break
 
     @case ('theme')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @php
                 $themeLabel = $site->reportedActiveThemeId();
                 $themeIsGit = $site->activeThemeInstallation !== null;
@@ -192,7 +199,7 @@
         @break
 
     @case ('last_deploy')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @php
                 /** @var \App\Models\Deployment|null $deployment */
                 $deployment = $site->latestDeployment;
@@ -220,7 +227,7 @@
         @break
 
     @case ('server')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @php
                 /** @var \App\Models\CoolifyServer|null $coolifyServer */
                 $coolifyServer = $site->relationLoaded('coolifyServer') ? $site->getRelation('coolifyServer') : null;
@@ -240,7 +247,7 @@
         @break
 
     @case ('auto_deploy')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @if ($site->coolify_deploy_settings_at === null || $site->coolify_auto_deploy === null)
                 <span class="plane-muted-state" title="{{ __('sites.cells.auto_unknown_hint') }}">{{ __('sites.cells.auto_unknown') }}</span>
             @else
@@ -266,7 +273,7 @@
         @break
 
     @case ('mail')
-        <td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
             @php
                 $mailServerName = $site->relationLoaded('mailServer') ? $site->mailServer?->name : null;
                 $mailBindingCount = (int) ($site->mail_bindings_count ?? 0);
@@ -287,10 +294,10 @@
         @break
 
     @case ('health')
-        <td><x-ops.freshness :at="$site->last_health_at" /></td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}"><x-ops.freshness :at="$site->last_health_at" /></td>
         @break
 
     @case ('updated')
-        <td><x-ops.freshness :at="$site->updated_at" :missing="__('ops.none')" :mark-stale="false" /></td>
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}"><x-ops.freshness :at="$site->updated_at" :missing="__('ops.none')" :mark-stale="false" /></td>
         @break
 @endswitch

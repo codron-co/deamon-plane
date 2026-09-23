@@ -78,7 +78,7 @@
                             @endphp
                             <tr data-href="{{ route('ops.sites.show', $site) }}" data-site-id="{{ $site->id }}" tabindex="0">
                                 @can('create', \App\Models\Site::class)
-                                    <td>
+                                    <td class="ops-check-cell" data-col="select">
                                         <label>
                                             <span class="visually-hidden">{{ $site->name }}</span>
                                             <input type="checkbox" name="site_ids[]" value="{{ $site->id }}">
@@ -88,7 +88,7 @@
                                 @foreach ($listView->columns as $columnKey)
                                     @include('ops.sites._cell', ['column' => $columnKey])
                                 @endforeach
-                                <td class="ops-row-actions">
+                                <td class="ops-row-actions" data-col="actions">
                                     @php
                                         $rowFixes = \App\Services\Sites\SiteAppHealthFixer::orderedUniqueFixes($appHealth);
                                     @endphp

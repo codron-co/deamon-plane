@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
 use App\Support\Lists\SiteListColumns;
+use App\Support\Lists\SiteListView;
 use App\Support\Lists\SiteSavedViews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,31 @@ class SiteListPreferencesController extends Controller
         ]);
 
         return $this->respond($request, $columns, __('sites.columns_picker.saved'));
+    }
+
+    /**
+     * List / compact / cards. Stored with the columns so the first paint already
+     * uses the operator's layout on any device; the page applies it without a
+     * region refresh, so the JSON answer only confirms the stored value.
+     */
+    public function updateMode(Request $request): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'mode' => ['required', 'string', 'in:'.implode(',', SiteListView::MODES)],
+        ]);
+
+        $mode = SiteListView::mode($validated['mode']);
+        $request->user()?->saveListPreference(SiteListColumns::LIST_KEY, ['mode' => $mode]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'list' => SiteListColumns::LIST_KEY,
+                'mode' => $mode,
+            ]);
+        }
+
+        return back();
     }
 
     public function destroy(Request $request): RedirectResponse|JsonResponse

@@ -21,6 +21,7 @@ Route::post('/sites/{site}/restore', [SiteController::class, 'restore'])->withTr
 Route::post('/sites', [SiteController::class, 'store'])->name('ops.sites.store');
 Route::post('/sites/list-preferences', [SiteListPreferencesController::class, 'update'])->name('ops.sites.list-preferences');
 Route::delete('/sites/list-preferences', [SiteListPreferencesController::class, 'destroy'])->name('ops.sites.list-preferences.reset');
+Route::post('/sites/list-mode', [SiteListPreferencesController::class, 'updateMode'])->name('ops.sites.list-mode');
 Route::post('/sites/list-views', [SiteListPreferencesController::class, 'storeView'])->name('ops.sites.list-views.store');
 Route::delete('/sites/list-views/{view}', [SiteListPreferencesController::class, 'destroyView'])->name('ops.sites.list-views.destroy');
 Route::post('/sites/bulk/publish-status', [SitePublishStatusController::class, 'bulkUpdate'])->name('ops.sites.bulk.publish-status');
