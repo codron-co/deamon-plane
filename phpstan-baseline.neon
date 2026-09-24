@@ -85,12 +85,6 @@ parameters:
 			path: app/Http/Controllers/Ops/ActivityController.php
 
 		-
-			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/Ops/Concerns/LoadsSiteOpsContext.php
-
-		-
 			message: '#^Offset ''sites'' on array\{servers\: int, projects\: int, environments\: int, git_sources\: int, github_apps_available\: bool, sites\: int\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -214,12 +208,6 @@ parameters:
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
 			identifier: method.notFound
 			count: 1
-			path: app/Http/Controllers/Ops/SiteController.php
-
-		-
-			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 3
 			path: app/Http/Controllers/Ops/SiteController.php
 
 		-
@@ -377,18 +365,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Jobs/PollDeploymentJob.php
-
-		-
-			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\SiteProvisioner\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Jobs/ProvisionSiteJob.php
-
-		-
-			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\ChannelSwitcher\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Jobs/SwitchSiteChannelJob.php
 
 		-
 			message: '#^Offset ''ttl'' on array\{type\: string, name\: string, content\: string, ttl\: int, proxied\: bool, priority\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
@@ -583,12 +559,6 @@ parameters:
 			path: app/Models/Site.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:failedInWindow\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Models/Site.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:zonePending\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -757,12 +727,6 @@ parameters:
 			path: app/Services/Coolify/CoolifyDeploymentSync.php
 
 		-
-			message: '#^Parameter \#1 \$deployment of method App\\Services\\Coolify\\CoolifyDeploymentSync\:\:writeRemoteState\(\) expects App\\Models\\Deployment, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Coolify/CoolifyDeploymentSync.php
-
-		-
 			message: '#^Parameter \#2 \$site of method App\\Services\\Coolify\\CoolifyDeploymentSync\:\:writeRemoteState\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
@@ -799,12 +763,6 @@ parameters:
 			path: app/Services/Coolify/CoolifyInventorySync.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$coolify_deployment_uuid\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/Coolify/CoolifyWebhookHandler.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hasToken\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -814,12 +772,6 @@ parameters:
 			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
-			path: app/Services/Coolify/CoolifyWebhookHandler.php
-
-		-
-			message: '#^Method App\\Services\\Coolify\\CoolifyWebhookHandler\:\:findOrCreateDeployment\(\) should return App\\Models\\Deployment\|null but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 2
 			path: app/Services/Coolify/CoolifyWebhookHandler.php
 
 		-
@@ -961,18 +913,6 @@ parameters:
 			path: app/Services/Ops/OpsCoolifyDeployQueue.php
 
 		-
-			message: '#^Method App\\Services\\Ops\\OpsCoolifyDeployQueue\:\:cancelRemote\(\) should return App\\Models\\Deployment\|null but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/Ops/OpsCoolifyDeployQueue.php
-
-		-
-			message: '#^Parameter \#1 \$deployment of method App\\Services\\Ops\\OpsCoolifyDeployQueue\:\:forceStart\(\) expects App\\Models\\Deployment, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Ops/OpsCoolifyDeployQueue.php
-
-		-
 			message: '#^Parameter \#1 \$site of method App\\Services\\Ops\\OpsCoolifyDeployQueue\:\:forgetRunningDeployments\(\) expects App\\Models\\Site\|null, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 2
@@ -1069,36 +1009,6 @@ parameters:
 			path: app/Services/Sites/ChannelEnvironmentMap.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$error_message\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/ChannelSwitcher.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$finished_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/ChannelSwitcher.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/ChannelSwitcher.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$log_excerpt\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/ChannelSwitcher.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/Sites/ChannelSwitcher.php
-
-		-
 			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 7
@@ -1108,12 +1018,6 @@ parameters:
 			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
-			path: app/Services/Sites/ChannelSwitcher.php
-
-		-
-			message: '#^Method App\\Services\\Sites\\ChannelSwitcher\:\:switchOnCoolify\(\) should return App\\Models\\Deployment but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 2
 			path: app/Services/Sites/ChannelSwitcher.php
 
 		-
@@ -1135,32 +1039,14 @@ parameters:
 			path: app/Services/Sites/ChannelSwitcher.php
 
 		-
-			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\ChannelSwitcher\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Sites/ChannelSwitcher.php
-
-		-
 			message: '#^Instanceof between App\\Services\\Coolify\\Dto\\CoolifyEnvironmentVariable and App\\Services\\Coolify\\Dto\\CoolifyEnvironmentVariable will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
 			path: app/Services/Sites/ComposePackMigrator.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/CoolifyDeploySettings.php
-
-		-
 			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
-			count: 1
-			path: app/Services/Sites/CoolifyDeploySettings.php
-
-		-
-			message: '#^Method App\\Services\\Sites\\CoolifyDeploySettings\:\:recordDeployment\(\) should return App\\Models\\Deployment but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
 			count: 1
 			path: app/Services/Sites/CoolifyDeploySettings.php
 
@@ -1249,20 +1135,8 @@ parameters:
 			path: app/Services/Sites/SiteAppHealthFixer.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/SiteAppHealthInspector.php
-
-		-
 			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
-			count: 2
-			path: app/Services/Sites/SiteAppHealthInspector.php
-
-		-
-			message: '#^Method App\\Services\\Sites\\SiteAppHealthInspector\:\:latestDeployment\(\) should return App\\Models\\Deployment\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
 			count: 2
 			path: app/Services/Sites/SiteAppHealthInspector.php
 
@@ -1321,36 +1195,6 @@ parameters:
 			path: app/Services/Sites/SiteLiveProbe.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$error_message\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/SiteProvisioner.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$finished_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/SiteProvisioner.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/SiteProvisioner.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$log_excerpt\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Sites/SiteProvisioner.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/Sites/SiteProvisioner.php
-
-		-
 			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 4
@@ -1369,12 +1213,6 @@ parameters:
 			path: app/Services/Sites/SiteProvisioner.php
 
 		-
-			message: '#^Method App\\Services\\Sites\\SiteProvisioner\:\:provisionOnCoolify\(\) should return App\\Models\\Deployment but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 2
-			path: app/Services/Sites/SiteProvisioner.php
-
-		-
 			message: '#^Parameter \#1 \$site of method App\\Services\\Sites\\SiteProvisioner\:\:markFailed\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1388,12 +1226,6 @@ parameters:
 
 		-
 			message: '#^Parameter \#1 \$site of static method App\\Services\\Sites\\DeploymentFailureText\:\:fromRemote\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Sites/SiteProvisioner.php
-
-		-
-			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\SiteProvisioner\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/Sites/SiteProvisioner.php
@@ -1465,12 +1297,6 @@ parameters:
 			path: app/Services/Themes/ThemeGitConnectionService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$latest_sha\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1489,30 +1315,6 @@ parameters:
 			path: app/Services/Themes/ThemeRolloutService.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:auditLogs\(\)\.$#'
-			identifier: method.notFound
-			count: 9
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hasAgentSecret\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:keepsThemeFileCustomizationsOnUpdate\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:reportedDeamonVersion\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
 			message: '#^Instanceof between App\\Enums\\ThemeInstallationStatus and App\\Enums\\ThemeInstallationStatus will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
@@ -1520,42 +1322,6 @@ parameters:
 
 		-
 			message: '#^Parameter \#1 \$connection of method App\\Services\\GitHub\\GitHubAppClient\:\:mintCloneToken\(\) expects App\\Models\\ThemeGitConnection\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:activateTheme\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:installTheme\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:rollbackThemeSync\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:updateTheme\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:syncWithDataRepair\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$site of method App\\Services\\Themes\\ThemeVersionGate\:\:shouldSkip\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/Themes/ThemeRolloutService.php
@@ -1570,24 +1336,6 @@ parameters:
 			message: '#^Parameter \#1 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:themePayload\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 3
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#2 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:deferSyncIfDeployOpen\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#2 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:guardStorefront\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 3
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#2 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:markError\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 6
 			path: app/Services/Themes/ThemeRolloutService.php
 
 		-

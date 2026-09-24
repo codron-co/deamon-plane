@@ -35,6 +35,13 @@ Schedule::job(new ReconcileDeskronPushJob)
     ->name('ops-deskron-push-reconcile')
     ->withoutOverlapping();
 
+// Work left mid-way (killed worker, lost webhook, timeout) is closed or re-read
+// so the deploy gate and the operator can move on. Reads Coolify, never mutates it.
+Schedule::command('ops:watchdog')
+    ->everyFiveMinutes()
+    ->name('ops-watchdog')
+    ->withoutOverlapping(10);
+
 // Queued ops alerts keep a delivery record; old rows are dropped after 90 days.
 Schedule::command('model:prune', ['--model' => [OpsNotification::class]])
     ->dailyAt('03:10')

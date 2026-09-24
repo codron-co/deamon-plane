@@ -481,6 +481,9 @@ return [
         'lede_provisioning' => 'Coolify compose stack is being created. This page will show active when the deploy finishes.',
         'dockerfile' => 'Coolify build pack is dockerfile, not dockercompose. Provision and branch switch still use the existing app UUID. Migrate this Coolify app to Docker Compose later; do not treat dockerfile as a skip.',
     ],
+    'errors' => [
+        'job_stopped' => 'The background job stopped before it finished (timeout or restart). Check Coolify, then retry.',
+    ],
     'form' => [
         'identity' => 'Identity',
         'domain_heading' => 'Domain',

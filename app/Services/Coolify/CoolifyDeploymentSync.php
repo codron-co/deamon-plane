@@ -11,8 +11,7 @@ use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\SiteThemeInstallation;
 use App\Services\Coolify\Dto\CoolifyDeployment;
-use App\Services\Mail\PlatformNotificationCatalog;
-use App\Services\Mail\PlatformOpsMailer;
+use App\Services\Mail\DeployFailedNotifier;
 use App\Services\Sites\DeploymentFailureText;
 use App\Services\Sites\SiteAppHealthInspector;
 
@@ -184,21 +183,7 @@ class CoolifyDeploymentSync
         }
 
         if ($becameFailed) {
-            try {
-                app(PlatformOpsMailer::class)->send(
-                    $site,
-                    PlatformNotificationCatalog::DEPLOY_FAILED,
-                    'Deploy başarısız',
-                    sprintf(
-                        "%s deploy failed.\n%s\nPlane: %s",
-                        $site->name,
-                        (string) ($deployment->error_message ?: 'Coolify deployment failed.'),
-                        route('ops.sites.show', $site),
-                    ),
-                );
-            } catch (\Throwable) {
-                // Ops mail must not break deploy sync.
-            }
+            app(DeployFailedNotifier::class)->notify($site, $deployment);
         }
 
         if ($becameFinished) {

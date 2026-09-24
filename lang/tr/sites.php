@@ -482,6 +482,9 @@ return [
         'lede_provisioning' => 'Coolify compose stack kuruluyor. Dağıtım bitince durum aktif olur.',
         'dockerfile' => 'Coolify build pack dockerfile, dockercompose değil. Provision ve dal değişimi mevcut app UUID kullanır. Daha sonra Compose’a geçin; dockerfile’ı atlama sanmayın.',
     ],
+    'errors' => [
+        'job_stopped' => 'Arka plan işi bitmeden durdu (zaman aşımı ya da yeniden başlatma). Coolify’yi kontrol edip tekrar deneyin.',
+    ],
     'form' => [
         'identity' => 'Kimlik',
         'domain_heading' => 'Domain',

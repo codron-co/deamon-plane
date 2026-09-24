@@ -315,6 +315,7 @@ class CoolifyDeploySettings
             'coolify_deployment_uuid' => $uuid,
             'status' => $uuid === null ? DeploymentStatus::Failed : DeploymentStatus::InProgress,
             'started_at' => now(),
+            'finished_at' => $uuid === null ? now() : null,
             'requested_by' => $actor?->id,
             'error_message' => $uuid === null ? 'Coolify did not return a deployment uuid.' : null,
         ]);

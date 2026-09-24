@@ -18,6 +18,7 @@ use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyCredentials;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployment;
+use App\Services\Mail\DeployFailedNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -285,6 +286,8 @@ class ChannelSwitcher
         }
 
         $site->save();
+
+        app(DeployFailedNotifier::class)->notify($site, $deployment);
 
         $site->auditLogs()->create([
             'actor_user_id' => $actorUserId,

@@ -43,6 +43,10 @@ class ProvisionSiteJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // Only a deployment row this attempt created may be marked failed; an
+        // older (possibly successful) row of the site must stay as it was.
+        $lastRowBefore = (int) $site->deployments()->max('id');
+
         try {
             $provisioner->provision($site, $this->actorUserId, $this->ip);
         } catch (Throwable $exception) {
@@ -50,10 +54,30 @@ class ProvisionSiteJob implements ShouldBeUnique, ShouldQueue
             $provisioner->markFailed(
                 $fresh,
                 $provisioner->safeFailureMessage($fresh, $exception),
-                $fresh->deployments()->latest('id')->first(),
+                $fresh->deployments()->where('id', '>', $lastRowBefore)->latest('id')->first(),
                 $this->actorUserId,
                 $this->ip,
             );
         }
+    }
+
+    /**
+     * Timeout or worker restart: the catch above never ran. Leave the site in
+     * error with a reason instead of stuck mid-way (the watchdog covers rows).
+     */
+    public function failed(?Throwable $exception): void
+    {
+        $site = Site::query()->find($this->siteId);
+        if ($site === null || $site->status !== SiteStatus::Provisioning) {
+            return;
+        }
+
+        app(SiteProvisioner::class)->markFailed(
+            $site,
+            __('sites.errors.job_stopped'),
+            null,
+            $this->actorUserId,
+            $this->ip,
+        );
     }
 }

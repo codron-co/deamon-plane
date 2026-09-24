@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Ops\Concerns;
 
-use App\Enums\Channel;
 use App\Models\Site;
 use App\Models\Theme;
 use App\Services\Themes\ThemeVisibilityGate;
@@ -15,7 +14,7 @@ trait LoadsSiteOpsContext
      */
     private function channelSwitchTargets(Site $site): array
     {
-        $current = $site->channel instanceof Channel ? $site->channel->value : (string) $site->channel;
+        $current = $site->channel->value;
 
         return array_values(array_filter(
             config('ops.channels', []),

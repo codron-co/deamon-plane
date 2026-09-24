@@ -583,7 +583,7 @@ class SiteController extends Controller
         $site->refresh();
 
         if ($site->status === SiteStatus::Active) {
-            $channel = $site->channel instanceof Channel ? $site->channel->value : $site->channel;
+            $channel = $site->channel->value;
 
             return redirect()
                 ->route('ops.sites.show', $site)
@@ -1215,7 +1215,7 @@ class SiteController extends Controller
             'slug' => $site->slug,
             'name' => $site->name,
             'primary_domain' => $site->primary_domain,
-            'channel' => $site->channel instanceof Channel ? $site->channel->value : $site->channel,
+            'channel' => $site->channel->value,
             'status' => $site->status instanceof SiteStatus ? $site->status->value : $site->status,
             'coolify_server_uuid' => $site->coolify_server_uuid,
             'coolify_connection_id' => $site->coolify_connection_id,

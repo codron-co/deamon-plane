@@ -2,6 +2,7 @@
 
 namespace App\Services\Coolify;
 
+use App\Enums\DeploymentStatus;
 use App\Models\Deployment;
 use App\Models\Site;
 use Illuminate\Database\Eloquent\Builder;
@@ -92,8 +93,11 @@ class CoolifyDeployGate
      */
     private function openDeployments(Site $site): Builder
     {
+        // A failed or cancelled row is closed even when its finished_at was never
+        // written; only queued / in-progress rows hold the host.
         return Deployment::query()
             ->whereNull('finished_at')
+            ->whereIn('status', [DeploymentStatus::Queued->value, DeploymentStatus::InProgress->value])
             ->whereIn('site_id', $this->peerSites($site)->select('id'));
     }
 

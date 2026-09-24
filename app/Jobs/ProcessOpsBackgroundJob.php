@@ -88,7 +88,28 @@ class ProcessOpsBackgroundJob implements ShouldQueue
             }
             $fresh->markCompleted($message, $fresh->result);
         } catch (Throwable $exception) {
+            report($exception);
             $job->fresh()?->markFailed($exception->getMessage());
+        }
+    }
+
+    /**
+     * Timeout or worker restart: neither the catch nor the finally above ran.
+     * Close the row and free the Coolify sweep lock this job was holding, so
+     * the next sweep does not wait out the lock's 15 minutes.
+     */
+    public function failed(?Throwable $exception): void
+    {
+        $job = OpsBackgroundJob::query()->find($this->jobId);
+        if ($job === null || ! in_array($job->status, ['queued', 'running'], true)) {
+            return;
+        }
+
+        $wasRunning = $job->status === 'running';
+        $job->markFailed(__('ops.jobs.stopped'));
+
+        if ($wasRunning && in_array($job->type, self::COOLIFY_TYPES, true)) {
+            Cache::lock('ops:coolify-bulk')->forceRelease();
         }
     }
 }

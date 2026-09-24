@@ -208,7 +208,11 @@ return [
         'waiting' => ':waiting sıra bekliyor',
         'deploy_busy' => 'Sıra bekleyen siteler hiç tetiklenmedi: aynı Coolify sunucusunda başka bir derleme sürüyor. Derleme bitince yalnızca bu siteler için tekrar çalıştırın. Bu siteler değişmedi.',
     ],
+    'watchdog' => [
+        'deployment_gave_up' => 'Coolify’den :hours saattir durum gelmedi; host serbest kalsın diye watchdog kapattı.',
+    ],
     'jobs' => [
+        'stopped' => 'Bitmeden durdu (zaman aşımı ya da yeniden başlatma).',
         'title' => 'Arka plan işlemleri',
         'minimize' => 'Daralt',
         'expand' => 'Genişlet',

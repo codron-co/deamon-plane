@@ -206,7 +206,11 @@ return [
         'waiting' => ':waiting waiting for a build slot',
         'deploy_busy' => 'The waiting sites were never triggered: another build is still running on the same Coolify server. Re-run for those sites only once it finishes. They are unchanged.',
     ],
+    'watchdog' => [
+        'deployment_gave_up' => 'No status from Coolify for :hours hours; closed by the watchdog so the host is free.',
+    ],
     'jobs' => [
+        'stopped' => 'Stopped before it finished (timeout or restart).',
         'title' => 'Background tasks',
         'minimize' => 'Minimize',
         'expand' => 'Expand',

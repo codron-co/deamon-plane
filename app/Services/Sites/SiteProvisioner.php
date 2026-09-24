@@ -24,6 +24,7 @@ use App\Services\Coolify\CoolifyCredentials;
 use App\Services\Coolify\CoolifyProvisionPreflight;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use App\Services\Mail\DeployFailedNotifier;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailOrderBinder;
 use Illuminate\Encryption\Encrypter;
@@ -335,6 +336,8 @@ class SiteProvisioner
             $site->transitionTo(SiteStatus::Error);
             $site->save();
         }
+
+        app(DeployFailedNotifier::class)->notify($site, $deployment);
 
         $site->auditLogs()->create([
             'actor_user_id' => $actorUserId,
