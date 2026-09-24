@@ -96,8 +96,8 @@ class CoolifyAppEnvSyncTest extends TestCase
         $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
 
         $this->assertContains('DEAMON_PLATFORM_MAIL_HOST', $keys);
-        // Removed from the CMS catalog in 1.2.25, so a site's old value is pruned.
-        $this->assertContains('CONTROL_PLANE_HOST_ALLOWLIST', $keys);
+        // A bootstrap key (ADR-12) stays even when the CMS catalog no longer lists it.
+        $this->assertNotContains('CONTROL_PLANE_HOST_ALLOWLIST', $keys);
         $this->assertNotContains('SERVICE_URL_APP', $keys);
         $this->assertNotContains('APP_URL', $keys);
         $this->assertNotContains('DB_PASSWORD', $keys);
@@ -189,6 +189,44 @@ class CoolifyAppEnvSyncTest extends TestCase
     /**
      * @param  list<array{key: string, value: string, uuid?: string}>  $envs
      */
+    public function test_a_catalog_without_bootstrap_keys_never_deletes_them(): void
+    {
+        $site = $this->site();
+        CoolifyEnvDefault::query()->forChannel(Channel::Main)
+            ->whereIn('key', CoolifyAppEnvSync::BOOTSTRAP_KEYS)
+            ->delete();
+        $this->assertTrue(CoolifyEnvDefault::query()->forChannel(Channel::Main)->exists());
+
+        $envs = [];
+        foreach (CoolifyAppEnvSync::BOOTSTRAP_KEYS as $key) {
+            $envs[] = ['key' => $key, 'value' => 'live-value-'.strtolower($key), 'uuid' => 'env-'.strtolower($key)];
+        }
+        $envs[] = ['key' => 'LEGACY_SETTING', 'value' => 'old', 'uuid' => 'env-legacy'];
+        $this->fakeEnvs($envs);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('LEGACY_SETTING', $keys);
+        foreach (CoolifyAppEnvSync::BOOTSTRAP_KEYS as $key) {
+            $this->assertNotContains($key, $keys);
+        }
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-legacy'));
+        Http::assertNotSent(function (Request $request): bool {
+            if ($request->method() !== 'DELETE') {
+                return false;
+            }
+
+            foreach (CoolifyAppEnvSync::BOOTSTRAP_KEYS as $key) {
+                if (str_contains($request->url(), '/envs/env-'.strtolower($key))) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+    }
+
     private function fakeEnvs(array $envs): void
     {
         Http::fake(function (Request $request) use ($envs) {

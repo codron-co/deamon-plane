@@ -44,6 +44,13 @@ class SiteAttacher
         $described = $this->describe($connection, $appUuid);
         $app = $described['app'];
 
+        // One Coolify app belongs to one Plane site. A second site on the same app
+        // would share its database, and purging either would delete both.
+        $holder = $this->siteHoldingApp($app->uuid, $site);
+        if ($holder !== null) {
+            throw new SiteProvisionException(__('sites.form.app_already_attached', ['site' => $holder->name]));
+        }
+
         $site->coolify_connection_id = $connection->id;
         $site->coolify_app_uuid = $app->uuid;
         $site->channel_needs_review = $described['needs_review'];
@@ -131,8 +138,15 @@ class SiteAttacher
             return [];
         }
 
+        $attached = Site::withTrashed()
+            ->whereNotNull('coolify_app_uuid')
+            ->pluck('coolify_app_uuid')
+            ->flip();
+
         return $apps
-            ->filter(fn (CoolifyApplication $app): bool => $this->classifier->isDeamonCustomer($app) && $app->uuid !== '')
+            ->filter(fn (CoolifyApplication $app): bool => $this->classifier->isDeamonCustomer($app)
+                && $app->uuid !== ''
+                && ! $attached->has($app->uuid))
             ->map(fn (CoolifyApplication $app): array => [
                 'uuid' => $app->uuid,
                 'name' => $app->name !== '' ? $app->name : $app->uuid,
@@ -142,6 +156,18 @@ class SiteAttacher
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Archived sites count: their app is still running until purge, and a purge
+     * of the archived row would delete the app out from under the new site.
+     */
+    public function siteHoldingApp(string $appUuid, ?Site $except = null): ?Site
+    {
+        return Site::withTrashed()
+            ->where('coolify_app_uuid', $appUuid)
+            ->when($except?->exists, fn ($query) => $query->whereKeyNot($except->getKey()))
+            ->first();
     }
 
     public function parseGitSource(?string $value): array

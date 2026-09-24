@@ -58,7 +58,7 @@ Each site setting belongs to exactly one source.
 
 | Step | Owner | Status |
 |---|---|---|
-| Env prune never deletes the 6 bootstrap keys | Plane `CoolifyAppEnvSync` | In progress (2026-09-24) |
+| Env prune never deletes the 6 bootstrap keys | Plane `CoolifyAppEnvSync` (`BOOTSTRAP_KEYS`) | Done (2026-09-24) |
 | Remove `APP_ENV` from the catalog; compose sets `APP_ENV: production`; `ChannelEnvironmentMap::appEnv()` no longer drives env | CMS catalog + compose, Plane | Open — F-G-03 (P0), week 0 |
 | `allow_php_edit` off in production regardless of env | CMS | Open — F-G-03 |
 | Canonical/robots/schema scheme not derived from `APP_ENV` | CMS | Open — C-H-03 |

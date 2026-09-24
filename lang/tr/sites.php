@@ -519,6 +519,8 @@ return [
         'connection' => 'Coolify bağlantısı',
         'connection_hint' => 'Yeni sitelerde varsayılan bağlantı seçili gelir. :link.',
         'connection_link' => 'Coolify menüsü',
+        'targets_locked' => 'Bu sitenin bir Coolify uygulaması var. Bağlantı, sunucu, proje, ortam ve git kaynağı olduğu gibi kalır; burada değiştirmek uygulamayı taşımaz.',
+        'app_already_attached' => 'Bu Coolify uygulaması zaten ":site" sitesine bağlı. Bir uygulama yalnız bir siteye ait olabilir.',
         'install' => 'Kurulum',
         'install_hint' => 'Yeni stack kur veya mevcut Deamon uygulamasını bağla. İkisi birden değil.',
         'domain_placeholder' => 'ornek.com',

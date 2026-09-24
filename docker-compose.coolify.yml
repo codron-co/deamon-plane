@@ -44,6 +44,7 @@ services:
         condition: service_healthy
     volumes:
       - plane_storage:/var/www/html/storage/app/public
+      - plane_backups:/var/www/html/storage/app/backups
     mem_limit: 768m
     cpus: "1.5"
     pids_limit: 256
@@ -89,5 +90,6 @@ services:
 
 volumes:
   plane_storage:
+  plane_backups:
   plane_mysql:
   plane_redis:

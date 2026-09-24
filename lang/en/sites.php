@@ -518,6 +518,8 @@ return [
         'connection' => 'Coolify connection',
         'connection_hint' => 'The default connection is selected for new sites. :link.',
         'connection_link' => 'Coolify menu',
+        'targets_locked' => 'This site already has a Coolify app. Its connection, server, project, environment and git source stay as they are; changing them here would not move the app.',
+        'app_already_attached' => 'This Coolify app is already attached to the site ":site". One app can belong to one site only.',
         'install' => 'Install',
         'install_hint' => 'Provision a new stack or attach an existing Deamon app. Not both.',
         'domain_placeholder' => 'example.com',

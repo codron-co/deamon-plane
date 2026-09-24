@@ -33,6 +33,14 @@ Schedule::job(new ReconcileDeskronPushJob)
     ->name('ops-deskron-push-reconcile')
     ->withoutOverlapping();
 
+// Plane's own database holds every connection credential and site agent secret.
+// A nightly dump on its own volume; restore steps: docs/runbooks/plane-db-backup.md.
+Schedule::command('ops:backup-db')
+    ->dailyAt('03:30')
+    ->timezone(config('app.timezone'))
+    ->name('ops-backup-db')
+    ->withoutOverlapping();
+
 // Sites summary tiles show the change since the previous day. Late evening so
 // the row reflects the day's end state; an upsert, so a manual run is harmless.
 Schedule::command('ops:snapshot-fleet')

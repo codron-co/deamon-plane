@@ -48,6 +48,7 @@ RUN apt-get update \
         nginx \
         supervisor \
         curl \
+        default-mysql-client \
         libpng-dev \
         libjpeg62-turbo-dev \
         libfreetype6-dev \

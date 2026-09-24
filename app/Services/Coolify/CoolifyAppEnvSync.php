@@ -39,6 +39,24 @@ class CoolifyAppEnvSync
     ];
 
     /**
+     * Site bootstrap env (ADR-12): what the CMS needs before it can reach its
+     * database and trust Plane. Plane writes these but never prunes them. The
+     * database passwords and agent secret have no copy anywhere else once the
+     * MySQL volume is initialized, so a catalog line dropped or renamed in the
+     * CMS must not turn into a fleet-wide deletion.
+     *
+     * @var list<string>
+     */
+    public const BOOTSTRAP_KEYS = [
+        'APP_KEY',
+        'DB_PASSWORD',
+        'MYSQL_ROOT_PASSWORD',
+        'CONTROL_PLANE_AGENT_SECRET',
+        'CONTROL_PLANE_HOST_ALLOWLIST',
+        'DEAMON_CHANNEL',
+    ];
+
+    /**
      * Align Coolify application env with the catalog for this site's git channel
      * (synced from the CMS `.env.production.example` on that branch).
      * Upserts catalog keys, then deletes leftovers that are no longer in the catalog
@@ -168,7 +186,9 @@ class CoolifyAppEnvSync
                 continue;
             }
 
-            if (isset($catalogKeys[$env->key]) || self::isProtectedKey($env->key)) {
+            if (isset($catalogKeys[$env->key])
+                || self::isProtectedKey($env->key)
+                || in_array($env->key, self::BOOTSTRAP_KEYS, true)) {
                 continue;
             }
 

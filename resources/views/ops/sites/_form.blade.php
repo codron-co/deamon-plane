@@ -1,6 +1,7 @@
 @php
     /** @var \App\Models\Site $site */
     $readonly = $readonly ?? false;
+    $targetsLocked = $site->exists && filled($site->coolify_app_uuid);
     $channelLocked = $channelLocked ?? false;
     $slugLocked = $channelLocked;
     $currentChannel = old('channel', $site->channel?->value ?? 'main');
@@ -185,7 +186,7 @@
             name="coolify_connection_id"
             data-coolify-connection
             data-options-template="{{ url('/coolify') }}/__id__/options"
-            @disabled($readonly)
+            @disabled($readonly || $targetsLocked)
         >
             <option value="">{{ __('ops.none') }}</option>
             @foreach ($coolifyConnections as $row)
@@ -194,6 +195,9 @@
                 </option>
             @endforeach
         </select>
+        @if ($targetsLocked)
+            <p class="field-hint">{{ __('sites.form.targets_locked') }}</p>
+        @endif
         @error('coolify_connection_id') <p class="field-error">{{ $message }}</p> @enderror
     </div>
 
@@ -242,7 +246,7 @@
     <div class="field" data-provision-field>
         <label class="field-label" for="site_server">{{ __('sites.form.server') }}</label>
         <p class="field-hint">{{ __('sites.form.server_hint') }}</p>
-        <select id="site_server" class="field-input" name="coolify_server_uuid" data-coolify-servers @disabled($readonly)>
+        <select id="site_server" class="field-input" name="coolify_server_uuid" data-coolify-servers @disabled($readonly || $targetsLocked)>
             <option value="">{{ __('ops.none') }}</option>
             @foreach ($coolifyServers as $server)
                 <option value="{{ $server->uuid }}" title="{{ $server->uuid }}" @selected($selectedServer === $server->uuid)>{{ $server->label() }}</option>
@@ -253,7 +257,7 @@
 
     <div class="field" data-provision-field>
         <label class="field-label" for="site_project">{{ __('sites.form.project') }}</label>
-        <select id="site_project" class="field-input" name="coolify_project_uuid" data-coolify-projects @disabled($readonly)>
+        <select id="site_project" class="field-input" name="coolify_project_uuid" data-coolify-projects @disabled($readonly || $targetsLocked)>
             <option value="">{{ __('ops.none') }}</option>
             @foreach ($coolifyProjects as $project)
                 <option value="{{ $project->uuid }}" title="{{ $project->uuid }}" @selected($selectedProject === $project->uuid)>{{ $project->label() }}</option>
@@ -271,7 +275,7 @@
             name="coolify_environment_uuid"
             data-coolify-environments
             data-environment-options="{{ Js::from($coolifyEnvironmentOptions ?? []) }}"
-            @disabled($readonly)
+            @disabled($readonly || $targetsLocked)
         >
             <option value="">{{ __('ops.none') }}</option>
             @foreach ($coolifyEnvironments as $environment)
@@ -294,7 +298,7 @@
                 {{ __('sites.form.git_hint_no_apps') }}
             @endif
         </p>
-        <select id="site_git" class="field-input" name="coolify_git_source" data-coolify-git @disabled($readonly)>
+        <select id="site_git" class="field-input" name="coolify_git_source" data-coolify-git @disabled($readonly || $targetsLocked)>
             <option value="">{{ __('sites.form.git_public') }}</option>
             @foreach ($coolifyGitSources as $source)
                 <option value="{{ $source->formValue() }}" title="{{ $source->uuid }}" @selected($selectedGit === $source->formValue())>{{ $source->label() }}</option>

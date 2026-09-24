@@ -12,6 +12,8 @@ use App\Models\ThemeGitConnection;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Services\Themes\ThemeRolloutService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class GitHubWebhookHandler
 {
@@ -23,10 +25,18 @@ class GitHubWebhookHandler
      * @param  array<string, mixed>  $payload
      * @return array{ok: true, event: string, updated: bool, fanout: int, skipped: int}
      */
-    public function handle(string $event, array $payload): array
+    public function handle(string $event, array $payload, ?string $deliveryId = null): array
     {
         if ($event === 'ping') {
             return ['ok' => true, 'event' => 'ping', 'updated' => false, 'fanout' => 0, 'skipped' => 0];
+        }
+
+        // GitHub "Redeliver" resends a delivery with its original id. Handling an
+        // old push again would move every opted-in site back to that commit.
+        if (! $this->firstDelivery($deliveryId)) {
+            Log::info('github.webhook_duplicate_delivery', ['event' => $event]);
+
+            return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
         }
 
         $repo = $this->repoFullName($payload);
@@ -54,8 +64,24 @@ class GitHubWebhookHandler
             return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
         }
 
-        $sha = $this->commitSha($payload);
+        $defaultRef = $this->defaultRef($theme, $payload);
+        $sha = null;
         $tag = $this->releaseTag($payload);
+
+        if ($event === 'push') {
+            // Only the catalog branch moves the catalog. A push to a feature
+            // branch or a tag must never reach sites that follow the theme.
+            if (! $this->isPushTo($payload, $defaultRef)) {
+                return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
+            }
+
+            $sha = $this->commitSha($payload);
+            if ($sha === null || $sha === $theme->latest_sha) {
+                return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
+            }
+        } elseif ($tag === null) {
+            return ['ok' => true, 'event' => $event, 'updated' => false, 'fanout' => 0, 'skipped' => 0];
+        }
 
         if ($sha !== null) {
             $theme->latest_sha = $sha;
@@ -65,6 +91,12 @@ class GitHubWebhookHandler
         }
         $theme->last_synced_at = Carbon::now();
         $theme->save();
+
+        // A release only names a tag; its target is a branch name, not a commit,
+        // so it updates the catalog label and leaves installations alone.
+        if ($sha === null) {
+            return ['ok' => true, 'event' => $event, 'updated' => true, 'fanout' => 0, 'skipped' => 0];
+        }
 
         $fanout = 0;
         $skipped = 0;
@@ -81,7 +113,7 @@ class GitHubWebhookHandler
             ->get();
 
         foreach ($installations as $installation) {
-            if ($sha !== null && $installation->ref !== '' && ! $this->refMatchesPush($payload, $installation->ref, $theme)) {
+            if ($installation->ref !== '' && $installation->ref !== $defaultRef) {
                 $skipped++;
 
                 continue;
@@ -180,7 +212,7 @@ class GitHubWebhookHandler
      */
     private function commitSha(array $payload): ?string
     {
-        $sha = $payload['after'] ?? $payload['head_commit']['id'] ?? $payload['release']['target_commitish'] ?? null;
+        $sha = $payload['after'] ?? $payload['head_commit']['id'] ?? null;
 
         return is_string($sha) && $sha !== '' && $sha !== '0000000000000000000000000000000000000000'
             ? $sha
@@ -200,19 +232,35 @@ class GitHubWebhookHandler
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function refMatchesPush(array $payload, string $installationRef, Theme $theme): bool
+    private function isPushTo(array $payload, string $branch): bool
     {
         $ref = $payload['ref'] ?? null;
-        if (! is_string($ref) || $ref === '') {
+
+        return is_string($ref) && $ref === 'refs/heads/'.$branch;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function defaultRef(Theme $theme, array $payload): string
+    {
+        $ref = trim((string) $theme->default_ref);
+        if ($ref !== '') {
+            return $ref;
+        }
+
+        $branch = $payload['repository']['default_branch'] ?? null;
+
+        return is_string($branch) && $branch !== '' ? $branch : 'main';
+    }
+
+    private function firstDelivery(?string $deliveryId): bool
+    {
+        $deliveryId = trim((string) $deliveryId);
+        if ($deliveryId === '') {
             return true;
         }
 
-        $short = str_starts_with($ref, 'refs/heads/')
-            ? substr($ref, 11)
-            : (str_starts_with($ref, 'refs/tags/') ? substr($ref, 10) : $ref);
-
-        return $short === $installationRef
-            || $installationRef === $theme->default_ref
-            || $short === $theme->default_ref;
+        return Cache::add('github-webhook-delivery:'.sha1($deliveryId), true, now()->addDays(7));
     }
 }

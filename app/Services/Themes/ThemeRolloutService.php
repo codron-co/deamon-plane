@@ -129,6 +129,24 @@ class ThemeRolloutService
             return;
         }
 
+        // An unattended update on a CMS that cannot keep site-edited theme files
+        // (before 1.2.32, or version unknown) would silently overwrite them. The
+        // operator can still update by hand after reading the warning on the site.
+        if ($fromWebhook && ! $site->keepsThemeFileCustomizationsOnUpdate()) {
+            $site->auditLogs()->create([
+                'actor_user_id' => null,
+                'action' => 'theme.update_skipped_customizations',
+                'after' => [
+                    'theme_id' => $theme->theme_id,
+                    'reported_deamon_version' => $site->reportedDeamonVersion(),
+                    'from_webhook' => true,
+                ],
+                'ip' => $ip,
+            ]);
+
+            return;
+        }
+
         $pending = ThemeUpdateJob::dispatch($installation->id, $actor?->id, $ip, $fromWebhook);
         if ($delaySeconds > 0) {
             $pending->delay(now()->addSeconds($delaySeconds));

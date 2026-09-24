@@ -50,7 +50,9 @@ class SiteMailProxyTest extends TestCase
                         'email' => 'new@example.com',
                         'local_part' => 'new',
                     ],
-                ], 201),
+                ], 201)
+                ->push($this->mailboxList(['ACmailbox1', 'ACmailbox2']), 200)
+                ->push($this->mailboxList(['ACmailbox1', 'ACmailbox2']), 200),
             'https://developers.hostinger.com/api/mail/v1/mailboxes/ACmailbox2/password' => Http::response([], 200),
             'https://developers.hostinger.com/api/mail/v1/mailboxes/ACmailbox2' => Http::response([], 200),
         ]);
@@ -77,6 +79,34 @@ class SiteMailProxyTest extends TestCase
         $this->signed('DELETE', '/internal/site/v1/mail/mailboxes/ACmailbox2', $site)
             ->assertOk()
             ->assertJsonPath('ok', true);
+    }
+
+    public function test_password_and_delete_refuse_a_mailbox_the_site_does_not_own(): void
+    {
+        $site = $this->readySite();
+
+        Http::fake([
+            'https://developers.hostinger.com/api/mail/v1/orders/OR1a2b3c4d5e6f7g/mailboxes' => Http::response(
+                $this->mailboxList(['ACmine']),
+                200,
+            ),
+        ]);
+
+        $this->signed('PATCH', '/internal/site/v1/mail/mailboxes/ACforeign/password', $site, [
+            'password' => self::PASSWORD,
+        ])->assertNotFound()->assertJsonPath('error', 'not_found');
+
+        $this->signed('DELETE', '/internal/site/v1/mail/mailboxes/ACforeign', $site)
+            ->assertNotFound()
+            ->assertJsonPath('error', 'not_found');
+
+        Http::assertNotSent(static fn ($request): bool => str_contains($request->url(), '/mailboxes/ACforeign'));
+
+        $denied = AuditLog::query()->where('action', 'mail.mailbox_access_denied')->get();
+        $this->assertCount(2, $denied);
+        $this->assertSame(['password', 'delete'], $denied->pluck('after.operation')->all());
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'mail.mailbox_password_reset']);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'mail.mailbox_deleted']);
     }
 
     public function test_rejects_bad_signature(): void
@@ -201,6 +231,21 @@ class SiteMailProxyTest extends TestCase
         ];
 
         return $this->call($method, $uri, [], [], [], $server, $body);
+    }
+
+    /**
+     * @param  list<string>  $ids
+     * @return array{data: list<array{id: string, email: string, local_part: string}>}
+     */
+    private function mailboxList(array $ids): array
+    {
+        return [
+            'data' => array_map(static fn (string $id): array => [
+                'id' => $id,
+                'email' => strtolower($id).'@example.com',
+                'local_part' => strtolower($id),
+            ], $ids),
+        ];
     }
 
     private function readySite(): Site

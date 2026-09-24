@@ -17,6 +17,8 @@ class GitHubWebhookController extends Controller
             $payload = [];
         }
 
-        return response()->json($handler->handle($event, $payload));
+        $deliveryId = $request->header('X-GitHub-Delivery');
+
+        return response()->json($handler->handle($event, $payload, is_string($deliveryId) ? $deliveryId : null));
     }
 }

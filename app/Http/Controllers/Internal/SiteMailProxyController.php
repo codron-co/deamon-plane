@@ -89,7 +89,13 @@ class SiteMailProxyController extends Controller
         }
 
         try {
-            HostingerMailClient::forSite($this->readySite($site))
+            $ready = $this->readySite($site);
+            $mailbox = $this->ownedMailbox($ready, $mailboxId);
+            if ($mailbox === null) {
+                return $this->mailboxNotOwned($site, $request, $mailboxId, 'password');
+            }
+
+            HostingerMailClient::forSite($ready, $mailbox['domain'] ?? null)
                 ->changePassword($mailboxId, $validated['password']);
         } catch (HostingerMailException $exception) {
             return $this->providerError($exception);
@@ -153,7 +159,13 @@ class SiteMailProxyController extends Controller
         }
 
         try {
-            HostingerMailClient::forSite($this->readySite($site))->deleteMailbox($mailboxId);
+            $ready = $this->readySite($site);
+            $mailbox = $this->ownedMailbox($ready, $mailboxId);
+            if ($mailbox === null) {
+                return $this->mailboxNotOwned($site, $request, $mailboxId, 'delete');
+            }
+
+            HostingerMailClient::forSite($ready, $mailbox['domain'] ?? null)->deleteMailbox($mailboxId);
         } catch (HostingerMailException $exception) {
             return $this->providerError($exception);
         }
@@ -184,6 +196,38 @@ class SiteMailProxyController extends Controller
         }
 
         return $site;
+    }
+
+    /**
+     * Hostinger mailbox ids are global to the API token, which several sites
+     * may share. A site may only touch a mailbox that its own bound orders list.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function ownedMailbox(Site $site, string $mailboxId): ?array
+    {
+        foreach (HostingerMailClient::listAllMailboxes($site) as $box) {
+            if (hash_equals((string) ($box['id'] ?? ''), $mailboxId)) {
+                return $box;
+            }
+        }
+
+        return null;
+    }
+
+    private function mailboxNotOwned(Site $site, Request $request, string $mailboxId, string $operation): JsonResponse
+    {
+        Log::warning('site.mail_proxy_foreign_mailbox', [
+            'site_id' => $site->id,
+            'operation' => $operation,
+        ]);
+
+        $this->audit($site, $request, 'mail.mailbox_access_denied', [
+            'mailbox_id' => $mailboxId,
+            'operation' => $operation,
+        ]);
+
+        return response()->json(['ok' => false, 'error' => 'not_found'], 404);
     }
 
     private function resolvedCreateDomain(Site $site, ?string $domain): string

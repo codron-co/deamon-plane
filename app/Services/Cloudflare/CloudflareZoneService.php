@@ -6,6 +6,7 @@ use App\Models\CloudflareDnsDefault;
 use App\Models\CloudflareSetting;
 use App\Models\Site;
 use App\Services\Sites\SiteProvisionException;
+use Illuminate\Support\Facades\Log;
 
 class CloudflareZoneService
 {
@@ -39,7 +40,7 @@ class CloudflareZoneService
                 if ($existing === null) {
                     $zone = $this->createApexZone($client, $accountId, $apex);
                     $created = true;
-                    $this->upsertTemplate($client, (string) $zone['id'], $apex);
+                    $this->upsertTemplate($client, (string) $zone['id'], $apex, $settings);
                 } else {
                     $zone = $existing;
                 }
@@ -62,7 +63,7 @@ class CloudflareZoneService
                     continue;
                 }
 
-                $own = $this->resolveZoneForHost($client, $accountId, $host, $foreignZones);
+                $own = $this->resolveZoneForHost($client, $accountId, $host, $foreignZones, $settings);
                 $this->applyDnsForHost($client, (string) $own['id'], (string) ($own['name'] ?? ''), $host, $settings);
                 $this->storeRowZone($site, $host, $own);
             }
@@ -128,7 +129,7 @@ class CloudflareZoneService
     {
         $client = CloudflareClient::fromSettings($settings);
         $zone = $this->requireZoneOnAccount($client, $settings, $zoneId);
-        $this->upsertTemplate($client, $zoneId, (string) ($zone['name'] ?? ''));
+        $this->upsertTemplate($client, $zoneId, (string) ($zone['name'] ?? ''), $settings);
 
         Site::query()->where('cloudflare_zone_id', $zoneId)->update(['dns_applied_at' => now()]);
     }
@@ -147,7 +148,7 @@ class CloudflareZoneService
         $zone = $this->findOrCreateZone($client, trim((string) $settings->account_id), $domain);
 
         if ($applyDefaults) {
-            $this->upsertTemplate($client, (string) $zone['id'], $domain);
+            $this->upsertTemplate($client, (string) $zone['id'], $domain, $settings);
         }
 
         return $zone;
@@ -338,7 +339,7 @@ class CloudflareZoneService
      * @param  array<string, array<string, mixed>>  $cache
      * @return array<string, mixed>
      */
-    private function resolveZoneForHost(CloudflareClient $client, string $accountId, string $host, array &$cache): array
+    private function resolveZoneForHost(CloudflareClient $client, string $accountId, string $host, array &$cache, CloudflareSetting $settings): array
     {
         foreach ($cache as $name => $zone) {
             if (self::hostUnderZone($host, $name)) {
@@ -354,7 +355,7 @@ class CloudflareZoneService
             }
 
             $zone = $this->createApexZone($client, $accountId, $apex);
-            $this->upsertTemplate($client, (string) $zone['id'], $apex);
+            $this->upsertTemplate($client, (string) $zone['id'], $apex, $settings);
         }
 
         $cache[(string) ($zone['name'] ?? $host)] = $zone;
@@ -474,7 +475,7 @@ class CloudflareZoneService
         $origin = $settings->resolvedOriginIpv4();
 
         if (strcasecmp($host, $zoneName) === 0) {
-            $this->upsertTemplate($client, $zoneId, $zoneName);
+            $this->upsertTemplate($client, $zoneId, $zoneName, $settings);
 
             return;
         }
@@ -502,11 +503,155 @@ class CloudflareZoneService
         ];
     }
 
-    private function upsertTemplate(CloudflareClient $client, string $zoneId, string $zoneName): void
+    private function upsertTemplate(CloudflareClient $client, string $zoneId, string $zoneName, CloudflareSetting $settings): void
     {
-        foreach (CloudflareDnsDefault::templateRecords() as $record) {
-            $this->upsertRecord($client, $zoneId, $zoneName, $record);
+        $records = CloudflareDnsDefault::templateRecords();
+        $mailEnabled = (bool) $settings->mail_template_enabled;
+        $templateMx = [];
+        foreach ($records as $record) {
+            if ($record['type'] === 'MX') {
+                $templateMx[] = self::recordContent($record['content']);
+            }
         }
+
+        foreach ($records as $record) {
+            if (in_array($record['type'], ['A', 'AAAA'], true)) {
+                // The site has to answer on the origin, so address records follow it.
+                $this->upsertRecord($client, $zoneId, $zoneName, $record);
+
+                continue;
+            }
+
+            if (! $mailEnabled && self::isMailRecord($record)) {
+                continue;
+            }
+
+            $this->addTemplateRecordIfMissing($client, $zoneId, $zoneName, $record, $templateMx);
+        }
+    }
+
+    /**
+     * Mail and verification rows sit next to records the customer may already
+     * depend on. Editing them, or adding a second one beside them, breaks mail:
+     * two SPF or two DMARC records are invalid (RFC 7208 section 3.2) and an
+     * extra MX splits delivery. So a template row is only added when nothing of
+     * its kind is there yet; an existing record is never replaced.
+     *
+     * @param  array{type: string, name: string, content: string, ttl: int, proxied: bool, priority?: int}  $record
+     * @param  list<string>  $templateMx
+     */
+    private function addTemplateRecordIfMissing(
+        CloudflareClient $client,
+        string $zoneId,
+        string $zoneName,
+        array $record,
+        array $templateMx,
+    ): void {
+        try {
+            $rows = $client->listDnsRecords($zoneId, [
+                'type' => $record['type'],
+                'name' => CloudflareDnsRecord::host($record['name'], $zoneName),
+                'per_page' => 50,
+            ]);
+
+            if ($this->templateSlotTaken($rows, $record, $templateMx)) {
+                return;
+            }
+
+            $client->createDnsRecord($zoneId, $this->recordPayload($record));
+        } catch (CloudflareApiException $exception) {
+            if ($exception->isForbidden()) {
+                throw new CloudflareApiException(__('cloudflare.errors.dns_edit_missing'), 403, $exception->payload, $exception);
+            }
+
+            if ($exception->isDuplicateRecord()) {
+                return;
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param  array<int, mixed>  $rows
+     * @param  array{type: string, name: string, content: string, ttl: int, proxied: bool, priority?: int}  $record
+     * @param  list<string>  $templateMx
+     */
+    private function templateSlotTaken(array $rows, array $record, array $templateMx): bool
+    {
+        $wanted = self::recordContent($record['content']);
+        $txtKind = $record['type'] === 'TXT' ? self::txtKind($wanted) : null;
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $content = self::recordContent((string) ($row['content'] ?? ''));
+            if ($content === $wanted) {
+                return true;
+            }
+
+            if ($record['type'] === 'TXT') {
+                if ($txtKind !== null && str_starts_with($content, $txtKind)) {
+                    Log::notice('cloudflare.template_record_kept', ['type' => 'TXT', 'name' => $record['name'], 'kind' => $txtKind]);
+
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($record['type'] === 'MX') {
+                // Our own template MX rows may coexist; any other MX means the
+                // customer routes mail elsewhere and we stay out of it.
+                if (! in_array($content, $templateMx, true)) {
+                    Log::notice('cloudflare.template_record_kept', ['type' => 'MX', 'name' => $record['name']]);
+
+                    return true;
+                }
+
+                continue;
+            }
+
+            Log::notice('cloudflare.template_record_kept', ['type' => $record['type'], 'name' => $record['name']]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array{type: string, name: string, content: string}  $record
+     */
+    private static function isMailRecord(array $record): bool
+    {
+        if ($record['type'] === 'MX') {
+            return true;
+        }
+
+        if ($record['type'] === 'TXT') {
+            return self::txtKind(self::recordContent($record['content'])) !== null;
+        }
+
+        return $record['type'] === 'CNAME' && str_contains(strtolower($record['name']), '_domainkey');
+    }
+
+    private static function txtKind(string $content): ?string
+    {
+        foreach (['v=spf1', 'v=dmarc1'] as $kind) {
+            if (str_starts_with($content, $kind)) {
+                return $kind;
+            }
+        }
+
+        return null;
+    }
+
+    private static function recordContent(string $content): string
+    {
+        return strtolower(trim(trim($content), '"'));
     }
 
     /**

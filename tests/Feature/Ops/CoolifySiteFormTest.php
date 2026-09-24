@@ -184,6 +184,114 @@ class CoolifySiteFormTest extends TestCase
         Http::assertNotSent(fn ($request) => $request->method() === 'POST' && str_contains($request->url(), '/applications/'));
     }
 
+    public function test_attach_refuses_an_app_another_site_holds_even_when_archived(): void
+    {
+        $connection = $this->seedConnection();
+        $holder = Site::factory()->create([
+            'name' => 'Susa Old',
+            'coolify_connection_id' => $connection->id,
+            'coolify_app_uuid' => 'crxguq6nodorlzy88wf9x305',
+        ]);
+        $holder->delete();
+
+        Http::fake([
+            'https://coolify.test/api/v1/applications/crxguq6nodorlzy88wf9x305' => Http::response([
+                'uuid' => 'crxguq6nodorlzy88wf9x305',
+                'name' => 'Susa',
+                'git_branch' => 'beta',
+                'build_pack' => 'dockercompose',
+                'git_repository' => 'https://github.com/codron-co/deamon.git',
+                'status' => 'running:healthy',
+                'docker_compose_domains' => '{"app":{"domain":"https://susa.demo.codron.co"}}',
+            ], 200),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.store'), [
+                'slug' => 'susa-twin',
+                'name' => 'Susa Twin',
+                'domain' => 'twin.example.test',
+                'channel' => 'main',
+                'coolify_connection_id' => $connection->id,
+                'placement' => 'attach',
+                'attach_app_uuid' => 'crxguq6nodorlzy88wf9x305',
+            ])
+            ->assertRedirect(route('ops.sites.create'))
+            ->assertSessionHas('error', __('sites.form.app_already_attached', ['site' => 'Susa Old']));
+
+        $this->assertNull(Site::withTrashed()->where('slug', 'susa-twin')->first());
+        $this->assertSame(1, Site::withTrashed()->where('coolify_app_uuid', 'crxguq6nodorlzy88wf9x305')->count());
+    }
+
+    public function test_attachable_list_hides_apps_already_attached(): void
+    {
+        $connection = $this->seedConnection();
+        Site::factory()->create([
+            'coolify_connection_id' => $connection->id,
+            'coolify_app_uuid' => 'taken-app',
+        ]);
+
+        Http::fake([
+            'https://coolify.test/api/v1/applications*' => Http::response([
+                [
+                    'uuid' => 'taken-app',
+                    'name' => 'Taken',
+                    'git_branch' => 'main',
+                    'build_pack' => 'dockercompose',
+                    'git_repository' => 'https://github.com/codron-co/deamon.git',
+                ],
+                [
+                    'uuid' => 'free-app',
+                    'name' => 'Free',
+                    'git_branch' => 'main',
+                    'build_pack' => 'dockercompose',
+                    'git_repository' => 'https://github.com/codron-co/deamon.git',
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.coolify.options', $connection))
+            ->assertOk()
+            ->assertJsonFragment(['uuid' => 'free-app'])
+            ->assertJsonMissing(['uuid' => 'taken-app']);
+    }
+
+    public function test_update_keeps_coolify_targets_of_a_site_that_has_an_app(): void
+    {
+        $connection = $this->seedConnection();
+        CoolifyServer::query()->create([
+            'coolify_connection_id' => $connection->id,
+            'uuid' => 'other-server',
+            'name' => 'other',
+            'is_active' => true,
+        ]);
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'primary_domain' => 'live.example.test',
+            'coolify_connection_id' => $connection->id,
+            'coolify_server_uuid' => 'no48ksggg0k8sk4o4w08gks8',
+            'coolify_app_uuid' => 'live-app',
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.edit', $site))
+            ->assertOk()
+            ->assertSee(__('sites.form.targets_locked'), false);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->put(route('ops.sites.update', $site), [
+                'name' => $site->name,
+                'domain' => 'live.example.test',
+                'coolify_connection_id' => $connection->id,
+                'coolify_server_uuid' => 'other-server',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('no48ksggg0k8sk4o4w08gks8', $site->fresh()->coolify_server_uuid);
+        $this->assertSame('live-app', $site->fresh()->coolify_app_uuid);
+    }
+
     public function test_attach_unknown_branch_flags_needs_review(): void
     {
         $connection = $this->seedConnection();

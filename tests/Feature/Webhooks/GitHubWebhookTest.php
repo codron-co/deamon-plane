@@ -73,6 +73,7 @@ class GitHubWebhookTest extends TestCase
         $optIn = Site::factory()->withSecrets()->create([
             'primary_domain' => 'optin.example.test',
             'agent_base_url' => 'https://optin.example.test',
+            'last_health_payload' => ['deamon_version' => '1.2.32'],
         ]);
         $optOut = Site::factory()->withSecrets()->create([
             'primary_domain' => 'optout.example.test',
@@ -109,6 +110,93 @@ class GitHubWebhookTest extends TestCase
         $this->assertNull($optOutInstall->fresh()->pinned_sha);
         $this->assertNull($optOutInstall->fresh()->updated_from_webhook_at);
         $this->assertNotNull($optInInstall->fresh()->updated_from_webhook_at);
+    }
+
+    public function test_push_to_a_non_default_branch_never_moves_the_catalog_or_sites(): void
+    {
+        [$theme, $install] = $this->optInInstall('main');
+
+        $this->signedPost('push', [
+            'ref' => 'refs/heads/feature/wip',
+            'after' => 'wip000111',
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ])->assertOk()->assertJson(['updated' => false, 'fanout' => 0]);
+
+        $this->signedPost('push', [
+            'ref' => 'refs/tags/v9.9.9',
+            'after' => 'tag000111',
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ])->assertOk()->assertJson(['updated' => false, 'fanout' => 0]);
+
+        $this->assertSame('old000sha', $theme->fresh()->latest_sha);
+        $this->assertSame('old000sha', $install->fresh()->pinned_sha);
+        Http::assertNothingSent();
+    }
+
+    public function test_release_updates_the_tag_but_never_writes_a_branch_name_as_sha(): void
+    {
+        [$theme, $install] = $this->optInInstall('main');
+
+        $this->signedPost('release', [
+            'action' => 'published',
+            'release' => ['tag_name' => 'v2.0.0', 'target_commitish' => 'main'],
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ])->assertOk()->assertJson(['updated' => true, 'fanout' => 0]);
+
+        $fresh = $theme->fresh();
+        $this->assertSame('v2.0.0', $fresh->latest_tag);
+        $this->assertSame('old000sha', $fresh->latest_sha);
+        $this->assertSame('old000sha', $install->fresh()->pinned_sha);
+        Http::assertNothingSent();
+    }
+
+    public function test_redelivered_push_is_handled_once(): void
+    {
+        [$theme] = $this->optInInstall('main');
+        Http::fake([
+            'https://pin.example.test/internal/control/v1/themes/update' => Http::response(['ok' => true, 'sha' => 'new111sha'], 200),
+        ]);
+        $payload = [
+            'ref' => 'refs/heads/main',
+            'after' => 'new111sha',
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ];
+
+        $this->signedPost('push', $payload, delivery: 'delivery-1')->assertJson(['fanout' => 1]);
+        $theme->forceFill(['latest_sha' => 'newer222sha'])->save();
+        $this->signedPost('push', $payload, delivery: 'delivery-1')->assertJson(['updated' => false, 'fanout' => 0]);
+
+        $this->assertSame('newer222sha', $theme->fresh()->latest_sha);
+        Http::assertSentCount(1);
+    }
+
+    public function test_same_sha_push_is_a_no_op(): void
+    {
+        [$theme] = $this->optInInstall('main');
+
+        $this->signedPost('push', [
+            'ref' => 'refs/heads/main',
+            'after' => 'old000sha',
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ])->assertOk()->assertJson(['updated' => false, 'fanout' => 0]);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_auto_update_skips_a_cms_that_would_overwrite_theme_file_edits(): void
+    {
+        [$theme, $install, $site] = $this->optInInstall('main', '1.2.31');
+
+        $this->signedPost('push', [
+            'ref' => 'refs/heads/main',
+            'after' => 'new111sha',
+            'repository' => ['full_name' => $theme->repo_full_name],
+        ])->assertOk()->assertJson(['updated' => true, 'fanout' => 1]);
+
+        $this->assertSame('new111sha', $theme->fresh()->latest_sha);
+        $this->assertSame('old000sha', $install->fresh()->pinned_sha);
+        $this->assertTrue($site->auditLogs()->where('action', 'theme.update_skipped_customizations')->exists());
+        Http::assertNothingSent();
     }
 
     public function test_minimum_version_skip_does_not_call_agent(): void
@@ -209,15 +297,46 @@ class GitHubWebhookTest extends TestCase
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function signedPost(string $event, array $payload, string $secret = self::SECRET): TestResponse
+    private function signedPost(string $event, array $payload, string $secret = self::SECRET, ?string $delivery = null): TestResponse
     {
         $body = json_encode($payload, JSON_THROW_ON_ERROR);
         $signature = GitHubWebhookSignature::sign($secret, $body);
 
-        return $this->call('POST', '/webhooks/github', [], [], [], [
+        $server = [
             'CONTENT_TYPE' => 'application/json',
             'HTTP_X_HUB_SIGNATURE_256' => $signature,
             'HTTP_X_GITHUB_EVENT' => $event,
-        ], $body);
+        ];
+        if ($delivery !== null) {
+            $server['HTTP_X_GITHUB_DELIVERY'] = $delivery;
+        }
+
+        return $this->call('POST', '/webhooks/github', [], [], [], $server, $body);
+    }
+
+    /**
+     * @return array{0: Theme, 1: SiteThemeInstallation, 2: Site}
+     */
+    private function optInInstall(string $ref, string $cmsVersion = '1.2.32'): array
+    {
+        $theme = Theme::factory()->publicCatalog()->create([
+            'repo_full_name' => 'deamon-themes/deamon-theme-pin',
+            'theme_id' => 'pin',
+            'default_ref' => 'main',
+            'latest_sha' => 'old000sha',
+        ]);
+        $site = Site::factory()->withSecrets()->create([
+            'primary_domain' => 'pin.example.test',
+            'agent_base_url' => 'https://pin.example.test',
+            'last_health_payload' => ['deamon_version' => $cmsVersion],
+        ]);
+        $install = SiteThemeInstallation::factory()->active()->autoUpdate()->create([
+            'site_id' => $site->id,
+            'theme_id' => $theme->id,
+            'ref' => $ref,
+            'pinned_sha' => 'old000sha',
+        ]);
+
+        return [$theme, $install, $site];
     }
 }

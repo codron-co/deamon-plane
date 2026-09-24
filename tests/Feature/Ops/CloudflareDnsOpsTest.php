@@ -286,6 +286,69 @@ class CloudflareDnsOpsTest extends TestCase
         });
     }
 
+    public function test_apply_defaults_never_replaces_or_duplicates_customer_mail_records(): void
+    {
+        $account = $this->account();
+
+        $this->fakeZoneRecords([
+            'A example.com' => [['id' => self::RECORD_ID, 'type' => 'A', 'content' => '1.1.1.1']],
+            'TXT example.com' => [
+                ['id' => 'txt-verify', 'type' => 'TXT', 'content' => 'google-site-verification=abc123'],
+                ['id' => 'txt-spf', 'type' => 'TXT', 'content' => '"v=spf1 include:_spf.google.com ~all"'],
+            ],
+            'TXT _dmarc.example.com' => [['id' => 'txt-dmarc', 'type' => 'TXT', 'content' => 'v=DMARC1; p=reject']],
+            'MX example.com' => [['id' => 'mx-google', 'type' => 'MX', 'content' => 'aspmx.l.google.com', 'priority' => 5]],
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.cloudflare.zones.apply', ['account' => $account, 'zone' => self::ZONE_ID]))
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'PUT'
+            && str_contains($request->url(), '/dns_records/'.self::RECORD_ID));
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PUT'
+            && ! str_contains($request->url(), '/dns_records/'.self::RECORD_ID));
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST'
+            && in_array($request->data()['type'] ?? null, ['TXT', 'MX'], true));
+    }
+
+    public function test_apply_defaults_writes_no_mail_records_when_the_account_mail_template_is_off(): void
+    {
+        $account = $this->account();
+        $account->forceFill(['mail_template_enabled' => false])->save();
+
+        $this->fakeZoneRecords([]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.cloudflare.zones.apply', ['account' => $account, 'zone' => self::ZONE_ID]))
+            ->assertRedirect();
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && ($request->data()['type'] ?? null) === 'A');
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST'
+            && in_array($request->data()['type'] ?? null, ['TXT', 'MX', 'CNAME'], true));
+    }
+
+    public function test_apply_defaults_completes_its_own_hostinger_mx_pair(): void
+    {
+        $account = $this->account();
+
+        $this->fakeZoneRecords([
+            'MX example.com' => [['id' => 'mx-one', 'type' => 'MX', 'content' => 'mx1.hostinger.com', 'priority' => 5]],
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.cloudflare.zones.apply', ['account' => $account, 'zone' => self::ZONE_ID]))
+            ->assertRedirect();
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && ($request->data()['type'] ?? null) === 'MX'
+            && ($request->data()['content'] ?? null) === 'mx2.hostinger.com');
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST'
+            && ($request->data()['content'] ?? null) === 'mx1.hostinger.com');
+    }
+
     public function test_zone_show_uses_tabs_and_keeps_nameservers_visible(): void
     {
         $account = $this->account();
@@ -381,6 +444,39 @@ class CloudflareDnsOpsTest extends TestCase
         $operator->assignRole(OpsRole::Operator->value);
 
         return $operator;
+    }
+
+    /**
+     * Existing records keyed by "TYPE fqdn"; any other lookup is empty.
+     *
+     * @param  array<string, list<array<string, mixed>>>  $records
+     */
+    private function fakeZoneRecords(array $records): void
+    {
+        Http::fake(function (Request $request) use ($records) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if ($method === 'GET' && str_contains($url, '/zones/'.self::ZONE_ID) && ! str_contains($url, 'dns_records')) {
+                return $this->zoneEnvelope();
+            }
+
+            if ($method === 'GET' && str_contains($url, '/dns_records')) {
+                $query = $request->data();
+                $key = ($query['type'] ?? '').' '.($query['name'] ?? '');
+
+                return Http::response(['success' => true, 'result' => $records[$key] ?? []], 200);
+            }
+
+            if (in_array($method, ['POST', 'PUT'], true) && str_contains($url, '/dns_records')) {
+                return Http::response([
+                    'success' => true,
+                    'result' => ['id' => 'dddddddddddddddddddddddddddddddd', 'type' => $request->data()['type'] ?? 'A'],
+                ], 200);
+            }
+
+            return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
+        });
     }
 
     private function zoneEnvelope(): PromiseInterface

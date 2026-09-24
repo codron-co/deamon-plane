@@ -977,6 +977,20 @@ class SiteController extends Controller
 
             $targets = $this->coolifyTargetsFrom($data);
 
+            // A site with a Coolify app keeps the targets that app lives on. Changing
+            // them in Plane does not move the app; it only points Plane (and a later
+            // purge) at a different place, leaving the real app orphaned.
+            if (filled($site->coolify_app_uuid)) {
+                $targets = [
+                    'connection_id' => $site->coolify_connection_id,
+                    'server_uuid' => $site->coolify_server_uuid,
+                    'project_uuid' => $site->coolify_project_uuid,
+                    'environment_uuid' => $site->coolify_environment_uuid,
+                    'git_uuid' => $site->coolify_git_source_uuid,
+                    'git_kind' => $site->coolify_git_source_kind,
+                ];
+            }
+
             $payload = [
                 'name' => $data['name'],
                 'primary_domain' => $data['domain'],
