@@ -41,7 +41,7 @@ Bu dosya subagent’lara **göömülecek** küresel kısıtları çıkarır.
 - Site stack: Coolify **Docker Compose** build pack + `docker-compose.coolify.yml` → **app + ayrı MySQL + ayrı Redis** (Nixpacks / Dockerfile-only yok)
 - **Plane stack:** aynı — bu repo `docker-compose.coolify.yml` (`plane_*` volumes); müşteri siteleriyle DB/Redis paylaşmaz
 - Channels allowlist: `main` | `beta` | `alpha`
-- Müşteri Coolify env (app): `APP_KEY` + `DEAMON_SITE_NAME` (+ Coolify `SERVICE_*`)
+- Müşteri Coolify env (app): yalnızca önyükleme anahtarları — hedef 6: `APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL` (+ Coolify `SERVICE_*`). **Yeni env anahtarı eklenmez**; site ayarı Plane'den imzalı agent → site DB; güvenlik tabanı CMS kodunda; `APP_ENV` kanaldan bağımsız `production` ([ADR-12](../../../docs/decisions/adr-12-site-config-from-plane.md)).
 - Tema SoT: Git-only catalog from Themes Git connections (one Plane GitHub App, many user/org installs). Legacy org+`deamon-theme-*` prefix is a migrated default, not a lock. Settings PAT/PEM paste is retired — [theme-git-connections spec](../../../docs/superpowers/specs/2026-09-10-theme-git-connections-design.md).
 - Secrets: encrypted cast/vault; log/git yok
 - Audit: create, channel, domain, deploy, theme assign/update

@@ -71,7 +71,7 @@ Eksikse: kullanıcıya tek mesajda iste; spike’ı uydurma.
 
 - **Yalnızca Docker Compose build pack.** Nixpacks / Dockerfile-only deneme.
 - Staging **müşteri** app: repo `codron-co/deamon` + `docker_compose_location=docker-compose.coolify.yml`
-- Env (müşteri): yalnızca `APP_KEY` + `DEAMON_SITE_NAME` (+ Coolify `SERVICE_*`)
+- Env (müşteri): yalnızca önyükleme anahtarları (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`; + Coolify `SERVICE_*`); diğer ayarlar agent ile ([ADR-12](../../../docs/decisions/adr-12-site-config-from-plane.md))
 - **Plane’in kendisi** ayrı Coolify app: repo `codron-co/deamon-plane` + aynı build pack + bu repodaki `docker-compose.coolify.yml` (Dalga 0’da sözleşme dosyaları hazır; ilk yeşil deploy Laravel/Task 0 sonrası)
 - Olmazsa: create’i manual step yap; updateBranch/deploy varsa hâlâ Hybrid olabilir
 

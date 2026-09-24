@@ -26,7 +26,7 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/deploy` | `ops.sites.deploy` | operator, super_admin; Coolify `POST /deploy?force=true`; rebuilds the ref the app already points at, pin untouched |
 | POST | `/sites/{site}/pin` | `ops.sites.pin` | operator, super_admin; pin SHA + auto-deploy off + deploy |
 | POST | `/sites/{site}/follow-head` | `ops.sites.follow-head` | operator, super_admin; `git_commit_sha: HEAD` + auto-deploy on + deploy |
-| POST | `/sites/bulk/channel` | `ops.sites.bulk.channel` | operator, super_admin; branch + APP_ENV for selected or `all=1` |
+| POST | `/sites/bulk/channel` | `ops.sites.bulk.channel` | operator, super_admin; branch (+ channel-mapped `APP_ENV` today; target: branch only, `APP_ENV` always `production` — [ADR-12](../decisions/adr-12-site-config-from-plane.md)) for selected or `all=1` |
 | GET | `/sites/bulk/channel` | `ops.sites.bulk.channel.get` | **Does not switch.** 302 to list |
 | POST | `/sites/bulk/sync` | `ops.sites.bulk.sync` | operator, super_admin; Coolify sync for selected ids or `all=1` |
 | GET | `/sites/bulk/sync` | `ops.sites.bulk.sync.get` | **Does not sync.** 302 to list |
@@ -185,7 +185,7 @@ Writes go through the signed agent (`SitePublishStateUpdater` → `SiteAgentClie
 
 ## Site name (Plane-owned)
 
-`sites.name` is the display name the CMS storefront, mails and SEO show. It is **Plane-owned**: the Coolify env `DEAMON_SITE_NAME` only seeds the CMS on first boot, after which Plane pushes the name over the signed agent (`SiteIdentityPusher` → `SiteAgentClient::setSiteName` → CMS `POST /internal/control/v1/site/identity`, CMS 1.2.27+). Rules:
+`sites.name` is the display name the CMS storefront, mails and SEO show. It is **Plane-owned**: the Coolify env `DEAMON_SITE_NAME` only seeds the CMS on first boot (target: removed from the catalog, provision pushes `/site/identity` — [ADR-12](../decisions/adr-12-site-config-from-plane.md)), after which Plane pushes the name over the signed agent (`SiteIdentityPusher` → `SiteAgentClient::setSiteName` → CMS `POST /internal/control/v1/site/identity`, CMS 1.2.27+). Rules:
 
 - Renaming a site in the edit form pushes immediately; the flash says whether the CMS took it.
 - Every health poll compares the CMS `site_name` with Plane's name and pushes ours on a mismatch (stale seed, cloned env). No manual fix per site.

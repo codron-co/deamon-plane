@@ -18,7 +18,7 @@
 ## Referans
 
 - [Architecture](architecture.md)
-- [Decisions (ADR)](decisions/README.md) — [ADR-10](decisions/adr-10-health-app-filter-verdict.md): `health` / `app` filters are SQL over a persisted verdict · [ADR-11](decisions/adr-11-dom-test-harness.md): skip Playwright; `node --test tests/js/*.js` covers toolbar URL, poll backoff, bulk interpolate, `isTyping` / `confirmOpen`, `pageIsHidden` / `shouldSchedulePoll`, Settings `textMatches`, list `fetch` / `replaceState` (no jsdom — duck-typed `{ hidden: true }` and `{ origin, pathname }`)
+- [Decisions (ADR)](decisions/README.md) — [ADR-12](decisions/adr-12-site-config-from-plane.md): customer site env = 6 bootstrap keys; every other setting via signed agent → site DB; security baseline in CMS code; `APP_ENV` always `production` · [ADR-10](decisions/adr-10-health-app-filter-verdict.md): `health` / `app` filters are SQL over a persisted verdict · [ADR-11](decisions/adr-11-dom-test-harness.md): skip Playwright; `node --test tests/js/*.js` covers toolbar URL, poll backoff, bulk interpolate, `isTyping` / `confirmOpen`, `pageIsHidden` / `shouldSchedulePoll`, Settings `textMatches`, list `fetch` / `replaceState` (no jsdom — duck-typed `{ hidden: true }` and `{ origin, pathname }`)
 - [Security](security.md)
 - [Related infra (Mailcow vb.)](related-infra.md) — Mailcow **coming soon**; Hostinger mail **in scope**
 - [Ops Sites CRUD](modules/ops-sites.md) — draft desired state + provision POST + channel switch

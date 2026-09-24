@@ -39,6 +39,10 @@ This Plane-specific skill is the only UI skill routed from this repo. Do not cop
 - Site agent: [docs/modules/agent-client.md](docs/modules/agent-client.md)
 - Themes (catalog + assign, not CMS theme authoring): [docs/modules/theme-catalog.md](docs/modules/theme-catalog.md), [docs/modules/theme-agent-client.md](docs/modules/theme-agent-client.md)
 
+## Site configuration rule (ADR-12)
+
+Customer site env = bootstrap only (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`). Env prune never deletes these. Every other per-site/agency setting is pushed over a signed agent endpoint and persisted in the site DB; the security baseline is fixed in CMS code. **Do not add catalog keys** and do not map channel → `APP_ENV` (live sites are always `production`). See [docs/decisions/adr-12-site-config-from-plane.md](docs/decisions/adr-12-site-config-from-plane.md).
+
 ## Hard limits
 
 - Multi-tenant SaaS / marketplace / customer theme ZIP upload: out of scope

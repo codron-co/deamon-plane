@@ -42,6 +42,7 @@ Header names live in `App\Services\Agent\ControlPlaneAgentContract`. Signing is 
 |-------|------|
 | `SiteAgentClient` | Signs and GET-polls health; also themes / mail / **admins**. Never logs the secret. |
 | `SiteHealthChecker` | Persists `last_health_at` + allowlisted summary (`deamon_version`, `active_theme_id`, `queue_ok`, …) and mirrors `site_status` onto `cms_site_status` / `cms_site_status_at`. |
+| _Pattern_ | Per-site settings travel this way (signed push → site DB, CMS default, drift re-push from health) instead of Coolify env — [ADR-12](../decisions/adr-12-site-config-from-plane.md). |
 | `SiteIdentityPusher` | Pushes Plane's `sites.name` through `POST /internal/control/v1/site/identity` (CMS **1.2.27+**) on rename, and from every health poll when the CMS reports a different `site_name`. Env `DEAMON_SITE_NAME` only seeds the CMS on first boot; renames never need env or a redeploy. Audit `site.name_pushed`. |
 | `SitePublishStateUpdater` | Writes the publish state through `POST /internal/control/v1/site/status`, then mirrors **what the CMS echoed**. See [ops-sites.md](ops-sites.md#yayın-durumu-cms-publish-state). |
 | `CheckSiteHealthJob` | One site. Unique per site for 4 minutes. |
