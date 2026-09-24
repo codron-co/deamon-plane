@@ -127,3 +127,19 @@ Nothing deploys. The running Plane stays on the last green commit.
 - Or revert: `git revert <sha>` and push; the revert's green run deploys it.
 - Do not re-enable Coolify auto-deploy or click **Redeploy** in Coolify to get around a red run. A manual Coolify Redeploy builds the branch HEAD — the red commit.
 - A red `deploy` job (Coolify build failed) with green checks: read the deployment log in Coolify ([deploy-failure-triage.md](deploy-failure-triage.md)); re-run the `deploy` job from the Actions UI once the cause is fixed outside the repo.
+
+## Next step: customer sites and themes behind CI
+
+The same rule — nothing deploys before `CI` is green for that exact commit — now exists for the **CMS fleet** and **themes**, but Plane orchestrates it instead of a GitHub job (Coolify secrets stay in Plane): [ci-gated-rollout.md](../modules/ci-gated-rollout.md).
+
+Switch-over order:
+
+1. Merge and deploy this Plane version (CI green, `deploy` job). Additive migrations; every site stays on `coolify`, every theme `ci_gate` off — no behaviour change yet.
+2. GitHub App (the Plane App) → **Permissions & events**: Actions **Read-only** + event **Workflow run**; each installation accepts the new permission. PAT / org-webhook setups add **Workflow runs** to that webhook. Confirm a `workflow_run` delivery returns `200`.
+3. Push once to each CMS channel branch in use so `/rollouts` → **Dal başları** shows the head and its CI verdict.
+4. Mark canary sites (one or two low-traffic sites per channel): site detail → **Deploy kapısı** → **Kanarya yap**.
+5. Switch sites to the CI gate in bulk: Sites → select → **Oto-deploy** → **CI kapısına al** (canaries first). Coolify auto-deploy turns off, apps follow HEAD, nothing deploys.
+6. Verify one rollout end to end: push, wait for green, `/rollouts` shows canary → fan-out → done. Push a deliberately red commit on `alpha`: Activity shows `CI kırmızı: commit bekletildi`, no rollout.
+7. Themes: enable **CI yeşil olunca güncelle** only for theme repos that have a workflow named `CI`.
+
+While a site is on the CI gate, do not turn Coolify auto-deploy back on in the Coolify UI — Plane only checks the switch when it reads the app. Going back is the bulk **Coolify oto-deploy'a dön**.

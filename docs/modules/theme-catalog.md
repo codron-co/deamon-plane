@@ -56,7 +56,7 @@ predicate the toolbar posts — and jumps to `ops.themes.show`. Tests: `PaletteS
 
 ## Agent install
 
-Assign is Task 12 (`ThemeRolloutService`) via the CMS theme agent — [theme-agent-client.md](theme-agent-client.md). CMS **1.2.7** accepts any github.com `owner/name` (and https / `.git` forms) for `source=git`; Plane still only assigns connected/selected catalog rows. GitHub push fan-out is Task 13 — [github-webhooks.md](github-webhooks.md). Site Themes tab / list / overview show a Plane installation when one exists; otherwise they show `last_health_payload.active_theme_id` as reported-by-health and do not claim the site has no theme.
+Assign is Task 12 (`ThemeRolloutService`) via the CMS theme agent — [theme-agent-client.md](theme-agent-client.md). CMS **1.2.7** accepts any github.com `owner/name` (and https / `.git` forms) for `source=git`; Plane still only assigns connected/selected catalog rows. GitHub push fan-out is Task 13 — [github-webhooks.md](github-webhooks.md). A theme with `ci_gate` on moves its catalog sha and fans out only after its repo's `CI` workflow is green for the pushed commit — [ci-gated-rollout.md](ci-gated-rollout.md#themes). Site Themes tab / list / overview show a Plane installation when one exists; otherwise they show `last_health_payload.active_theme_id` as reported-by-health and do not claim the site has no theme.
 
 `clone_token` is minted from the **theme’s connection** installation id. PAT connections never send a token to the site.
 
