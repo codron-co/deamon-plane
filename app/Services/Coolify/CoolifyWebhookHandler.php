@@ -38,7 +38,7 @@ class CoolifyWebhookHandler
             $remote = $this->enrichFromCoolify($deployment->site, $remote);
         }
 
-        if (in_array($deployment->trigger, [DeploymentTrigger::Manual, DeploymentTrigger::ThemeRollout], true)) {
+        if (in_array($deployment->trigger, DeploymentTrigger::keepingSiteStatus(), true)) {
             $this->deploymentSync->applyExisting($deployment, $remote);
         } else {
             $this->provisioner->applyRemoteDeployment($deployment, $remote);

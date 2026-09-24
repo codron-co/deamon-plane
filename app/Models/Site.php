@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Channel;
 use App\Enums\CmsPublishStatus;
 use App\Enums\CoolifyGitSourceKind;
+use App\Enums\DeployGate;
 use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
 use App\Services\Agent\AgentHealthStatus;
@@ -54,6 +55,8 @@ class Site extends Model
         'coolify_auto_deploy',
         'coolify_pinned_sha',
         'coolify_deploy_settings_at',
+        'deploy_gate',
+        'deploy_canary',
         'channel_needs_review',
         'git_repository',
         'app_key_encrypted',
@@ -111,6 +114,8 @@ class Site extends Model
             'channel_needs_review' => 'boolean',
             'coolify_auto_deploy' => 'boolean',
             'coolify_deploy_settings_at' => 'datetime',
+            'deploy_gate' => DeployGate::class,
+            'deploy_canary' => 'boolean',
             'status' => SiteStatus::class,
             'cms_site_status' => CmsPublishStatus::class,
             'cms_site_status_at' => 'datetime',
@@ -514,6 +519,22 @@ class Site extends Model
             SiteStatus::Deploying,
             SiteStatus::Stopped,
         ], true);
+    }
+
+    /**
+     * Plane deploys this site after a green CI run; Coolify auto-deploy is off.
+     */
+    public function usesCiGate(): bool
+    {
+        return $this->deploy_gate === DeployGate::Ci;
+    }
+
+    /**
+     * Coolify builds a fixed commit instead of the branch HEAD (last known mirror).
+     */
+    public function hasPinnedCommit(): bool
+    {
+        return trim((string) $this->coolify_pinned_sha) !== '';
     }
 
     public function hasAgentSecret(): bool

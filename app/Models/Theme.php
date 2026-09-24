@@ -26,6 +26,7 @@ class Theme extends Model
         'name',
         'repo_full_name',
         'default_ref',
+        'ci_gate',
         'visibility',
         'minimum_deamon_version',
         'smoke_paths',
@@ -45,6 +46,7 @@ class Theme extends Model
             'visibility' => ThemeVisibility::class,
             'last_synced_at' => 'datetime',
             'smoke_paths' => 'array',
+            'ci_gate' => 'boolean',
         ];
     }
 

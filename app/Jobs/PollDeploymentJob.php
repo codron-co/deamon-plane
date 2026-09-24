@@ -207,10 +207,7 @@ class PollDeploymentJob implements ShouldQueue
 
     private function isStatusOnly(Deployment $deployment): bool
     {
-        return in_array($deployment->trigger, [
-            DeploymentTrigger::Manual,
-            DeploymentTrigger::ThemeRollout,
-        ], true);
+        return in_array($deployment->trigger, DeploymentTrigger::keepingSiteStatus(), true);
     }
 
     private function failOpen(

@@ -64,6 +64,26 @@ return [
     ],
 
     /*
+    | CI-gated rollout (docs/modules/ci-gated-rollout.md). A GitHub `workflow_run`
+    | named `workflow_name` that completes green for a `push` promotes that commit:
+    | CMS channel → fleet rollout of `ci`-gated sites (canary first), theme with
+    | `ci_gate` → catalog sha + fan-out. No env keys: change here and deploy Plane.
+    */
+    'ci' => [
+        'workflow_name' => 'CI',
+        // Canary sites must build and pass health inside this window, or the rollout halts.
+        'canary_timeout_minutes' => 30,
+        // Consecutive failed health checks of a finished canary before the rollout halts.
+        'canary_health_attempts' => 3,
+        // Seconds between two AdvanceFleetRolloutJob ticks while a stage waits.
+        'poll_seconds' => 30,
+        // Sites asked to deploy per fan-out tick; the next tick continues the list.
+        'fanout_batch' => 20,
+        // Watchdog: an open rollout nobody advanced for this long is kicked again.
+        'stall_minutes' => 5,
+    ],
+
+    /*
     | Fleet-wide app-health fix counts walk every site, so the Sites header menu
     | reads them from a short-lived cache and shows how old the number is. Applying
     | a fix clears the entry. Set to 0 to scan on every page render.
