@@ -93,8 +93,12 @@ jobs:
         run: composer install --prefer-dist --no-progress
 
       # storage/framework/* is gitignored without placeholders; Blade needs views/.
+      # An empty .env: artisan test warns on every test when the file is missing.
+      # phpunit.xml (and the job env) still supply every value.
       - name: Runtime directories
-        run: mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+        run: |
+          mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          touch .env
 
       # phpunit.xml default: sqlite :memory:
       - name: Tests (sqlite)
@@ -156,7 +160,9 @@ jobs:
         run: composer install --prefer-dist --no-progress
 
       - name: Runtime directories
-        run: mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+        run: |
+          mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          touch .env
 
       # Service containers cannot take mysqld flags. Mirror the compose
       # server settings that matter (--default-time-zone=+03:00, utf8mb4).
