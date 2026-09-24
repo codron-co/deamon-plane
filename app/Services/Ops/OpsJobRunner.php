@@ -43,6 +43,7 @@ class OpsJobRunner
             'sites.bulk_deploy_gate' => $this->bulkDeployGate($job),
             'sites.bulk_deploy' => $this->bulkDeploy($job),
             'sites.bulk_follow_head' => $this->bulkFollowHead($job),
+            'sites.bulk_update_head' => $this->bulkUpdateHead($job),
             'sites.bulk_pin' => $this->bulkPin($job),
             'sites.bulk_app_health_fix' => $this->bulkAppHealthFix($job),
             'sites.bulk_inject_agent_secret' => $this->bulkInjectAgentSecret($job),
@@ -231,6 +232,20 @@ class OpsJobRunner
         $result = $this->fanout($job, $sites, fn (Site $site) => $settings->followHead($site, $actor, $ip));
 
         return $this->triggerSummaryFor(__('site_ops.pin.bulk_follow'), $result);
+    }
+
+    private function bulkUpdateHead(OpsBackgroundJob $job): string
+    {
+        $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
+        $settings = app(CoolifyDeploySettings::class);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
+
+        $result = $this->fanout($job, $sites, function (Site $site) use ($settings, $actor, $ip): void {
+            $settings->updateToHead($site, $actor, $ip);
+        });
+
+        return $this->triggerSummaryFor(__('site_ops.pin.bulk_update_head'), $result);
     }
 
     private function bulkPin(OpsBackgroundJob $job): string

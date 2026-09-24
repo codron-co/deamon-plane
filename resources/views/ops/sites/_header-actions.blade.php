@@ -42,6 +42,20 @@
                     @csrf
                     <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.follow_head') }}</button>
                 </form>
+                @if ($site->hasPinnedCommit())
+                    <form
+                        method="POST"
+                        action="{{ route('ops.sites.update-head', $site) }}"
+                        data-ops-pending
+                        data-confirm="{{ __('site_ops.pin.confirm_update_head', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('site_ops.pin.confirm_update_head_title') }}"
+                        data-confirm-label="{{ __('sites.menu.update_head') }}"
+                        data-confirm-danger="false"
+                    >
+                        @csrf
+                        <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.update_head') }}</button>
+                    </form>
+                @endif
             @endif
             @if (filled($coolifyAppUrl))
                 @if ($canDeploy)

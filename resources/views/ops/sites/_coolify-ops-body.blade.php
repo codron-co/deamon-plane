@@ -235,6 +235,20 @@
                         @csrf
                         <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.pin.follow_button') }}</button>
                     </form>
+                    @if ($currentSha !== null)
+                        <form
+                            method="POST"
+                            action="{{ route('ops.sites.update-head', $site) }}"
+                            data-ops-pending
+                            data-confirm="{{ __('site_ops.pin.confirm_update_head', ['name' => $site->name]) }}"
+                            data-confirm-title="{{ __('site_ops.pin.confirm_update_head_title') }}"
+                            data-confirm-label="{{ __('site_ops.pin.update_head_button') }}"
+                            data-confirm-danger="false"
+                        >
+                            @csrf
+                            <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.pin.update_head_button') }}</button>
+                        </form>
+                    @endif
                 </div>
             </div>
         @endif

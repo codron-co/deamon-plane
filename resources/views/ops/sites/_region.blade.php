@@ -308,6 +308,17 @@
                                     data-confirm-label="{{ __('site_ops.bulk.follow_head') }}"
                                     data-confirm-danger="true"
                                 >{{ __('site_ops.bulk.follow_head') }}</button>
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.update-head') }}"
+                                    data-confirm="{{ __('site_ops.bulk.confirm_update_head', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('site_ops.bulk.confirm_update_head', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('site_ops.pin.confirm_update_head_title') }}"
+                                    data-confirm-label="{{ __('site_ops.bulk.update_head') }}"
+                                    data-confirm-danger="true"
+                                >{{ __('site_ops.bulk.update_head') }}</button>
                                     <div class="ops-action-sep" role="separator"></div>
                                 <label class="ops-bulk-channel sites-bulk-pin">
                                     <span class="visually-hidden">{{ __('site_ops.bulk.ref') }}</span>

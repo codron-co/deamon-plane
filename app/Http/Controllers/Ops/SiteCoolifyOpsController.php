@@ -510,6 +510,19 @@ class SiteCoolifyOpsController extends Controller
         return back()->with('status', __('site_ops.pin.follow_done', ['name' => $site->name]));
     }
 
+    public function updateHead(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        try {
+            $settings->updateToHead($site, $request->user(), $request->ip());
+        } catch (ComposePackException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('site_ops.pin.update_head_done', ['name' => $site->name]));
+    }
+
     public function deploy(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
     {
         $this->authorize('update', $site);
@@ -542,6 +555,17 @@ class SiteCoolifyOpsController extends Controller
             __('ops.jobs.bulk_follow_head'),
             fn (Collection $sites) => $settings->followHeadMany($sites, $request->user(), $request->ip()),
             __('site_ops.pin.bulk_follow'),
+        );
+    }
+
+    public function bulkUpdateHead(BulkSiteIdsRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
+    {
+        return $this->runBulkDeploy(
+            $request,
+            'sites.bulk_update_head',
+            __('ops.jobs.bulk_update_head'),
+            fn (Collection $sites) => $settings->updateToHeadMany($sites, $request->user(), $request->ip()),
+            __('site_ops.pin.bulk_update_head'),
         );
     }
 

@@ -142,6 +142,71 @@ class CoolifyDeploySettingsTest extends TestCase
         $this->assertNull($fresh->coolify_pinned_sha, 'Following HEAD is not a pin.');
     }
 
+    public function test_update_to_head_clears_the_pin_and_deploys_but_leaves_auto_deploy_off(): void
+    {
+        $site = $this->site();
+        $site->forceFill(['coolify_pinned_sha' => 'deadbeef', 'coolify_auto_deploy' => false])->save();
+
+        Http::fake(function (Request $request) {
+            if ($sync = $this->coolifyEnvSyncResponse($request)) {
+                return $sync;
+            }
+            if ($request->method() === 'PATCH') {
+                return Http::response($this->appPayload(sha: '', autoDeploy: false), 200);
+            }
+            if ($request->method() === 'POST' && str_contains($request->url(), '/deploy')) {
+                return Http::response(['deployments' => [['deployment_uuid' => 'dep-3']]], 200);
+            }
+
+            return Http::response(['error' => 'unexpected'], 404);
+        });
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.update-head', $site))
+            ->assertRedirect()
+            ->assertSessionHas('status', __('site_ops.pin.update_head_done', ['name' => $site->name]));
+
+        Http::assertSent(function (Request $request): bool {
+            $body = $request->data();
+
+            return $request->method() === 'PATCH'
+                && ($body['git_commit_sha'] ?? null) === 'HEAD'
+                && ! array_key_exists('is_auto_deploy_enabled', $body);
+        });
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request->url(), '/deploy'));
+
+        $fresh = $site->fresh();
+        $this->assertFalse($fresh->coolify_auto_deploy, 'Update to HEAD must not turn auto-deploy on.');
+        $this->assertNull($fresh->coolify_pinned_sha);
+        $this->assertTrue($fresh->auditLogs()->where('action', 'site.git_update_head')->exists());
+    }
+
+    public function test_update_to_head_is_offered_only_on_a_pinned_site(): void
+    {
+        $site = $this->site();
+        $coolifySha = 'deadbeef';
+
+        // Coolify is the truth for the panel; one stub answers whatever the test set.
+        Http::fake([
+            'https://coolify.example/api/v1/applications/'.self::APP => function () use (&$coolifySha) {
+                return Http::response($this->appPayload(sha: $coolifySha, autoDeploy: false), 200);
+            },
+        ]);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.coolify-ops.panel', $site))
+            ->assertOk()
+            ->assertSee(route('ops.sites.update-head', $site), false)
+            ->assertSee('data-confirm="'.e(__('site_ops.pin.confirm_update_head', ['name' => $site->name])).'"', false);
+
+        $coolifySha = 'HEAD';
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.coolify-ops.panel', $site))
+            ->assertOk()
+            ->assertDontSee(route('ops.sites.update-head', $site), false);
+    }
+
     public function test_show_does_not_link_get_for_post_only_ops(): void
     {
         $site = $this->site();

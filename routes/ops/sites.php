@@ -30,6 +30,7 @@ Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAu
 Route::post('/sites/bulk/deploy-gate', [SiteCoolifyOpsController::class, 'bulkDeployGate'])->name('ops.sites.bulk.deploy-gate');
 Route::post('/sites/bulk/deploy', [SiteCoolifyOpsController::class, 'bulkDeploy'])->name('ops.sites.bulk.deploy');
 Route::post('/sites/bulk/follow-head', [SiteCoolifyOpsController::class, 'bulkFollowHead'])->name('ops.sites.bulk.follow-head');
+Route::post('/sites/bulk/update-head', [SiteCoolifyOpsController::class, 'bulkUpdateHead'])->name('ops.sites.bulk.update-head');
 Route::post('/sites/bulk/pin', [SiteCoolifyOpsController::class, 'bulkPin'])->name('ops.sites.bulk.pin');
 Route::post('/sites/bulk/channel', [SiteCoolifyOpsController::class, 'bulkChannel'])->name('ops.sites.bulk.channel');
 Route::get('/sites/bulk/channel', [SiteCoolifyOpsController::class, 'redirectGetBulkChannel'])->name('ops.sites.bulk.channel.get');
@@ -47,6 +48,7 @@ Route::post('/sites/{site}/deploy-gate', [SiteCoolifyOpsController::class, 'depl
 Route::post('/sites/{site}/deploy-canary', [SiteCoolifyOpsController::class, 'deployCanary'])->name('ops.sites.deploy-canary');
 Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');
 Route::post('/sites/{site}/follow-head', [SiteCoolifyOpsController::class, 'followHead'])->name('ops.sites.follow-head');
+Route::post('/sites/{site}/update-head', [SiteCoolifyOpsController::class, 'updateHead'])->name('ops.sites.update-head');
 Route::post('/sites/{site}/deploy', [SiteCoolifyOpsController::class, 'deploy'])->name('ops.sites.deploy');
 Route::post('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'sync'])->name('ops.sites.sync');
 Route::get('/sites/{site}/sync', [SiteCoolifyOpsController::class, 'redirectGetSync'])->name('ops.sites.sync.get');

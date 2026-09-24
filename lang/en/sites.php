@@ -353,6 +353,7 @@ return [
         'deploy' => 'Deploy',
         'redeploy' => 'Redeploy',
         'follow_head' => 'Deploy HEAD',
+        'update_head' => 'Update to HEAD (auto-deploy unchanged)',
         'open_coolify' => 'Open in Coolify',
         'edit' => 'Edit',
         'activate' => 'Activate',

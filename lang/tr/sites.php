@@ -354,6 +354,7 @@ return [
         'deploy' => 'Deploy',
         'redeploy' => 'Tekrar deploy',
         'follow_head' => 'HEAD’de deploy',
+        'update_head' => 'HEAD’e güncelle (oto-deploy değişmez)',
         'open_coolify' => 'Coolify’de aç',
         'edit' => 'Düzenle',
         'activate' => 'Aktif Et',

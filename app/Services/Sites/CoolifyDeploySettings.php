@@ -199,6 +199,40 @@ class CoolifyDeploySettings
         return $app;
     }
 
+    /**
+     * Move a pinned site to the branch HEAD once, without touching Coolify
+     * auto-deploy: a site with auto-deploy off stays off and keeps waiting for
+     * the next manual update. "Follow HEAD" is the variant that also turns
+     * auto-deploy on.
+     */
+    public function updateToHead(Site $site, ?User $actor = null, ?string $ip = null): CoolifyApplication
+    {
+        $uuid = $this->requireApp($site);
+        $this->assertCanStartDeploy($site);
+        $coolify = CoolifyApplicationService::forSite($site);
+
+        try {
+            $app = $coolify->patchApplication($uuid, [
+                'git_commit_sha' => CoolifyApplication::HEAD_REF,
+            ]);
+            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip);
+        } catch (CoolifyDeployBusyException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
+        } catch (CoolifyApiException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
+        }
+
+        $autoDeploy = $app->autoDeployState() ?? $site->coolify_auto_deploy;
+        $this->remember($site, $autoDeploy, CoolifyApplication::HEAD_REF);
+
+        $this->audit($site, $actor, $ip, 'site.git_update_head', [
+            'git_commit_sha' => null,
+            'is_auto_deploy' => $autoDeploy,
+        ]);
+
+        return $app;
+    }
+
     public function redeploy(Site $site, ?User $actor = null, ?string $ip = null): void
     {
         $this->startDeploy($site, true, DeploymentTrigger::Manual, $actor, $ip);
@@ -278,6 +312,17 @@ class CoolifyDeploySettings
     public function followHeadMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {
         return $this->applyMany($sites, fn (Site $site) => $this->followHead($site, $actor, $ip));
+    }
+
+    /**
+     * @param  iterable<int, Site>  $sites
+     * @return array{ok: int, failed: int, skipped: int, waiting: int, errors: list<string>, rate_limited: bool, deploy_busy: bool}
+     */
+    public function updateToHeadMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
+    {
+        return $this->applyMany($sites, function (Site $site) use ($actor, $ip): void {
+            $this->updateToHead($site, $actor, $ip);
+        });
     }
 
     /**

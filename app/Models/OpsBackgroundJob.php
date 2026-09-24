@@ -27,6 +27,7 @@ class OpsBackgroundJob extends Model
         'sites.bulk_deploy_gate' => 'bulk_deploy_gate',
         'sites.bulk_deploy' => 'bulk_deploy',
         'sites.bulk_follow_head' => 'bulk_follow_head',
+        'sites.bulk_update_head' => 'bulk_update_head',
         'sites.bulk_pin' => 'bulk_pin',
         'sites.bulk_app_health_fix' => 'bulk_app_health_fix',
         'sites.bulk_inject_agent_secret' => 'bulk_inject_agent_secret',
@@ -45,6 +46,7 @@ class OpsBackgroundJob extends Model
     private const TRIGGER_ONLY_TYPES = [
         'sites.bulk_deploy',
         'sites.bulk_follow_head',
+        'sites.bulk_update_head',
         'sites.bulk_pin',
         'sites.bulk_channel',
     ];
