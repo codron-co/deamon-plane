@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Enums\OpsLane;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\DeskronSetting;
 use App\Models\Site;
 use App\Services\Deskron\DeskronConfigurer;
@@ -31,12 +33,18 @@ use Illuminate\Foundation\Queue\Queueable;
  */
 class ReconcileDeskronPushJob implements ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
 
     /** One pass walks every unconfigured site, each with its own agent timeout. */
     public int $timeout = 900;
+
+    public function __construct()
+    {
+        $this->onLane(OpsLane::Long);
+    }
 
     public function handle(DeskronConfigurer $configurer): void
     {

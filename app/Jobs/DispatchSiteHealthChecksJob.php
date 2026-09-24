@@ -2,18 +2,26 @@
 
 namespace App\Jobs;
 
+use App\Enums\OpsLane;
 use App\Enums\SiteStatus;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\Site;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
 class DispatchSiteHealthChecksJob implements ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
 
     public int $timeout = 60;
+
+    public function __construct()
+    {
+        $this->onLane(OpsLane::Health);
+    }
 
     public function handle(): void
     {

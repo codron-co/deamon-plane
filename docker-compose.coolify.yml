@@ -49,6 +49,9 @@ services:
     cpus: "1.5"
     pids_limit: 256
     restart: unless-stopped
+    # Above the longest supervisord stopwaitsecs (queue-long 320 s) so running
+    # jobs finish on redeploy instead of being killed.
+    stop_grace_period: 330s
 
   mysql:
     image: mysql:8.0

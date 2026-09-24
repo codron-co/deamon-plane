@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Enums\OpsLane;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\FleetRollout;
 use App\Services\Rollouts\FleetRolloutService;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
@@ -19,6 +21,7 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  */
 class AdvanceFleetRolloutJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
@@ -29,7 +32,9 @@ class AdvanceFleetRolloutJob implements ShouldBeUniqueUntilProcessing, ShouldQue
 
     public function __construct(
         public readonly int $rolloutId,
-    ) {}
+    ) {
+        $this->onLane(OpsLane::Long);
+    }
 
     public function uniqueId(): string
     {

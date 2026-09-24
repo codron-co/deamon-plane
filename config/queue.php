@@ -64,11 +64,23 @@ return [
             'after_commit' => false,
         ],
 
+        // retry_after must outlast the longest job on the connection, or a job
+        // still running is handed out again (tests/Unit/Jobs/JobTimeoutInvariantTest).
         'redis' => [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 180),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        // The "long" lane: bulk sweeps, reconciles and rollouts that run for minutes.
+        'redis-long' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'long',
+            'retry_after' => 960,
             'block_for' => null,
             'after_commit' => false,
         ],
@@ -89,6 +101,22 @@ return [
             ],
         ],
 
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ops lanes
+    |--------------------------------------------------------------------------
+    |
+    | App\Enums\OpsLane. Only the long lane changes connection, and only on
+    | Redis (production); sync and database keep one connection.
+    |
+    */
+
+    'lanes' => [
+        'long' => [
+            'connection' => env('QUEUE_CONNECTION', 'database') === 'redis' ? 'redis-long' : null,
+        ],
     ],
 
     /*

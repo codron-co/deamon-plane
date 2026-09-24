@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
+use App\Enums\OpsLane;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\CoolifyConnection;
 use App\Models\Deployment;
 use App\Models\Site;
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\Log;
 
 class PollDeploymentJob implements ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
@@ -34,7 +37,9 @@ class PollDeploymentJob implements ShouldQueue
         public readonly ?string $ip = null,
         public readonly int $pollAttempt = 1,
         public readonly int $transientAttempt = 0,
-    ) {}
+    ) {
+        $this->onLane(OpsLane::Critical);
+    }
 
     public function handle(
         SiteProvisioner $provisioner,

@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Enums\OpsLane;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\Site;
 use App\Services\Sites\SiteAppHealthInspector;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -10,6 +12,7 @@ use Illuminate\Foundation\Queue\Queueable;
 
 class InspectSiteAppHealthJob implements ShouldBeUnique, ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
@@ -20,7 +23,9 @@ class InspectSiteAppHealthJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         public readonly string $siteId,
-    ) {}
+    ) {
+        $this->onLane(OpsLane::Health);
+    }
 
     public function uniqueId(): string
     {

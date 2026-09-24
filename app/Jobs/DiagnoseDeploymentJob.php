@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Enums\DeploymentStatus;
+use App\Enums\OpsLane;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\Deployment;
 use App\Services\Sites\Diagnosis\DeploymentDiagnoser;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -16,6 +18,7 @@ use Illuminate\Foundation\Queue\Queueable;
  */
 class DiagnoseDeploymentJob implements ShouldBeUnique, ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
@@ -26,7 +29,9 @@ class DiagnoseDeploymentJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         public readonly int $deploymentId,
-    ) {}
+    ) {
+        $this->onLane(OpsLane::Critical);
+    }
 
     public function uniqueId(): string
     {

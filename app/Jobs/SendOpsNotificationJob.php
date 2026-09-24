@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Enums\OpsLane;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\OpsNotification;
 use App\Services\Mail\PlatformOpsMailer;
 use Illuminate\Bus\Queueable;
@@ -19,6 +21,7 @@ class SendOpsNotificationJob implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
+    use OnOpsLane;
     use Queueable;
     use SerializesModels;
 
@@ -26,7 +29,10 @@ class SendOpsNotificationJob implements ShouldQueue
 
     public int $timeout = 60;
 
-    public function __construct(public readonly int $notificationId) {}
+    public function __construct(public readonly int $notificationId)
+    {
+        $this->onLane(OpsLane::Critical);
+    }
 
     /**
      * @return list<int>

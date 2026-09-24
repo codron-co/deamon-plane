@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Enums\OpsLane;
 use App\Enums\SiteStatus;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\Site;
 use App\Services\Sites\ChannelSwitcher;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -12,6 +14,7 @@ use Throwable;
 
 class SwitchSiteChannelJob implements ShouldBeUnique, ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
@@ -24,7 +27,9 @@ class SwitchSiteChannelJob implements ShouldBeUnique, ShouldQueue
         public readonly string $siteId,
         public readonly ?int $actorUserId = null,
         public readonly ?string $ip = null,
-    ) {}
+    ) {
+        $this->onLane(OpsLane::Critical);
+    }
 
     public function uniqueId(): string
     {

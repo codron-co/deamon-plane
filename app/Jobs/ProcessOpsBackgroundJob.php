@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Enums\OpsLane;
+use App\Jobs\Concerns\OnOpsLane;
 use App\Models\OpsBackgroundJob;
 use App\Services\Ops\OpsJobRunner;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,13 +13,17 @@ use Throwable;
 
 class ProcessOpsBackgroundJob implements ShouldQueue
 {
+    use OnOpsLane;
     use Queueable;
 
     public int $tries = 1;
 
     public int $timeout = 300;
 
-    public function __construct(public readonly string $jobId) {}
+    public function __construct(public readonly string $jobId)
+    {
+        $this->onLane(OpsLane::Long);
+    }
 
     /**
      * Job types that fan out over Coolify. Only one runs at a time so two bulk
