@@ -1,5 +1,7 @@
 # 17 — CMS handoff (istek listesi)
 
+> **ADR-12 notu (2026-09-24, denetim sonrası karar):** Site env'i 6 önyükleme anahtarına iner; yeni zorunlu env anahtarı eklenmez, yeni ayarlar agent ile gelir; `APP_ENV` her zaman `production` ve kanal geçişi yalnızca dalı değiştirir. Bu belgedeki env/kanal önerileri bu kararla birlikte okunmalı — [ADR-12](../../decisions/adr-12-site-config-from-plane.md).
+
 **Tarih:** 2026-09-24 · **HEAD:** 8484d37 · **Hazırlayan:** Orkestratör (Dalga 3)
 **Kapsam:** Plane önerilerinin `codron-co/deamon` (CMS) tarafında gerektirdiği sözleşme, endpoint, payload ve sürüm değişiklikleri. **Bu dosya yalnız istek listesidir; CMS kodu önermez.** Her madde CMS repo'sunda ayrı spec ile ele alınmalıdır.
 **Kaynak:** 02–14 raporlarının §6 bölümleri. Tekrarlar birleştirildi.
@@ -46,7 +48,7 @@
 | Q02 | İmzalı Plane health istekleri throttle dışında mı? | 429 kaynaklı sahte down alarmı | S4-B01 |
 | Q03 | `site/identity` isimde hangi dönüşümleri yapıyor? Normalize ediyorsa identity heal her poll'da sonsuz POST döngüsüne girer | S4-B18 | S4 §6 |
 | Q04 | Secret değişimi restart gerektiriyor mu? Restart'sız okuma mümkün mü? | P16/P45 kesinti süresi | S4-B06 |
-| Q05 | Yeni zorunlu env anahtarı eksikken CMS nasıl açılıyor (hızlı hata mı, varsayılan mı)? | P57 tetikleme kararı | S3-B26 |
+| Q05 | Yeni zorunlu env anahtarı eksikken CMS nasıl açılıyor (hızlı hata mı, varsayılan mı)? **ADR-12 ile cevaplandı:** yeni zorunlu env anahtarı eklenmez; yeni ayar agent ile gelir ve CMS'te kod varsayılanı vardır. Katalogdan çıkacak `APP_ENV` / `DEAMON_SITE_NAME` için C01 göç kuralı geçerli. | P57 tetikleme kararı | S3-B26 |
 | Q06 | `themes/update` 10 sn agent timeout'u içinde bitiyor mu, arka planda mı çalışıyor? | P19 smoke/süre bütçesi | S5 §6 |
 | Q07 | Runtime imajında `git` var mı? (önceki 1.3-d) | Tema kurulum/güncelleme akışının canlıda çalışması | S5 §6, 15 |
 | Q08 | `CONTROL_PLANE_HOST_ALLOWLIST` kontrolü hangi CMS sürümünde kaldırıldı? | Plane "min CMS sürümü" uyarısı | S7-B23 |

@@ -1,5 +1,7 @@
 # 04 — Coolify, deploy ve teşhis denetimi
 
+> **ADR-12 notu (2026-09-24, denetim sonrası karar):** Site env'i 6 önyükleme anahtarına iner; yeni zorunlu env anahtarı eklenmez, yeni ayarlar agent ile gelir; `APP_ENV` her zaman `production` ve kanal geçişi yalnızca dalı değiştirir. Bu belgedeki env/kanal önerileri bu kararla birlikte okunmalı — [ADR-12](../../decisions/adr-12-site-config-from-plane.md).
+
 **Tarih:** 2026-09-24 · **HEAD:** 8484d37 · **Hazırlayan:** S3 — Coolify, deploy ve teşhis denetçisi (Dalga 1)
 **Kapsam:** M2 ([01-envanter.md §11](01-envanter.md#11-modül--dosya-haritası-dalga-1-sahiplik-referansı)): `app/Services/Coolify/**` (Dto, EnvCatalog), `app/Services/Sites/{SiteProvisioner,ChannelSwitcher,ComposePackMigrator,CoolifyDeploySettings,DeploymentFailureText}`, `app/Services/Sites/Diagnosis/*`, `app/Services/Ops/OpsCoolifyDeployQueue`, Coolify/Deployment/Settings/DeamonGit controller'ları, Coolify webhook zinciri, `Deployment` modeli, `PollDeploymentJob`, `DiagnoseDeploymentJob`, `ProvisionSiteJob`, `SwitchSiteChannelJob`, `SyncCoolifyEnvCatalogJob`, `ops:import-coolify-apps`, `ops:heal-throttled-deploys`, `ops:sync-env-catalog`, `app/Support/{RetryAfter,CoolifyWebhookSignature}`.
 **Kapsam dışı:** Tema dağıtımı (M4), app-health denetçisi ve agent (M3; yalnız `SiteAppHealthFixer` teşhisin çağırdığı kadarıyla okundu), Cloudflare/domain (M5), kuyruk/iş widget'ı UI (M8). Canlı Coolify'a istek atılmadı.
@@ -230,7 +232,7 @@ Tek Coolify GET: `timeout 30 sn` × 3 deneme + backoff (≤1,5 sn) + host cooldo
 | Konu | CMS tarafında gereken |
 |------|------------------------|
 | S3-B01 / S3-O01 | `.env.production.example`'da secret/generated anahtarları kaldırma veya yeniden adlandırma bir “göç” adımı olarak yapılmalı (önce yeni anahtar eklenir, eski en az bir sürüm boyunca kalır); isteğe bağlı `#@deprecated` yönergesi — ayrıştırıcı Plane'de, dosya CMS'te. |
-| S3-B26 | Yeni zorunlu env anahtarı eklenen sürümlerde CMS'in eksik anahtarla açılış davranışı (hızlı hata mı, varsayılan mı) belgelenmeli; Plane bu bilgiye göre O21'i tetikler. |
+| S3-B26 | Yeni zorunlu env anahtarı eklenen sürümlerde CMS'in eksik anahtarla açılış davranışı (hızlı hata mı, varsayılan mı) belgelenmeli; Plane bu bilgiye göre O21'i tetikler. **Artık değişti (2026-09-24):** ADR-12 ile yeni zorunlu env anahtarı eklenmez; yeni ayar agent ile gelir ve CMS'te kod varsayılanı vardır ([ADR-12](../../decisions/adr-12-site-config-from-plane.md)). |
 | S3-O09 doğrulama adımı | Health payload'ında çalışan commit SHA'sı (varsa alan adı teyidi) — otomatik düzeltme sonrası “doğru sürüm ayakta” kontrolü için. Doğrulanmadı: mevcut payload'da `deamon_version` dışında SHA var mı. |
 
 ## 7. Açık sorular

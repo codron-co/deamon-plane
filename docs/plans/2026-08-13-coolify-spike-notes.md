@@ -1,5 +1,7 @@
 # Coolify API spike notes — Deamon Plane Dalga 0
 
+> **Güncel kural (2026-09-24):** Müşteri site env'i ve kanal → `APP_ENV` eşlemesiyle ilgili ifadeler için [ADR-12](../decisions/adr-12-site-config-from-plane.md) geçerlidir: env yalnızca 6 önyükleme anahtarı (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`); diğer ayarlar imzalı agent → site DB; `APP_ENV` her zaman `production`; yeni env anahtarı eklenmez.
+
 **Date:** 2026-08-13  
 **Source of truth (API):** Coolify OpenAPI `v4.x` (`https://github.com/coollabsio/coolify/blob/v4.x/openapi.yaml`, servers: `{host}/api/v1`)  
 **Live instance:** `https://dev.codron.cloud` (Coolify **4.3.1**) — read-only list + authorized mutate on **Susa DEMO** only.
@@ -99,7 +101,7 @@ Plane is installed the **same way** as a customer site: Coolify **Docker Compose
 | Compose file | `docker-compose.coolify.yml` | `docker-compose.coolify.yml` |
 | Services | `app` + mysql + redis | `app` + mysql + redis |
 | Volumes | `plane_storage`, `plane_mysql`, `plane_redis` | `deamon_storage`, `deamon_themes`, `deamon_mysql`, `deamon_redis` |
-| Coolify env (minimal) | `APP_KEY` (+ later `COOLIFY_*`) | `APP_KEY` + `DEAMON_SITE_NAME` |
+| Coolify env (minimal) | `APP_KEY` (+ later `COOLIFY_*`) | `APP_KEY` + `DEAMON_SITE_NAME` — **Artık değişti (2026-09-24):** hedef 6 önyükleme anahtarı (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`); `DEAMON_SITE_NAME` agent ile gelecek ([ADR-12](../decisions/adr-12-site-config-from-plane.md)) |
 | Domain service | `app` (8080, `/up`) | `app` (8080, `/up`) |
 
 Docs: `docs/modules/deployment.md`. **First successful image build** needs Laravel `composer.json` (Dalga 1). Coolify **resource** can be created now (repo + compose path + domain).

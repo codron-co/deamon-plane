@@ -1,5 +1,7 @@
 # Deamon Plane Implementation Plan
 
+> **Güncel kural (2026-09-24):** Müşteri site env'i ve kanal → `APP_ENV` eşlemesiyle ilgili ifadeler için [ADR-12](../decisions/adr-12-site-config-from-plane.md) geçerlidir: env yalnızca 6 önyükleme anahtarı (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`); diğer ayarlar imzalı agent → site DB; `APP_ENV` her zaman `production`; yeni env anahtarı eklenmez.
+
 I'm using the writing-plans skill to create the implementation plan.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -25,6 +27,7 @@ I'm using the writing-plans skill to create the implementation plan.
 - **Plane deploy:** Aynı Coolify modeli — bu repo `docker-compose.coolify.yml` (`plane_*` volumes; müşteri stack’i ile paylaşmaz). Detay: `docs/modules/deployment.md`.
 - **Kanallar:** Git branch seti sabit: `main` | `beta` | `alpha` (config allowlist). Başka branch UI’dan seçilemez (override sadece Super Admin + audit).
 - **Coolify env (müşteri app):** Yalnızca `APP_KEY` + `DEAMON_SITE_NAME` (+ Coolify’nin enjekte ettiği `SERVICE_URL_APP` / `SERVICE_FQDN_APP`). Diğerleri compose `environment:` bloğundan — Deamon CMS `docs/modules/deployment.md` ile uyum.
+  > **Artık değişti (2026-09-24):** Müşteri site env'i yalnızca önyükleme anahtarları; hedef 6: `APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL` (+ Coolify `SERVICE_*`). `DEAMON_SITE_NAME` ve `APP_ENV` katalogdan çıkacak: ad `/site/identity` ile gelir, `APP_ENV` her zaman `production`. Diğer ayarlar imzalı agent → site DB. Bkz. [ADR-12](../decisions/adr-12-site-config-from-plane.md).
 - **Tema SoT:** GitHub org `deamon-themes` (veya config’teki org); repo adı `deamon-theme-{theme_id}`. ZIP upload control plane’de **yok**.
 - **Tema güven modeli:** Tema kodu trusted deploy (PHP/Blade); yalnızca org içi + review’lı repo. Müşteri rastgele repo bağlayamaz.
 - **Gizli anahtarlar:** Coolify token, GitHub App private key, site agent shared secrets — control plane DB’de encrypted cast / vault; log’a yazılmaz; git’e commit edilmez.
@@ -217,6 +220,7 @@ Implementasyon öncesi Coolify sürümünde doğrulanacak endpoint’ler (adapte
 
 1. Create application (Docker Compose build pack, repo URL, branch)
 2. Set env vars (`APP_KEY`, `DEAMON_SITE_NAME`)
+   > **Artık değişti (2026-09-24):** Env sync artık CMS kataloğundan yalnızca önyükleme anahtarlarını yazar (hedef 6: `APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`). Site adı ve diğer ayarlar deploy sonrası agent ile itilir. Bkz. [ADR-12](../decisions/adr-12-site-config-from-plane.md).
 3. Set / sync domains
 4. Trigger deployment
 5. Get deployment status + logs
@@ -457,7 +461,7 @@ return [
 | `app/Http/Controllers/Internal/Control/*` | health, themes |
 | `app/Services/ControlPlane/ThemeGitInstaller.php` | clone/pull safe path |
 | `config/deamon.php` | `control_plane` config keys |
-| `.env.example` / `.env.production.example` | `CONTROL_PLANE_*` opsiyonel |
+| `.env.example` / `.env.production.example` | `CONTROL_PLANE_*` opsiyonel — **Artık değişti (2026-09-24):** `CONTROL_PLANE_AGENT_SECRET` ve `CONTROL_PLANE_HOST_ALLOWLIST` artık zorunlu önyükleme anahtarları; Plane yazar, prune silmez ([ADR-12](../decisions/adr-12-site-config-from-plane.md)) |
 | `docs/modules/deployment.md` | Agent bölümü |
 | `docs/modules/theme-repositories.md` | Agent install |
 | `tests/Feature/ControlPlane/*` | |

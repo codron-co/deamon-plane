@@ -2,6 +2,14 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Site config from Plane — ADR-12 (2026-09-24)
+
+- Status: **decision + docs** (CMS `62af7d64`, Plane `5381eff`); code transition open.
+- Customer site env = 6 bootstrap keys (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`); env prune never deletes them.
+- Every other per-site setting ships as a signed agent endpoint → site DB (CMS default, last-known value when Plane is down, reported in health).
+- Security baseline fixed in CMS code; `APP_ENV` always `production`, channel = branch only.
+- Open: remove `APP_ENV` / `DEAMON_SITE_NAME` from the catalog, stop `ChannelEnvironmentMap::appEnv()` driving env (F-G-03 P0), push `/site/identity` at provision. See [ADR-12](../decisions/adr-12-site-config-from-plane.md).
+
 ## Stale core theme + storefront smoke guard (2026-09-23)
 
 - Status: **committed on `alpha`**. Trigger: moonagro.com `/timeline` 500 (`View [partials.timeline.feed] not found`) after the new theme was installed. Root cause in the CMS: `themes/default` on the persistent volume was only seeded when missing, so the August copy never got the timeline partials.
@@ -21,6 +29,7 @@ Durable orchestrator state. Do not re-dispatch completed tasks.
 
 - Status: **code** (Deamon Git + prune). Build-pack catalogs (`dockercompose` / `dockerfile`) and in-Plane editing are gone; `coolify_env_defaults` is keyed by git **channel**. Source per channel is `coolify_env_catalog_sources` (repo, commit, fetched_at, last_error).
 - `CoolifyEnvCatalogSync` + `EnvExampleParser` read `.env.production.example` from `config('ops.deamon.repository')` at `ref=<channel>` via `GitHubAppClient::fetchTextFile` (**Settings → Deamon Git** only). Triggers: CMS repo `push` webhook (`GitHubWebhookHandler`, same secret), hourly `ops:sync-env-catalog`, Settings **Refresh from GitHub** (`POST /settings/env-defaults/sync`), on-demand when a channel is empty at deploy.
+- **Artık değişti (2026-09-24):** `{{site.app_env}}` ve `{{site.name}}` satırları katalogdan çıkacak (`APP_ENV` her zaman `production`, ad agent ile); bkz. [ADR-12](../decisions/adr-12-site-config-from-plane.md). Aşağıdaki satır o günkü durumdur.
 - Value tokens: `{{generated}}`, `{{site.app_key|name|channel|app_env|agent_secret}}`, `{{plane.host}}` (`CONTROL_PLANE_HOST_ALLOWLIST`). Coolify inject rows are not listed. Compose constants and `DEAMON_PLATFORM_MAIL_*` are not catalog rows — compose / `/platform-mail/configure` own them.
 - Credentials: Settings → **Deamon Git** (App install on `github_settings.installation_id` / PAT) — not Themes connections.
 - Deploy sync **upserts + prunes** leftovers (keeps `SERVICE_*` / `COOLIFY_*` / `APP_URL` / `DEAMON_SITE_HOST` / `SOURCE_COMMIT`; never rotates live secrets).

@@ -1,5 +1,7 @@
 # Deamon Plane denetimi — 2026-09
 
+> **ADR-12 notu (2026-09-24, denetim sonrası karar):** Site env'i 6 önyükleme anahtarına iner; yeni zorunlu env anahtarı eklenmez, yeni ayarlar agent ile gelir; `APP_ENV` her zaman `production` ve kanal geçişi yalnızca dalı değiştirir. Bu belgedeki env/kanal önerileri bu kararla birlikte okunmalı — [ADR-12](../../decisions/adr-12-site-config-from-plane.md).
+
 **Tarih:** 2026-09-24 · **HEAD:** `8484d37` (`alpha`) · **Önceki inceleme:** [2026-09-14](../../plans/2026-09-14-plane-review-and-proposals.md) (HEAD `242ae15`)
 **Başlatan prompt:** [`.cursor/prompts/010_START-Plane-Denetim-ve-Yol-Haritasi.md`](../../../.cursor/prompts/010_START-Plane-Denetim-ve-Yol-Haritasi.md)
 

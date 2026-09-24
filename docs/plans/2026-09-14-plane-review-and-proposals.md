@@ -1,5 +1,7 @@
 # Deamon Plane — Durum incelemesi ve öneri raporu
 
+> **Güncel kural (2026-09-24):** Müşteri site env'i ve kanal → `APP_ENV` eşlemesiyle ilgili ifadeler için [ADR-12](../decisions/adr-12-site-config-from-plane.md) geçerlidir: env yalnızca 6 önyükleme anahtarı (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`); diğer ayarlar imzalı agent → site DB; `APP_ENV` her zaman `production`; yeni env anahtarı eklenmez.
+
 **Tarih:** 2026-09-14
 **Dal:** `alpha` (HEAD `242ae15`)
 **Kapsam:** Yalnızca `deamon-plane`. CMS (`codron-co/deamon`) tarafına düşen işler ayrı başlıkta işaretlendi.
