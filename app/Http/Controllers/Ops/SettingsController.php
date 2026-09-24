@@ -7,6 +7,7 @@ use App\Enums\CoolifyEnvKind;
 use App\Http\Controllers\Controller;
 use App\Models\CoolifyEnvCatalogSource;
 use App\Models\CoolifyEnvDefault;
+use App\Models\GithubSetting;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogException;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogSync;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
@@ -48,7 +49,7 @@ class SettingsController extends Controller
             'repository' => config('ops.deamon.repository'),
             'canWrite' => request()->user()?->can('ops.write') ?? false,
             'githubWebhookUrl' => url('/webhooks/github'),
-            'githubSetting' => \App\Models\GithubSetting::current(),
+            'githubSetting' => GithubSetting::current(),
             'envChannels' => $channels,
             'envKinds' => CoolifyEnvKind::cases(),
             'envDefaults' => $envDefaults,

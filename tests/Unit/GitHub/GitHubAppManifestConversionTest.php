@@ -22,7 +22,7 @@ class GitHubAppManifestConversionTest extends TestCase
             ], 201),
         ]);
 
-        (new GitHubAppClient())->convertAppManifest('manifest-code');
+        (new GitHubAppClient)->convertAppManifest('manifest-code');
 
         Http::assertSent(function (Request $request): bool {
             return $request->url() === 'https://api.github.com/app-manifests/manifest-code/conversions'

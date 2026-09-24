@@ -12,8 +12,11 @@ use App\Models\Deployment;
 use App\Models\OpsBackgroundJob;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyDeploymentSync;
 use App\Services\Coolify\Dto\CoolifyDeployment;
+use App\Services\Sites\ChannelSwitcher;
+use App\Services\Sites\SiteProvisioner;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -91,9 +94,9 @@ class DeploymentPollWidgetTest extends TestCase
         Queue::fake();
 
         (new PollDeploymentJob($deployment->id))->handle(
-            app(\App\Services\Sites\SiteProvisioner::class),
-            app(\App\Services\Coolify\CoolifyApplicationService::class),
-            app(\App\Services\Sites\ChannelSwitcher::class),
+            app(SiteProvisioner::class),
+            app(CoolifyApplicationService::class),
+            app(ChannelSwitcher::class),
             app(CoolifyDeploymentSync::class),
         );
 
