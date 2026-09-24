@@ -37,6 +37,7 @@
 - [Cloudflare HTTP adapter](modules/cloudflare-client.md) — token, parent-zone A attach, preview wildcard, DNS template
 - [Site detail UI reference](prototypes/site-detail-reference.html) — golden Site detail layout; identity mark loads the live domain favicon
 - [Runbooks](runbooks/README.md) — deploy-plane / provision / import / channel-switch / agent-secret-inject / theme-rollout / token-rotation
+- [CI and CI-gated deploy](runbooks/ci-cd-plane.md) — GitHub Actions `CI` (pint, Larastan, sqlite + MySQL tests, node, image boot), `composer check`, Coolify deploys Plane only when CI is green
 
 ## Sınır
 

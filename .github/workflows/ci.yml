@@ -1,0 +1,366 @@
+# Deamon Plane CI + CI-gated deploy.
+#
+# The workflow name "CI" is load-bearing: branch protection and Plane match on it.
+# Runbook: docs/runbooks/ci-cd-plane.md
+name: CI
+
+on:
+  push:
+    branches: [main, beta, alpha]
+  pull_request:
+
+permissions:
+  contents: read
+
+# PRs: a new push cancels the stale run. Branch pushes: one group per commit,
+# so every pushed commit gets its own verdict (nothing is cancelled or
+# replaced). Deploy ordering is handled by the deploy job's own concurrency.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || format('push-{0}', github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PHP_VERSION: "8.2"
+  PHP_EXTENSIONS: bcmath, gd, intl, mbstring, pcntl, pdo_mysql, pdo_sqlite, sqlite3, zip
+  COMPOSER_NO_INTERACTION: "1"
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Composer install
+        run: composer install --prefer-dist --no-progress
+
+      - name: Composer audit (fails on security advisories only)
+        run: composer audit --locked --abandoned=report
+
+      - name: Pint
+        run: vendor/bin/pint --test
+
+      - name: PHPStan (Larastan, level 5 + baseline)
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress --error-format=github
+
+  test-sqlite:
+    name: test-sqlite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Composer install
+        run: composer install --prefer-dist --no-progress
+
+      # storage/framework/* is gitignored without placeholders; Blade needs views/.
+      - name: Runtime directories
+        run: mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+
+      # phpunit.xml default: sqlite :memory:
+      - name: Tests (sqlite)
+        run: php artisan test
+
+  test-mysql:
+    name: test-mysql
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: plane_test
+          MYSQL_USER: plane
+          MYSQL_PASSWORD: plane
+          MYSQL_ROOT_PASSWORD: plane-root
+          TZ: Europe/Istanbul
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uplane -pplane"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    # phpunit.xml <env> entries have no force="true": values already in the
+    # environment win, so these replace the sqlite :memory: defaults.
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_DATABASE: plane_test
+      DB_USERNAME: plane
+      DB_PASSWORD: plane
+      DB_TIMEZONE: "+03:00"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Composer install
+        run: composer install --prefer-dist --no-progress
+
+      - name: Runtime directories
+        run: mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+
+      # Service containers cannot take mysqld flags. Mirror the compose
+      # server settings that matter (--default-time-zone=+03:00, utf8mb4).
+      # Laravel also sets the session time_zone from DB_TIMEZONE.
+      - name: Match compose MySQL server settings
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -pplane-root -e "
+            SET PERSIST time_zone = '+03:00';
+            SET PERSIST character_set_server = 'utf8mb4';
+            SET PERSIST collation_server = 'utf8mb4_unicode_ci';
+            ALTER DATABASE plane_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+            SELECT @@global.time_zone, @@global.collation_server, VERSION();"
+
+      - name: Tests (mysql)
+        run: php artisan test
+
+  node:
+    name: node
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      # ADR-11: syntax check on every shipped script + node --test contracts.
+      - name: node --check public/js
+        run: for f in public/js/*.js; do node --check "$f"; done
+
+      - name: node --test tests/js
+        run: node --test tests/js/*.js
+
+  docker:
+    name: docker
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          push: false
+          tags: deamon-plane:ci
+          build-args: |
+            COOLIFY_BRANCH=${{ github.ref_name }}
+            SOURCE_COMMIT=${{ github.sha }}
+          cache-from: type=gha,scope=plane-image
+          cache-to: type=gha,scope=plane-image,mode=max
+
+      # Boot the real Coolify compose stack (app + MySQL + Redis) from the image
+      # built above and wait for /up. Catches entrypoint, migration and
+      # config:cache/route:cache/view:cache failures before Coolify sees them.
+      - name: Boot smoke test (docker-compose.coolify.yml)
+        env:
+          COMPOSE_PROJECT_NAME: plane-ci
+        run: |
+          set -euo pipefail
+          {
+            echo "APP_KEY=base64:$(openssl rand -base64 32)"
+            echo "APP_URL=http://localhost"
+          } > .env
+          cat > "$RUNNER_TEMP/compose.ci.yml" <<'YAML'
+          services:
+            app:
+              image: deamon-plane:ci
+              pull_policy: never
+          YAML
+          compose() { docker compose -f docker-compose.coolify.yml -f "$RUNNER_TEMP/compose.ci.yml" "$@"; }
+          compose up -d --no-build
+          for i in $(seq 1 60); do
+            code="$(compose exec -T app curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/up || true)"
+            if [ "$code" = "200" ]; then
+              echo "/up returned 200 after ~$((i * 5))s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error title=Boot smoke test::/up did not return 200 within 300s (last: ${code:-none})"
+          exit 1
+
+      - name: Compose logs
+        if: failure()
+        run: docker compose -p plane-ci -f docker-compose.coolify.yml logs --no-color --timestamps || true
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -p plane-ci -f docker-compose.coolify.yml down -v --remove-orphans || true
+          rm -f .env
+
+  # Coolify auto-deploy for the Plane app is OFF; this job is the only deploy
+  # trigger. It runs only when every job above is green on a branch push.
+  deploy:
+    name: deploy
+    needs: [lint, test-sqlite, test-mysql, node, docker]
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta' || github.ref == 'refs/heads/alpha')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ github.ref_name }}
+    # One deploy per branch at a time; a newer run waits instead of racing.
+    concurrency:
+      group: deploy-plane-${{ github.ref_name }}
+      cancel-in-progress: false
+    env:
+      COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+    steps:
+      - name: Check the Coolify target is configured
+        id: config
+        run: |
+          if [ -z "$COOLIFY_BASE_URL" ] || [ -z "$COOLIFY_API_TOKEN" ] || [ -z "$COOLIFY_APP_UUID" ]; then
+            echo "::notice title=Deploy skipped::Environment '$GITHUB_REF_NAME' has no COOLIFY_BASE_URL / COOLIFY_API_TOKEN / COOLIFY_APP_UUID secrets. See docs/runbooks/ci-cd-plane.md."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! printf '%s' "$COOLIFY_APP_UUID" | grep -Eq '^[A-Za-z0-9-]+$'; then
+            echo "::error title=Deploy::COOLIFY_APP_UUID must be a bare Coolify uuid."
+            exit 1
+          fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      # Coolify's /deploy builds the branch HEAD (the API has no commit
+      # parameter; pinning git_commit_sha would show the app as "pinned" in
+      # Plane). Deploy only if HEAD is still the commit this run tested; if
+      # the branch moved on, the newer push has its own run and deploys itself.
+      - name: Check the branch HEAD is still this commit
+        id: head
+        if: steps.config.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$GITHUB_REF_NAME" --jq .object.sha)"
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "::notice title=Deploy skipped::$GITHUB_REF_NAME moved on to ${head:0:7}; that push deploys itself after its own CI."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "current=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy via Coolify API
+        if: steps.config.outputs.configured == 'true' && steps.head.outputs.current == 'true'
+        run: |
+          set -euo pipefail
+          base="${COOLIFY_BASE_URL%/}"
+          base="${base%/api/v1}"
+          base="${base%/}"
+          api="$base/api/v1"
+
+          # Token goes through stdin (-H @-), never argv or the log.
+          coolify() {
+            printf 'Authorization: Bearer %s\n' "$COOLIFY_API_TOKEN" \
+              | curl --fail-with-body --silent --show-error \
+                  --connect-timeout 10 --max-time 60 \
+                  -H @- -H 'Accept: application/json' "$@"
+          }
+
+          # Same call as App\Services\Coolify\CoolifyClient::deploy()
+          # (POST /api/v1/deploy?uuid=...). No retry: a POST retry could queue twice.
+          response="$(coolify -X POST "$api/deploy?uuid=$COOLIFY_APP_UUID")"
+          deployment="$(printf '%s' "$response" | jq -r '(.deployments // [.])[0].deployment_uuid // empty')"
+          if [ -z "$deployment" ]; then
+            echo "::error title=Deploy::Coolify accepted the call but returned no deployment_uuid."
+            printf '%s\n' "$response" | jq -c '.' || true
+            exit 1
+          fi
+          echo "Queued Coolify deployment $deployment for ${GITHUB_SHA:0:7}"
+
+          # Follow the deployment so a failed Coolify build turns this job red.
+          for i in $(seq 1 120); do
+            sleep 10
+            row="$(coolify "$api/deployments/$deployment" || true)"
+            status="$(printf '%s' "$row" | jq -r '.status // empty' 2>/dev/null || true)"
+            commit="$(printf '%s' "$row" | jq -r '.commit // empty' 2>/dev/null || true)"
+            echo "[$((i * 10))s] status=${status:-unknown}"
+            case "$status" in
+              finished)
+                # Coolify may report a full or short SHA, or "HEAD".
+                if [ -n "$commit" ] && [ "$commit" != "HEAD" ] && [ "${GITHUB_SHA#"$commit"}" = "$GITHUB_SHA" ]; then
+                  echo "::warning title=Deploy::Coolify built ${commit:0:7}, not ${GITHUB_SHA:0:7} (the branch moved during the deploy)."
+                fi
+                echo "::notice title=Deployed::Plane $GITHUB_REF_NAME @ ${GITHUB_SHA:0:7} (Coolify deployment $deployment)"
+                exit 0
+                ;;
+              failed|cancelled*|error)
+                echo "::error title=Deploy::Coolify deployment $deployment ended as '$status'. Check the Coolify deployment log."
+                exit 1
+                ;;
+            esac
+          done
+          echo "::error title=Deploy::Coolify deployment $deployment still not finished after 20 minutes."
+          exit 1

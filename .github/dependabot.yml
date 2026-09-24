@@ -1,0 +1,32 @@
+# Weekly dependency PRs. Minor + patch bumps are grouped into one PR per
+# ecosystem; majors stay separate so they get their own review.
+# No npm entry: Plane has no package.json (ADR-11 keeps the JS lane dependency-free).
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Istanbul
+    target-branch: alpha
+    open-pull-requests-limit: 5
+    groups:
+      composer-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Istanbul
+    target-branch: alpha
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(ci)"

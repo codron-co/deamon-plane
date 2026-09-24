@@ -5,6 +5,7 @@ Uygulama ilerledikçe doldurulur. Özet akışlar plan §15’te.
 | Runbook | Durum |
 |---------|--------|
 | [deploy-plane.md](deploy-plane.md) | Coolify Compose ile Plane kurulumu |
+| [ci-cd-plane.md](ci-cd-plane.md) | Plane CI (GitHub Actions `CI`) + yalnız yeşil CI sonrası Coolify deploy; Environments/secrets, auto-deploy kapatma, branch protection |
 | [provision-site.md](provision-site.md) | Task 4 — draft/error → Coolify compose provision + poll / webhook |
 | [import-coolify-apps.md](import-coolify-apps.md) | Task 7 — `ops:import-coolify-apps` dry-run → `--apply` |
 | [channel-switch.md](channel-switch.md) | Task 5 — PATCH git_branch + deploy; confirm / version gate from last health; no DELETE |
