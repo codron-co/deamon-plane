@@ -4,6 +4,7 @@ namespace App\Services\Ops;
 
 use App\Enums\Channel;
 use App\Enums\CmsPublishStatus;
+use App\Enums\DeployGate;
 use App\Models\CoolifyConnection;
 use App\Models\OpsBackgroundJob;
 use App\Models\Site;
@@ -39,6 +40,7 @@ class OpsJobRunner
             'sites.bulk_channel' => $this->bulkChannel($job),
             'sites.bulk_compose' => $this->bulkCompose($job),
             'sites.bulk_auto_deploy' => $this->bulkAutoDeploy($job),
+            'sites.bulk_deploy_gate' => $this->bulkDeployGate($job),
             'sites.bulk_deploy' => $this->bulkDeploy($job),
             'sites.bulk_follow_head' => $this->bulkFollowHead($job),
             'sites.bulk_pin' => $this->bulkPin($job),
@@ -187,6 +189,24 @@ class OpsJobRunner
             $enabled ? __('site_ops.auto_deploy.bulk_on') : __('site_ops.auto_deploy.bulk_off'),
             $result,
         );
+    }
+
+    private function bulkDeployGate(OpsBackgroundJob $job): string
+    {
+        $sites = $this->sites($job)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
+        $gate = DeployGate::tryFrom((string) ($job->payload['gate'] ?? ''));
+        if ($gate === null) {
+            throw new \InvalidArgumentException('sites.bulk_deploy_gate requires payload.gate');
+        }
+        $settings = app(CoolifyDeploySettings::class);
+        $actor = $this->actor($job);
+        $ip = $this->ip($job);
+
+        $result = $this->fanout($job, $sites, function (Site $site) use ($settings, $gate, $actor, $ip): void {
+            $settings->setDeployGate($site, $gate, $actor, $ip);
+        });
+
+        return $this->summaryFor(__('rollouts.bulk.done', ['gate' => $gate->label()]), $result);
     }
 
     private function bulkDeploy(OpsBackgroundJob $job): string

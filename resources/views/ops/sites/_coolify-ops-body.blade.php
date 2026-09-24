@@ -128,7 +128,8 @@
                         <button type="submit" class="btn btn-ghost btn-sm" aria-pressed="{{ $autoDeployOn === true ? 'true' : 'mixed' }}" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.auto_deploy.off_button') }}</button>
                     </form>
                 @endif
-                @if ($canOps && $autoDeployOn !== true)
+                {{-- A CI-gated site turns auto-deploy back on only through the deploy gate. --}}
+                @if ($canOps && $autoDeployOn !== true && ! $site->usesCiGate())
                     <form
                         method="POST"
                         action="{{ route('ops.sites.auto-deploy', $site) }}"
@@ -238,4 +239,8 @@
             </div>
         @endif
     </article>
+@endif
+
+@if (filled($site->coolify_app_uuid))
+    @include('ops.sites._deploy-gate-card', ['site' => $site, 'canOps' => $canOps])
 @endif

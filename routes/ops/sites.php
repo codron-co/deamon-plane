@@ -27,6 +27,7 @@ Route::delete('/sites/list-views/{view}', [SiteListPreferencesController::class,
 Route::post('/sites/bulk/publish-status', [SitePublishStatusController::class, 'bulkUpdate'])->name('ops.sites.bulk.publish-status');
 Route::post('/sites/bulk/compose', [SiteCoolifyOpsController::class, 'bulkMigrateCompose'])->name('ops.sites.bulk.compose');
 Route::post('/sites/bulk/auto-deploy', [SiteCoolifyOpsController::class, 'bulkAutoDeploy'])->name('ops.sites.bulk.auto-deploy');
+Route::post('/sites/bulk/deploy-gate', [SiteCoolifyOpsController::class, 'bulkDeployGate'])->name('ops.sites.bulk.deploy-gate');
 Route::post('/sites/bulk/deploy', [SiteCoolifyOpsController::class, 'bulkDeploy'])->name('ops.sites.bulk.deploy');
 Route::post('/sites/bulk/follow-head', [SiteCoolifyOpsController::class, 'bulkFollowHead'])->name('ops.sites.bulk.follow-head');
 Route::post('/sites/bulk/pin', [SiteCoolifyOpsController::class, 'bulkPin'])->name('ops.sites.bulk.pin');
@@ -42,6 +43,8 @@ Route::post('/sites/bulk/purge', [SiteCoolifyOpsController::class, 'bulkPurge'])
 Route::get('/sites/{site}/coolify-ops/panel', [SiteCoolifyOpsController::class, 'panel'])->name('ops.sites.coolify-ops.panel');
 Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateCompose'])->name('ops.sites.compose');
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
+Route::post('/sites/{site}/deploy-gate', [SiteCoolifyOpsController::class, 'deployGate'])->name('ops.sites.deploy-gate');
+Route::post('/sites/{site}/deploy-canary', [SiteCoolifyOpsController::class, 'deployCanary'])->name('ops.sites.deploy-canary');
 Route::post('/sites/{site}/pin', [SiteCoolifyOpsController::class, 'pin'])->name('ops.sites.pin');
 Route::post('/sites/{site}/follow-head', [SiteCoolifyOpsController::class, 'followHead'])->name('ops.sites.follow-head');
 Route::post('/sites/{site}/deploy', [SiteCoolifyOpsController::class, 'deploy'])->name('ops.sites.deploy');

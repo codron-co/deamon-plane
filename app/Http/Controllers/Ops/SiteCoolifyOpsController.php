@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Enums\Channel;
+use App\Enums\DeployGate;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
 use App\Http\Requests\Ops\BulkAutoDeploySiteRequest;
+use App\Http\Requests\Ops\BulkDeployGateRequest;
 use App\Http\Requests\Ops\BulkPinSiteRequest;
 use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\PinSiteRequest;
@@ -148,6 +150,78 @@ class SiteCoolifyOpsController extends Controller
             $result,
             $enabled ? __('site_ops.auto_deploy.bulk_on') : __('site_ops.auto_deploy.bulk_off'),
         ));
+    }
+
+    /**
+     * `coolify` ↔ `ci`. Switching never deploys; see docs/modules/ci-gated-rollout.md.
+     */
+    public function deployGate(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
+    {
+        $this->authorize('update', $site);
+        $gate = DeployGate::from((string) $request->validate([
+            'gate' => ['required', 'in:'.implode(',', DeployGate::values())],
+        ])['gate']);
+
+        try {
+            $settings->setDeployGate($site, $gate, $request->user(), $request->ip());
+        } catch (ComposePackException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('rollouts.site.gate_done', [
+            'name' => $site->name,
+            'gate' => $gate->label(),
+        ]));
+    }
+
+    /**
+     * Canary sites build a green commit first; the rest of the channel waits for them.
+     */
+    public function deployCanary(Request $request, Site $site): RedirectResponse
+    {
+        $this->authorize('update', $site);
+        $canary = (bool) $request->validate(['canary' => ['required', 'boolean']])['canary'];
+        $before = (bool) $site->deploy_canary;
+
+        $site->forceFill(['deploy_canary' => $canary])->save();
+        $site->auditLogs()->create([
+            'actor_user_id' => $request->user()?->id,
+            'action' => 'site.deploy_canary_updated',
+            'before' => ['deploy_canary' => $before],
+            'after' => ['deploy_canary' => $canary],
+            'ip' => $request->ip(),
+        ]);
+
+        return back()->with('status', $canary
+            ? __('rollouts.site.canary_on', ['name' => $site->name])
+            : __('rollouts.site.canary_off', ['name' => $site->name]));
+    }
+
+    public function bulkDeployGate(BulkDeployGateRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse
+    {
+        $sites = $this->sitesFromBulk($request)->filter(fn (Site $site): bool => filled($site->coolify_app_uuid));
+
+        foreach ($sites as $site) {
+            $this->authorize('update', $site);
+        }
+
+        if ($sites->isEmpty()) {
+            return back()->with('error', __('site_ops.bulk.empty'));
+        }
+
+        $gate = DeployGate::from((string) $request->validated('gate'));
+
+        if ($request->expectsJson()) {
+            return $this->queueOpsJob($request, 'sites.bulk_deploy_gate', __('ops.jobs.bulk_deploy_gate'), [
+                'site_ids' => $sites->pluck('id')->all(),
+                'ip' => $request->ip(),
+                'gate' => $gate->value,
+            ]);
+        }
+
+        $result = $settings->setDeployGateMany($sites, $gate, $request->user(), $request->ip());
+
+        return back()->with('status', $this->bulkFlash($result, __('rollouts.bulk.done', ['gate' => $gate->label()])));
     }
 
     public function pin(PinSiteRequest $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse

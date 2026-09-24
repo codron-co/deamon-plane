@@ -377,6 +377,34 @@
                                     data-confirm-label="{{ __('site_ops.bulk.auto_off') }}"
                                     data-confirm-danger="false"
                                 >{{ __('site_ops.bulk.auto_off') }}</button>
+                                <div class="ops-action-sep" role="separator"></div>
+                                <span class="ops-menu-label">{{ __('rollouts.bulk.label') }}</span>
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.deploy-gate') }}"
+                                    name="gate"
+                                    value="ci"
+                                    data-confirm="{{ __('rollouts.bulk.confirm_ci', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('rollouts.bulk.confirm_ci', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('rollouts.site.confirm_title') }}"
+                                    data-confirm-label="{{ __('rollouts.bulk.to_ci') }}"
+                                    data-confirm-danger="false"
+                                >{{ __('rollouts.bulk.to_ci') }}</button>
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.deploy-gate') }}"
+                                    name="gate"
+                                    value="coolify"
+                                    data-confirm="{{ __('rollouts.bulk.confirm_coolify', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('rollouts.bulk.confirm_coolify', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('rollouts.site.confirm_title') }}"
+                                    data-confirm-label="{{ __('rollouts.bulk.to_coolify') }}"
+                                    data-confirm-danger="false"
+                                >{{ __('rollouts.bulk.to_coolify') }}</button>
                                 </div>
                             </details>
                             <button

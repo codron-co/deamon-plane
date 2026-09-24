@@ -187,6 +187,8 @@ class ThemeController extends Controller
         $validated = $request->validate([
             'visibility' => ['required', 'in:'.implode(',', ThemeVisibility::values())],
             'default_ref' => ['nullable', 'string', 'max:120'],
+            // Only the CI gate form posts it; the other theme forms leave it alone.
+            'ci_gate' => ['sometimes', 'boolean'],
         ]);
 
         $before = [
@@ -199,7 +201,23 @@ class ThemeController extends Controller
         if ($ref !== '') {
             $theme->default_ref = $ref;
         }
+        $ciGateBefore = (bool) $theme->ci_gate;
+        if (array_key_exists('ci_gate', $validated)) {
+            $theme->ci_gate = (bool) $validated['ci_gate'];
+        }
         $theme->save();
+
+        if ($ciGateBefore !== (bool) $theme->ci_gate) {
+            $theme->auditLogs()->create([
+                'actor_user_id' => $request->user()?->id,
+                'action' => 'theme.ci_gate_updated',
+                'before' => ['ci_gate' => $ciGateBefore],
+                'after' => ['ci_gate' => (bool) $theme->ci_gate],
+                'ip' => $request->ip(),
+            ]);
+
+            return back()->with('status', $theme->ci_gate ? __('rollouts.theme.on') : __('rollouts.theme.off'));
+        }
 
         $theme->auditLogs()->create([
             'actor_user_id' => $request->user()?->id,

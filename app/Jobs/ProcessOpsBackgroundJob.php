@@ -31,6 +31,7 @@ class ProcessOpsBackgroundJob implements ShouldQueue
         'sites.bulk_channel',
         'sites.bulk_compose',
         'sites.bulk_auto_deploy',
+        'sites.bulk_deploy_gate',
         'sites.bulk_deploy',
         'sites.bulk_follow_head',
         'sites.bulk_pin',

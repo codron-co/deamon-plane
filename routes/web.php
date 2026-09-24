@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/ops/mail-servers.php';
     require __DIR__.'/ops/deskron.php';
     require __DIR__.'/ops/themes.php';
+    require __DIR__.'/ops/rollouts.php';
 
     Route::get('/account', [AccountController::class, 'show'])->name('ops.account.show');
     Route::put('/account', [AccountController::class, 'update'])->name('ops.account.update');

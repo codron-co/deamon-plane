@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\CiBranchHead;
+use App\Models\FleetRollout;
 use App\Models\MailServer;
 use App\Models\OpsBackgroundJob;
 use App\Models\Site;
@@ -137,6 +139,8 @@ class ActivityController extends Controller
             Site::class => route('ops.sites.show', $audit->subject_id),
             Theme::class => route('ops.themes.show', $audit->subject_id),
             MailServer::class => route('ops.mail-servers.show', $audit->subject_id),
+            FleetRollout::class => route('ops.rollouts.show', $audit->subject_id),
+            CiBranchHead::class => route('ops.rollouts'),
             default => null,
         };
     }
@@ -146,6 +150,10 @@ class ActivityController extends Controller
         $subject = $audit->subject;
         if ($subject instanceof Site || $subject instanceof Theme || $subject instanceof MailServer) {
             return (string) $subject->name;
+        }
+
+        if ($subject instanceof FleetRollout || $subject instanceof CiBranchHead) {
+            return $subject->label();
         }
 
         return $audit->subject_type.' #'.$audit->subject_id;

@@ -447,6 +447,37 @@
                 @endif
             </article>
 
+            <article class="site-card" aria-labelledby="theme-ci-gate-heading">
+                <span class="site-section-kicker">{{ __('rollouts.theme.kicker') }}</span>
+                <h3 id="theme-ci-gate-heading">{{ __('rollouts.theme.title') }} @include('ops.dashboard._hint', ['text' => __('rollouts.theme.hint')])</h3>
+                @if ($canWrite)
+                    <form method="POST" action="{{ route('ops.themes.update', $theme) }}" class="ops-form settings-form" data-ops-pending>
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="visibility" value="{{ $visibilityValue }}">
+                        <input type="hidden" name="default_ref" value="{{ $defaultRefValue }}">
+                        <div class="field">
+                            <label class="field-check">
+                                <input type="hidden" name="ci_gate" value="0">
+                                <input type="checkbox" name="ci_gate" value="1" @checked(old('ci_gate', $theme->ci_gate))>
+                                <span>{{ __('rollouts.theme.label') }}</span>
+                            </label>
+                            <p class="field-hint">{{ __('rollouts.theme.requires_workflow', ['workflow' => config('ops.ci.workflow_name', 'CI')]) }}</p>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-secondary" data-pending-label="{{ __('ops.actions.working') }}">{{ __('themes.show.save') }}</button>
+                        </div>
+                    </form>
+                @else
+                    <dl class="site-fact-list">
+                        <div>
+                            <dt>{{ __('rollouts.theme.title') }}</dt>
+                            <dd>{{ $theme->ci_gate ? __('rollouts.theme.state_on') : __('rollouts.theme.state_off') }}</dd>
+                        </div>
+                    </dl>
+                @endif
+            </article>
+
             <article class="site-card">
                 <span class="site-section-kicker">{{ __('themes.show.failure_banner') }}</span>
                 <h3>{{ __('themes.show.installs') }}</h3>
