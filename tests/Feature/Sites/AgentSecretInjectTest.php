@@ -71,7 +71,14 @@ class AgentSecretInjectTest extends TestCase
             'https://coolify.test/api/v1/applications/coolify-app-1' => Http::response(['uuid' => 'coolify-app-1'], 200),
         ]);
 
-        $html = $this->actingAs($this->user(OpsRole::Operator))
+        // Rotating a live secret is Super Admin only; the operator who injected it
+        // does not get the rotate button.
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertDontSee(__('sites.agent.rotate'), false);
+
+        $html = $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->get(route('ops.sites.show', $site))
             ->assertOk()
             ->assertSee(__('sites.agent.rotate'), false)
@@ -86,7 +93,7 @@ class AgentSecretInjectTest extends TestCase
         ]);
     }
 
-    public function test_operator_rotates_existing_secret_and_rewrites_coolify_env(): void
+    public function test_super_admin_rotates_existing_secret_and_rewrites_coolify_env(): void
     {
         CoolifyConnection::factory()->create([
             'base_url' => 'https://coolify.test',
@@ -105,7 +112,7 @@ class AgentSecretInjectTest extends TestCase
         ]);
         $previous = (string) $site->agent_secret_encrypted;
 
-        $this->actingAs($this->user(OpsRole::Operator))
+        $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->post(route('ops.sites.agent-secret', $site))
             ->assertRedirect(route('ops.sites.show', $site))
             ->assertSessionHas('status');

@@ -162,6 +162,7 @@
             </form>
         </section>
 
+        @can('delete', $connection)
         <section class="danger-zone" aria-labelledby="theme-git-disconnect-heading">
             <h2 id="theme-git-disconnect-heading">{{ __('themes.git.disconnect.title') }}</h2>
             <p>{{ __('themes.git.disconnect.hint') }}</p>
@@ -171,6 +172,7 @@
                 <button type="submit" class="btn btn-danger">{{ __('themes.git.disconnect.action') }}</button>
             </form>
         </section>
+        @endcan
     @endif
 @endsection
 

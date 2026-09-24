@@ -74,7 +74,7 @@
         <a class="is-active" href="#overview" role="tab" aria-selected="true" aria-controls="overview">{{ __('coolify.tabs.overview') }}</a>
         <a href="#inventory" role="tab" aria-selected="false" aria-controls="inventory">{{ __('coolify.tabs.inventory') }}</a>
         <a href="#configuration" role="tab" aria-selected="false" aria-controls="configuration">{{ __('coolify.tabs.configuration') }}</a>
-        @if ($canWrite)
+        @if ($canDelete ?? false)
             <a href="#danger" role="tab" aria-selected="false" aria-controls="danger">{{ __('coolify.tabs.danger') }}</a>
         @endif
     </nav>
@@ -257,17 +257,19 @@
                     <form method="POST" action="{{ route('ops.coolify.update', $connection) }}" class="ops-form settings-form">
                         @csrf
                         @method('PUT')
-                        @include('ops.coolify._connection-fields', ['connection' => $connection, 'canWrite' => $canWrite, 'requireToken' => false])
+                        @include('ops.coolify._connection-fields', ['connection' => $connection, 'canWrite' => $canEditCredentials ?? false, 'requireToken' => false])
 
                         <div class="field">
                             <span class="field-label">{{ __('coolify.show.webhook') }}</span>
                             <input class="field-input" type="text" value="{{ $webhookUrl }}" readonly>
                         </div>
 
-                        @if ($canWrite)
+                        @if ($canEditCredentials ?? false)
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">{{ __('coolify.show.save') }}</button>
                             </div>
+                        @elseif ($canWrite)
+                            <p class="field-hint">{{ __('ops.super_admin_only') }}</p>
                         @else
                             <p class="field-hint">{{ __('ops.viewer_readonly') }}</p>
                         @endif
@@ -381,7 +383,7 @@
         </div>
     </section>
 
-    @if ($canWrite)
+    @if ($canDelete ?? false)
         <section id="danger" class="site-section" role="tabpanel" data-site-panel>
             <div class="danger-zone">
                 <div>

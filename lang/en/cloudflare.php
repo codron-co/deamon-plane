@@ -77,6 +77,8 @@ return [
         'dns_deleted' => 'DNS record deleted.',
     ],
     'errors' => [
+        'account_in_use' => 'This Cloudflare account is still used by :count site(s), archived ones included. Move them to another account first.',
+        'zone_in_use' => 'A site or domain in Plane still uses this zone. Remove that binding first.',
         'not_configured' => 'Cloudflare is not configured. Add Account ID and API token in the Cloudflare menu.',
         'account_unavailable' => 'The selected Cloudflare account is missing, disabled, or has no token. Pick another account.',
         'domain_required' => 'A primary domain is required to provision.',

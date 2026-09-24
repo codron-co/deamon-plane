@@ -43,7 +43,7 @@ class MailServerOpsTest extends TestCase
     {
         $server = $this->server();
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->get(route('ops.mail-servers.show', $server))
             ->assertOk()
             ->assertSee(__('mail.fields.token_saved'), false)
@@ -182,5 +182,13 @@ class MailServerOpsTest extends TestCase
             'api_token' => self::TOKEN,
             'is_enabled' => true,
         ]);
+    }
+
+    private function superAdminUser(): User
+    {
+        $operator = User::factory()->create();
+        $operator->assignRole(OpsRole::SuperAdmin->value);
+
+        return $operator;
     }
 }

@@ -142,20 +142,22 @@ class SiteListExtraFiltersTest extends TestCase
 
     public function test_bulk_all_matching_honours_the_auto_deploy_filter(): void
     {
-        $target = Site::factory()->create(['name' => 'Kapali', 'coolify_auto_deploy' => false]);
-        $spared = Site::factory()->create(['name' => 'Acik', 'coolify_auto_deploy' => true]);
+        Site::factory()->create(['name' => 'Kapali', 'primary_domain' => 'kapali.example.test', 'coolify_auto_deploy' => false]);
+        Site::factory()->create(['name' => 'Acik', 'primary_domain' => 'acik.example.test', 'coolify_auto_deploy' => true]);
+        Http::fake(['*' => Http::response('<html></html>', 200)]);
 
+        // Live sync is reversible, so it may run on "all matching the filter";
+        // the POST has to touch exactly the filtered set.
         $this->actingAs($this->admin())
             ->from(route('ops.sites', ['auto_deploy' => 'off']))
-            ->post(route('ops.sites.bulk.purge'), [
+            ->post(route('ops.sites.live-sync'), [
                 'all' => '1',
                 'filter_auto_deploy' => 'off',
-                'confirmed' => '1',
             ])
             ->assertRedirect();
 
-        $this->assertNull(Site::withTrashed()->find($target->id));
-        $this->assertNotNull(Site::query()->find($spared->id));
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), 'kapali.example.test'));
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'acik.example.test'));
     }
 
     public function test_server_filter_matches_the_site_server_uuid_and_labels_the_connection(): void
@@ -180,19 +182,19 @@ class SiteListExtraFiltersTest extends TestCase
 
     public function test_bulk_all_matching_honours_the_server_filter(): void
     {
-        $target = Site::factory()->create(['coolify_server_uuid' => 'srv-aaa']);
-        $spared = Site::factory()->create(['coolify_server_uuid' => 'srv-bbb']);
+        Site::factory()->create(['primary_domain' => 'on-aaa.example.test', 'coolify_server_uuid' => 'srv-aaa']);
+        Site::factory()->create(['primary_domain' => 'on-bbb.example.test', 'coolify_server_uuid' => 'srv-bbb']);
+        Http::fake(['*' => Http::response('<html></html>', 200)]);
 
         $this->actingAs($this->admin())
-            ->post(route('ops.sites.bulk.purge'), [
+            ->post(route('ops.sites.live-sync'), [
                 'all' => '1',
                 'filter_server' => 'srv-aaa',
-                'confirmed' => '1',
             ])
             ->assertRedirect();
 
-        $this->assertNull(Site::withTrashed()->find($target->id));
-        $this->assertNotNull(Site::query()->find($spared->id));
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), 'on-aaa.example.test'));
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'on-bbb.example.test'));
     }
 
     public function test_stale_filter_lists_missing_or_day_old_health(): void

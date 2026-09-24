@@ -64,7 +64,7 @@
         <a class="is-active" href="#overview" role="tab" aria-selected="true" aria-controls="overview">{{ __('cloudflare.tabs.overview') }}</a>
         <a href="#zones" role="tab" aria-selected="false" aria-controls="zones">{{ __('cloudflare.tabs.zones') }}</a>
         <a href="#configuration" role="tab" aria-selected="false" aria-controls="configuration">{{ __('cloudflare.tabs.configuration') }}</a>
-        @if ($canWrite)
+        @if ($canDanger ?? false)
             <a href="#danger" role="tab" aria-selected="false" aria-controls="danger">{{ __('cloudflare.tabs.danger') }}</a>
         @endif
     </nav>
@@ -321,11 +321,13 @@
                     <form method="POST" action="{{ route('ops.cloudflare.update', $account) }}" class="ops-form settings-form">
                         @csrf
                         @method('PUT')
-                        @include('ops.cloudflare._account-fields', ['account' => $account, 'canWrite' => $canWrite, 'requireToken' => false])
-                        @if ($canWrite)
+                        @include('ops.cloudflare._account-fields', ['account' => $account, 'canWrite' => $canDanger ?? false, 'requireToken' => false])
+                        @if ($canDanger ?? false)
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">{{ __('cloudflare.save') }}</button>
                             </div>
+                        @elseif ($canWrite)
+                            <p class="field-hint">{{ __('ops.super_admin_only') }}</p>
                         @else
                             <p class="field-hint">{{ __('cloudflare.readonly') }}</p>
                         @endif
@@ -365,7 +367,7 @@
         </div>
     </section>
 
-    @if ($canWrite)
+    @if ($canDanger ?? false)
         <section id="danger" class="site-section" role="tabpanel" data-site-panel>
             <div class="danger-zone">
                 <div>

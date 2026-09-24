@@ -341,7 +341,7 @@ class CoolifyConnectionsTest extends TestCase
 
         $connection = CoolifyConnection::factory()->create(['name' => 'Staging']);
 
-        $html = $this->actingAs($this->operator())
+        $html = $this->actingAs($this->superAdminUser())
             ->get(route('ops.coolify.show', $connection))
             ->assertOk()
             ->assertSee(__('coolify.danger.button'), false)
@@ -350,7 +350,7 @@ class CoolifyConnectionsTest extends TestCase
 
         $this->assertStringNotContainsString('window.confirm', $html);
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->delete(route('ops.coolify.destroy', $connection))
             ->assertRedirect(route('ops.coolify.index'));
 
@@ -437,6 +437,14 @@ class CoolifyConnectionsTest extends TestCase
     {
         $operator = User::factory()->create($locale === null ? [] : ['locale' => $locale]);
         $operator->assignRole(OpsRole::Operator->value);
+
+        return $operator;
+    }
+
+    private function superAdminUser(?string $locale = null): User
+    {
+        $operator = User::factory()->create($locale === null ? [] : ['locale' => $locale]);
+        $operator->assignRole(OpsRole::SuperAdmin->value);
 
         return $operator;
     }

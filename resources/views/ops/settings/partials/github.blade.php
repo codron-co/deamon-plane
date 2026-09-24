@@ -44,7 +44,7 @@
                         {{ $github->hasManifestApp() ? __('settings.deamon_git.connect') : __('settings.deamon_git.create_app') }}
                     </button>
                 </form>
-                @if ($github->hasDeamonGitInstallation())
+                @if ($github->hasDeamonGitInstallation() && (request()->user()?->can('ops.danger') ?? false))
                     <form
                         method="POST"
                         action="{{ route('ops.settings.deamon-git.disconnect') }}"
@@ -75,7 +75,7 @@
                         <button type="submit" class="btn btn-secondary">{{ __('settings.deamon_git.pat_save') }}</button>
                     </div>
                 </form>
-                @if ($github->hasToken())
+                @if ($github->hasToken() && (request()->user()?->can('ops.danger') ?? false))
                     <form
                         method="POST"
                         action="{{ route('ops.settings.deamon-git.pat.clear') }}"

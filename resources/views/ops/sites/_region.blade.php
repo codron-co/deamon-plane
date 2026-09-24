@@ -412,6 +412,7 @@
                                         data-confirm-label="{{ __('sites.publish.bulk.unpublish') }}"
                                         data-confirm-danger="true"
                                     >{{ __('sites.publish.bulk.unpublish') }}</button>
+                                    @can('ops.danger')
                                     <div class="ops-action-sep" role="separator"></div>
                                     <button
                                         type="submit"
@@ -424,6 +425,7 @@
                                         data-confirm-label="{{ __('sites.menu.hard_delete') }}"
                                         data-confirm-danger="true"
                                     >{{ __('sites.menu.hard_delete') }}</button>
+                                    @endcan
                                 </div>
                             </details>
                         </div>

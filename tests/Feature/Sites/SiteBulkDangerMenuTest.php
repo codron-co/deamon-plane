@@ -29,7 +29,7 @@ class SiteBulkDangerMenuTest extends TestCase
     {
         Site::factory()->count(2)->create();
 
-        $html = $this->actingAs($this->user(OpsRole::Operator))
+        $html = $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->get(route('ops.sites'))
             ->assertOk()
             ->getContent();
@@ -50,7 +50,7 @@ class SiteBulkDangerMenuTest extends TestCase
     {
         Site::factory()->create();
 
-        $html = $this->actingAs($this->user(OpsRole::Operator))
+        $html = $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->get(route('ops.sites'))
             ->assertOk()
             ->getContent();
@@ -68,7 +68,7 @@ class SiteBulkDangerMenuTest extends TestCase
         Site::factory()->count(3)->create();
 
         $menu = $this->dangerMenu(
-            $this->actingAs($this->user(OpsRole::Operator))
+            $this->actingAs($this->user(OpsRole::SuperAdmin))
                 ->get(route('ops.sites'))
                 ->assertOk()
                 ->getContent()

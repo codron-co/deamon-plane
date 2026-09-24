@@ -25,6 +25,9 @@ Müşteri CMS admin’i plane’e erişmez.
 | Confirm | **done** | Destroy, channel leave-main, theme activate/assign-activate, theme git disconnect — `PlaneConfirm` (`window.confirm` yok) |
 | Rate limits | **done** | Fortify login; `/webhooks/coolify` + `/webhooks/github` throttle 60/min |
 | Secret leakage tests | **done** | Settings, Coolify webhook, GitHub webhook, `SecretRedactor` unit |
+| Super Admin actions | **done** (2026-09-24) | Gate `ops.danger` (`User::canRunDangerousOps`): hard delete (single, and bulk with explicit ids, at most 10, never "all matching the filter"), live agent secret rotate, Coolify connection credentials and delete, Cloudflare account update/delete and zone delete, theme git disconnect, Deamon Git disconnect and PAT clear, DeskRon settings, platform SMTP login, mail server update/delete. Operators keep everything reversible. Test: `tests/Feature/Security/DangerousActionsRoleTest.php` |
+| In-use protection | **done** (2026-09-24) | A Coolify connection, Cloudflare account or zone that a site (archived included) still uses cannot be deleted |
+| Target change | **done** (2026-09-24) | A new Coolify URL or SMTP host/port needs the token/password again; a stored secret is only sent to the stored target |
 
 ## Blast radius
 

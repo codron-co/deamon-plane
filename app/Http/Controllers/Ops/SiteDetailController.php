@@ -67,6 +67,8 @@ class SiteDetailController extends Controller
             'canChangePublishStatus' => $user?->can('update', $site) ?? false,
             'canInjectAgentSecret' => ($user?->can('update', $site) ?? false)
                 && filled($site->coolify_app_uuid),
+            'canRotateAgentSecret' => ($user?->can('ops.danger') ?? false)
+                && filled($site->coolify_app_uuid),
             'canSyncCoolify' => ($user?->can('update', $site) ?? false)
                 && filled($site->coolify_app_uuid),
             'canLiveSync' => ($user?->can('update', $site) ?? false)

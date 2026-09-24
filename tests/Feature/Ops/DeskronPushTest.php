@@ -93,7 +93,7 @@ class DeskronPushTest extends TestCase
     {
         Queue::fake();
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->put(route('ops.deskron.update'), [
                 'application_id' => '01KDESKRONAPP0000000000000',
                 'api_key' => 'dsk_master_key',
@@ -140,6 +140,14 @@ class DeskronPushTest extends TestCase
     {
         $user = User::factory()->create();
         $user->assignRole(OpsRole::Operator->value);
+
+        return $user;
+    }
+
+    private function superAdminUser(): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole(OpsRole::SuperAdmin->value);
 
         return $user;
     }

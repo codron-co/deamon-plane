@@ -32,6 +32,9 @@ class SiteCoolifyOpsController extends Controller
 {
     use QueuesOpsJob;
 
+    /** Hard delete at most this many sites per request (audit decision K02). */
+    public const BULK_PURGE_LIMIT = 10;
+
     /**
      * The Coolify ops card for the site detail page. Loaded after the page so a slow
      * or throttling Coolify never holds the detail page open.
@@ -271,7 +274,19 @@ class SiteCoolifyOpsController extends Controller
 
     public function bulkPurge(BulkSiteIdsRequest $request, SiteLifecycle $lifecycle): RedirectResponse|JsonResponse
     {
+        $this->authorize('ops.danger');
+
+        // Hard delete is never "every site matching a filter": a stale or wrong
+        // filter must not widen an irreversible action. Explicit ids, capped.
+        if ($request->boolean('all') || $request->boolean('all_dockerfile')) {
+            return back()->with('error', __('site_ops.bulk.purge_needs_selection'));
+        }
+
         $sites = $this->sitesFromBulk($request);
+
+        if ($sites->count() > self::BULK_PURGE_LIMIT) {
+            return back()->with('error', __('site_ops.bulk.purge_limit', ['limit' => self::BULK_PURGE_LIMIT]));
+        }
 
         foreach ($sites as $site) {
             $this->authorize('forceDelete', $site);

@@ -42,19 +42,19 @@
             <div class="field">
                 <label class="field-label" for="deskron-application-id">{{ __('deskron.fields.application_id') }}</label>
                 <p class="field-hint">{{ __('deskron.fields.application_id_hint') }}</p>
-                <input id="deskron-application-id" class="field-input" type="text" name="application_id" value="{{ old('application_id', $settings->application_id) }}" autocomplete="off" @disabled(! $canWrite)>
+                <input id="deskron-application-id" class="field-input" type="text" name="application_id" value="{{ old('application_id', $settings->application_id) }}" autocomplete="off" @disabled(! ($canEdit ?? false))>
             </div>
 
             <div class="field">
                 <label class="field-label" for="deskron-api-key">{{ __('deskron.fields.api_key') }}</label>
                 <p class="field-hint">{{ $settings->exists && $settings->hasApiKey() ? __('deskron.fields.secret_saved') : __('deskron.fields.api_key_hint') }}</p>
-                <input id="deskron-api-key" class="field-input" type="password" name="api_key" value="" autocomplete="new-password" @disabled(! $canWrite)>
+                <input id="deskron-api-key" class="field-input" type="password" name="api_key" value="" autocomplete="new-password" @disabled(! ($canEdit ?? false))>
             </div>
 
             <div class="field">
                 <label class="field-label" for="deskron-webhook-secret">{{ __('deskron.fields.webhook_secret') }}</label>
                 <p class="field-hint">{{ $settings->exists && $settings->hasWebhookSecret() ? __('deskron.fields.secret_saved') : __('deskron.fields.webhook_secret_hint') }}</p>
-                <input id="deskron-webhook-secret" class="field-input" type="password" name="webhook_secret" value="" autocomplete="new-password" @disabled(! $canWrite)>
+                <input id="deskron-webhook-secret" class="field-input" type="password" name="webhook_secret" value="" autocomplete="new-password" @disabled(! ($canEdit ?? false))>
             </div>
         </article>
 
@@ -77,8 +77,10 @@
             @endif
         </article>
 
-        @if ($canWrite)
+        @if ($canEdit ?? false)
             <button type="submit" class="btn btn-primary">{{ __('deskron.save') }}</button>
+        @elseif ($canWrite)
+            <p class="field-hint">{{ __('ops.super_admin_only') }}</p>
         @endif
     </form>
 @endsection

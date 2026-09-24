@@ -42,9 +42,13 @@ class SitePolicy
         return $user->hasRole(OpsRole::SuperAdmin->value);
     }
 
+    /**
+     * Hard delete removes the Coolify app with its volumes; it cannot be undone,
+     * while restore (reversible) already needs Super Admin.
+     */
     public function forceDelete(User $user, Site $site): bool
     {
-        return $user->canWriteOps();
+        return $user->canRunDangerousOps();
     }
 
     public function provision(User $user, Site $site): bool

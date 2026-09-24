@@ -675,6 +675,10 @@ class SiteController extends Controller
         $this->authorize('update', $site);
 
         $rotate = $site->hasAgentSecret();
+        if ($rotate) {
+            // Rotating a live secret cuts the agent until the app restarts.
+            $this->authorize('ops.danger');
+        }
 
         try {
             $injector->inject($site, $request->user(), $request->ip(), $rotate);
@@ -1157,7 +1161,7 @@ class SiteController extends Controller
         return view('ops.sites.archived', [
             'sites' => $sites,
             'canRestore' => $request->user()?->hasRole(OpsRole::SuperAdmin->value) ?? false,
-            'canPurge' => $request->user()?->canWriteOps() ?? false,
+            'canPurge' => $request->user()?->canRunDangerousOps() ?? false,
         ]);
     }
 

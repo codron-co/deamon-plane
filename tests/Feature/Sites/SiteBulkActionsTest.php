@@ -44,7 +44,7 @@ class SiteBulkActionsTest extends TestCase
         ]);
         $this->site(['name' => 'Compose Site']);
 
-        $html = $this->actingAs($this->operator())
+        $html = $this->actingAs($this->superAdminUser())
             ->get(route('ops.sites'))
             ->assertOk()
             ->assertSee('name="all"', false)
@@ -528,6 +528,14 @@ class SiteBulkActionsTest extends TestCase
     {
         $user = User::factory()->create();
         $user->assignRole(OpsRole::Viewer->value);
+
+        return $user;
+    }
+
+    private function superAdminUser(): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole(OpsRole::SuperAdmin->value);
 
         return $user;
     }

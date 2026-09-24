@@ -137,6 +137,16 @@ class User extends Authenticatable
         ]);
     }
 
+    /**
+     * Irreversible or fleet-wide actions: hard delete, removing a connection,
+     * account or zone, rotating a live agent secret, and changing the secrets
+     * Plane hands to every CMS. Super Admin only.
+     */
+    public function canRunDangerousOps(): bool
+    {
+        return $this->hasRole(OpsRole::SuperAdmin->value);
+    }
+
     public function opsRole(): ?OpsRole
     {
         foreach (OpsRole::cases() as $role) {

@@ -23,14 +23,18 @@
     </section>
 
     @if ($canWrite)
-        <form method="POST" action="{{ route('ops.mail-servers.update', $server) }}" class="ops-form ops-form-stack">
-            @csrf
-            @method('PUT')
-            @include('ops.mail-servers._fields', ['server' => $server, 'canWrite' => true, 'requireToken' => false])
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">{{ __('ops.actions.save_changes') }}</button>
-            </div>
-        </form>
+        @if ($canDanger ?? false)
+            <form method="POST" action="{{ route('ops.mail-servers.update', $server) }}" class="ops-form ops-form-stack">
+                @csrf
+                @method('PUT')
+                @include('ops.mail-servers._fields', ['server' => $server, 'canWrite' => true, 'requireToken' => false])
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">{{ __('ops.actions.save_changes') }}</button>
+                </div>
+            </form>
+        @else
+            <p class="field-hint">{{ __('ops.super_admin_only') }}</p>
+        @endif
 
         <form method="POST" action="{{ route('ops.mail-servers.test', $server) }}" data-ops-pending>
             @csrf
@@ -102,7 +106,7 @@
         @endif
     </section>
 
-    @if ($canWrite)
+    @if ($canDanger ?? false)
         <form method="POST" action="{{ route('ops.mail-servers.destroy', $server) }}" data-confirm="{{ __('mail.danger.confirm', ['name' => $server->name]) }}" data-confirm-title="{{ __('mail.danger.confirm_title') }}" data-confirm-label="{{ __('mail.danger.label') }}" data-confirm-danger="true">
             @csrf
             @method('DELETE')

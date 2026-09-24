@@ -105,6 +105,8 @@ return [
         'confirm_follow' => 'Seçili :count sitenin pin’i kaldırılsın, Coolify oto-deploy açılsın ve her dal ucu dağıtılsın mı?',
         'confirm_pin' => 'Seçili :count site seçilen commite pinlensin ve Coolify oto-deploy kapansın mı? Volume’lar geri sarılmaz.',
         'empty' => 'Eşleşen site yok.',
+        'purge_needs_selection' => 'Kalıcı silme için siteleri tek tek seçin; bütün bir filtre üzerinde çalışmaz.',
+        'purge_limit' => 'Kalıcı silme bir seferde en çok :limit sitede çalışır. Daha az site seçin.',
         'confirm_title' => 'Toplu işlemi onayla',
     ],
 ];

@@ -99,7 +99,8 @@ class DeamonGitConnectionController extends Controller
 
     public function disconnect(Request $request): RedirectResponse
     {
-        $this->authorize('ops.write');
+        // The env catalog of every channel is read through this connection.
+        $this->authorize('ops.danger');
 
         $this->deamonGit->disconnect();
 
@@ -127,7 +128,7 @@ class DeamonGitConnectionController extends Controller
 
     public function clearPat(Request $request): RedirectResponse
     {
-        $this->authorize('ops.write');
+        $this->authorize('ops.danger');
 
         $this->deamonGit->clearPat();
 

@@ -128,6 +128,7 @@ class MailServerOpsController extends Controller
         return view('ops.mail-servers.show', [
             'server' => $mailServer,
             'canWrite' => request()->user()?->can('ops.write') ?? false,
+            'canDanger' => request()->user()?->can('ops.danger') ?? false,
             'hasToken' => $mailServer->hasToken(),
             'sites' => $mailServer->sites()->with('mailBindings')->orderBy('name')->get(),
         ]);
@@ -135,7 +136,8 @@ class MailServerOpsController extends Controller
 
     public function update(Request $request, MailServer $mailServer, SiteMailConfigurer $configurer): RedirectResponse
     {
-        $this->authorize('ops.write');
+        // Holds the Hostinger token every bound site's mailboxes go through.
+        $this->authorize('ops.danger');
 
         $before = $this->auditSnapshot($mailServer);
         $validated = $this->validated($request, requireToken: false);
@@ -150,7 +152,7 @@ class MailServerOpsController extends Controller
 
     public function destroy(Request $request, MailServer $mailServer, SiteMailConfigurer $configurer): RedirectResponse
     {
-        $this->authorize('ops.write');
+        $this->authorize('ops.danger');
 
         $sites = $mailServer->sites()->get();
         $before = $this->auditSnapshot($mailServer);

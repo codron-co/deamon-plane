@@ -29,7 +29,16 @@ class CoolifyConnectionPolicy
 
     public function delete(User $user, CoolifyConnection $connection): bool
     {
-        return $user->canWriteOps();
+        return $user->canRunDangerousOps();
+    }
+
+    /**
+     * Name, base URL, token, webhook secret and enabled state. The defaults
+     * (server, project, environment, git source) stay with `update`.
+     */
+    public function updateCredentials(User $user, CoolifyConnection $connection): bool
+    {
+        return $user->canRunDangerousOps();
     }
 
     public function test(User $user, CoolifyConnection $connection): bool

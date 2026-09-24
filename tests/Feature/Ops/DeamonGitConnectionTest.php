@@ -95,14 +95,14 @@ class DeamonGitConnectionTest extends TestCase
             'cms_account_login' => 'codron-co',
         ]);
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->post(route('ops.settings.deamon-git.pat'), ['token' => 'ghp-deamon-pat'])
             ->assertRedirect(route('ops.settings').'#deamon-git-heading')
             ->assertSessionHas('status');
 
         $this->assertTrue(GithubSetting::current()->hasToken());
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->post(route('ops.settings.deamon-git.disconnect'))
             ->assertRedirect(route('ops.settings').'#deamon-git-heading');
 
@@ -126,6 +126,14 @@ class DeamonGitConnectionTest extends TestCase
     {
         $operator = User::factory()->create();
         $operator->assignRole(OpsRole::Operator->value);
+
+        return $operator;
+    }
+
+    private function superAdminUser(): User
+    {
+        $operator = User::factory()->create();
+        $operator->assignRole(OpsRole::SuperAdmin->value);
 
         return $operator;
     }

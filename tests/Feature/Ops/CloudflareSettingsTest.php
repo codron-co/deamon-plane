@@ -87,7 +87,7 @@ class CloudflareSettingsTest extends TestCase
     {
         $account = $this->account();
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->put(route('ops.cloudflare.update', $account), [
                 'name' => 'Renamed CF',
                 'account_id' => self::ACCOUNT_ID,
@@ -383,5 +383,13 @@ class CloudflareSettingsTest extends TestCase
         }
 
         return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
+    }
+
+    private function superAdminUser(array $attributes = []): User
+    {
+        $operator = User::factory()->create($attributes);
+        $operator->assignRole(OpsRole::SuperAdmin->value);
+
+        return $operator;
     }
 }

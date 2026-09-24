@@ -30,7 +30,7 @@ class PlatformMailSettingsTest extends TestCase
 
     public function test_operator_can_save_platform_smtp_without_echoing_password(): void
     {
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->put(route('ops.platform-mail.update'), [
                 'enabled' => '1',
                 'host' => 'smtp.hostinger.com',
@@ -56,7 +56,7 @@ class PlatformMailSettingsTest extends TestCase
         $this->assertSame('super-secret-smtp', $settings->password);
         $this->assertSame('minor', data_get($settings->notifications, 'site_version_update.on'));
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->get(route('ops.platform-mail.edit'))
             ->assertOk()
             ->assertSee(__('platform_mail.title'), false)
@@ -204,6 +204,14 @@ class PlatformMailSettingsTest extends TestCase
     {
         $operator = User::factory()->create();
         $operator->assignRole(OpsRole::Operator->value);
+
+        return $operator;
+    }
+
+    private function superAdminUser(): User
+    {
+        $operator = User::factory()->create();
+        $operator->assignRole(OpsRole::SuperAdmin->value);
 
         return $operator;
     }

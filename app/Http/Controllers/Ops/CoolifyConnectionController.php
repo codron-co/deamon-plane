@@ -9,6 +9,7 @@ use App\Models\CoolifyEnvironment;
 use App\Models\CoolifyGitSource;
 use App\Models\CoolifyProjectRecord;
 use App\Models\CoolifyServer;
+use App\Models\Site;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyClient;
@@ -22,6 +23,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 class CoolifyConnectionController extends Controller
 {
@@ -96,6 +98,8 @@ class CoolifyConnectionController extends Controller
         return ListFragment::respond($request, 'ops.coolify.show', 'ops.coolify._inventory-region', [
             'connection' => $connection,
             'canWrite' => $request->user()?->can('update', $connection) ?? false,
+            'canEditCredentials' => $request->user()?->can('updateCredentials', $connection) ?? false,
+            'canDelete' => $request->user()?->can('delete', $connection) ?? false,
             'webhookUrl' => url('/webhooks/coolify'),
             'hasToken' => $connection->hasToken(),
             'hasWebhookSecret' => $connection->hasWebhookSecret(),
@@ -119,6 +123,22 @@ class CoolifyConnectionController extends Controller
         $this->authorize('update', $connection);
 
         $validated = $this->validatedConnection($request, requireToken: false);
+
+        // The defaults form re-posts the stored name / URL / enabled flag; anything
+        // beyond that changes where Plane sends this connection's token.
+        if ($this->changesCredentials($connection, $validated, $request)) {
+            $this->authorize('updateCredentials', $connection);
+        }
+
+        // A new base URL with the stored token would hand that token to whatever
+        // answers at the new address. Moving the connection means re-entering it.
+        $newBase = $this->nullableUrl($validated['base_url'] ?? null);
+        if ($newBase !== $this->nullableUrl($connection->base_url) && ! filled($validated['api_token'] ?? null)) {
+            throw ValidationException::withMessages([
+                'api_token' => __('coolify.errors.token_required_for_new_url'),
+            ]);
+        }
+
         $this->fillConnection($connection, $validated, $request);
 
         $connection->default_project_uuid = $this->nullableString($request->input('default_project_uuid'));
@@ -158,6 +178,11 @@ class CoolifyConnectionController extends Controller
     {
         $this->authorize('delete', $connection);
 
+        $inUse = Site::withTrashed()->where('coolify_connection_id', $connection->id)->count();
+        if ($inUse > 0) {
+            return back()->with('error', __('coolify.errors.connection_in_use', ['count' => $inUse]));
+        }
+
         $wasDefault = $connection->is_default;
         $connection->delete();
 
@@ -175,7 +200,14 @@ class CoolifyConnectionController extends Controller
         $this->authorize('test', $connection);
 
         $base = $this->nullableUrl($request->input('base_url')) ?: (string) $connection->base_url;
-        $token = filled($request->input('api_token'))
+        $typedToken = filled($request->input('api_token'));
+
+        // The stored token only ever goes to the stored URL.
+        if (! $typedToken && $base !== (string) $this->nullableUrl($connection->base_url)) {
+            return back()->with('error', __('coolify.errors.token_required_for_new_url'));
+        }
+
+        $token = $typedToken
             ? (string) $request->input('api_token')
             : (string) $connection->api_token;
 
@@ -395,6 +427,18 @@ class CoolifyConnectionController extends Controller
         $trimmed = trim($value);
 
         return $trimmed !== '' ? $trimmed : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function changesCredentials(CoolifyConnection $connection, array $validated, Request $request): bool
+    {
+        return trim((string) $validated['name']) !== (string) $connection->name
+            || $this->nullableUrl($validated['base_url'] ?? null) !== $this->nullableUrl($connection->base_url)
+            || filled($validated['api_token'] ?? null)
+            || filled($validated['webhook_secret'] ?? null)
+            || $request->boolean('is_enabled', true) !== (bool) $connection->is_enabled;
     }
 
     private function nullableUrl(mixed $value): ?string

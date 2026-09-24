@@ -188,6 +188,7 @@ return [
         'no_matches' => 'No matches',
     ],
     'viewer_readonly' => 'Viewer role is read-only.',
+    'super_admin_only' => 'Only a Super Admin can change this.',
     'dockerfile_chip' => 'Dockerfile (legacy pack)',
     'bulk' => [
         'result' => ':ok ok',

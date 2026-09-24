@@ -188,6 +188,7 @@ return [
         'no_matches' => 'Eşleşme yok',
     ],
     'viewer_readonly' => 'İzleyici rolü salt okunur.',
+    'super_admin_only' => 'Bunu yalnız Super Admin değiştirebilir.',
     'dockerfile_chip' => 'Dockerfile (eski pack)',
     'bulk' => [
         'result' => ':ok tamam',

@@ -2,7 +2,7 @@
     /** @var \App\Models\Site $site */
     /** @var \App\Services\Agent\SiteHealthEvaluator $agentHealth */
     $canCheckHealth = $canCheckHealth ?? false;
-    $canWriteAgentSecret = $canInjectAgentSecret ?? false;
+    $canWriteAgentSecret = $canRotateAgentSecret ?? false;
     $payload = $agentHealth->payload($site);
     $display = $agentHealth->displayStatus($site);
     $version = $site->reportedDeamonVersion();

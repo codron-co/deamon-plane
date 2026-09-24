@@ -77,6 +77,8 @@ return [
         'dns_deleted' => 'DNS kaydı silindi.',
     ],
     'errors' => [
+        'account_in_use' => 'Bu Cloudflare hesabını hâlâ :count site kullanıyor (arşivliler dahil). Önce onları başka hesaba taşıyın.',
+        'zone_in_use' => 'Plane’de bu zone’u kullanan bir site ya da domain var. Önce o bağı kaldırın.',
         'not_configured' => 'Cloudflare bağlı değil. Cloudflare menüsünden Account ID ve API token ekleyin.',
         'account_unavailable' => 'Seçili Cloudflare hesabı yok, kapalı veya token’sız. Başka bir hesap seçin.',
         'domain_required' => 'Provision için birincil domain gerekli.',

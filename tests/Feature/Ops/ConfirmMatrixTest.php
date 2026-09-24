@@ -121,7 +121,7 @@ class ConfirmMatrixTest extends TestCase
     {
         $connection = CoolifyConnection::factory()->create(['name' => 'Matrix Coolify']);
 
-        $html = $this->actingAs($this->operator())
+        $html = $this->actingAs($this->superAdminUser())
             ->get(route('ops.coolify.show', $connection))
             ->assertOk()
             ->getContent();
@@ -149,7 +149,7 @@ class ConfirmMatrixTest extends TestCase
     {
         $server = MailServer::factory()->create(['name' => 'Matrix Mail']);
 
-        $html = $this->actingAs($this->operator())
+        $html = $this->actingAs($this->superAdminUser())
             ->get(route('ops.mail-servers.show', $server))
             ->assertOk()
             ->getContent();
@@ -211,7 +211,7 @@ class ConfirmMatrixTest extends TestCase
             'account_login' => 'matrix-git',
         ]);
 
-        $themeHtml = $this->actingAs($this->operator())
+        $themeHtml = $this->actingAs($this->superAdminUser())
             ->get(route('ops.themes.show', $theme))
             ->assertOk()
             ->getContent();
@@ -226,7 +226,7 @@ class ConfirmMatrixTest extends TestCase
             'Revoking a site from a theme allowlist is danger.',
         );
 
-        $gitHtml = $this->actingAs($this->operator())
+        $gitHtml = $this->actingAs($this->superAdminUser())
             ->get(route('ops.themes.git.show', $git))
             ->assertOk()
             ->getContent();
@@ -255,7 +255,7 @@ class ConfirmMatrixTest extends TestCase
         $zoneId = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
         Http::fake(fn (Request $request): PromiseInterface => $this->cloudflareEnvelope($request, $account->account_id, $zoneId));
 
-        $showHtml = $this->actingAs($this->operator())
+        $showHtml = $this->actingAs($this->superAdminUser())
             ->get(route('ops.cloudflare.show', $account))
             ->assertOk()
             ->getContent();
@@ -270,7 +270,7 @@ class ConfirmMatrixTest extends TestCase
             'Removing a Cloudflare account is danger.',
         );
 
-        $zoneHtml = $this->actingAs($this->operator())
+        $zoneHtml = $this->actingAs($this->superAdminUser())
             ->get(route('ops.cloudflare.zones.show', ['account' => $account, 'zone' => $zoneId]))
             ->assertOk()
             ->getContent();
@@ -295,7 +295,7 @@ class ConfirmMatrixTest extends TestCase
             'Applying Deamon DNS defaults does not delete the zone.',
         );
 
-        $defaultsHtml = $this->actingAs($this->operator())
+        $defaultsHtml = $this->actingAs($this->superAdminUser())
             ->get(route('ops.cloudflare.defaults'))
             ->assertOk()
             ->getContent();
@@ -415,6 +415,14 @@ class ConfirmMatrixTest extends TestCase
     {
         $user = User::factory()->create();
         $user->assignRole(OpsRole::Operator->value);
+
+        return $user;
+    }
+
+    private function superAdminUser(): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole(OpsRole::SuperAdmin->value);
 
         return $user;
     }

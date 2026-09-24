@@ -53,7 +53,7 @@ class SiteBulkSelectionScopeTest extends TestCase
     {
         Site::factory()->create(['notes' => "[import] dockerfile_build_pack: leftover\n"]);
 
-        $html = $this->actingAs($this->operator())
+        $html = $this->actingAs($this->superAdminUser())
             ->get(route('ops.sites'))
             ->assertOk()
             ->getContent();
@@ -92,23 +92,24 @@ class SiteBulkSelectionScopeTest extends TestCase
 
         // The rendered fallback names the widest scope the button can reach, so a broken
         // ops-ui.js over-warns instead of under-warning.
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->get(route('ops.sites'))
             ->assertOk()
             ->assertSee('data-confirm="'.e(__('sites.danger.hard_confirm_bulk', ['count' => 3])).'"', false);
     }
 
-    public function test_all_equals_one_with_a_filter_touches_exactly_the_filtered_set(): void
+    public function test_hard_delete_never_runs_on_a_whole_filter(): void
     {
         $target = Site::factory()->create(['name' => 'Alpha Purge', 'channel' => Channel::Alpha]);
         $spared = Site::factory()->create(['name' => 'Main Keeper', 'channel' => Channel::Main]);
 
-        // The rendered summary is the promise; the POST has to keep it.
         $this->actingAs($this->admin())
             ->get(route('ops.sites', ['channel' => 'alpha']))
             ->assertOk()
             ->assertSee('data-bulk-total="1"', false);
 
+        // "All matching the filter" is fine for reversible actions; an irreversible
+        // one needs explicit ids, so a wrong or stale filter cannot widen it.
         $this->actingAs($this->admin())
             ->from(route('ops.sites', ['channel' => 'alpha']))
             ->post(route('ops.sites.bulk.purge'), [
@@ -116,9 +117,10 @@ class SiteBulkSelectionScopeTest extends TestCase
                 'filter_channel' => 'alpha',
                 'confirmed' => '1',
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('error', __('site_ops.bulk.purge_needs_selection'));
 
-        $this->assertNull(Site::withTrashed()->find($target->id));
+        $this->assertNotNull(Site::query()->find($target->id));
         $this->assertNotNull(Site::query()->find($spared->id));
     }
 
@@ -153,5 +155,10 @@ class SiteBulkSelectionScopeTest extends TestCase
         $user->assignRole($role->value);
 
         return $user;
+    }
+
+    private function superAdminUser(): User
+    {
+        return $this->userWith(OpsRole::SuperAdmin);
     }
 }

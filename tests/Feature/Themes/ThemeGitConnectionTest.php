@@ -358,7 +358,7 @@ class ThemeGitConnectionTest extends TestCase
             'included' => true,
         ]);
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->from(route('ops.themes.git.show', $connection))
             ->patch(route('ops.themes.git.update', $connection), [
                 'name' => 'Acme catalog',
@@ -375,7 +375,7 @@ class ThemeGitConnectionTest extends TestCase
         $this->assertTrue($connection->repos()->where('repo_full_name', 'acme/one')->value('included'));
         $this->assertFalse($connection->repos()->where('repo_full_name', 'acme/two')->value('included'));
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->delete(route('ops.themes.git.destroy', $connection))
             ->assertRedirect(route('ops.themes'))
             ->assertSessionHas('status');
@@ -502,5 +502,13 @@ class ThemeGitConnectionTest extends TestCase
         config(['app.url' => 'https://plane.example.com']);
         URL::forceRootUrl('https://plane.example.com');
         URL::forceScheme('https');
+    }
+
+    private function superAdminUser(): User
+    {
+        $operator = User::factory()->create();
+        $operator->assignRole(OpsRole::SuperAdmin->value);
+
+        return $operator;
     }
 }

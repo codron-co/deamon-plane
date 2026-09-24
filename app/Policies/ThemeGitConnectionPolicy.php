@@ -29,6 +29,6 @@ class ThemeGitConnectionPolicy
 
     public function delete(User $user, ThemeGitConnection $connection): bool
     {
-        return $user->canWriteOps();
+        return $user->canRunDangerousOps();
     }
 }

@@ -69,6 +69,9 @@ return [
         'minor' => 'Minor and up',
         'major' => 'Major only',
     ],
+    'errors' => [
+        'password_required_for_new_host' => 'The SMTP host or port changed. Enter the password again; the saved one is only sent to the saved server.',
+    ],
     'flash' => [
         'saved' => 'Software mail settings saved.',
         'saved_push_queued' => 'Software mail settings saved. Push to sites queued.',

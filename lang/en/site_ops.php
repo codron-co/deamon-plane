@@ -105,6 +105,8 @@ return [
         'confirm_follow' => 'Clear pins on the :count selected sites, turn Coolify auto-deploy on, and deploy each branch tip?',
         'confirm_pin' => 'Pin the :count selected sites to the chosen commit and turn Coolify auto-deploy off? Volumes are not rolled back.',
         'empty' => 'No matching sites.',
+        'purge_needs_selection' => 'Hard delete needs sites picked one by one; it never runs on a whole filter.',
+        'purge_limit' => 'Hard delete runs on at most :limit sites at a time. Select fewer sites.',
         'confirm_title' => 'Confirm bulk action',
     ],
 ];

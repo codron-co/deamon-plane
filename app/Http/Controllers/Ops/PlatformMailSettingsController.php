@@ -12,6 +12,7 @@ use App\Services\Mail\PlatformOpsMailer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class PlatformMailSettingsController extends Controller
 {
@@ -24,6 +25,7 @@ class PlatformMailSettingsController extends Controller
             'definitions' => PlatformNotificationCatalog::definitions(),
             'notifications' => $this->mergedNotifications($settings),
             'canWrite' => request()->user()?->can('ops.write') ?? false,
+            'canEditSmtp' => request()->user()?->can('ops.danger') ?? false,
             'platformMailState' => PlatformMailState::current($settings),
         ]);
     }
@@ -55,12 +57,30 @@ class PlatformMailSettingsController extends Controller
         $enabled = $request->boolean('enabled');
 
         $settings->enabled = $enabled;
-        $settings->host = trim((string) ($validated['host'] ?? '')) ?: null;
-        $settings->port = (int) ($validated['port'] ?? 465);
-        $settings->encryption = trim((string) ($validated['encryption'] ?? 'ssl')) ?: 'ssl';
-        $settings->username = trim((string) ($validated['username'] ?? '')) ?: null;
-        if (filled($validated['password'] ?? null)) {
-            $settings->password = (string) $validated['password'];
+
+        // The SMTP login is pushed to every CMS and also carries Plane's own
+        // alerts, so only a Super Admin changes it. An operator's form has these
+        // fields disabled; whatever arrives for them is ignored, not cleared.
+        if ($request->user()?->can('ops.danger') ?? false) {
+            $host = trim((string) ($validated['host'] ?? '')) ?: null;
+            $port = (int) ($validated['port'] ?? 465);
+            $newPassword = filled($validated['password'] ?? null);
+
+            // The stored password must not follow a new host to whoever runs it.
+            if ($settings->hasPassword() && ! $newPassword
+                && ($host !== $settings->host || $port !== (int) $settings->port)) {
+                throw ValidationException::withMessages([
+                    'password' => __('platform_mail.errors.password_required_for_new_host'),
+                ]);
+            }
+
+            $settings->host = $host;
+            $settings->port = $port;
+            $settings->encryption = trim((string) ($validated['encryption'] ?? 'ssl')) ?: 'ssl';
+            $settings->username = trim((string) ($validated['username'] ?? '')) ?: null;
+            if ($newPassword) {
+                $settings->password = (string) $validated['password'];
+            }
         }
         $settings->from_address = trim((string) ($validated['from_address'] ?? '')) ?: null;
         $settings->from_name = trim((string) ($validated['from_name'] ?? '')) ?: null;

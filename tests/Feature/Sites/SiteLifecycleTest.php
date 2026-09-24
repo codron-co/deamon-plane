@@ -112,7 +112,7 @@ class SiteLifecycleTest extends TestCase
             'https://coolify.example/api/v1/applications/'.self::APP.'*' => Http::response('', 200),
         ]);
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdmin())
             ->delete(route('ops.sites.purge', $site))
             ->assertRedirect(route('ops.sites'))
             ->assertSessionHas('status', __('sites.flash.purged'));
@@ -172,7 +172,7 @@ class SiteLifecycleTest extends TestCase
             return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
         });
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdmin())
             ->delete(route('ops.sites.purge', $site))
             ->assertRedirect(route('ops.sites'))
             ->assertSessionHas('status', __('sites.flash.purged'));
@@ -208,7 +208,7 @@ class SiteLifecycleTest extends TestCase
                 : Http::response(['success' => false, 'errors' => [['message' => 'Cloudflare down']]], 500);
         });
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdmin())
             ->delete(route('ops.sites.purge', $site))
             ->assertRedirect(route('ops.sites'));
 
@@ -226,7 +226,7 @@ class SiteLifecycleTest extends TestCase
             'https://coolify.example/api/v1/applications/'.self::APP.'*' => Http::response(['message' => 'Not found'], 404),
         ]);
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdmin())
             ->delete(route('ops.sites.purge', $site))
             ->assertRedirect(route('ops.sites'));
 
@@ -241,7 +241,7 @@ class SiteLifecycleTest extends TestCase
             'https://coolify.example/api/v1/applications/'.self::APP.'*' => Http::response(['message' => 'Busy'], 500),
         ]);
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdmin())
             ->from(route('ops.sites.show', $site))
             ->delete(route('ops.sites.purge', $site))
             ->assertRedirect()
@@ -265,7 +265,7 @@ class SiteLifecycleTest extends TestCase
             'https://coolify.example/api/v1/applications/gone-app*' => Http::response('', 200),
         ]);
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdmin())
             ->from(route('ops.sites'))
             ->post(route('ops.sites.bulk.purge'), ['site_ids' => [$gone->id]])
             ->assertRedirect(route('ops.sites'));
@@ -322,7 +322,7 @@ class SiteLifecycleTest extends TestCase
 
         $result = app(SiteLifecycle::class)->purgeMany(
             collect([$broken, $fine]),
-            $this->operator(),
+            $this->superAdmin(),
             '127.0.0.1',
         );
 

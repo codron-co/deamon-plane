@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('ops.write', static fn (User $user): bool => $user->canWriteOps());
+        Gate::define('ops.danger', static fn (User $user): bool => $user->canRunDangerousOps());
         Gate::policy(Site::class, SitePolicy::class);
         Gate::policy(Theme::class, ThemePolicy::class);
         Gate::policy(ThemeGitConnection::class, ThemeGitConnectionPolicy::class);

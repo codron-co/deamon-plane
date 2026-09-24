@@ -60,15 +60,15 @@
 
             <div class="field">
                 <label class="field-label" for="pm-host">{{ __('platform_mail.fields.host') }}</label>
-                <input id="pm-host" class="field-input" type="text" name="host" value="{{ old('host', $settings->host) }}" @disabled(! $canWrite)>
+                <input id="pm-host" class="field-input" type="text" name="host" value="{{ old('host', $settings->host) }}" @disabled(! ($canEditSmtp ?? false))>
             </div>
             <div class="field">
                 <label class="field-label" for="pm-port">{{ __('platform_mail.fields.port') }}</label>
-                <input id="pm-port" class="field-input" type="number" name="port" value="{{ old('port', $settings->port ?: 465) }}" @disabled(! $canWrite)>
+                <input id="pm-port" class="field-input" type="number" name="port" value="{{ old('port', $settings->port ?: 465) }}" @disabled(! ($canEditSmtp ?? false))>
             </div>
             <div class="field">
                 <label class="field-label" for="pm-encryption">{{ __('platform_mail.fields.encryption') }}</label>
-                <select id="pm-encryption" name="encryption" @disabled(! $canWrite)>
+                <select id="pm-encryption" name="encryption" @disabled(! ($canEditSmtp ?? false))>
                     @foreach (['ssl' => 'SSL / SMTPS (465)', 'tls' => 'STARTTLS', 'none' => 'None'] as $value => $label)
                         <option value="{{ $value }}" @selected(old('encryption', $settings->encryption ?: 'ssl') === $value)>{{ $label }}</option>
                     @endforeach
@@ -76,12 +76,12 @@
             </div>
             <div class="field">
                 <label class="field-label" for="pm-username">{{ __('platform_mail.fields.username') }}</label>
-                <input id="pm-username" class="field-input" type="text" name="username" value="{{ old('username', $settings->username) }}" autocomplete="off" @disabled(! $canWrite)>
+                <input id="pm-username" class="field-input" type="text" name="username" value="{{ old('username', $settings->username) }}" autocomplete="off" @disabled(! ($canEditSmtp ?? false))>
             </div>
             <div class="field">
                 <label class="field-label" for="pm-password">{{ __('platform_mail.fields.password') }}</label>
                 <p class="field-hint">{{ $settings->exists && $settings->hasPassword() ? __('platform_mail.fields.password_saved') : __('platform_mail.fields.password_hint') }}</p>
-                <input id="pm-password" class="field-input" type="password" name="password" value="" autocomplete="new-password" @disabled(! $canWrite)>
+                <input id="pm-password" class="field-input" type="password" name="password" value="" autocomplete="new-password" @disabled(! ($canEditSmtp ?? false))>
             </div>
             <div class="field">
                 <label class="field-label" for="pm-from-address">{{ __('platform_mail.fields.from_address') }}</label>

@@ -190,6 +190,8 @@ return [
         'deploy_busy' => 'Bu sunucuda zaten bir Coolify derlemesi sürüyor (:count devam ediyor, üst sınır :max). Bitmesini bekleyip tekrar deneyin.',
         'compose_domains_before_raw' => 'Domain bağlanamadı: Coolify henüz compose dosyasını git’ten yüklemedi. Önce bir deploy bitmeli (compose yüklensin), sonra domain tekrar bağlanır. Plane’deki domain doğru olabilir; sorun sıralama.',
         'errors_heading' => 'Coolify hataları:',
+        'token_required_for_new_url' => 'Coolify adresi değişti. Yeni adres için API token’ı girin; kayıtlı token yalnız kayıtlı adrese gönderilir.',
+        'connection_in_use' => 'Bu bağlantıyı hâlâ :count site kullanıyor (arşivliler dahil). Önce onları taşıyın ya da kalıcı silin.',
     ],
     'flash' => [
         'saved' => 'Coolify bağlantısı kaydedildi. Sunucu ve projeleri senkronlayın.',

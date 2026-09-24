@@ -190,6 +190,8 @@ return [
         'deploy_busy' => 'Another Coolify build is already running on this server (:count in flight, max :max). Wait for it to finish, then retry.',
         'compose_domains_before_raw' => 'Domain could not be bound: Coolify has not loaded the compose file from git yet. Finish one deploy first (so compose is loaded), then bind the domain again. The Plane domain may be fine; the problem is ordering.',
         'errors_heading' => 'Coolify errors:',
+        'token_required_for_new_url' => 'The Coolify URL changed. Enter the API token for the new address; the saved token is only sent to the saved URL.',
+        'connection_in_use' => 'This connection is still used by :count site(s), archived ones included. Move or purge them first.',
     ],
     'flash' => [
         'saved' => 'Coolify connection saved. Sync servers and projects.',

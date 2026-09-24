@@ -24,7 +24,7 @@ class DeskronSettingsTest extends TestCase
 
     public function test_operator_saves_deskron_settings_encrypted_and_never_sees_the_key_again(): void
     {
-        $this->actingAs($this->userWithRole(OpsRole::Operator))
+        $this->actingAs($this->userWithRole(OpsRole::SuperAdmin))
             ->put(route('ops.deskron.update'), [
                 'application_id' => '01KDESKRONAPP000000000000',
                 'api_key' => 'dsk_super_secret_master_key',
@@ -42,7 +42,7 @@ class DeskronSettingsTest extends TestCase
         $audit = AuditLog::query()->where('action', 'deskron.updated')->firstOrFail();
         $this->assertStringNotContainsString('dsk_super_secret_master_key', json_encode($audit->after, JSON_THROW_ON_ERROR));
 
-        $this->actingAs($this->userWithRole(OpsRole::Operator))
+        $this->actingAs($this->userWithRole(OpsRole::SuperAdmin))
             ->get(route('ops.deskron.edit'))
             ->assertOk()
             ->assertSee(__('deskron.title'), false)
@@ -59,7 +59,7 @@ class DeskronSettingsTest extends TestCase
             'webhook_secret' => 'whsec_existing',
         ]);
 
-        $this->actingAs($this->userWithRole(OpsRole::Operator))
+        $this->actingAs($this->userWithRole(OpsRole::SuperAdmin))
             ->put(route('ops.deskron.update'), [
                 'application_id' => 'NEWAPP',
                 'api_key' => '',

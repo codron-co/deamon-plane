@@ -372,7 +372,7 @@ class CloudflareDnsOpsTest extends TestCase
             return Http::response(['success' => false, 'errors' => [['message' => 'unexpected '.$url]]], 404);
         });
 
-        $this->actingAs($this->operator())
+        $this->actingAs($this->superAdminUser())
             ->get(route('ops.cloudflare.zones.show', ['account' => $account, 'zone' => self::ZONE_ID]))
             ->assertOk()
             ->assertSee('example.com', false)
@@ -491,5 +491,13 @@ class CloudflareDnsOpsTest extends TestCase
                 'account' => ['id' => self::ACCOUNT_ID],
             ],
         ], 200);
+    }
+
+    private function superAdminUser(array $attributes = []): User
+    {
+        $operator = User::factory()->create($attributes);
+        $operator->assignRole(OpsRole::SuperAdmin->value);
+
+        return $operator;
     }
 }

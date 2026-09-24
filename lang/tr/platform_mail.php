@@ -69,6 +69,9 @@ return [
         'minor' => 'Minor ve üstü',
         'major' => 'Yalnız major',
     ],
+    'errors' => [
+        'password_required_for_new_host' => 'SMTP sunucusu veya portu değişti. Parolayı yeniden girin; kayıtlı parola yalnız kayıtlı sunucuya gönderilir.',
+    ],
     'flash' => [
         'saved' => 'Yazılım e-posta ayarları kaydedildi.',
         'saved_push_queued' => 'Yazılım e-posta ayarları kaydedildi. Sitelere aktarım kuyruğa alındı.',

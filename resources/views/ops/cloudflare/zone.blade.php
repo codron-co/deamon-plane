@@ -50,7 +50,7 @@
     <nav class="site-section-nav" aria-label="{{ __('cloudflare.tabs.zone_aria') }}" role="tablist" data-site-tabs data-initial-tab="{{ $initialTab }}">
         <a class="is-active" href="#overview" role="tab" aria-selected="true" aria-controls="overview">{{ __('cloudflare.tabs.overview') }}</a>
         <a href="#dns" role="tab" aria-selected="false" aria-controls="dns">{{ __('cloudflare.tabs.dns') }}</a>
-        @if ($canWrite)
+        @if ($canDanger ?? false)
             <a href="#danger" role="tab" aria-selected="false" aria-controls="danger">{{ __('cloudflare.tabs.danger') }}</a>
         @endif
     </nav>
@@ -224,7 +224,7 @@
         @endif
     </section>
 
-    @if ($canWrite)
+    @if ($canDanger ?? false)
         <section id="danger" class="site-section" role="tabpanel" data-site-panel>
             <div class="danger-zone">
                 <div>

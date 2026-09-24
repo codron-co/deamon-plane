@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Ops;
 use App\Http\Controllers\Controller;
 use App\Models\CloudflareDnsDefault;
 use App\Models\CloudflareSetting;
+use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Services\Cloudflare\CloudflareAccounts;
 use App\Services\Cloudflare\CloudflareApiException;
 use App\Services\Cloudflare\CloudflareClient;
@@ -80,13 +82,14 @@ class CloudflareOpsController extends Controller
             'zones' => $zones,
             'zonesError' => $zonesError,
             'canWrite' => request()->user()?->can('ops.write') ?? false,
+            'canDanger' => request()->user()?->can('ops.danger') ?? false,
             'hasToken' => $account->hasToken(),
         ]);
     }
 
     public function update(Request $request, CloudflareSetting $account): RedirectResponse
     {
-        $this->authorize('ops.write');
+        $this->authorize('ops.danger');
 
         $validated = $this->validatedAccount($request, requireToken: false);
         $this->fillAccount($account, $validated, $request);
@@ -101,7 +104,14 @@ class CloudflareOpsController extends Controller
 
     public function destroy(CloudflareSetting $account): RedirectResponse
     {
-        $this->authorize('ops.write');
+        $this->authorize('ops.danger');
+
+        // A site without its account silently falls back to the default one and
+        // the next alias could open a zone there, replacing the site's zone and NS.
+        $inUse = Site::withTrashed()->where('cloudflare_setting_id', $account->id)->count();
+        if ($inUse > 0) {
+            return back()->with('error', __('cloudflare.errors.account_in_use', ['count' => $inUse]));
+        }
 
         $wasDefault = (bool) $account->is_default;
         $account->delete();
@@ -273,6 +283,7 @@ class CloudflareOpsController extends Controller
             'recordsError' => $recordsError,
             'nameservers' => $nameservers,
             'canWrite' => request()->user()?->can('ops.write') ?? false,
+            'canDanger' => request()->user()?->can('ops.danger') ?? false,
         ]);
     }
 
@@ -292,11 +303,19 @@ class CloudflareOpsController extends Controller
 
     public function destroyZone(CloudflareSetting $account, string $zone, CloudflareZoneService $zones): RedirectResponse
     {
-        $this->authorize('ops.write');
+        $this->authorize('ops.danger');
         $this->assertReady($account);
+        $zoneId = $this->cloudflareId($zone);
+
+        // Deleting a zone a site still answers on takes that site's DNS down.
+        $inUse = Site::withTrashed()->where('cloudflare_zone_id', $zoneId)->count()
+            + SiteDomain::query()->where('cloudflare_zone_id', $zoneId)->count();
+        if ($inUse > 0) {
+            return back()->with('error', __('cloudflare.errors.zone_in_use'));
+        }
 
         try {
-            $zones->deleteZone($account, $this->cloudflareId($zone));
+            $zones->deleteZone($account, $zoneId);
         } catch (CloudflareApiException $exception) {
             return $this->failed($exception);
         }

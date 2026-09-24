@@ -18,6 +18,7 @@ class DeskronSettingsController extends Controller
         return view('ops.deskron.edit', [
             'settings' => DeskronSetting::current(),
             'canWrite' => $request->user()?->can('ops.write') ?? false,
+            'canEdit' => $request->user()?->can('ops.danger') ?? false,
             'pushedSites' => Site::query()->whereNotNull('deskron_pushed_at')->whereNull('deskron_push_failed_at')->count(),
             'failedSites' => Site::query()->whereNotNull('deskron_push_failed_at')->orderBy('name')->get(['id', 'name', 'slug', 'deskron_push_error']),
         ]);
@@ -36,7 +37,8 @@ class DeskronSettingsController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $this->authorize('ops.write');
+        // The DeskRon key is pushed to every CMS in the fleet.
+        $this->authorize('ops.danger');
 
         $validated = $request->validate([
             'application_id' => ['nullable', 'string', 'max:64', 'regex:/\A[0-9A-Za-z]+\z/'],

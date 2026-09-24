@@ -99,7 +99,7 @@ class SiteArchiveTest extends TestCase
 
         Http::fake(['https://coolify.example/api/v1/applications/old-app*' => Http::response('', 200)]);
 
-        $this->actingAs($this->user(OpsRole::Operator))
+        $this->actingAs($this->user(OpsRole::SuperAdmin))
             ->delete(route('ops.sites.purge', $site))
             ->assertRedirect(route('ops.sites'));
 
