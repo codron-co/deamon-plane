@@ -1,0 +1,1741 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/HealThrottledDeploysCommand.php
+
+		-
+			message: '#^Parameter \#1 \$site of static method App\\Services\\Coolify\\CoolifyApplicationService\:\:forSite\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Console/Commands/HealThrottledDeploysCommand.php
+
+		-
+			message: '#^Offset ''domain'' on array\{name\: ''app'', domain\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetClassifier.php
+
+		-
+			message: '#^Offset ''name'' on array\{name\: string, domain\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetClassifier.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetClassifier.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$domain\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetImporter.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetImporter.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetImporter.php
+
+		-
+			message: '#^Method App\\Console\\Commands\\ImportCoolifyApps\\CoolifyFleetImporter\:\:findExisting\(\) should return App\\Models\\Site\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetImporter.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetImporter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>slug" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/ImportCoolifyApps/CoolifyFleetImporter.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isHostingerReady\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Internal/SiteMailProxyController.php
+
+		-
+			message: '#^Offset ''id'' on array\{id\: string, email\: string, local_part\: string\|null, domain\: string\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Internal/SiteMailProxyController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Ops/ActivityController.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Ops/Concerns/LoadsSiteOpsContext.php
+
+		-
+			message: '#^Offset ''sites'' on array\{servers\: int, projects\: int, environments\: int, git_sources\: int, github_apps_available\: bool, sites\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyConnectionController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{uuid\: string, label\: string\}, Closure\(App\\Models\\CoolifyProjectRecord\)\: array\{uuid\: string, label\: string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyConnectionController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{uuid\: string, label\: string\}, Closure\(App\\Models\\CoolifyServer\)\: array\{uuid\: string, label\: string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyConnectionController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{uuid\: string, project_uuid\: string, label\: string\}, Closure\(App\\Models\\CoolifyEnvironment\)\: array\{uuid\: string, project_uuid\: string, label\: string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyConnectionController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{value\: string, label\: string\}, Closure\(App\\Models\\CoolifyGitSource\)\: array\{value\: string, label\: string\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyConnectionController.php
+
+		-
+			message: '#^Property App\\Models\\CoolifyConnection\:\:\$default_git_source_kind \(App\\Enums\\CoolifyGitSourceKind\|null\) does not accept string\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyConnectionController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyInventoryController.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Ops/CoolifyInventoryController.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Enums\\CoolifyGitSourceKind\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Ops/CoolifyInventoryController.php
+
+		-
+			message: '#^Offset ''ok'' on array\{ok\: int, skipped\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Ops/DomainController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$hostinger_order_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/MailServerOpsController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$mail_domain\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/MailServerOpsController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$mail_server_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/MailServerOpsController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:mailBindings\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/MailServerOpsController.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\MailProvider and App\\Enums\\MailProvider will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Ops/MailServerOpsController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$after\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$project_uuid\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$uuid\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Pagination\\LengthAwarePaginator\<int, App\\Models\\Site\>\:\:getCollection\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 3
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Offset ''agent''\|''app''\|''auto_deploy''\|''channel''\|''cms''\|''deploy''\|''health''\|''pack''\|''publish''\|''q''\|''server''\|''stale''\|''status''\|''theme''\|''theme_id'' on array\{q\: \(array\|string\), channel\: \(array\|string\), status\: \(array\|string\), publish\: \(array\|string\), deploy\: \(array\|string\), agent\: \(array\|string\), pack\: \(array\|string\), health\: \(array\|string\), \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Offset ''failed'' on array\{ok\: int, failed\: int, skipped\: int, waiting\: int, kept\: int, unready\: int, errors\: list\<string\>, waiting_sites\: list\<string\>, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Offset ''newest_by_channel'' does not exist on array\{newest\: string\|null, versions\: array\<string, string\|null\>\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Offset ''waiting'' on array\{ok\: int, failed\: int, skipped\: int, waiting\: int, kept\: int, unready\: int, errors\: list\<string\>, waiting_sites\: list\<string\>, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Parameter \#1 \$connection of method App\\Http\\Controllers\\Ops\\SiteController\:\:coolifyFormData\(\) expects App\\Models\\CoolifyConnection\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Parameter \#1 \$server of method App\\Services\\Mail\\SiteMailOrderBinder\:\:refreshCatalog\(\) expects App\\Models\\MailServer, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>default_server_uuid" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Ops/SiteController.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Ops/SiteCoolifyOpsController.php
+
+		-
+			message: '#^Offset ''deployments'' on array\{filled\: bool, deployments\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Ops/SiteCoolifyOpsController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cloudflare_nameservers\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteDomainController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:zonePending\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/SiteDomainController.php
+
+		-
+			message: '#^Parameter \#2 \$action of method App\\Services\\Ops\\PacedFanout\:\:run\(\) expects callable\(App\\Models\\Site\)\: void, Closure\(App\\Models\\Site\)\: App\\Enums\\CmsPublishStatus given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Ops/SitePublishStatusController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:behindCatalog\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/ThemeController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:behindCatalog\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Ops/ThemeController.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Enums\\ThemeVisibility\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Ops/ThemeController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Webhooks/CoolifyWebhookController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Webhooks/GitHubWebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Middleware/SetOpsLocale.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Http/Middleware/VerifyCoolifyWebhook.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Jobs\\PollDeploymentJob\:\:coolifyFor\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/PollDeploymentJob.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Jobs\\PollDeploymentJob\:\:rescheduleAfterTransient\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/PollDeploymentJob.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Sites\\ChannelSwitcher\:\:safeFailureMessage\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/PollDeploymentJob.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Sites\\SiteProvisioner\:\:markFailed\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/PollDeploymentJob.php
+
+		-
+			message: '#^Parameter \#1 \$site of static method App\\Services\\Sites\\DeploymentFailureText\:\:fromException\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/PollDeploymentJob.php
+
+		-
+			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\SiteProvisioner\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/ProvisionSiteJob.php
+
+		-
+			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\ChannelSwitcher\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/SwitchSiteChannelJob.php
+
+		-
+			message: '#^Offset ''ttl'' on array\{type\: string, name\: string, content\: string, ttl\: int, proxied\: bool, priority\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Models/CloudflareDnsDefault.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Models/CloudflareSetting.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$kind\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/CoolifyConnection.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$uuid\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/CoolifyConnection.php
+
+		-
+			message: '#^Method App\\Models\\CoolifyConnection\:\:environmentsForProject\(\) should return Illuminate\\Support\\Collection\<int, App\\Models\\CoolifyEnvironment\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/CoolifyConnection.php
+
+		-
+			message: '#^Parameter \#1 \$key of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:contains\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|Illuminate\\Database\\Eloquent\\Model\|int\|string, Closure\(App\\Models\\CoolifyGitSource\)\: bool given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/CoolifyConnection.php
+
+		-
+			message: '#^Parameter \#1 \$rows of method App\\Models\\CoolifyConnection\:\:soleActiveUuid\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\CoolifyEnvironment\|App\\Models\\CoolifyProjectRecord\|App\\Models\\CoolifyServer\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Models/CoolifyConnection.php
+
+		-
+			message: '#^Parameter \#1 \$rows of method App\\Models\\CoolifyConnection\:\:soleActiveUuid\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\CoolifyEnvironment\|App\\Models\\CoolifyProjectRecord\|App\\Models\\CoolifyServer\>, Illuminate\\Support\\Collection\<int, App\\Models\\CoolifyEnvironment\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/CoolifyConnection.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/CoolifyConnection.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Models/CoolifyEnvCatalogSource.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Enums\\Channel\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/CoolifyEnvDefault.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Enums\\CoolifyEnvKind\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/CoolifyEnvDefault.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\CoolifyGitSourceKind and App\\Enums\\CoolifyGitSourceKind will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Models/CoolifyGitSource.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Models/CoolifySetting.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Deployment.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 2
+			path: app/Models/Deployment.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type App\\Enums\\DeploymentStatus\:\:Cancelled\|App\\Enums\\DeploymentStatus\:\:Failed\|App\\Enums\\DeploymentStatus\:\:Finished\|App\\Enums\\DeploymentStatus\:\:InProgress\|App\\Enums\\DeploymentStatus\:\:Queued\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Deployment.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type App\\Enums\\DeploymentTrigger\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Deployment.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Deployment.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Models/DeskronSetting.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Models/GithubSetting.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: app/Models/PlatformMailSetting.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$after\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cloudflare_nameservers\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cloudflare_zone_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cloudflare_zone_status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$domain\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$error_message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pinned_sha\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ref\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/Site.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$theme\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Models/Site.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:failedInWindow\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:zonePending\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Offset ''newest_by_channel'' on array\{newest\: string\|null, versions\: non\-empty\-array\<string, string\|null\>\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_values contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: app/Models/Site.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between null and null will always evaluate to false\.$#'
+			identifier: notIdentical.alwaysFalse
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Enums\\SiteStatus and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>latest_sha" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Site.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Appearance and App\\Enums\\Appearance will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$send$#'
+			identifier: parameter.notFound
+			count: 1
+			path: app/Services/Agent/SiteAgentClient.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/Cloudflare/CloudflareDnsRecord.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/Cloudflare/CloudflareDnsRecord.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Services/Cloudflare/CloudflareHostname.php
+
+		-
+			message: '#^Call to an undefined static method App\\Services\\Cloudflare\\CloudflareApiException\:\:messageFromJson\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/Cloudflare/CloudflareHttpResult.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cloudflare_nameservers\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cloudflare/CloudflareZoneService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cloudflare_zone_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cloudflare/CloudflareZoneService.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: app/Services/Cloudflare/CloudflareZoneService.php
+
+		-
+			message: '#^Offset ''ttl'' on array\{type\: string, name\: string, content\: string, ttl\: int, proxied\: bool, priority\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Cloudflare/CloudflareZoneService.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-falsy\-string and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/Coolify/CoolifyApiException.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyAppEnvSync.php
+
+		-
+			message: '#^Instanceof between App\\Models\\CoolifyEnvDefault and App\\Models\\CoolifyEnvDefault will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 2
+			path: app/Services/Coolify/CoolifyAppEnvSync.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/Coolify/CoolifyAppEnvSync.php
+
+		-
+			message: '#^Offset ''key'' on array\{key\: string, value\: string\} in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/Coolify/CoolifyClient.php
+
+		-
+			message: '#^Offset ''value'' on array\{key\: string, value\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Coolify/CoolifyClient.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-list\<mixed\> and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyClient.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyDeploymentSync.php
+
+		-
+			message: '#^Parameter \#1 \$deployment of method App\\Services\\Coolify\\CoolifyDeploymentSync\:\:writeRemoteState\(\) expects App\\Models\\Deployment, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Coolify/CoolifyDeploymentSync.php
+
+		-
+			message: '#^Parameter \#2 \$site of method App\\Services\\Coolify\\CoolifyDeploymentSync\:\:writeRemoteState\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Coolify/CoolifyDeploymentSync.php
+
+		-
+			message: '#^Property App\\Models\\Deployment\:\:\$started_at \(Carbon\\Carbon\|null\) does not accept Carbon\\CarbonImmutable\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Services/Coolify/CoolifyDeploymentSync.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\CoolifyGitSourceKind and App\\Enums\\CoolifyGitSourceKind will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyInventorySync.php
+
+		-
+			message: '#^Instanceof between App\\Services\\Coolify\\Dto\\CoolifyProject and App\\Services\\Coolify\\Dto\\CoolifyProject will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyInventorySync.php
+
+		-
+			message: '#^Instanceof between App\\Services\\Coolify\\Dto\\CoolifyProjectEnvironment and App\\Services\\Coolify\\Dto\\CoolifyProjectEnvironment will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyInventorySync.php
+
+		-
+			message: '#^Instanceof between App\\Services\\Coolify\\Dto\\CoolifyServer and App\\Services\\Coolify\\Dto\\CoolifyServer will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyInventorySync.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$coolify_deployment_uuid\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Coolify/CoolifyWebhookHandler.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hasToken\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Coolify/CoolifyWebhookHandler.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/CoolifyWebhookHandler.php
+
+		-
+			message: '#^Method App\\Services\\Coolify\\CoolifyWebhookHandler\:\:findOrCreateDeployment\(\) should return App\\Models\\Deployment\|null but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Services/Coolify/CoolifyWebhookHandler.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Coolify\\CoolifyWebhookHandler\:\:enrichFromCoolify\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Coolify/CoolifyWebhookHandler.php
+
+		-
+			message: '#^Offset ''domain'' on array\{name\: ''app'', domain\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Coolify/Dto/CoolifyApplication.php
+
+		-
+			message: '#^Offset ''name'' on array\{name\: string, domain\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Coolify/Dto/CoolifyApplication.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Coolify/Dto/CoolifyStorages.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Coolify/EnvCatalog/CoolifyEnvCatalogSync.php
+
+		-
+			message: '#^Offset ''errors'' on array\{errors\: array\{\}, waiting_sites\: array\{\}, rate_limited\: false\}\|array\{ok\: int, failed\: int, skipped\: int, waiting\: int, errors\: list\<string\>, waiting_sites\: list\<string\>, rate_limited\: bool, deploy_busy\: bool, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Domains/DomainBindSweep.php
+
+		-
+			message: '#^Offset ''waiting_sites'' on array\{errors\: array\{\}, waiting_sites\: array\{\}, rate_limited\: false\}\|array\{ok\: int, failed\: int, skipped\: int, waiting\: int, errors\: list\<string\>, waiting_sites\: list\<string\>, rate_limited\: bool, deploy_busy\: bool, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Services/Domains/DomainBindSweep.php
+
+		-
+			message: '#^Instanceof between App\\Models\\SiteDomain and App\\Models\\SiteDomain will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Domains/DomainClearSweep.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<int\|string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: app/Services/GitHub/GitHubAppClient.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\ThemeGitAccountType and App\\Enums\\ThemeGitAccountType will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/GitHub/GitHubAppClient.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<mixed, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Hostinger/HostingerMailClient.php
+
+		-
+			message: '#^Parameter \#3 \$lastPushedAt of class App\\Services\\Mail\\PlatformMailState constructor expects Illuminate\\Support\\Carbon\|null, Carbon\\Carbon given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Mail/PlatformMailState.php
+
+		-
+			message: '#^Parameter \#3 \$lastPushedAt of class App\\Services\\Mail\\PlatformMailState constructor expects Illuminate\\Support\\Carbon\|null, Carbon\\Carbon\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/Mail/PlatformMailState.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$api_token\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Mail/SiteMailConfigurer.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\Site\)\: void given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Mail/SiteMailConfigurer.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\{id\: string, domain\: string\|null, status\: string\|null, seats\: int\|null\} will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Mail/SiteMailOrderBinder.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Mail/SiteMailOrderBinder.php
+
+		-
+			message: '#^Offset ''id'' on array\{id\: string, domain\: string\|null, status\: string\|null, seats\: int\|null\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Mail/SiteMailOrderBinder.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\Site\)\: void given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Mail/SiteMailOrderBinder.php
+
+		-
+			message: '#^Result of \|\| is always false\.$#'
+			identifier: booleanOr.alwaysFalse
+			count: 1
+			path: app/Services/Mail/SiteMailOrderBinder.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Ops/BulkResultSummary.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$coolify_app_uuid\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Ops/OpsCoolifyDeployQueue.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:auditLogs\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Ops/OpsCoolifyDeployQueue.php
+
+		-
+			message: '#^Method App\\Services\\Ops\\OpsCoolifyDeployQueue\:\:cancelRemote\(\) should return App\\Models\\Deployment\|null but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Ops/OpsCoolifyDeployQueue.php
+
+		-
+			message: '#^Parameter \#1 \$deployment of method App\\Services\\Ops\\OpsCoolifyDeployQueue\:\:forceStart\(\) expects App\\Models\\Deployment, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Ops/OpsCoolifyDeployQueue.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Ops\\OpsCoolifyDeployQueue\:\:forgetRunningDeployments\(\) expects App\\Models\\Site\|null, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/Ops/OpsCoolifyDeployQueue.php
+
+		-
+			message: '#^Parameter \#1 \$site of static method App\\Services\\Coolify\\CoolifyApplicationService\:\:forSite\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Services/Ops/OpsCoolifyDeployQueue.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>coolify_app_uuid" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Ops/OpsCoolifyDeployQueue.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Support\\Collection\<int, App\\Models\\Site\>\:\:loadMissing\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Ops/OpsJobRunner.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Ops/OpsJobRunner.php
+
+		-
+			message: '#^Offset ''sites'' on array\{servers\: int, projects\: int, environments\: int, git_sources\: int, github_apps_available\: bool, sites\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Ops/OpsJobRunner.php
+
+		-
+			message: '#^Parameter \#3 \$action of method App\\Services\\Ops\\OpsJobRunner\:\:fanout\(\) expects callable\(App\\Models\\Site\)\: void, Closure\(App\\Models\\Site\)\: App\\Services\\Coolify\\Dto\\CoolifyApplication given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/Ops/OpsJobRunner.php
+
+		-
+			message: '#^Parameter \#3 \$action of method App\\Services\\Ops\\OpsJobRunner\:\:fanout\(\) expects callable\(App\\Models\\Site\)\: void, Closure\(App\\Models\\Site\)\: array\{filled\: bool, deployments\: int\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Ops/OpsJobRunner.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:credentials\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Ops/PacedFanout.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hasToken\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Ops/PacedFanout.php
+
+		-
+			message: '#^Instanceof between App\\Models\\Site and App\\Models\\Site will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Ops/PacedFanout.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Ops/PaletteSearch.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\SiteDomain\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/Ops/PaletteSearch.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Ops/PaletteSearch.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$default_project_uuid\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/ChannelEnvironmentMap.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/ChannelEnvironmentMap.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$error_message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$finished_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$log_excerpt\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 7
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Method App\\Services\\Sites\\ChannelSwitcher\:\:switchOnCoolify\(\) should return App\\Models\\Deployment but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Sites\\ChannelSwitcher\:\:markFailed\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Sites\\ChannelSwitcher\:\:markSucceeded\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Parameter \#1 \$site of static method App\\Services\\Sites\\DeploymentFailureText\:\:fromRemote\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\ChannelSwitcher\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/ChannelSwitcher.php
+
+		-
+			message: '#^Instanceof between App\\Services\\Coolify\\Dto\\CoolifyEnvironmentVariable and App\\Services\\Coolify\\Dto\\CoolifyEnvironmentVariable will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/ComposePackMigrator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/CoolifyDeploySettings.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/CoolifyDeploySettings.php
+
+		-
+			message: '#^Method App\\Services\\Sites\\CoolifyDeploySettings\:\:recordDeployment\(\) should return App\\Models\\Deployment but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Sites/CoolifyDeploySettings.php
+
+		-
+			message: '#^Parameter \#2 \$action of method App\\Services\\Sites\\CoolifyDeploySettings\:\:applyMany\(\) expects callable\(App\\Models\\Site\)\: void, Closure\(App\\Models\\Site\)\: App\\Services\\Coolify\\Dto\\CoolifyApplication given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/Sites/CoolifyDeploySettings.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$api_token\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/DeploymentFailureText.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 3
+			path: app/Services/Sites/DeploymentFailureText.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>api_token" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Sites/DeploymentFailureText.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hasToken\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Sites/Diagnosis/DeploymentDiagnoser.php
+
+		-
+			message: '#^Parameter \#2 \$site of method App\\Services\\Sites\\Diagnosis\\DeploymentDiagnoser\:\:applyAutoFix\(\) expects App\\Models\\Site\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/Diagnosis/DeploymentDiagnoser.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between numeric\-string and '''' will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/Sites/Diagnosis/DeploymentFailureClassifier.php
+
+		-
+			message: '#^Parameter \#1 \$connection of static method App\\Services\\Coolify\\CoolifyApplicationService\:\:forConnection\(\) expects App\\Models\\CoolifyConnection, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/SiteAgentSecretInjector.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, int\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Sites/SiteAppHealthFixer.php
+
+		-
+			message: '#^Instanceof between App\\Models\\Site and App\\Models\\Site will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 2
+			path: app/Services/Sites/SiteAppHealthFixer.php
+
+		-
+			message: '#^Instanceof between App\\Services\\Sites\\SiteAppHealthIssue and App\\Services\\Sites\\SiteAppHealthIssue will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/SiteAppHealthFixer.php
+
+		-
+			message: '#^Offset ''computed_at'' on array\{counts\: array\<string, int\>, computed_at\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Sites/SiteAppHealthFixer.php
+
+		-
+			message: '#^Offset ''counts'' on array\{counts\: array\<string, int\>, computed_at\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Sites/SiteAppHealthFixer.php
+
+		-
+			message: '#^Variable \$report on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: app/Services/Sites/SiteAppHealthFixer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/SiteAppHealthInspector.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 2
+			path: app/Services/Sites/SiteAppHealthInspector.php
+
+		-
+			message: '#^Method App\\Services\\Sites\\SiteAppHealthInspector\:\:latestDeployment\(\) should return App\\Models\\Deployment\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Services/Sites/SiteAppHealthInspector.php
+
+		-
+			message: '#^Parameter \$checkedAt of class App\\Services\\Sites\\SiteAppHealthReport constructor expects Illuminate\\Support\\Carbon\|null, Carbon\\Carbon\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/SiteAppHealthReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$domain\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/SiteAttacher.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$verified_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/SiteDomainReconciler.php
+
+		-
+			message: '#^Offset ''domain'' on array\{name\: ''app'', domain\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Sites/SiteDomainReconciler.php
+
+		-
+			message: '#^Offset ''name'' on array\{name\: string, domain\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Sites/SiteDomainReconciler.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/SiteLifecycle.php
+
+		-
+			message: '#^Instanceof between App\\Models\\Site and App\\Models\\Site will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/SiteLiveProbe.php
+
+		-
+			message: '#^Instanceof between DOMElement and DOMElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/SiteLiveProbe.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between lowercase\-string&non\-falsy\-string and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/Sites/SiteLiveProbe.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$error_message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$finished_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$log_excerpt\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\Channel and App\\Enums\\Channel will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 4
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\SiteStatus and App\\Enums\\SiteStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Method App\\Services\\Sites\\SiteProvisioner\:\:connectionFor\(\) should return App\\Models\\CoolifyConnection\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Method App\\Services\\Sites\\SiteProvisioner\:\:provisionOnCoolify\(\) should return App\\Models\\Deployment but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Sites\\SiteProvisioner\:\:markFailed\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Sites\\SiteProvisioner\:\:markSucceeded\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Parameter \#1 \$site of static method App\\Services\\Sites\\DeploymentFailureText\:\:fromRemote\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Parameter \#3 \$deployment of method App\\Services\\Sites\\SiteProvisioner\:\:markFailed\(\) expects App\\Models\\Deployment\|null, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Sites/SiteProvisioner.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$default_branch\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_private\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$repo_full_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:shortName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Enums\\ThemeVisibility and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>description" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>minimumDeamonVersion" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>themeId" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/Themes/ThemeCatalogSync.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: app/Services/Themes/ThemeGitConnectionService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$latest_sha\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$minimum_deamon_version\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$theme_id\.$#'
+			identifier: property.notFound
+			count: 9
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:auditLogs\(\)\.$#'
+			identifier: method.notFound
+			count: 9
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hasAgentSecret\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:keepsThemeFileCustomizationsOnUpdate\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:reportedDeamonVersion\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\ThemeInstallationStatus and App\\Enums\\ThemeInstallationStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$connection of method App\\Services\\GitHub\\GitHubAppClient\:\:mintCloneToken\(\) expects App\\Models\\ThemeGitConnection\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:activateTheme\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:installTheme\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:rollbackThemeSync\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Agent\\SiteAgentClient\:\:updateTheme\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:syncWithDataRepair\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$site of method App\\Services\\Themes\\ThemeVersionGate\:\:shouldSkip\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:assertMutableTheme\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#1 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:themePayload\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#2 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:deferSyncIfDeployOpen\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#2 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:guardStorefront\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#2 \$site of method App\\Services\\Themes\\ThemeRolloutService\:\:markError\(\) expects App\\Models\\Site, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 6
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#2 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:auditSnapshot\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#2 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:syncWithDataRepair\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#2 \$theme of method App\\Services\\Themes\\ThemeVersionGate\:\:shouldSkip\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#3 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:guardStorefront\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Parameter \#3 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:markError\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 6
+			path: app/Services/Themes/ThemeRolloutService.php
+
+		-
+			message: '#^Instanceof between Illuminate\\Http\\Client\\Response and Illuminate\\Http\\Client\\Response will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Themes/ThemeSmokeCheck.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-string&uppercase\-string and '''' will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Support/IdentityMark.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Support/Lists/CoolifyInventoryQuery.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Support/Lists/CoolifyInventoryQuery.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/Lists/CoolifyInventoryQuery.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Enums\\Channel\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/Lists/FleetAttentionQuery.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\ConnectionInterface\:\:getDriverName\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Support/MysqlWallClockShift.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Pagination\\LengthAwarePaginator\<int, App\\Support\\Ops\\ActivityRow\>\:\:getCollection\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Pagination\\LengthAwarePaginator\<int, App\\Support\\Ops\\ActivityRow\>\:\:setCollection\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Parameter \#1 \$items of method App\\Support\\Ops\\ActivityFeed\:\:hydrate\(\) expects Illuminate\\Support\\Collection\<int, object\>, Illuminate\\Support\\Collection\<int, stdClass\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Parameter \#4 \$actor of class App\\Support\\Ops\\ActivityRow constructor expects App\\Models\\User\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Parameter \#5 \$site of class App\\Support\\Ops\\ActivityRow constructor expects App\\Models\\Site\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>site" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/Ops/ActivityFeed.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/Ops/ActivityRow.php
+
+		-
+			message: '#^Call to function method_exists\(\) with App\\Models\\User and ''appearanceValue'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Support/OpsAppearance.php
+
+		-
+			message: '#^Offset ''ttl'' on array\{type\: string, name\: string, content\: string, ttl\: int, proxied\: bool, priority\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: database/migrations/2026_09_10_060000_expand_cloudflare_accounts_and_dns_defaults.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 3
+			path: database/seeders/OpsAdminSeeder.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Console\\Command\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: database/seeders/OpsAdminSeeder.php

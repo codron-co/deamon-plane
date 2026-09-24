@@ -1,0 +1,26 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - app
+        - config
+        - database
+        - routes
+    # Models declare casts in casts() with a generic @return array<string, string>.
+    # Without this Larastan reads that docblock and types every cast column as its
+    # migration type (Channel enum -> string), which floods the report with false
+    # "instanceof ... always false" findings.
+    parseModelCastsMethod: true
+    # Today's findings live in phpstan-baseline.neon. New code must be clean.
+    # Shrink it after fixing entries: composer stan:baseline
+    #
+    # Known PHPStan quirk: an error inside a trait used by several classes is
+    # matched against the using class's baseline entry first, but the generator
+    # writes it under the trait path. After regenerating, if `composer stan`
+    # reports "ignore.count ... expected N, occurred N+1" for
+    # Ops/Concerns/LoadsSiteOpsContext.php, raise the count of the using class
+    # entry (SiteController.php) by one.
+    reportUnmatchedIgnoredErrors: true
