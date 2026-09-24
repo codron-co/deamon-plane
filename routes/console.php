@@ -3,6 +3,7 @@
 use App\Jobs\DispatchSiteHealthChecksJob;
 use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileDeskronPushJob;
+use App\Models\OpsNotification;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -32,6 +33,13 @@ Schedule::command('ops:sync-env-catalog')
 Schedule::job(new ReconcileDeskronPushJob)
     ->hourly()
     ->name('ops-deskron-push-reconcile')
+    ->withoutOverlapping();
+
+// Queued ops alerts keep a delivery record; old rows are dropped after 90 days.
+Schedule::command('model:prune', ['--model' => [OpsNotification::class]])
+    ->dailyAt('03:10')
+    ->timezone(config('app.timezone'))
+    ->name('ops-prune-notifications')
     ->withoutOverlapping();
 
 // Plane's own database holds every connection credential and site agent secret.

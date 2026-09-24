@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Ops;
 
+use App\Jobs\SendOpsNotificationJob;
 use App\Mail\PlatformOpsMail;
+use App\Models\OpsNotification;
 use App\Models\PlatformMailSetting;
 use App\Models\Site;
 use App\Models\User;
@@ -12,6 +14,7 @@ use App\Services\Mail\PlatformOpsMailer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
 use RuntimeException;
 use Tests\TestCase;
@@ -110,11 +113,20 @@ class PlatformMailUnsubscribeTest extends TestCase
 
     public function test_ops_mailer_redacts_smtp_password_from_failure_log(): void
     {
+        Queue::fake();
         Log::spy();
         $site = Site::factory()->create();
         User::factory()->create(['email' => 'eligible@example.test']);
         $password = 'leaked-smtp-secret-xyzzy';
         $this->readySettings(password: $password);
+
+        // Sending only queues; the SMTP failure happens in the job.
+        $this->assertTrue(app(PlatformOpsMailer::class)->send(
+            $site,
+            PlatformNotificationCatalog::SITE_DOWN,
+            'Site unavailable',
+            'The health check failed.',
+        ));
 
         $transport = new class($password)
         {
@@ -131,15 +143,24 @@ class PlatformMailUnsubscribeTest extends TestCase
             }
         };
 
+        Mail::shouldReceive('purge')->with('platform_ops');
         Mail::shouldReceive('mailer')->with('platform_ops')->andReturn($transport);
 
-        $this->assertFalse(app(PlatformOpsMailer::class)->send(
-            $site,
-            PlatformNotificationCatalog::SITE_DOWN,
-            'Site unavailable',
-            'The health check failed.',
-        ));
+        $notification = OpsNotification::query()->where('recipient', 'eligible@example.test')->firstOrFail();
+        $job = new SendOpsNotificationJob($notification->id);
 
+        try {
+            $job->handle(app(PlatformOpsMailer::class));
+            $this->fail('The transport error should reach the queue so the job retries.');
+        } catch (RuntimeException) {
+        }
+
+        $job->failed(null);
+
+        $fresh = $notification->fresh();
+        $this->assertSame(OpsNotification::STATUS_FAILED, $fresh->status);
+        $this->assertSame(1, $fresh->attempts);
+        $this->assertSame('SMTP auth failed using [redacted]', $fresh->last_error);
         Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context) use ($password): bool {
             return $message === 'Platform ops mail failed'
                 && ($context['message'] ?? '') === 'SMTP auth failed using [redacted]'
