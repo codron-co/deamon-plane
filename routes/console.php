@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\DispatchSiteHealthChecksJob;
+use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileDeskronPushJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -47,4 +48,11 @@ Schedule::command('ops:snapshot-fleet')
     ->dailyAt('23:50')
     ->timezone(config('app.timezone'))
     ->name('ops-snapshot-fleet')
+    ->withoutOverlapping();
+
+// CI-gated fleet rollouts advance by re-queueing themselves; a worker restart or a
+// Plane deploy can drop that chain. Every 5 minutes, stalled open rollouts get a tick.
+Schedule::job(new KickStalledFleetRolloutsJob)
+    ->everyFiveMinutes()
+    ->name('ops-fleet-rollout-watchdog')
     ->withoutOverlapping();
