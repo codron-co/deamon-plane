@@ -7,6 +7,7 @@
 | Ne yapıyorsun? | Prompt |
 |----------------|--------|
 | **Ürünü subagent-driven inşa et** | **[000 — START Plane Orkestrasyon](prompts/000_START-Plane-Orkestrasyon.md)** ← bunu yapıştır |
+| **Tüm Plane'i denetle, iyileştirme/otonomi/yeni modül raporu çıkar** | **[010 — START Plane Denetim ve Yol Haritası](prompts/010_START-Plane-Denetim-ve-Yol-Haritasi.md)** ← salt-okunur, çıktı `docs/audit/2026-09-plane-review/` |
 
 İnsan okuması için kısa özet: [docs/subagent-orchestration.md](../docs/subagent-orchestration.md)
 
@@ -27,6 +28,7 @@
 | Dosya | Rol |
 |-------|-----|
 | [000_START-Plane-Orkestrasyon.md](prompts/000_START-Plane-Orkestrasyon.md) | Kullanıcının yapıştırdığı starter |
+| [010_START-Plane-Denetim-ve-Yol-Haritasi.md](prompts/010_START-Plane-Denetim-ve-Yol-Haritasi.md) | Denetim + yol haritası starter (paralel alt-ajanlar, salt-okunur) |
 | [ortak/_Subagent-Plane-Orkestrasyon.md](prompts/ortak/_Subagent-Plane-Orkestrasyon.md) | Dalgalar, roller, merge, hard gates |
 | [ortak/_Dalga-0-Discovery-Spike.md](prompts/ortak/_Dalga-0-Discovery-Spike.md) | Faz 0 Coolify API Go/No-Go |
 | [ortak/_Dalga-1-Core-Schema-Auth.md](prompts/ortak/_Dalga-1-Core-Schema-Auth.md) | Task 0–1 bootstrap + şema |
