@@ -43,6 +43,8 @@
 
     @include('ops.settings.partials.github')
 
+    @include('ops.settings.partials.automation')
+
     <section
         class="settings-panel"
         aria-labelledby="customer-defaults-heading"

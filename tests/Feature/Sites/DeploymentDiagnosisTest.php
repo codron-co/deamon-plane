@@ -100,6 +100,27 @@ class DeploymentDiagnosisTest extends TestCase
         $this->assertNotContains('deploy_failed|', $codes);
     }
 
+    public function test_automatic_redeploy_is_skipped_on_a_site_that_follows_the_branch_head(): void
+    {
+        config(['ops.diagnosis.enabled' => true, 'ops.diagnosis.auto_fix' => true]);
+        $site = $this->composeSite();
+        Http::fake(fn () => Http::response(['error' => 'no coolify in this test'], 404));
+
+        $deployment = Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Failed,
+            'error_message' => 'toomanyrequests: You have reached your pull rate limit.',
+            'finished_at' => now(),
+        ]);
+
+        $diagnosis = $deployment->fresh()->diagnosis();
+        $this->assertSame('registry_rate_limited', $diagnosis->code);
+        $this->assertSame('redeploy', $diagnosis->autoFix['fix']);
+        $this->assertSame(DeploymentDiagnosis::AUTO_SKIPPED, $diagnosis->autoFix['status']);
+        $this->assertSame('follows_head', $diagnosis->autoFix['reason']);
+        Http::assertNothingSent();
+    }
+
     public function test_same_auto_fix_is_not_repeated_inside_the_window(): void
     {
         config(['ops.diagnosis.enabled' => true, 'ops.diagnosis.auto_fix' => true]);

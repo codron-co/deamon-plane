@@ -16,11 +16,14 @@ final class DeploymentFailureClassifier
 {
     /**
      * Fixes Plane may run on its own after a failed deploy: none of them delete
-     * data, rotate a secret or move the site to another commit.
+     * data, rotate a secret or move the site to another commit. `redeploy` runs
+     * automatically only on a pinned site (same commit); `bind_domains` rewrites
+     * the live host list and stays a manual fix. Every automatic fix also passes
+     * App\Services\Ops\AutomationGuard (switch, budgets, fleet incident).
      *
      * @var list<string>
      */
-    public const AUTO_SAFE = ['sync_env', 'redeploy', 'restart_app', 'sync_deployments', 'bind_domains'];
+    public const AUTO_SAFE = ['sync_env', 'redeploy', 'restart_app', 'sync_deployments'];
 
     /**
      * @var list<array{code: string, service: string, patterns: list<string>, auto: string|null, fixes: list<string>, logs: bool}>

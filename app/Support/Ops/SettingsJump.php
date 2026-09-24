@@ -40,6 +40,12 @@ final class SettingsJump
                 'needles' => ['git', 'repository', 'repo', 'compose', 'müşteri', 'musteri', 'customer'],
             ],
             [
+                'id' => 'automation',
+                'hash' => 'automation-heading',
+                'label' => __('settings.automation.title'),
+                'needles' => ['otomasyon', 'automation', 'auto', 'kill', 'switch', 'bütçe', 'budget', 'fix', 'restart', 'rebind'],
+            ],
+            [
                 'id' => 'coolify',
                 'hash' => 'system-coolify-heading',
                 'label' => __('settings.coolify.title'),

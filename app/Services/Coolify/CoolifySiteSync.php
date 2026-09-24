@@ -4,6 +4,7 @@ namespace App\Services\Coolify;
 
 use App\Models\CoolifyConnection;
 use App\Models\Site;
+use App\Services\Ops\AutomationGuard;
 use App\Services\Sites\SiteAppHealthInspector;
 use App\Services\Sites\SiteDomainReconciler;
 
@@ -35,7 +36,7 @@ class CoolifySiteSync
         $app = $coolify->getApp($uuid);
         $filled = (new CoolifySiteTargetSync)->fillSite($site, $app, $connection);
 
-        $autoRebind = (bool) config('ops.coolify.auto_rebind_domains', true);
+        $autoRebind = app(AutomationGuard::class)->enabled(AutomationGuard::DOMAIN_AUTO_REBIND);
         $domains = ['imported' => 0, 'conflicts' => 0, 'rebound' => false, 'missing' => []];
         try {
             $domains = app(SiteDomainReconciler::class)->reconcile(

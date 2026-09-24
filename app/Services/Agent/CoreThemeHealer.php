@@ -4,6 +4,7 @@ namespace App\Services\Agent;
 
 use App\Models\Site;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Ops\AutomationGuard;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -26,12 +27,19 @@ class CoreThemeHealer
             return false;
         }
 
-        if (! (bool) config('ops.agent.core_theme_auto_restart', true) || blank($site->coolify_app_uuid)) {
+        $guard = app(AutomationGuard::class);
+        if (! $guard->enabled(AutomationGuard::CORE_THEME_RESTART) || blank($site->coolify_app_uuid)) {
             return false;
         }
 
         $hours = max(1, (int) config('ops.agent.core_theme_restart_window_hours', 6));
         if (! Cache::add($this->throttleKey($site), true, now()->addHours($hours))) {
+            return false;
+        }
+
+        // No incident signal here: after a CMS release every site legitimately
+        // needs this restart, so only the budgets apply.
+        if ($guard->deny(AutomationGuard::CORE_THEME_RESTART, $site) !== null) {
             return false;
         }
 

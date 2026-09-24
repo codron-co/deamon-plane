@@ -6,6 +6,7 @@ use App\Enums\DeploymentStatus;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Ops\AutomationGuard;
 use App\Services\Sites\DeploymentFailureText;
 use App\Services\Sites\SiteAppHealthFixer;
 use Carbon\CarbonImmutable;
@@ -113,7 +114,9 @@ final class DeploymentDiagnoser
     {
         $fix = (string) $diagnosis->autoFixKey;
 
-        if (! $allow || ! config('ops.diagnosis.auto_fix', true)) {
+        $guard = app(AutomationGuard::class);
+
+        if (! $allow || ! $guard->enabled(AutomationGuard::DEPLOY_AUTO_FIX)) {
             return $diagnosis->withAutoFix($fix, DeploymentDiagnosis::AUTO_SKIPPED, 'disabled');
         }
 
@@ -131,6 +134,18 @@ final class DeploymentDiagnoser
 
         if ($this->recentlyAutoFixed($deployment, $fix)) {
             return $diagnosis->withAutoFix($fix, DeploymentDiagnosis::AUTO_SKIPPED, 'repeated');
+        }
+
+        // A redeploy of a site that follows the branch head builds whatever the
+        // head is now, which may be a newer commit than the one that failed. Only
+        // a pinned site is rebuilt at the same commit without a human.
+        if ($fix === 'redeploy' && ! $site->hasPinnedCommit()) {
+            return $diagnosis->withAutoFix($fix, DeploymentDiagnosis::AUTO_SKIPPED, 'follows_head');
+        }
+
+        $denied = $guard->deny(AutomationGuard::DEPLOY_AUTO_FIX, $site, (string) $diagnosis->code);
+        if ($denied !== null) {
+            return $diagnosis->withAutoFix($fix, DeploymentDiagnosis::AUTO_SKIPPED, $denied);
         }
 
         try {
