@@ -131,6 +131,9 @@ return [
         'timeout_seconds' => (int) env('CONTROL_PLANE_AGENT_TIMEOUT', 10),
         'poll_minutes' => (int) env('CONTROL_PLANE_AGENT_POLL_MINUTES', 10),
         'stale_after_minutes' => (int) env('CONTROL_PLANE_AGENT_STALE_MINUTES', 30),
+        // Down alert only after this many unhealthy answers in a row (one poll
+        // can fail on a deploy or a network blip). Not an env setting.
+        'alert_after_failures' => 2,
         // Health reports core_theme.in_sync=false (CMS 1.2.30+): restart the app so the
         // entrypoint refreshes themes/default from the image; once per window per site.
         'core_theme_auto_restart' => filter_var(env('OPS_CORE_THEME_AUTO_RESTART', true), FILTER_VALIDATE_BOOLEAN),

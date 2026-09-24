@@ -8,6 +8,7 @@ use App\Enums\CoolifyGitSourceKind;
 use App\Enums\DeployGate;
 use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
+use App\Services\Agent\AgentHealthReason;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\ControlPlaneAgentContract;
 use App\Services\Cloudflare\CloudflareHostname;
@@ -89,6 +90,7 @@ class Site extends Model
         'platform_mail_push_error',
         'last_notified_deamon_version',
         'last_health_notify_status',
+        'health_fail_streak',
         'last_health_notify_at',
     ];
 
@@ -140,6 +142,7 @@ class Site extends Model
             'mail_configured_at' => 'datetime',
             'mail_configure_failed_at' => 'datetime',
             'last_health_notify_at' => 'datetime',
+            'health_fail_streak' => 'integer',
         ];
     }
 
@@ -1163,7 +1166,20 @@ class Site extends Model
     }
 
     /**
-     * A stored secret the CMS has accepted with HTTP 200 (or status=ok).
+     * An HTTP 200 that proves nothing about the secret: the proxy or the CMS
+     * answered with a web page, not the signed agent route.
+     *
+     * @var list<string>
+     */
+    public const UNVERIFIED_200_REASONS = [
+        AgentHealthReason::AgentNotRegistered,
+        AgentHealthReason::ProxyFallback,
+        AgentHealthReason::HttpError,
+    ];
+
+    /**
+     * A stored secret the CMS has accepted: status=ok, or a JSON 200 from the
+     * signed agent route (a web page answering 200 does not count).
      *
      * @param  Builder<Site>  $query
      * @return Builder<Site>
@@ -1172,13 +1188,19 @@ class Site extends Model
     {
         return $query->whereNotNull('agent_secret_encrypted')
             ->where(function (Builder $verified): void {
-                $verified->where('last_health_payload->http_status', 200)
-                    ->orWhere('last_health_payload->status', AgentHealthStatus::Ok);
+                $verified->where('last_health_payload->status', AgentHealthStatus::Ok)
+                    ->orWhere(function (Builder $http): void {
+                        $http->where('last_health_payload->http_status', 200)
+                            ->where(function (Builder $reason): void {
+                                $reason->whereNull('last_health_payload->reason')
+                                    ->orWhereNotIn('last_health_payload->reason', self::UNVERIFIED_200_REASONS);
+                            });
+                    });
             });
     }
 
     /**
-     * A stored secret the CMS has never answered 200 for.
+     * A stored secret the CMS has not accepted yet (see scopeVerifiedAgentSecret).
      *
      * @param  Builder<Site>  $query
      * @return Builder<Site>
@@ -1186,14 +1208,14 @@ class Site extends Model
     public function scopeUnverifiedAgentSecret(Builder $query): Builder
     {
         return $query->whereNotNull('agent_secret_encrypted')
+            ->where(function (Builder $status): void {
+                $status->whereNull('last_health_payload->status')
+                    ->orWhere('last_health_payload->status', '!=', AgentHealthStatus::Ok);
+            })
             ->where(function (Builder $unverified): void {
-                $unverified->where(function (Builder $http): void {
-                    $http->whereNull('last_health_payload->http_status')
-                        ->orWhere('last_health_payload->http_status', '!=', 200);
-                })->where(function (Builder $status): void {
-                    $status->whereNull('last_health_payload->status')
-                        ->orWhere('last_health_payload->status', '!=', AgentHealthStatus::Ok);
-                });
+                $unverified->whereNull('last_health_payload->http_status')
+                    ->orWhere('last_health_payload->http_status', '!=', 200)
+                    ->orWhereIn('last_health_payload->reason', self::UNVERIFIED_200_REASONS);
             });
     }
 
@@ -1210,7 +1232,9 @@ class Site extends Model
     }
 
     /**
-     * CMS answered 200 for this secret (or stored status=ok from that path).
+     * The CMS accepted this secret: status=ok, or a JSON 200 from the agent
+     * route. A web page answering 200 (agent route missing, proxy placeholder)
+     * does not verify anything.
      */
     public function agentSecretIsVerified(): bool
     {
@@ -1223,7 +1247,8 @@ class Site extends Model
             return true;
         }
 
-        return (int) ($payload['http_status'] ?? 0) === 200;
+        return (int) ($payload['http_status'] ?? 0) === 200
+            && ! in_array($payload['reason'] ?? null, self::UNVERIFIED_200_REASONS, true);
     }
 
     /**

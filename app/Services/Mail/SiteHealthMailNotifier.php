@@ -2,6 +2,7 @@
 
 namespace App\Services\Mail;
 
+use App\Enums\SiteStatus;
 use App\Models\Site;
 use App\Services\Agent\AgentHealthResult;
 use App\Services\Agent\AgentHealthStatus;
@@ -15,8 +16,30 @@ final class SiteHealthMailNotifier
 
     public function afterHealthCheck(Site $site, AgentHealthResult $result): void
     {
+        // Only a real answer moves the alert state. A throttled probe, a missing
+        // secret or a missing URL says nothing about whether the site is up.
+        if (! in_array($result->status, [AgentHealthStatus::Ok, AgentHealthStatus::Unhealthy], true)) {
+            return;
+        }
+
         $previous = (string) ($site->last_health_notify_status ?? '');
-        $current = $result->ok ? AgentHealthStatus::Ok : AgentHealthStatus::Unhealthy;
+
+        if ($result->ok) {
+            $site->health_fail_streak = 0;
+        } elseif (! in_array($site->status, [SiteStatus::Deploying, SiteStatus::Provisioning], true)) {
+            // A site that is being (re)built is expected to fail a poll or two.
+            $site->health_fail_streak = min(1000, (int) $site->health_fail_streak + 1);
+        }
+
+        $threshold = max(1, (int) config('ops.agent.alert_after_failures', 2));
+        if ($result->ok) {
+            $current = AgentHealthStatus::Ok;
+        } elseif ((int) $site->health_fail_streak >= $threshold) {
+            $current = AgentHealthStatus::Unhealthy;
+        } else {
+            // Below the threshold the last alert state stands.
+            $current = $previous !== '' ? $previous : null;
+        }
 
         if ($previous === AgentHealthStatus::Ok && $current === AgentHealthStatus::Unhealthy) {
             $this->mailer->send(
@@ -50,8 +73,10 @@ final class SiteHealthMailNotifier
 
         $this->maybeNotifyVersion($site, $result);
 
-        $site->last_health_notify_status = $current;
-        $site->last_health_notify_at = now();
+        if ($current !== null && $current !== $previous) {
+            $site->last_health_notify_status = $current;
+            $site->last_health_notify_at = now();
+        }
         $site->save();
     }
 

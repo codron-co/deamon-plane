@@ -10,6 +10,19 @@ use App\Services\Sites\SiteIdentityPusher;
 
 class SiteHealthChecker
 {
+    /**
+     * Reported facts that stay true while the agent is unreachable.
+     *
+     * @var list<string>
+     */
+    private const LAST_KNOWN_KEYS = [
+        'deamon_version',
+        'active_theme_id',
+        'channel_hint',
+        'php',
+        'site_name',
+    ];
+
     public function __construct(
         private readonly SiteAgentClient $client,
         private readonly SiteHealthMailNotifier $mailNotifier,
@@ -22,6 +35,9 @@ class SiteHealthChecker
         $result = $this->client->health($site);
 
         $summary = $this->sanitizedSummary($site, $result->summary);
+        if (! $result->ok) {
+            $summary = $this->withLastKnown($site, $summary);
+        }
 
         $site->last_health_at = now();
         $site->last_health_payload = $summary;
@@ -49,6 +65,27 @@ class SiteHealthChecker
         $this->mailNotifier->afterHealthCheck($site->fresh() ?? $site, $result);
 
         return $result;
+    }
+
+    /**
+     * A failed poll says nothing about which CMS version or theme the site runs.
+     * Keep the last reported values so version gates and theme checks do not
+     * act on "unknown" after one timeout.
+     *
+     * @param  array<string, mixed>  $summary
+     * @return array<string, mixed>
+     */
+    private function withLastKnown(Site $site, array $summary): array
+    {
+        $previous = is_array($site->last_health_payload) ? $site->last_health_payload : [];
+
+        foreach (self::LAST_KNOWN_KEYS as $key) {
+            if (! array_key_exists($key, $summary) && array_key_exists($key, $previous)) {
+                $summary[$key] = $previous[$key];
+            }
+        }
+
+        return $summary;
     }
 
     /**
