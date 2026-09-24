@@ -54,8 +54,10 @@ class ThemeGitConnectionService
             'default_permissions' => [
                 'metadata' => 'read',
                 'contents' => 'read',
+                // `workflow_run` deliveries need Actions read (CI gate, docs/modules/ci-gated-rollout.md).
+                'actions' => 'read',
             ],
-            'default_events' => ['push', 'release'],
+            'default_events' => ['push', 'release', 'workflow_run'],
         ];
     }
 
