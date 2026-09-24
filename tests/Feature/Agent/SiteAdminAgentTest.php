@@ -167,7 +167,7 @@ class SiteAdminAgentTest extends TestCase
         ]);
 
         $audit = AuditLog::query()->where('action', 'site.admin.password_invite_sent')->firstOrFail();
-        $this->assertSame(['admin_id' => 9, 'email' => 'invited@example.com'], $audit->after);
+        $this->assertSameJsonObject(['admin_id' => 9, 'email' => 'invited@example.com'], $audit->after);
 
         Http::assertSent(function (Request $request): bool {
             return $request->method() === 'POST'

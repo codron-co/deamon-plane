@@ -186,7 +186,7 @@ class SiteListPreferencesTest extends TestCase
 
         $stored = $user->fresh()->listPreference(SiteListColumns::LIST_KEY);
         $this->assertSame(SiteListColumns::defaults(), $stored['columns']);
-        $this->assertSame(['key' => 'site', 'dir' => 'asc'], $stored['sort']);
+        $this->assertSameJsonObject(['key' => 'site', 'dir' => 'asc'], $stored['sort']);
     }
 
     public function test_viewer_may_save_their_own_layout(): void
@@ -273,7 +273,7 @@ class SiteListPreferencesTest extends TestCase
             ->get(route('ops.sites', ['sort' => 'site', 'dir' => 'desc']))
             ->assertOk();
 
-        $this->assertSame(
+        $this->assertSameJsonObject(
             ['key' => 'site', 'dir' => 'desc'],
             $user->fresh()->listPreference(SiteListColumns::LIST_KEY)['sort'],
         );

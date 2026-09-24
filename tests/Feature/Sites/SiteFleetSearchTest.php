@@ -207,7 +207,8 @@ class SiteFleetSearchTest extends TestCase
     {
         $count = 0;
         DB::listen(function ($query) use (&$count): void {
-            if (str_starts_with($query->sql, 'select * from "site_domains"')) {
+            // sqlite quotes identifiers with ", MySQL with backticks.
+            if (preg_match('/^select \* from ["`]site_domains["`]/', $query->sql) === 1) {
                 $count++;
             }
         });

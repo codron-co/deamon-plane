@@ -44,6 +44,38 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * assertSame for an object read back from a JSON column. MySQL's JSON type
+     * stores object keys in its own order (shortest key first); sqlite keeps
+     * insertion order. Key order is not part of the contract, list order is.
+     *
+     * @param  array<array-key, mixed>  $expected
+     */
+    protected function assertSameJsonObject(array $expected, mixed $actual, string $message = ''): void
+    {
+        $this->assertIsArray($actual, $message);
+        $this->assertSame(self::sortObjectKeys($expected), self::sortObjectKeys($actual), $message);
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $value
+     * @return array<array-key, mixed>
+     */
+    private static function sortObjectKeys(array $value): array
+    {
+        foreach ($value as $key => $item) {
+            if (is_array($item)) {
+                $value[$key] = self::sortObjectKeys($item);
+            }
+        }
+
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+
+        return $value;
+    }
+
+    /**
      * Plane deploy syncs Coolify env against Settings catalogs (GET /envs + PATCH /envs/bulk).
      *
      * @return PromiseInterface|null

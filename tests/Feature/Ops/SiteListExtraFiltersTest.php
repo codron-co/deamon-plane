@@ -242,7 +242,7 @@ class SiteListExtraFiltersTest extends TestCase
             ->assertRedirect();
 
         $stored = $user->fresh()->listPreference(SiteListColumns::LIST_KEY);
-        $this->assertSame([
+        $this->assertSameJsonObject([
             'theme_id' => 'kuzey',
             'cms' => 'outdated',
             'auto_deploy' => 'off',

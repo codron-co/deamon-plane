@@ -65,9 +65,9 @@ class SiteSavedViewsTest extends TestCase
         $stored = $user->fresh()->listPreference(SiteListColumns::LIST_KEY);
         $this->assertCount(1, $stored['views']);
         $this->assertSame('Beta hataları', $stored['views'][0]['name']);
-        $this->assertSame(['channel' => 'beta', 'status' => 'error'], $stored['views'][0]['filters']);
+        $this->assertSameJsonObject(['channel' => 'beta', 'status' => 'error'], $stored['views'][0]['filters']);
         $this->assertSame(['site', 'updated'], $stored['views'][0]['columns']);
-        $this->assertSame(['key' => 'updated', 'dir' => 'desc'], $stored['views'][0]['sort']);
+        $this->assertSameJsonObject(['key' => 'updated', 'dir' => 'desc'], $stored['views'][0]['sort']);
         $this->assertSame($stored['views'][0]['id'], $stored['default_view']);
     }
 
