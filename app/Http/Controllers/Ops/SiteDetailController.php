@@ -48,6 +48,7 @@ class SiteDetailController extends Controller
             'mailboxRequests',
             'cloudflareAccount',
             'activeThemeInstallation.theme',
+            'searchIntegration',
         ]);
 
         $user = $request->user();

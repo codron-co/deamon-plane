@@ -293,6 +293,34 @@
         </td>
         @break
 
+    @case ('search')
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
+            @php
+                /** @var \App\Models\SiteSearchIntegration|null $searchIntegration */
+                $searchIntegration = $site->relationLoaded('searchIntegration') ? $site->searchIntegration : null;
+            @endphp
+            @if ($searchIntegration === null)
+                <span class="muted">{{ __('ops.none') }}</span>
+            @else
+                @php
+                    $searchPushState = $searchIntegration->pushState();
+                    $searchMeasurement = $searchIntegration->measurement();
+                @endphp
+                <span
+                    class="plane-ref @if (! $searchIntegration->hasSearchConsole()) is-unknown @endif"
+                    data-search-cell
+                    title="{{ __('search_integrations.push_states.'.$searchPushState) }}"
+                >
+                    <span class="plane-ref-branch">{{ $searchIntegration->hasSearchConsole() ? __('search_integrations.fleet.gsc') : __('search_integrations.fleet.gsc_missing') }}</span>
+                    <span class="plane-ref-version">{{ $searchMeasurement === 'off' ? __('search_integrations.modes.off') : $searchIntegration->measurementId() }}</span>
+                </span>
+                @if ($searchPushState === 'failed')
+                    <span class="status-chip status-error" title="{{ \App\Services\SearchIntegrations\SiteSearchIntegrationsPresenter::errorLabel($searchIntegration->push_error) }}">{{ __('search_integrations.push_states.failed') }}</span>
+                @endif
+            @endif
+        </td>
+        @break
+
     @case ('health')
         <td data-col="{{ $column }}" data-label="{{ $cellLabel }}"><x-ops.freshness :at="$site->last_health_at" /></td>
         @break

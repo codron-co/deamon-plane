@@ -2,6 +2,12 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Arama & Analitik from Plane — Search Console + GA4/GTM (2026-09-30)
+
+- Status: **committed on `alpha`**. CMS 1.2.49 (`codron-co/deamon` alpha `3ac17600`): `GET`/`POST /internal/control/v1/search-integrations` (partial, managed subset only, raw HTML refused), `managed` marker + admin notice, health `search_integrations`, verification files pass the maintenance gate.
+- Plane: `site_search_integrations` desired state, site tab **Arama & Analitik** (save → `PushSiteSearchIntegrationsJob`, **Siteden çek**, **Şimdi gönder**), hourly `ReconcileSiteSearchIntegrationsJob`, audit `site.search_integrations.*`, fleet column `search` + filter `analytics`.
+- Docs: [../modules/search-integrations.md](../modules/search-integrations.md). Tests: `SiteSearchIntegrationsTest` (13).
+
 ## Site config from Plane — ADR-12 (2026-09-24)
 
 - Status: **decision + docs** (CMS `62af7d64`, Plane `5381eff`); code transition open.

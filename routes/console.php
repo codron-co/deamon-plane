@@ -3,6 +3,7 @@
 use App\Jobs\DispatchSiteHealthChecksJob;
 use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileDeskronPushJob;
+use App\Jobs\ReconcileSiteSearchIntegrationsJob;
 use App\Models\OpsNotification;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -33,6 +34,13 @@ Schedule::command('ops:sync-env-catalog')
 Schedule::job(new ReconcileDeskronPushJob)
     ->hourly()
     ->name('ops-deskron-push-reconcile')
+    ->withoutOverlapping();
+
+// Arama & Analitik: saves push at once (PushSiteSearchIntegrationsJob); this pass
+// re-pushes whatever a down or older CMS did not accept yet.
+Schedule::job(new ReconcileSiteSearchIntegrationsJob)
+    ->hourly()
+    ->name('ops-search-integrations-reconcile')
     ->withoutOverlapping();
 
 // Work left mid-way (killed worker, lost webhook, timeout) is closed or re-read

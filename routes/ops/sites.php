@@ -12,6 +12,7 @@ use App\Http\Controllers\Ops\SiteDomainController;
 use App\Http\Controllers\Ops\SiteEnvController;
 use App\Http\Controllers\Ops\SiteListPreferencesController;
 use App\Http\Controllers\Ops\SitePublishStatusController;
+use App\Http\Controllers\Ops\SiteSearchIntegrationsController;
 use App\Http\Controllers\Ops\SiteThemeController;
 use Illuminate\Support\Facades\Route;
 
@@ -92,6 +93,9 @@ Route::post('/sites/{site}/mail-order', [SiteController::class, 'refreshMailOrde
 Route::post('/sites/{site}/mail-configure', [SiteController::class, 'resendMailConfigure'])->name('ops.sites.mail-configure');
 Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/fulfill', [SiteController::class, 'fulfillMailboxRequest'])->name('ops.sites.mailbox-requests.fulfill');
 Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/reject', [SiteController::class, 'rejectMailboxRequest'])->name('ops.sites.mailbox-requests.reject');
+Route::post('/sites/{site}/search-integrations', [SiteSearchIntegrationsController::class, 'update'])->name('ops.sites.search-integrations.update');
+Route::post('/sites/{site}/search-integrations/pull', [SiteSearchIntegrationsController::class, 'pull'])->name('ops.sites.search-integrations.pull');
+Route::post('/sites/{site}/search-integrations/push', [SiteSearchIntegrationsController::class, 'push'])->name('ops.sites.search-integrations.push');
 Route::post('/sites/{site}/themes', [SiteThemeController::class, 'assign'])->name('ops.sites.themes.assign');
 Route::post('/sites/{site}/themes/{installation}/update', [SiteThemeController::class, 'update'])->name('ops.sites.themes.update');
 Route::post('/sites/{site}/themes/{installation}/sync', [SiteThemeController::class, 'sync'])->name('ops.sites.themes.sync');

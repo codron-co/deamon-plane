@@ -101,6 +101,7 @@
         @if ($canManageAdmins ?? false)
             <a id="site-tab-admins" href="#admins" role="tab" aria-selected="false" aria-controls="admins">{{ __('sites.admins.title') }}</a>
         @endif
+        <a id="site-tab-search" href="#search" role="tab" aria-selected="false" aria-controls="search">{{ __('search_integrations.title') }}</a>
         <a id="site-tab-infrastructure" href="#infrastructure" role="tab" aria-selected="false" aria-controls="infrastructure">{{ __('sites.detail.infrastructure') }}</a>
         @if (($canDelete ?? false) || ($canForceDelete ?? false))
             <a id="site-tab-danger" href="#danger" role="tab" aria-selected="false" aria-controls="danger">{{ __('sites.detail.danger') }}</a>
@@ -203,6 +204,7 @@
     <section id="deployments" class="site-section site-section-surface" role="tabpanel" data-site-panel aria-labelledby="site-tab-deployments">@include('ops.deployments.index')</section>
     <section id="theme" class="site-section site-section-surface" role="tabpanel" data-site-panel aria-labelledby="site-tab-theme">@include('ops.sites._themes')</section>
     @include('ops.sites._admins')
+    <section id="search" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-tab-search site-search-heading">@include('ops.sites._search-integrations')</section>
 
     <section id="infrastructure" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-tab-infrastructure site-infrastructure-heading">
         <div class="site-section-heading">

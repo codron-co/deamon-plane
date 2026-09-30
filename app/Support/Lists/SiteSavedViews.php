@@ -20,7 +20,7 @@ final class SiteSavedViews
 
     public const ALL = 'all';
 
-    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app', 'theme', 'theme_id', 'cms', 'auto_deploy', 'server', 'stale'];
+    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app', 'theme', 'theme_id', 'cms', 'auto_deploy', 'server', 'stale', 'analytics'];
 
     /**
      * Filter key => Site::scopeMatchingListFilters() argument name, where they differ.
@@ -73,6 +73,7 @@ final class SiteSavedViews
             'auto_deploy' => (string) $request->query('auto_deploy', ''),
             'server' => (string) $request->query('server', ''),
             'stale' => (string) $request->query('stale', ''),
+            'analytics' => (string) $request->query('analytics', ''),
         ]);
 
         if ($queryView === self::ALL) {
@@ -260,6 +261,7 @@ final class SiteSavedViews
         $autoDeploy = (string) ($raw['auto_deploy'] ?? '');
         $server = trim((string) ($raw['server'] ?? ''));
         $stale = (string) ($raw['stale'] ?? '');
+        $analytics = (string) ($raw['analytics'] ?? '');
 
         $filters = [
             'q' => $q,
@@ -277,6 +279,7 @@ final class SiteSavedViews
             'auto_deploy' => in_array($autoDeploy, Site::AUTO_DEPLOY_FILTERS, true) ? $autoDeploy : '',
             'server' => preg_match(Site::SERVER_FILTER_PATTERN, $server) === 1 ? $server : '',
             'stale' => in_array($stale, Site::STALE_FILTERS, true) ? $stale : '',
+            'analytics' => in_array($analytics, Site::ANALYTICS_FILTERS, true) ? $analytics : '',
         ];
 
         return array_filter($filters, static fn (string $value): bool => $value !== '');

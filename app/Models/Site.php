@@ -218,6 +218,16 @@ class Site extends Model
         return $this->hasMany(SiteMailboxRequest::class)->latest();
     }
 
+    /**
+     * Search Console / GA4 / GTM desired state pushed over POST /search-integrations.
+     *
+     * @return HasOne<SiteSearchIntegration, $this>
+     */
+    public function searchIntegration(): HasOne
+    {
+        return $this->hasOne(SiteSearchIntegration::class);
+    }
+
     public function cloudflareAccount(): BelongsTo
     {
         return $this->belongsTo(CloudflareSetting::class, 'cloudflare_setting_id');
@@ -896,6 +906,14 @@ class Site extends Model
      */
     public const STALE_FILTERS = ['stale'];
 
+    /**
+     * Arama & Analitik (Plane desired state in `site_search_integrations`):
+     * no Search Console verification, no GA4/GTM, or the last push failed.
+     *
+     * @var list<string>
+     */
+    public const ANALYTICS_FILTERS = ['gsc_missing', 'measurement_missing', 'push_failed'];
+
     public const STALE_HEALTH_HOURS = 24;
 
     /**
@@ -936,6 +954,7 @@ class Site extends Model
         string $autoDeploy = '',
         string $server = '',
         string $stale = '',
+        string $analytics = '',
     ): Builder {
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
@@ -952,6 +971,7 @@ class Site extends Model
         $autoDeploy = in_array($autoDeploy, self::AUTO_DEPLOY_FILTERS, true) ? $autoDeploy : '';
         $server = preg_match(self::SERVER_FILTER_PATTERN, $server) === 1 ? $server : '';
         $stale = in_array($stale, self::STALE_FILTERS, true) ? $stale : '';
+        $analytics = in_array($analytics, self::ANALYTICS_FILTERS, true) ? $analytics : '';
 
         if ($search !== '') {
             $term = addcslashes($search, '%_\\');
@@ -1058,6 +1078,28 @@ class Site extends Model
             // Coolify server uuids are random per instance, so the uuid alone
             // identifies the server even with several Coolify connections.
             $query->where('coolify_server_uuid', $server);
+        }
+
+        if ($analytics === 'gsc_missing') {
+            $query->whereDoesntHave('searchIntegration', static function (Builder $search): void {
+                $search->where(static function (Builder $has): void {
+                    $has->where('google_verification', '!=', '')->orWhere('google_file_token', '!=', '');
+                });
+            });
+        } elseif ($analytics === 'measurement_missing') {
+            $query->whereDoesntHave('searchIntegration', static function (Builder $search): void {
+                $search->where(static function (Builder $measures): void {
+                    $measures->where(static fn (Builder $ga4): Builder => $ga4->where('google_mode', 'ga4')->where('ga4_id', '!=', ''))
+                        ->orWhere(static fn (Builder $gtm): Builder => $gtm->where('google_mode', 'gtm')->where('gtm_id', '!=', ''));
+                });
+            });
+        } elseif ($analytics === 'push_failed') {
+            $query->whereHas('searchIntegration', static function (Builder $search): void {
+                $search->whereNotNull('push_failed_at')
+                    ->where(static function (Builder $after): void {
+                        $after->whereNull('pushed_at')->orWhereColumn('push_failed_at', '>', 'pushed_at');
+                    });
+            });
         }
 
         if ($stale === 'stale') {

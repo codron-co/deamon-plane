@@ -70,6 +70,12 @@ return [
     'stale_states' => [
         'stale' => 'Older than :hours h or none',
     ],
+    'filter_analytics' => 'Search & Analytics',
+    'analytics_states' => [
+        'gsc_missing' => 'No Search Console verification',
+        'measurement_missing' => 'No GA4 / GTM',
+        'push_failed' => 'Push failed',
+    ],
     'theme_git' => 'Git theme',
     'theme_update_available' => 'A newer version is in the catalog',
     'theme_reported_hint' => 'Reported by the CMS, not installed by Plane',
@@ -135,6 +141,7 @@ return [
         'server' => 'Server',
         'auto_deploy' => 'Auto-deploy',
         'mail' => 'Mail',
+        'search' => 'Search & Analytics',
     ],
     'saved_views' => [
         'label' => 'Saved views',

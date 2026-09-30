@@ -89,6 +89,7 @@ class SiteController extends Controller
         $autoDeploy = $savedViews->filters['auto_deploy'] ?? '';
         $server = $savedViews->filters['server'] ?? '';
         $stale = $savedViews->filters['stale'] ?? '';
+        $analytics = $savedViews->filters['analytics'] ?? '';
 
         $allowedChannels = config('ops.channels', []);
         $publishFilters = [...CmsPublishStatus::values(), 'unknown'];
@@ -124,6 +125,10 @@ class SiteController extends Controller
         foreach (Site::STALE_FILTERS as $staleOption) {
             $staleFilters[$staleOption] = (string) __('sites.stale_states.'.$staleOption, ['hours' => Site::STALE_HEALTH_HOURS]);
         }
+        $analyticsFilters = [];
+        foreach (Site::ANALYTICS_FILTERS as $analyticsOption) {
+            $analyticsFilters[$analyticsOption] = (string) __('sites.analytics_states.'.$analyticsOption);
+        }
 
         /*
          * Theme / CMS options read the whole fleet's payloads, and server options the
@@ -152,6 +157,9 @@ class SiteController extends Controller
         if ($listView->shows('mail')) {
             $query->with('mailServer:id,name')->withCount('mailBindings');
         }
+        if ($listView->shows('search')) {
+            $query->with('searchIntegration');
+        }
 
         $hasDockerfileSites = (clone $query)->withDockerfileBuildPackWarning()->exists();
         $sites = $listView->applySort($query)->paginate(25)->withQueryString();
@@ -176,6 +184,7 @@ class SiteController extends Controller
             'auto_deploy' => $autoDeployFilters,
             'server' => $serverFilters,
             'stale' => $staleFilters,
+            'analytics' => $analyticsFilters,
         ]);
         $bulkPinCommits = $this->bulkPinSuggestions($sites);
 
@@ -215,6 +224,7 @@ class SiteController extends Controller
             'autoDeploy' => $autoDeploy,
             'server' => $server,
             'stale' => $stale,
+            'analytics' => $analytics,
             'savedViews' => $savedViews,
             'channels' => $allowedChannels,
             'statuses' => SiteStatus::values(),
@@ -229,6 +239,7 @@ class SiteController extends Controller
             'autoDeployFilters' => $autoDeployFilters,
             'serverFilters' => $serverFilters,
             'staleFilters' => $staleFilters,
+            'analyticsFilters' => $analyticsFilters,
             'summary' => $summary,
             'summaryTrend' => $summaryTrend,
             'listView' => $listView,
@@ -276,6 +287,7 @@ class SiteController extends Controller
             'auto_deploy' => __('sites.filter_auto_deploy'),
             'server' => __('sites.filter_server'),
             'stale' => __('sites.filter_stale'),
+            'analytics' => __('sites.filter_analytics'),
         ];
 
         $translated = [
@@ -298,7 +310,7 @@ class SiteController extends Controller
 
             $chips[] = [
                 'key' => $key,
-                'label' => $labels[$key] ?? $key,
+                'label' => $labels[$key],
                 'value' => $display,
                 'url' => SiteSavedViews::withoutFilter($applied, $key),
             ];

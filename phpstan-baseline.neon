@@ -217,12 +217,6 @@ parameters:
 			path: app/Http/Controllers/Ops/SiteController.php
 
 		-
-			message: '#^Offset ''agent''\|''app''\|''auto_deploy''\|''channel''\|''cms''\|''deploy''\|''health''\|''pack''\|''publish''\|''q''\|''server''\|''stale''\|''status''\|''theme''\|''theme_id'' on array\{q\: \(array\|string\), channel\: \(array\|string\), status\: \(array\|string\), publish\: \(array\|string\), deploy\: \(array\|string\), agent\: \(array\|string\), pack\: \(array\|string\), health\: \(array\|string\), \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Http/Controllers/Ops/SiteController.php
-
-		-
 			message: '#^Offset ''failed'' on array\{ok\: int, failed\: int, skipped\: int, waiting\: int, kept\: int, unready\: int, errors\: list\<string\>, waiting_sites\: list\<string\>, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1

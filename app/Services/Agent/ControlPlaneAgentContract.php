@@ -53,6 +53,9 @@ final class ControlPlaneAgentContract
     /** CMS 1.2.22+: stores the DeskRon application the admin Support page uses. */
     public const DESKRON_CONFIGURE_PATH = '/internal/control/v1/deskron/configure';
 
+    /** CMS 1.2.49+: reads (GET) and partially sets (POST) search verification + GA4/GTM ids. */
+    public const SEARCH_INTEGRATIONS_PATH = '/internal/control/v1/search-integrations';
+
     public const ADMINS_PATH = '/internal/control/v1/admins';
 
     public const HEADER_SITE = 'X-Deamon-Site';
@@ -180,6 +183,11 @@ final class ControlPlaneAgentContract
     public static function deskronConfigurePath(): string
     {
         return self::configuredPath('ops.agent.deskron_configure_path', self::DESKRON_CONFIGURE_PATH);
+    }
+
+    public static function searchIntegrationsPath(): string
+    {
+        return self::configuredPath('ops.agent.search_integrations_path', self::SEARCH_INTEGRATIONS_PATH);
     }
 
     public static function adminsPath(): string

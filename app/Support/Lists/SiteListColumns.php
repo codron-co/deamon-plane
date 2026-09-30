@@ -36,6 +36,7 @@ final class SiteListColumns
         'server' => ['sort' => null, 'default' => false],
         'auto_deploy' => ['sort' => 'coolify_auto_deploy', 'default' => false],
         'mail' => ['sort' => null, 'default' => false],
+        'search' => ['sort' => null, 'default' => false],
         'health' => ['sort' => 'last_health_at', 'default' => false],
         'updated' => ['sort' => 'updated_at', 'default' => false],
     ];

@@ -14,3 +14,4 @@
 <input type="hidden" name="filter_auto_deploy" value="{{ $autoDeploy ?? '' }}">
 <input type="hidden" name="filter_server" value="{{ $server ?? '' }}">
 <input type="hidden" name="filter_stale" value="{{ $stale ?? '' }}">
+<input type="hidden" name="filter_analytics" value="{{ $analytics ?? '' }}">

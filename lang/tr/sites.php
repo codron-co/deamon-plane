@@ -70,6 +70,12 @@ return [
     'stale_states' => [
         'stale' => ':hours saatten eski ya da yok',
     ],
+    'filter_analytics' => 'Arama & Analitik',
+    'analytics_states' => [
+        'gsc_missing' => 'Search Console doğrulaması yok',
+        'measurement_missing' => 'GA4 / GTM yok',
+        'push_failed' => 'Gönderim başarısız',
+    ],
     'theme_git' => 'Git teması',
     'theme_update_available' => 'Katalogda daha yeni sürüm var',
     'theme_reported_hint' => 'CMS bildirdi, Plane kurmadı',
@@ -136,6 +142,7 @@ return [
         'server' => 'Sunucu',
         'auto_deploy' => 'Otomatik deploy',
         'mail' => 'Mail',
+        'search' => 'Arama & Analitik',
     ],
     'saved_views' => [
         'label' => 'Kayıtlı görünümler',
