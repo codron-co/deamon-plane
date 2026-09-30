@@ -9,6 +9,7 @@ use App\Http\Controllers\Ops\SiteController;
 use App\Http\Controllers\Ops\SiteCoolifyOpsController;
 use App\Http\Controllers\Ops\SiteDetailController;
 use App\Http\Controllers\Ops\SiteDomainController;
+use App\Http\Controllers\Ops\SiteEnvController;
 use App\Http\Controllers\Ops\SiteListPreferencesController;
 use App\Http\Controllers\Ops\SitePublishStatusController;
 use App\Http\Controllers\Ops\SiteThemeController;
@@ -42,6 +43,10 @@ Route::post('/sites/bulk/app-health-fix', [SiteAppHealthController::class, 'bulk
 Route::post('/sites/bulk/agent-secret', [SiteController::class, 'bulkInjectAgentSecret'])->name('ops.sites.bulk.agent-secret');
 Route::post('/sites/bulk/purge', [SiteCoolifyOpsController::class, 'bulkPurge'])->name('ops.sites.bulk.purge');
 Route::get('/sites/{site}/coolify-ops/panel', [SiteCoolifyOpsController::class, 'panel'])->name('ops.sites.coolify-ops.panel');
+Route::get('/sites/{site}/env/panel', [SiteEnvController::class, 'panel'])->name('ops.sites.env.panel');
+Route::post('/sites/{site}/env/fix', [SiteEnvController::class, 'fix'])->name('ops.sites.env.fix');
+Route::post('/sites/{site}/env', [SiteEnvController::class, 'set'])->name('ops.sites.env.set');
+Route::delete('/sites/{site}/env', [SiteEnvController::class, 'destroy'])->name('ops.sites.env.destroy');
 Route::post('/sites/{site}/compose', [SiteCoolifyOpsController::class, 'migrateCompose'])->name('ops.sites.compose');
 Route::post('/sites/{site}/auto-deploy', [SiteCoolifyOpsController::class, 'autoDeploy'])->name('ops.sites.auto-deploy');
 Route::post('/sites/{site}/deploy-gate', [SiteCoolifyOpsController::class, 'deployGate'])->name('ops.sites.deploy-gate');

@@ -218,6 +218,7 @@
                 @include('ops.sites._publish-state')
                 @include('ops.sites._channel-switch')
                 @include('ops.sites._coolify-ops')
+                @include('ops.sites._env')
                 @include('ops.sites._agent-health')
                 @if (($canInjectAgentSecret ?? false) && ! $site->hasAgentSecret())
                     <article class="site-card site-operation" aria-labelledby="agent-secret-heading">
