@@ -227,6 +227,76 @@ class CoolifyAppEnvSyncTest extends TestCase
         });
     }
 
+    public function test_live_db_passwords_are_captured_on_the_site_row(): void
+    {
+        $site = $this->site();
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => 'live-db-password-value-0000000001'],
+            ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => 'live-root-password-value-00000001'],
+        ]);
+
+        app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $site->refresh();
+        $this->assertSame('live-db-password-value-0000000001', $site->db_password_encrypted);
+        $this->assertSame('live-root-password-value-00000001', $site->mysql_root_password_encrypted);
+        $this->assertArrayNotHasKey('db_password_encrypted', $site->toArray());
+    }
+
+    public function test_blank_db_passwords_are_restored_from_the_site_copy_not_regenerated(): void
+    {
+        $site = $this->site(['last_health_at' => now()]);
+        $site->forceFill([
+            'db_password_encrypted' => 'kept-db-password-value-00000000001',
+            'mysql_root_password_encrypted' => 'kept-root-password-value-000000001',
+        ])->save();
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => ''],
+            ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => ''],
+        ]);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('DB_PASSWORD', $keys);
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'PATCH' || ! str_ends_with($request->url(), '/envs/bulk')) {
+                return false;
+            }
+            $map = $this->bulkMap($request);
+
+            return $map['DB_PASSWORD'] === 'kept-db-password-value-00000000001'
+                && $map['MYSQL_ROOT_PASSWORD'] === 'kept-root-password-value-000000001';
+        });
+    }
+
+    public function test_a_site_that_already_ran_without_a_copy_gets_no_new_db_password(): void
+    {
+        $site = $this->site(['last_health_at' => now()]);
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => ''],
+            ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => ''],
+        ]);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertNotContains('DB_PASSWORD', $keys);
+        $this->assertNotContains('MYSQL_ROOT_PASSWORD', $keys);
+        $this->assertNull($site->refresh()->db_password_encrypted);
+    }
+
+    public function test_a_new_site_keeps_a_copy_of_the_passwords_it_is_given(): void
+    {
+        $site = $this->site();
+        $this->fakeEnvs([['key' => 'DB_PASSWORD', 'value' => '']]);
+
+        app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $copy = (string) $site->refresh()->db_password_encrypted;
+        $this->assertSame(40, strlen($copy));
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'PATCH'
+            && ($this->bulkMap($request)['DB_PASSWORD'] ?? null) === $copy);
+    }
+
     private function fakeEnvs(array $envs): void
     {
         Http::fake(function (Request $request) use ($envs) {

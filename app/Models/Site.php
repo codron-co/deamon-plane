@@ -102,6 +102,8 @@ class Site extends Model
     protected $hidden = [
         'app_key_encrypted',
         'agent_secret_encrypted',
+        'db_password_encrypted',
+        'mysql_root_password_encrypted',
     ];
 
     /**
@@ -123,6 +125,8 @@ class Site extends Model
             'cms_site_status_at' => 'datetime',
             'app_key_encrypted' => 'encrypted',
             'agent_secret_encrypted' => 'encrypted',
+            'db_password_encrypted' => 'encrypted',
+            'mysql_root_password_encrypted' => 'encrypted',
             'last_health_at' => 'datetime',
             'last_health_payload' => 'array',
             'health_unhealthy' => 'boolean',

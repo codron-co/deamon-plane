@@ -57,6 +57,19 @@ class CoolifyAppEnvSync
     ];
 
     /**
+     * MySQL passwords Plane keeps an encrypted copy of on the site row. The site volume
+     * is initialised with them once; a fresh value afterwards locks the app out of its
+     * own database (cukurovaprofil.com, 2026-09-15: the env rows were recreated blank,
+     * new passwords were generated and the site stayed down).
+     *
+     * @var array<string, string> env key => sites column
+     */
+    public const DB_SECRET_COLUMNS = [
+        'DB_PASSWORD' => 'db_password_encrypted',
+        'MYSQL_ROOT_PASSWORD' => 'mysql_root_password_encrypted',
+    ];
+
+    /**
      * Align Coolify application env with the catalog for this site's git channel
      * (synced from the CMS `.env.production.example` on that branch).
      * Upserts catalog keys, then deletes leftovers that are no longer in the catalog
@@ -80,6 +93,7 @@ class CoolifyAppEnvSync
 
         $existingVars = $coolify->listEnvs($uuid);
         $existing = $this->existingMap($existingVars);
+        $this->captureDbSecrets($site, $existing);
         $desired = [];
 
         foreach ($defaults as $row) {
@@ -233,7 +247,7 @@ class CoolifyAppEnvSync
         return match ($row->kind) {
             CoolifyEnvKind::Static => $this->staticValue($row, $current),
             CoolifyEnvKind::Required => $this->requiredValue($row, $current),
-            CoolifyEnvKind::Generated => $this->generatedValue($row, $current),
+            CoolifyEnvKind::Generated => $this->generatedValue($site, $row, $current),
             CoolifyEnvKind::Site => $this->siteValue($site, $row, $current),
             CoolifyEnvKind::Skip => null,
         };
@@ -267,13 +281,96 @@ class CoolifyAppEnvSync
         return $fallback;
     }
 
-    private function generatedValue(CoolifyEnvDefault $row, ?string $current): ?string
+    private function generatedValue(Site $site, CoolifyEnvDefault $row, ?string $current): ?string
     {
         if (! $this->isBlank($current) && ! $this->isPlaceholder((string) $current)) {
             return null;
         }
 
-        return Str::password(40, symbols: false);
+        $column = self::DB_SECRET_COLUMNS[$row->key] ?? null;
+        if ($column === null) {
+            return Str::password(40, symbols: false);
+        }
+
+        $stored = (string) ($site->getAttribute($column) ?? '');
+        if ($stored !== '') {
+            Log::warning('coolify.env_db_secret_restored', [
+                'site_id' => $site->id,
+                'site_slug' => $site->slug,
+                'key' => $row->key,
+            ]);
+
+            return $stored;
+        }
+
+        // No copy and the site already ran: its volume holds a password we do not know.
+        // A new one would only replace "missing env" with "access denied".
+        if ($this->siteHasRun($site)) {
+            Log::error('coolify.env_db_secret_missing', [
+                'site_id' => $site->id,
+                'site_slug' => $site->slug,
+                'key' => $row->key,
+            ]);
+
+            return null;
+        }
+
+        $generated = Str::password(40, symbols: false);
+        $site->forceFill([$column => $generated])->saveQuietly();
+
+        return $generated;
+    }
+
+    /**
+     * Keep Plane's copy of the MySQL passwords in step with a live Coolify env. Only an
+     * empty copy is filled: a copy that disagrees with Coolify is reported, not
+     * overwritten, because either side may be the one the volume was initialised with.
+     *
+     * @param  array<string, string>  $existing
+     */
+    public function captureDbSecrets(Site $site, array $existing): void
+    {
+        $fill = [];
+
+        foreach (self::DB_SECRET_COLUMNS as $key => $column) {
+            $live = $existing[$key] ?? '';
+            if ($this->isBlank($live) || $this->isPlaceholder($live)) {
+                continue;
+            }
+
+            $stored = (string) ($site->getAttribute($column) ?? '');
+            if ($stored === '') {
+                $fill[$column] = $live;
+            } elseif ($stored !== $live) {
+                Log::warning('coolify.env_db_secret_drift', [
+                    'site_id' => $site->id,
+                    'site_slug' => $site->slug,
+                    'key' => $key,
+                ]);
+            }
+        }
+
+        if ($fill !== []) {
+            $site->forceFill($fill)->saveQuietly();
+        }
+    }
+
+    /**
+     * Read the app env from Coolify and fill Plane's empty copies of the MySQL passwords.
+     */
+    public function captureDbSecretsFromCoolify(Site $site, CoolifyApplicationService $coolify): void
+    {
+        $uuid = trim((string) $site->coolify_app_uuid);
+        if ($uuid !== '') {
+            $this->captureDbSecrets($site, $this->existingMap($coolify->listEnvs($uuid)));
+        }
+    }
+
+    private function siteHasRun(Site $site): bool
+    {
+        return $site->last_health_at !== null
+            || $site->last_app_health_at !== null
+            || $site->deployments()->exists();
     }
 
     private function siteValue(Site $site, CoolifyEnvDefault $row, ?string $current): ?string

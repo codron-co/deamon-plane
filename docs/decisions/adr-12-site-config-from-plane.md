@@ -68,3 +68,7 @@ Each site setting belongs to exactly one source.
 | New settings (module entitlements, CSP extra hosts, Google Business agency OAuth, backup target) ship as agent endpoints | CMS + Plane | Planned — N-01, C-G-10, N-02 |
 
 Until the `APP_ENV` step ships, docs that describe `ChannelEnvironmentMap` describe **current behaviour**, not the target.
+
+## Ek (2026-09-30): MySQL şifrelerinin Plane kopyası
+
+`DB_PASSWORD` ve `MYSQL_ROOT_PASSWORD` site satırında şifreli kopya olarak tutulur (`sites.db_password_encrypted`, `sites.mysql_root_password_encrypted`). `CoolifyAppEnvSync` her senkronda Coolify'daki canlı değeri boş kopyaya yazar (dolu kopya ezilmez; fark `coolify.env_db_secret_drift` olarak loglanır). Coolify'da değer boş/placeholder gelirse kopya geri yazılır; kopya yoksa ve site daha önce çalışmışsa yeni şifre **üretilmez** (`coolify.env_db_secret_missing`), çünkü volume eski şifreyle kuruludur. Yeni site için üretilen şifre anında kopyalanır. Mevcut filo için tek seferlik: `php artisan ops:capture-db-secrets`. Neden: cukurovaprofil.com 2026-09-15'te env satırları boş yeniden oluşunca yeni şifre üretildi ve site DB'ye bağlanamadı (denetim S3-B01).
