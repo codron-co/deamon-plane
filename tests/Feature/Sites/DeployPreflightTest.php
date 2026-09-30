@@ -13,6 +13,7 @@ use App\Services\Cloudflare\CloudflareZoneService;
 use App\Services\Sites\CoolifyDeploySettings;
 use App\Services\Sites\DeployPreflight;
 use Database\Seeders\RoleSeeder;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -121,7 +122,7 @@ class DeployPreflightTest extends TestCase
     {
         app()->setLocale('tr');
 
-        $response = new \Illuminate\Http\Client\Response(new \GuzzleHttp\Psr7\Response(400, [], json_encode([
+        $response = new \Illuminate\Http\Client\Response(new Response(400, [], json_encode([
             'success' => false,
             'errors' => [
                 ['code' => 1099, 'message' => 'Please ensure you are providing the root domain and not a TLD (e.g., example.com, not .com)'],
