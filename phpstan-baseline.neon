@@ -1291,24 +1291,6 @@ parameters:
 			path: app/Services/Themes/ThemeGitConnectionService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$latest_sha\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$minimum_deamon_version\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$theme_id\.$#'
-			identifier: property.notFound
-			count: 9
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
 			message: '#^Instanceof between App\\Enums\\ThemeInstallationStatus and App\\Enums\\ThemeInstallationStatus will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
@@ -1318,48 +1300,6 @@ parameters:
 			message: '#^Parameter \#1 \$connection of method App\\Services\\GitHub\\GitHubAppClient\:\:mintCloneToken\(\) expects App\\Models\\ThemeGitConnection\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
 			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:assertMutableTheme\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#1 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:themePayload\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 3
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#2 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:auditSnapshot\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 3
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#2 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:syncWithDataRepair\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#2 \$theme of method App\\Services\\Themes\\ThemeVersionGate\:\:shouldSkip\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#3 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:guardStorefront\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 3
-			path: app/Services/Themes/ThemeRolloutService.php
-
-		-
-			message: '#^Parameter \#3 \$theme of method App\\Services\\Themes\\ThemeRolloutService\:\:markError\(\) expects App\\Models\\Theme, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 6
 			path: app/Services/Themes/ThemeRolloutService.php
 
 		-

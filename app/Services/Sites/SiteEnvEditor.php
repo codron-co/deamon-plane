@@ -73,7 +73,7 @@ class SiteEnvEditor
 
         $existing = [];
         foreach ($coolify->listEnvs($uuid) as $env) {
-            if (! $env instanceof CoolifyEnvironmentVariable || $env->key === '' || $env->isPreview) {
+            if ($env->key === '' || $env->isPreview) {
                 continue;
             }
             $existing[$env->key] = (string) ($env->value() ?? '');
@@ -82,7 +82,7 @@ class SiteEnvEditor
         /** @var array<string, CoolifyEnvDefault> $catalog */
         $catalog = [];
         foreach ($this->sync->catalog($channel) as $row) {
-            if ($row instanceof CoolifyEnvDefault && $row->kind !== CoolifyEnvKind::Skip) {
+            if ($row->kind !== CoolifyEnvKind::Skip) {
                 $catalog[$row->key] = $row;
             }
         }

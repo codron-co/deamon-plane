@@ -67,9 +67,6 @@ class DeployPreflight
 
         $wanted = [];
         foreach ($report->issues as $issue) {
-            if (! $issue instanceof SiteAppHealthIssue) {
-                continue;
-            }
             $result['issues'][] = $issue->key !== null && $issue->key !== '' ? $issue->code.':'.$issue->key : $issue->code;
             if ($issue->fix !== null && in_array($issue->fix, self::FIXES, true)) {
                 $wanted[$issue->fix] = true;
