@@ -275,6 +275,31 @@
                                             {{ $installation->auto_update ? __('sites.themes.disable_auto') : __('sites.themes.enable_auto') }}
                                         </button>
                                     </form>
+                                    <form
+                                        method="POST"
+                                        action="{{ route('ops.sites.themes.reinstall', [$site, $installation]) }}"
+                                        data-confirm="{{ __('sites.themes.reinstall_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
+                                        data-confirm-title="{{ __('sites.themes.reinstall_title') }}"
+                                        data-confirm-label="{{ __('sites.themes.reinstall') }}"
+                                        data-confirm-danger="false"
+                                    >
+                                        @csrf
+                                        <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.reinstall') }}</button>
+                                    </form>
+                                    @if (! $installation->is_active)
+                                        <form
+                                            method="POST"
+                                            action="{{ route('ops.sites.themes.remove', [$site, $installation]) }}"
+                                            data-confirm="{{ __('sites.themes.remove_confirm', ['theme' => $installedTheme?->theme_id, 'site' => $site->name]) }}"
+                                            data-confirm-title="{{ __('sites.themes.remove_title') }}"
+                                            data-confirm-label="{{ __('sites.themes.remove') }}"
+                                            data-confirm-danger="true"
+                                        >
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-ghost btn-sm">{{ __('sites.themes.remove') }}</button>
+                                        </form>
+                                    @endif
                                 @endif
                             </td>
                         </tr>

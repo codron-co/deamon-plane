@@ -145,6 +145,7 @@ class CoolifyDeploySettings
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
+        $this->preflight($site, $actor, $ip);
         $coolify = CoolifyApplicationService::forSite($site);
 
         try {
@@ -173,6 +174,7 @@ class CoolifyDeploySettings
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
+        $this->preflight($site, $actor, $ip);
         $coolify = CoolifyApplicationService::forSite($site);
         $autoDeploy = ! $site->usesCiGate();
 
@@ -209,6 +211,7 @@ class CoolifyDeploySettings
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
+        $this->preflight($site, $actor, $ip);
         $coolify = CoolifyApplicationService::forSite($site);
 
         try {
@@ -260,10 +263,20 @@ class CoolifyDeploySettings
         return $deployment;
     }
 
+    /**
+     * Bind hosts, sync env and align the agent secret with Plane before Coolify
+     * builds (DeployPreflight). Never throws: a deploy is not held back by it.
+     */
+    private function preflight(Site $site, ?User $actor, ?string $ip): void
+    {
+        app(DeployPreflight::class)->run($site, $actor, $ip);
+    }
+
     private function startDeploy(Site $site, bool $force, DeploymentTrigger $trigger, ?User $actor, ?string $ip): Deployment
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
+        $this->preflight($site, $actor, $ip);
 
         try {
             $result = CoolifyApplicationService::forSite($site)->deploy($uuid, $force);

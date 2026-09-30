@@ -53,7 +53,7 @@ final class ThemeAgentResult
 
     public static function needsSecret(): self
     {
-        return new self(false, 'Site has no agent secret. Inject CONTROL_PLANE_AGENT_SECRET on the CMS Coolify app.');
+        return new self(false, (string) __('agent.needs_secret'));
     }
 
     /**
@@ -106,20 +106,22 @@ final class ThemeAgentResult
 
         $message = match (true) {
             $httpStatus === 429 => (string) __('sites.agent.rate_limited'),
-            $httpStatus === 401 || $httpStatus === 403 => 'Agent rejected the request signature.',
-            $httpStatus === 404 && $code === null => 'Theme agent is not registered on this CMS (secret missing or CMS older than 1.2.5).',
-            $code === 'theme_not_found' => 'Theme was not found on the CMS instance.',
-            $code === 'unsupported_source' => 'CMS rejected a non-git theme source.',
-            $code === 'path_traversal' => 'Theme id failed the CMS path guard.',
-            $code === 'system_theme' => 'The default system theme cannot be installed or updated.',
+            $httpStatus === 401 || $httpStatus === 403 => (string) __('agent.bad_signature'),
+            $httpStatus === 404 && $code === null => (string) __('agent.theme.not_registered'),
+            $code === 'theme_not_found' => (string) __('agent.theme.not_found'),
+            $code === 'theme_active' => (string) __('agent.theme.active'),
+            $code === 'theme_protected' => (string) __('agent.theme.protected'),
+            $code === 'unsupported_source' => (string) __('agent.theme.unsupported_source'),
+            $code === 'path_traversal' => (string) __('agent.theme.path_traversal'),
+            $code === 'system_theme' => (string) __('agent.theme.system_theme'),
             // CMS ships an actionable Turkish message for this one; show it verbatim.
             $code === 'data_package_missing' => is_string($cmsMessage)
                 ? $cmsMessage
-                : 'CMS has no theme data package (sync.json). Update the theme or run data-install first.',
+                : (string) __('agent.theme.data_package_missing'),
             $code === 'validation_failed' && is_string($cmsMessage) => $cmsMessage,
-            $code === 'validation_failed' => 'Theme agent validation failed.',
-            $code === 'git_failed' || $httpStatus === 502 => 'CMS git install failed.',
-            default => is_string($cmsMessage) ? $cmsMessage : 'Theme agent returned HTTP '.$httpStatus.'.',
+            $code === 'validation_failed' => (string) __('agent.theme.validation_failed'),
+            $code === 'git_failed' || $httpStatus === 502 => (string) __('agent.theme.git_failed'),
+            default => is_string($cmsMessage) ? $cmsMessage : (string) __('agent.theme.http', ['status' => $httpStatus]),
         };
 
         return self::failure($message, $httpStatus, $code);

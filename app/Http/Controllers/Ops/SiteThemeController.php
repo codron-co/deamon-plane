@@ -146,6 +146,34 @@ class SiteThemeController extends Controller
         return back()->with('status', __('sites.theme_flash.activated'));
     }
 
+    public function reinstall(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
+    {
+        $this->assertInstallation($site, $installation);
+        $this->authorize('assign', Theme::class);
+
+        try {
+            $rollout->reinstall($installation, $request->user(), $request->ip());
+        } catch (ThemeRolloutException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('sites.theme_flash.reinstall_queued'));
+    }
+
+    public function remove(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
+    {
+        $this->assertInstallation($site, $installation);
+        $this->authorize('assign', Theme::class);
+
+        try {
+            $outcome = $rollout->remove($installation, $request->user(), $request->ip());
+        } catch (ThemeRolloutException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('status', __('sites.theme_flash.removed_'.$outcome));
+    }
+
     public function autoUpdate(Request $request, Site $site, SiteThemeInstallation $installation, ThemeRolloutService $rollout): RedirectResponse
     {
         $this->assertInstallation($site, $installation);

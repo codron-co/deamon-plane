@@ -758,7 +758,14 @@ class CloudflareZoneService
 
     public function zoneName(string $primaryDomain): string
     {
-        return CloudflareHostname::normalize($primaryDomain);
+        $name = CloudflareHostname::normalize($primaryDomain);
+
+        // `com.tr` alone is a public suffix; Cloudflare would answer in English.
+        if ($name !== '' && CloudflareHostname::isPublicSuffix($name)) {
+            throw new CloudflareApiException(__('cloudflare.errors.public_suffix', ['domain' => $name]), 422);
+        }
+
+        return $name;
     }
 
     /**

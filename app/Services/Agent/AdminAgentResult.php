@@ -78,15 +78,15 @@ final class AdminAgentResult
 
         $message = match (true) {
             $httpStatus === 429 => (string) __('sites.agent.rate_limited'),
-            $httpStatus === 401 || $httpStatus === 403 => 'Agent rejected the request signature.',
-            $httpStatus === 404 && $code === null => 'CMS agent is too old for admin management (needs Deamon 1.2.13+).',
+            $httpStatus === 401 || $httpStatus === 403 => (string) __('agent.bad_signature'),
+            $httpStatus === 404 && $code === null => (string) __('agent.admin.too_old'),
             $code === 'mail_not_configured' => (string) __('sites.admins.errors.mail_not_configured'),
             $code === 'mail_send_failed' => (string) __('sites.admins.errors.mail_send_failed', [
                 'reason' => is_string($cmsMessage) ? $cmsMessage : '',
             ]),
             $code === 'validation_failed' && is_string($cmsMessage) => $cmsMessage,
-            $code === 'validation_failed' => 'Admin agent validation failed.',
-            default => 'Admin agent returned HTTP '.$httpStatus.'.',
+            $code === 'validation_failed' => (string) __('agent.admin.validation_failed'),
+            default => (string) __('agent.admin.http', ['status' => $httpStatus]),
         };
 
         return self::failure(

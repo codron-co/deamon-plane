@@ -93,6 +93,8 @@ Route::post('/sites/{site}/themes/{installation}/sync', [SiteThemeController::cl
 Route::post('/sites/{site}/themes/{installation}/sync-rollback', [SiteThemeController::class, 'rollbackSync'])->name('ops.sites.themes.sync-rollback');
 Route::post('/sites/{site}/themes/{installation}/files-rollback', [SiteThemeController::class, 'rollbackFiles'])->name('ops.sites.themes.files-rollback');
 Route::post('/sites/{site}/themes/{installation}/activate', [SiteThemeController::class, 'activate'])->name('ops.sites.themes.activate');
+Route::post('/sites/{site}/themes/{installation}/reinstall', [SiteThemeController::class, 'reinstall'])->name('ops.sites.themes.reinstall');
+Route::delete('/sites/{site}/themes/{installation}', [SiteThemeController::class, 'remove'])->name('ops.sites.themes.remove');
 Route::post('/sites/{site}/themes/{installation}/auto-update', [SiteThemeController::class, 'autoUpdate'])->name('ops.sites.themes.auto-update');
 Route::get('/sites/{site}/admins/panel', [SiteAdminController::class, 'panel'])->name('ops.sites.admins.panel');
 Route::post('/sites/{site}/admins', [SiteAdminController::class, 'store'])->name('ops.sites.admins.store');

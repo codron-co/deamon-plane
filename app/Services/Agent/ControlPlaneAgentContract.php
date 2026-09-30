@@ -35,6 +35,9 @@ final class ControlPlaneAgentContract
 
     public const THEME_ACTIVATE_PATH = '/internal/control/v1/themes/activate';
 
+    /** CMS 1.2.38+: removes an installed, inactive theme (package, git copy, DB row). */
+    public const THEME_REMOVE_PATH = '/internal/control/v1/themes/remove';
+
     /** CMS 1.2.14+: installs the data package (sync.json + data/) from the clone. */
     public const THEME_DATA_INSTALL_PATH = '/internal/control/v1/themes/data-install';
 
@@ -142,6 +145,11 @@ final class ControlPlaneAgentContract
     public static function themeActivatePath(): string
     {
         return self::configuredPath('ops.agent.theme_activate_path', self::THEME_ACTIVATE_PATH);
+    }
+
+    public static function themeRemovePath(): string
+    {
+        return self::configuredPath('ops.agent.theme_remove_path', self::THEME_REMOVE_PATH);
     }
 
     public static function themeDataInstallPath(): string

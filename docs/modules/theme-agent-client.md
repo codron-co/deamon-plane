@@ -21,6 +21,7 @@ Base: `/internal/control/v1`
 | POST | `/themes/install` | `{theme_id, repo, ref, source:"git", sha?, clone_token?}` |
 | POST | `/themes/update` | same as install |
 | POST | `/themes/activate` | `{theme_id}` |
+| POST | `/themes/remove` | `{theme_id}` — CMS **1.2.38+**; deletes package, git copy and DB row. 409 `theme_active` / `theme_protected` |
 | POST | `/themes/data-install` | `{theme_id}` — CMS **1.2.14+** |
 | POST | `/themes/sync` | `{action:sync_all\|capability, mode:merge\|overwrite\|reset, theme_id?, capability_id?, preserve?}` — Plane sends `merge` (Sync now) or `overwrite` (confirmed Overwrite), never `reset` |
 | POST | `/themes/sync-rollback` | `{task_id}` — restores the rows that sync task changed |
@@ -58,6 +59,7 @@ CMS `auto_update` is always `false` in agent JSON. Opt-in lives on Plane `site_t
 | 404 (no JSON) | Secret missing — routes not registered |
 | 401 | `unauthorized` |
 | 404 | `theme_not_found` |
+| 409 | `theme_active` / `theme_protected` (remove) |
 | 422 | `unsupported_source` / `path_traversal` / `system_theme` / `validation_failed` |
 | 502 | `git_failed` |
 
@@ -70,6 +72,16 @@ Theme file customizations (CMS 1.2.32+): update keeps files the site edited (adm
 Update sends the catalog `latest_sha`; the installation `pinned_sha` is only a fallback. Before this, update re-sent the pin, so auto-update and Update to latest re-installed the first commit forever.
 
 Allowlist/public/private enforced in `ThemeVisibilityGate`.
+
+### A theme the site lost is sent again, not parked as an error
+
+A site whose theme files are gone (volume reset, fresh DB, re-created app) answers `theme_not_found` to update, activate, sync and files rollback. `ThemeRolloutService::healMissing` wraps those four calls: on `theme_not_found` it sends the theme through `/themes/install` (pinned SHA) and retries the call once. Audit `theme.reinstalled_missing` / `theme.reinstall_missing_failed`; a failed install surfaces its own error, not the original 404. The system theme is never re-sent.
+
+### Send to site again and Remove
+
+Each row on the Themes tab has **Siteye yeniden gönder** (`POST /sites/{site}/themes/{installation}/reinstall`, `ThemeInstallJob`, re-activates when the row is active, no content sync) and, for an inactive row, **Kaldır** (`DELETE /sites/{site}/themes/{installation}`). Remove refuses the system theme and the theme the last health reports as active (no call to the site). Outcomes: `removed` (site deleted it), `already_gone` (`theme_not_found`), `plane_only` (CMS older than 1.2.38 answers a bare 404: only the Plane row goes and the flash says the files stayed). Any other refusal keeps the row. Audit `theme.removed` with the outcome, `theme.remove_failed`.
+
+Agent errors reach the operator through `lang/{tr,en}/agent.php` (`ThemeAgentResult`, `AdminAgentResult`, health), so the Turkish panel no longer shows English strings.
 
 ## Out of scope
 

@@ -86,6 +86,11 @@ return [
         'zone_edit_missing' => 'Cloudflare Zone → Edit izni yok. Yeni domain kaydı için DNS & Zones → Zone → Edit gerekli. “DNS Write” şablonu bunu vermez.',
         'dns_edit_missing' => 'Cloudflare DNS → Edit izni yok. A/MX/TXT kayıtları için DNS & Zones → DNS → Edit gerekli.',
         'wildcard_unavailable' => 'Joker zone :domain bu Cloudflare hesabında yok. NS altyapıda hazır; Plane zone oluşturmaz. Hesapta :domain zone’unun durduğunu kontrol edip tekrar deneyin.',
+        'public_suffix' => ':domain bir alan adı uzantısı (ör. .com.tr), kayıtlı bir alan adı değil. Tam alan adını girin: firma.com.tr.',
+        'not_registered' => 'Cloudflare bu alan adını kayıtlı bir alan adı olarak tanımıyor. Yazımı ve alan adının satın alındığını kontrol edin.',
+        'zone_exists_elsewhere' => 'Bu alan adı başka bir Cloudflare hesabında zaten kayıtlı. Önce orada silinmeli ya da o hesap Plane’e bağlanmalı.',
+        'token_rejected' => 'Cloudflare API anahtarı reddedildi. Cloudflare menüsünden token’ı kontrol edin.',
+        'this_domain' => 'Girilen değer',
     ],
     'defaults' => [
         'nav' => 'Deamon DNS',

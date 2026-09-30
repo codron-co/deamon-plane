@@ -111,6 +111,15 @@ A mixed two-hour widget hides the one failure behind twenty completed rows. **Sa
 
 `ops-jobs.js` persists the toggle in `sessionStorage` (`planeOpsJobsFailedOnly`) and builds the poll URL with `PlaneOpsContracts.jobsIndexUrl`. Client-side `isFailedStatus` hides non-failed rows already on screen until the next poll arrives. An empty failed-only list **keeps the panel** so the toggle stays reachable. Tests: `JobsFailedFilterTest`; `node --test` for `isFailedStatus` / `jobsIndexUrl`.
 
+## Deploy preflight
+
+Every deploy path (`CoolifyDeploySettings::startDeploy` — Redeploy and CI rollout —, `pin`, `followHead`, `updateToHead`, `ChannelSwitcher::switchOnCoolify`) runs `DeployPreflight` first. It inspects the app live (`SiteAppHealthInspector`) and fixes what is safe before a build:
+
+- `bind_domains`: hosts in Plane but not in Coolify `docker_compose_domains` are PATCHed (while DNS is pending the temporary preview host). Coolify writes Traefik labels at deploy time, so the deploy that follows serves them. Before this a site could build on an app with an empty domain field and land on the CodRon placeholder.
+- `inject_secret`: a missing `CONTROL_PLANE_AGENT_SECRET`, or one whose Coolify value differs from Plane's (`agent_secret_mismatch`), gets Plane's value written with `rotate: false`. The secret never rotates here.
+
+Catalog env is not repeated: `CoolifyApplicationService::deploy()` already syncs it. Preflight never blocks a deploy; findings and failures are audited as `site.deploy_preflight` (`issues`, `fixed`, `failed`). Off switch: `OPS_DEPLOY_PREFLIGHT_ENABLED=false` (off in `phpunit.xml`; `DeployPreflightTest` turns it on).
+
 ## Domain binding always redeploys
 
 Coolify writes the Traefik labels of a compose app at deploy time, so a `docker_compose_domains` PATCH alone never makes a new host answer. `SiteLanding::bindAndRedeploy` is the one path every domain mutation uses: detail **Add domain**, the edit form when the host list changed, fleet **Domains** create / assign / bind, and **DNS confirm**. It PATCHes the binding, stamps `verified_at`, then queues `CoolifyDeploySettings::redeploy` (audit `site.redeployed`). Outcomes reach the flash as a suffix: `redeployed`, `deploy_busy` (gate refused — redeploy by hand later), `waiting_dns` (zone still pending — DNS confirm will bind and deploy), `no_app`. Bulk **Bind on Coolify** on `/domains` is still PATCH-only by design; run **Tekrar deploy** on the touched sites afterwards.

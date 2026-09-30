@@ -63,6 +63,28 @@ class CloudflareHostnameTest extends TestCase
         $this->assertSame('', CloudflareHostname::apex('localhost'));
     }
 
+    public function test_multi_label_public_suffixes_are_never_a_zone(): void
+    {
+        $this->assertSame('firma.com.tr', CloudflareHostname::apex('firma.com.tr'));
+        $this->assertSame('firma.com.tr', CloudflareHostname::apex('www.firma.com.tr'));
+        $this->assertSame('firma.com.tr', CloudflareHostname::apex('shop.firma.com.tr'));
+        $this->assertSame('okul.k12.tr', CloudflareHostname::apex('www.okul.k12.tr'));
+        $this->assertSame('shop.co.uk', CloudflareHostname::apex('www.shop.co.uk'));
+        $this->assertSame(['a.firma.com.tr', 'firma.com.tr'], CloudflareHostname::zoneCandidates('a.firma.com.tr'));
+        $this->assertTrue(CloudflareHostname::isApex('firma.com.tr'));
+        $this->assertFalse(CloudflareHostname::isApex('shop.firma.com.tr'));
+        $this->assertFalse(CloudflareHostname::isApex('com.tr'));
+        $this->assertSame('', CloudflareHostname::apex('com.tr'));
+        $this->assertSame([], CloudflareHostname::zoneCandidates('com.tr'));
+        $this->assertTrue(CloudflareHostname::isPublicSuffix('com.tr'));
+        $this->assertTrue(CloudflareHostname::isPublicSuffix('.com.tr'));
+        $this->assertFalse(CloudflareHostname::isPublicSuffix('firma.com.tr'));
+        // A plain .tr registration and ordinary .com stay two labels.
+        $this->assertSame('firma.tr', CloudflareHostname::apex('www.firma.tr'));
+        $this->assertTrue(CloudflareHostname::sameRegistrableApex('a.firma.com.tr', 'b.firma.com.tr'));
+        $this->assertFalse(CloudflareHostname::sameRegistrableApex('a.firma.com.tr', 'b.baska.com.tr'));
+    }
+
     public function test_www_companion_keeps_the_operator_host(): void
     {
         $this->assertSame('www.example.com', CloudflareHostname::wwwHost('example.com'));

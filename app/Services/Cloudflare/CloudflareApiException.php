@@ -27,7 +27,7 @@ class CloudflareApiException extends RuntimeException
 
     public function isSubdomainRejection(): bool
     {
-        $message = strtolower($this->getMessage());
+        $message = strtolower($this->cloudflareMessage());
 
         return str_contains($message, 'root domain')
             || str_contains($message, 'not any subdomains');
@@ -41,7 +41,7 @@ class CloudflareApiException extends RuntimeException
             }
         }
 
-        $message = strtolower($this->getMessage());
+        $message = strtolower($this->cloudflareMessage());
 
         return str_contains($message, 'already exists')
             || str_contains($message, 'record with that host');
@@ -63,6 +63,17 @@ class CloudflareApiException extends RuntimeException
         return false;
     }
 
+    /**
+     * Cloudflare's own (English) wording, for pattern checks. getMessage() may be the
+     * translated operator text.
+     */
+    public function cloudflareMessage(): string
+    {
+        $raw = self::messageFromBody($this->payload);
+
+        return $raw ?? $this->getMessage();
+    }
+
     public static function fromResponse(Response $response, ?string $token = null): self
     {
         $json = $response->json();
@@ -70,10 +81,38 @@ class CloudflareApiException extends RuntimeException
         $message = self::messageFromBody($json) ?? 'Cloudflare API request failed.';
 
         return new self(
-            self::redact($message, $token),
+            self::operatorMessage(self::redact($message, $token), $payload),
             $response->status(),
             $payload,
         );
+    }
+
+    /**
+     * Known Cloudflare errors in the operator's language. The English original stays
+     * in the payload (cloudflareMessage()) for logs and pattern checks; unknown errors
+     * keep Cloudflare's text so nothing is hidden.
+     *
+     * @param  array<string, mixed>|null  $payload
+     */
+    public static function operatorMessage(string $message, ?array $payload): string
+    {
+        $lower = strtolower($message);
+        $codes = [];
+        foreach (is_array($payload['errors'] ?? null) ? $payload['errors'] : [] as $error) {
+            if (is_array($error) && isset($error['code'])) {
+                $codes[] = (int) $error['code'];
+            }
+        }
+
+        $key = match (true) {
+            str_contains($lower, 'not a tld'), str_contains($lower, 'root domain and not') => 'cloudflare.errors.public_suffix',
+            str_contains($lower, 'not a registered domain'), in_array(1049, $codes, true) => 'cloudflare.errors.not_registered',
+            str_contains($lower, 'already exists') && str_contains($lower, 'zone'), in_array(1061, $codes, true) => 'cloudflare.errors.zone_exists_elsewhere',
+            str_contains($lower, 'authentication error'), in_array(10000, $codes, true) => 'cloudflare.errors.token_rejected',
+            default => null,
+        };
+
+        return $key === null ? $message : (string) __($key, ['domain' => __('cloudflare.errors.this_domain')]);
     }
 
     public static function redact(string $text, ?string $token = null): string

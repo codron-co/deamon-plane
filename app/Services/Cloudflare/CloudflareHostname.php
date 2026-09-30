@@ -51,7 +51,28 @@ final class CloudflareHostname
     }
 
     /**
-     * Longest hostname first, down to the registrable 2-label apex. Never a TLD.
+     * Multi-label public suffixes a customer can register under. Cloudflare rejects a
+     * zone named after one of these ("provide the root domain and not a TLD"), so the
+     * registrable apex of `firma.com.tr` is `firma.com.tr`, not `com.tr`. Not the full
+     * Public Suffix List: the .tr second levels plus the common foreign ones.
+     *
+     * @var list<string>
+     */
+    public const MULTI_LABEL_SUFFIXES = [
+        // .tr (TRABIS)
+        'com.tr', 'net.tr', 'org.tr', 'gen.tr', 'web.tr', 'biz.tr', 'info.tr', 'name.tr',
+        'tel.tr', 'av.tr', 'dr.tr', 'bbs.tr', 'bel.tr', 'pol.tr', 'kep.tr', 'k12.tr',
+        'edu.tr', 'gov.tr', 'mil.tr', 'tsk.tr', 'nc.tr', 'tv.tr',
+        // Common elsewhere
+        'co.uk', 'org.uk', 'me.uk', 'ltd.uk', 'plc.uk', 'ac.uk', 'gov.uk', 'net.uk',
+        'com.au', 'net.au', 'org.au', 'co.nz', 'org.nz', 'co.za', 'com.br', 'com.cy',
+        'com.mx', 'co.jp', 'co.kr', 'com.cn', 'com.hk', 'com.sg', 'co.in', 'com.ua',
+        'com.az', 'com.ge', 'co.il', 'com.sa', 'com.qa', 'com.eg',
+    ];
+
+    /**
+     * Longest hostname first, down to the registrable apex. Never a TLD or a public
+     * suffix such as `com.tr`.
      *
      * @return list<string>
      */
@@ -63,9 +84,10 @@ final class CloudflareHostname
         }
 
         $labels = explode('.', $host);
+        $minimum = self::suffixLabelCount($host) + 1;
         $candidates = [];
 
-        while (count($labels) >= 2) {
+        while (count($labels) >= $minimum) {
             $candidates[] = implode('.', $labels);
             array_shift($labels);
         }
@@ -75,17 +97,38 @@ final class CloudflareHostname
 
     public static function isApex(string $host): bool
     {
-        return count(explode('.', self::normalize($host))) === 2;
+        $normalized = self::normalize($host);
+
+        return $normalized !== '' && $normalized === self::apex($normalized);
     }
 
     /**
-     * Registrable 2-label suffix used when Plane must create a customer zone.
+     * Registrable apex (one label above the public suffix) used when Plane must
+     * create a customer zone. Empty when the host is itself a suffix (`com.tr`).
      */
     public static function apex(string $host): string
     {
         $candidates = self::zoneCandidates($host);
 
         return $candidates === [] ? '' : (string) $candidates[array_key_last($candidates)];
+    }
+
+    public static function isPublicSuffix(string $host): bool
+    {
+        $host = ltrim(self::normalize($host), '.');
+
+        return $host !== '' && (in_array($host, self::MULTI_LABEL_SUFFIXES, true) || ! str_contains($host, '.'));
+    }
+
+    private static function suffixLabelCount(string $host): int
+    {
+        foreach (self::MULTI_LABEL_SUFFIXES as $suffix) {
+            if ($host === $suffix || str_ends_with($host, '.'.$suffix)) {
+                return substr_count($suffix, '.') + 1;
+            }
+        }
+
+        return 1;
     }
 
     /**

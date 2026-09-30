@@ -79,7 +79,7 @@ class SiteAgentClient
 
             return AgentHealthResult::failure(
                 AgentHealthReason::BadSignature,
-                'Agent rejected the request signature.',
+                (string) __('agent.bad_signature'),
                 $response->status(),
             );
         }
@@ -302,6 +302,17 @@ class SiteAgentClient
     public function activateTheme(Site $site, array $payload): ThemeAgentResult
     {
         return $this->postTheme($site, ControlPlaneAgentContract::themeActivatePath(), $payload);
+    }
+
+    /**
+     * Removes an installed, inactive theme. CMS older than 1.2.38 has no such
+     * route and answers 404 without an error code.
+     *
+     * @param  array{theme_id: string}  $payload
+     */
+    public function removeTheme(Site $site, array $payload): ThemeAgentResult
+    {
+        return $this->postTheme($site, ControlPlaneAgentContract::themeRemovePath(), $payload);
     }
 
     /**

@@ -289,7 +289,7 @@ class ThemeRolloutService
 
         $this->assertMutableTheme($theme);
 
-        $result = $this->agent->updateTheme($site, $this->themePayload($theme, $installation, sha: $previousSha));
+        $result = $this->healMissing($site, $theme, $actor, $ip, fn (): ThemeAgentResult => $this->agent->updateTheme($site, $this->themePayload($theme, $installation, sha: $previousSha)));
 
         $site->auditLogs()->create([
             'actor_user_id' => $actor?->id,
@@ -362,7 +362,7 @@ class ThemeRolloutService
                 $actor,
                 $ip,
                 'theme.install_failed',
-                'The default system theme cannot be installed or updated via the agent.',
+                (string) __('agent.theme.system_theme_agent'),
             );
 
             return;
@@ -437,7 +437,7 @@ class ThemeRolloutService
                 $actor,
                 $ip,
                 'theme.update_failed',
-                'The default system theme cannot be installed or updated via the agent.',
+                (string) __('agent.theme.system_theme_agent'),
             );
 
             return;
@@ -448,7 +448,7 @@ class ThemeRolloutService
         $installation->save();
 
         $payload = $this->themePayload($theme, $installation, preferLatest: true);
-        $result = $this->agent->updateTheme($site, $payload);
+        $result = $this->healMissing($site, $theme, $actor, $ip, fn (): ThemeAgentResult => $this->agent->updateTheme($site, $payload));
 
         if (! $result->ok) {
             $this->markError($installation, $site, $theme, $actor, $ip, 'theme.update_failed', $result->safeMessage);
@@ -613,7 +613,7 @@ class ThemeRolloutService
         string $mode = ControlPlaneAgentContract::SYNC_MODE_MERGE,
     ): ThemeAgentResult {
         $body = ControlPlaneAgentContract::syncBody($theme->theme_id, ControlPlaneAgentContract::SYNC_ACTION_ALL, $mode);
-        $result = $this->agent->syncTheme($site, $body);
+        $result = $this->healMissing($site, $theme, $actor, $ip, fn (): ThemeAgentResult => $this->agent->syncTheme($site, $body));
 
         if ($result->ok || $result->errorCode !== 'data_package_missing') {
             return $result;
@@ -680,7 +680,7 @@ class ThemeRolloutService
     {
         if ($theme->theme_id === ControlPlaneAgentContract::SYSTEM_THEME_ID) {
             throw new ThemeRolloutException(
-                'The default system theme cannot be installed or updated via the agent.',
+                (string) __('agent.theme.system_theme_agent'),
             );
         }
     }
@@ -699,7 +699,7 @@ class ThemeRolloutService
             return;
         }
 
-        $result = $this->agent->activateTheme($site, ['theme_id' => $theme->theme_id]);
+        $result = $this->healMissing($site, $theme, $actor, $ip, fn (): ThemeAgentResult => $this->agent->activateTheme($site, ['theme_id' => $theme->theme_id]));
 
         if (! $result->ok) {
             if ($persistError) {
@@ -729,6 +729,152 @@ class ThemeRolloutService
             'after' => $this->auditSnapshot($installation->fresh() ?? $installation, $theme),
             'ip' => $ip,
         ]);
+    }
+
+    /**
+     * Send the theme to the site again (install endpoint, pinned SHA). The row
+     * keeps its activation state: an active theme is re-activated after install.
+     */
+    public function reinstall(SiteThemeInstallation $installation, ?User $actor, ?string $ip): void
+    {
+        $installation->loadMissing(['site', 'theme']);
+        $site = $installation->site;
+        $theme = $installation->theme;
+
+        if ($site === null || $theme === null) {
+            throw new ThemeRolloutException('Installation is missing site or theme.');
+        }
+
+        $this->assertMutableTheme($theme);
+
+        if (! $site->hasAgentSecret()) {
+            throw new ThemeRolloutException((string) __('agent.needs_secret'));
+        }
+
+        $installation->status = ThemeInstallationStatus::Pending;
+        $installation->last_error = null;
+        $installation->save();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => 'theme.reinstall_started',
+            'after' => $this->auditSnapshot($installation, $theme),
+            'ip' => $ip,
+        ]);
+
+        ThemeInstallJob::dispatch($installation->id, (bool) $installation->is_active, false, $actor?->id, $ip);
+    }
+
+    /**
+     * Remove the theme from the site and drop the Plane row. The site's active
+     * theme and the system theme are refused. A theme the site no longer has is
+     * already gone. A CMS older than 1.2.38 has no remove route: only the Plane
+     * row goes, and the outcome says the files stayed on the site.
+     *
+     * @return 'removed'|'already_gone'|'plane_only'
+     */
+    public function remove(SiteThemeInstallation $installation, ?User $actor, ?string $ip): string
+    {
+        $installation->loadMissing(['site', 'theme']);
+        $site = $installation->site;
+        $theme = $installation->theme;
+
+        if ($site === null || $theme === null) {
+            $installation->delete();
+
+            return 'already_gone';
+        }
+
+        if ($theme->theme_id === ControlPlaneAgentContract::SYSTEM_THEME_ID) {
+            throw new ThemeRolloutException((string) __('agent.theme.protected'));
+        }
+
+        $reportedActive = $site->last_health_payload['active_theme_id'] ?? null;
+        if ($theme->theme_id === $reportedActive || ($installation->is_active && $reportedActive === null)) {
+            throw new ThemeRolloutException((string) __('agent.theme.active'));
+        }
+
+        $result = $this->agent->removeTheme($site, ['theme_id' => $theme->theme_id]);
+
+        $outcome = match (true) {
+            $result->ok => 'removed',
+            $result->errorCode === 'theme_not_found' => 'already_gone',
+            $result->httpStatus === 404 && $result->errorCode === null => 'plane_only',
+            default => null,
+        };
+
+        if ($outcome === null) {
+            $site->auditLogs()->create([
+                'actor_user_id' => $actor?->id,
+                'action' => 'theme.remove_failed',
+                'after' => ['theme_id' => $theme->theme_id, 'error' => $result->safeMessage],
+                'ip' => $ip,
+            ]);
+
+            throw new ThemeRolloutException($result->safeMessage);
+        }
+
+        $snapshot = $this->auditSnapshot($installation, $theme);
+        $installation->delete();
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => 'theme.removed',
+            'after' => array_merge($snapshot, ['outcome' => $outcome]),
+            'ip' => $ip,
+        ]);
+
+        return $outcome;
+    }
+
+    /**
+     * A site whose theme files are gone (volume reset, re-created app, DB wipe)
+     * answers theme_not_found to update / activate / sync. Send the theme again
+     * through the install endpoint and retry the call once, instead of leaving the
+     * operator with an error only a hand-made re-assign clears.
+     *
+     * @param  callable(): ThemeAgentResult  $call
+     */
+    private function healMissing(Site $site, Theme $theme, ?User $actor, ?string $ip, callable $call): ThemeAgentResult
+    {
+        $result = $call();
+
+        if ($result->ok || $result->errorCode !== 'theme_not_found'
+            || $theme->theme_id === ControlPlaneAgentContract::SYSTEM_THEME_ID) {
+            return $result;
+        }
+
+        $installation = SiteThemeInstallation::query()
+            ->where('site_id', $site->id)
+            ->where('theme_id', $theme->id)
+            ->first();
+        if (! $installation instanceof SiteThemeInstallation) {
+            return $result;
+        }
+
+        $install = $this->agent->installTheme($site, $this->themePayload($theme, $installation));
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actor?->id,
+            'action' => $install->ok ? 'theme.reinstalled_missing' : 'theme.reinstall_missing_failed',
+            'after' => [
+                'theme_id' => $theme->theme_id,
+                'ok' => $install->ok,
+                'error' => $install->ok ? null : $install->safeMessage,
+            ],
+            'ip' => $ip,
+        ]);
+
+        if (! $install->ok) {
+            return $install;
+        }
+
+        if ($install->sha !== null) {
+            $installation->pinned_sha = $install->sha;
+            $installation->save();
+        }
+
+        return $call();
     }
 
     private function markError(

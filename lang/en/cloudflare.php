@@ -86,6 +86,11 @@ return [
         'zone_edit_missing' => 'Cloudflare Zone → Edit is missing. New domains need DNS & Zones → Zone → Edit. The DNS Write template does not grant it.',
         'dns_edit_missing' => 'Cloudflare DNS → Edit is missing. A/MX/TXT records need DNS & Zones → DNS → Edit.',
         'wildcard_unavailable' => 'The wildcard zone :domain is not in this Cloudflare account. NS is already set at infra; Plane will not create the zone. Check that :domain is in this account, then retry.',
+        'public_suffix' => ':domain is a domain suffix (e.g. .com.tr), not a registered domain. Enter the full domain: company.com.tr.',
+        'not_registered' => 'Cloudflare does not recognise this as a registered domain. Check the spelling and that the domain is purchased.',
+        'zone_exists_elsewhere' => 'This domain is already a zone in another Cloudflare account. Remove it there or connect that account to Plane.',
+        'token_rejected' => 'Cloudflare rejected the API token. Check the token under Cloudflare.',
+        'this_domain' => 'The value',
     ],
     'defaults' => [
         'nav' => 'Deamon DNS',

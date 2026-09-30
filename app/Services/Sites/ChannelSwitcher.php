@@ -143,6 +143,8 @@ class ChannelSwitcher
             'DEAMON_CHANNEL' => $target->value,
         ]);
 
+        app(DeployPreflight::class)->run($site, $actorUserId !== null ? \App\Models\User::query()->find($actorUserId) : null, $ip);
+
         $deployed = $coolify->deploy($appUuid);
         $deploymentUuid = $deployed->firstDeploymentUuid();
 

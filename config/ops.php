@@ -242,6 +242,18 @@ return [
     */
 
     /*
+    | Deploy preflight. Before every Coolify deploy Plane inspects the app live and
+    | fixes what is safe to fix before a build: hosts not bound on the compose
+    | service and a missing or drifted CONTROL_PLANE_AGENT_SECRET
+    | (Plane's value is written; it is never rotated). Catalog env is synced by the
+    | deploy call itself. It never blocks the deploy;
+    | the outcome is audited as site.deploy_preflight (DeployPreflight).
+    */
+    'deploy_preflight' => [
+        'enabled' => filter_var(env('OPS_DEPLOY_PREFLIGHT_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+    ],
+
+    /*
     | Failed-deploy diagnosis. Every Failed deployment row is classified
     | (DeploymentFailureClassifier); codes whose evidence lives in the container log
     | pull `GET /applications/{uuid}/logs`. `auto_fix` lets Plane run the single safe
