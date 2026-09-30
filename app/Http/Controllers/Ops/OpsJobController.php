@@ -77,6 +77,7 @@ class OpsJobController extends Controller
             'queue' => [
                 'running' => $standing['running'],
                 'queued' => $standing['queued'],
+                'waiting' => $standing['waiting'],
                 'label' => $queue->queueSummaryLabel($standing),
             ],
         ]);
@@ -108,7 +109,7 @@ class OpsJobController extends Controller
         $this->authorize('ops.write');
 
         return response()->json(
-            $this->deploymentResponse($queue, $queue->cancel($deployment)),
+            $this->deploymentResponse($queue, $queue->cancel($deployment, $request->user(), $request->ip())),
         );
     }
 
@@ -161,6 +162,7 @@ class OpsJobController extends Controller
         $payload['queue'] = [
             'running' => $standing['running'],
             'queued' => $standing['queued'],
+            'waiting' => $standing['waiting'],
             'label' => $queue->queueSummaryLabel($standing),
         ];
 
@@ -207,6 +209,8 @@ class OpsJobController extends Controller
         } else {
             $query->where(function ($inner) use ($since): void {
                 $inner->whereIn('status', [
+                    // Held in the Plane deploy line: shown with its place, cancellable.
+                    DeploymentStatus::Waiting,
                     DeploymentStatus::Queued,
                     DeploymentStatus::InProgress,
                 ])->orWhere(function ($recent) use ($since): void {

@@ -54,6 +54,8 @@ Lookup order: `coolify_deployment_uuid` → open (queued/in_progress) row for `s
 
 Terminal rows are not regressed by a later in-progress event (webhook and poll share this guard).
 
+A row that turns terminal frees a build slot on its Coolify host, so the `Deployment` saved hook dispatches `StartWaitingDeploysJob` when Plane `waiting` deploys exist ([ops-sites.md](ops-sites.md#plane-deploy-line-a-full-build-cap-queues-it-never-refuses)); the webhook needs no code of its own for that.
+
 ## UI
 
 - Coolify menu → connection: **Deploy webhook URL** is the path only. The hint tells the operator to append `?token=` + the webhook signing secret. The live secret is never rendered after save.

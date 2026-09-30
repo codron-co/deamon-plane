@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Coolify\CoolifyDeployGate;
 use App\Services\Coolify\CoolifyDeploymentSync;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use Illuminate\Support\Collection;
@@ -154,7 +155,12 @@ class OpsCoolifyDeployQueue
      * The set is deliberately not the widget's own page of rows: depth must count
      * the whole queue, not the 30 newest deployments the widget happens to list.
      *
-     * @return array{running: int, queued: int, positions: array<int, array{position: int, depth: int}>}
+     * Plane `waiting` rows (host at its build cap, nothing sent to Coolify yet)
+     * form a second line per host, ranked by `queued_at` then `id` — the order
+     * `WaitingDeployDispatcher` starts them in. They are counted in `waiting`,
+     * never in `queued`, and their places live in `waiting_positions`.
+     *
+     * @return array{running: int, queued: int, waiting: int, positions: array<int, array{position: int, depth: int}>, waiting_positions: array<int, array{position: int, depth: int}>}
      */
     public function queueStanding(): array
     {
@@ -201,7 +207,36 @@ class OpsCoolifyDeployQueue
             $positions[$id]['depth'] = $depths[$this->hostKey($row)];
         }
 
-        return ['running' => $running, 'queued' => $queued, 'positions' => $positions];
+        $waitingRows = DB::table('deployments')
+            ->join('sites', 'sites.id', '=', 'deployments.site_id')
+            ->where('deployments.status', DeploymentStatus::Waiting->value)
+            ->orderBy('deployments.queued_at')
+            ->orderBy('deployments.id')
+            ->get([
+                'deployments.id as id',
+                'deployments.site_id as site_id',
+                'sites.coolify_connection_id as coolify_connection_id',
+                'sites.coolify_server_uuid as coolify_server_uuid',
+            ]);
+
+        $waitingPositions = [];
+        $waitingDepths = [];
+        foreach ($waitingRows as $row) {
+            $host = $this->hostKey($row);
+            $waitingDepths[$host] = ($waitingDepths[$host] ?? 0) + 1;
+            $waitingPositions[(int) $row->id] = ['position' => $waitingDepths[$host], 'depth' => 0];
+        }
+        foreach ($waitingRows as $row) {
+            $waitingPositions[(int) $row->id]['depth'] = $waitingDepths[$this->hostKey($row)];
+        }
+
+        return [
+            'running' => $running,
+            'queued' => $queued,
+            'waiting' => $waitingRows->count(),
+            'positions' => $positions,
+            'waiting_positions' => $waitingPositions,
+        ];
     }
 
     /**
@@ -209,7 +244,7 @@ class OpsCoolifyDeployQueue
      * label; a running build already has its elapsed timer.
      *
      * @param  array<string, mixed>  $row
-     * @param  array{running: int, queued: int, positions: array<int, array{position: int, depth: int}>}  $standing
+     * @param  array{running: int, queued: int, waiting?: int, positions: array<int, array{position: int, depth: int}>, waiting_positions?: array<int, array{position: int, depth: int}>}  $standing
      * @return array<string, mixed>
      */
     public function applyQueueStanding(array $row, array $standing): array
@@ -224,6 +259,11 @@ class OpsCoolifyDeployQueue
         }
 
         $place = $standing['positions'][(int) $id] ?? null;
+        $inPlane = false;
+        if ($place === null && ($row['plane_waiting'] ?? false) === true) {
+            $place = $standing['waiting_positions'][(int) $id] ?? null;
+            $inPlane = true;
+        }
         if ($place === null) {
             return $row;
         }
@@ -231,7 +271,7 @@ class OpsCoolifyDeployQueue
         $row['queue_position'] = $place['position'];
         $row['queue_depth'] = $place['depth'];
         // Localised here, not in the widget: ops-jobs.js must never assemble copy.
-        $row['queue_label'] = __('ops.jobs.queue_position', [
+        $row['queue_label'] = __($inPlane ? 'site_ops.queue.widget_position' : 'ops.jobs.queue_position', [
             'position' => $place['position'],
             'depth' => $place['depth'],
         ]);
@@ -242,11 +282,12 @@ class OpsCoolifyDeployQueue
     /**
      * Fleet-wide header line: "1 derleniyor · 22 kuyrukta".
      *
-     * @param  array{running: int, queued: int, positions: array<int, array{position: int, depth: int}>}  $standing
+     * @param  array{running: int, queued: int, waiting?: int, positions: array<int, array{position: int, depth: int}>, waiting_positions?: array<int, array{position: int, depth: int}>}  $standing
      */
     public function queueSummaryLabel(array $standing): ?string
     {
-        if ($standing['queued'] < 1) {
+        $waiting = (int) ($standing['waiting'] ?? 0);
+        if ($standing['queued'] < 1 && $waiting < 1) {
             return null;
         }
 
@@ -254,7 +295,12 @@ class OpsCoolifyDeployQueue
         if ($standing['running'] > 0) {
             $parts[] = __('ops.jobs.queue_building', ['count' => $standing['running']]);
         }
-        $parts[] = __('ops.jobs.queue_waiting', ['count' => $standing['queued']]);
+        if ($standing['queued'] > 0) {
+            $parts[] = __('ops.jobs.queue_waiting', ['count' => $standing['queued']]);
+        }
+        if ($waiting > 0) {
+            $parts[] = __('site_ops.queue.summary', ['count' => $waiting]);
+        }
 
         return implode(' · ', $parts);
     }
@@ -266,16 +312,7 @@ class OpsCoolifyDeployQueue
      */
     private function hostKey(object $row): string
     {
-        if ($row->coolify_connection_id !== null) {
-            return 'conn:'.$row->coolify_connection_id;
-        }
-
-        $serverUuid = trim((string) $row->coolify_server_uuid);
-        if ($serverUuid !== '') {
-            return 'server:'.$serverUuid;
-        }
-
-        return 'site:'.$row->site_id;
+        return CoolifyDeployGate::hostKeyFor($row->coolify_connection_id, $row->coolify_server_uuid, (string) $row->site_id);
     }
 
     /**
@@ -317,8 +354,13 @@ class OpsCoolifyDeployQueue
         }
     }
 
-    public function cancel(Deployment $deployment): Deployment
+    public function cancel(Deployment $deployment, ?User $actor = null, ?string $ip = null): Deployment
     {
+        // Still in the Plane line: nothing reached Coolify, so cancel locally.
+        if ($deployment->status === DeploymentStatus::Waiting) {
+            return app(WaitingDeployQueue::class)->cancel($deployment, $actor, $ip)->loadMissing('site');
+        }
+
         $uuid = trim((string) $deployment->coolify_deployment_uuid);
         if ($uuid === '' || $deployment->site === null) {
             abort(422, __('ops.jobs.cancel_unavailable'));

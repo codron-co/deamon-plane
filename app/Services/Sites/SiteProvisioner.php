@@ -7,6 +7,7 @@ use App\Enums\CoolifyGitSourceKind;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\SiteStatus;
+use App\Enums\WaitingDeployAction;
 use App\Jobs\PollDeploymentJob;
 use App\Jobs\ProvisionSiteJob;
 use App\Models\CloudflareSetting;
@@ -27,6 +28,7 @@ use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use App\Services\Mail\DeployFailedNotifier;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailOrderBinder;
+use App\Services\Ops\WaitingDeployQueue;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -171,19 +173,49 @@ class SiteProvisioner
             // Provision continues; operator can use Generate & inject on the site.
         }
 
+        // The first build waits in the Plane line when the host's build cap is
+        // full; the site stays `provisioning` until the dispatcher starts it.
+        return app(WaitingDeployQueue::class)->request(
+            $site,
+            WaitingDeployAction::Provision,
+            [],
+            $actorUserId !== null ? User::query()->find($actorUserId) : null,
+            $ip,
+        )->deployment;
+    }
+
+    /**
+     * The provision build itself. Called straight from `provisionOnCoolify` when
+     * the host has room, or by `WaitingDeployDispatcher` with the waiting row.
+     */
+    public function startProvisionDeploy(Site $site, ?int $actorUserId = null, ?string $ip = null, ?Deployment $into = null): Deployment
+    {
+        $connection = $this->connectionFor($site);
+        $coolify = $connection instanceof CoolifyConnection
+            ? CoolifyApplicationService::forConnection($connection)
+            : $this->coolify;
+        $appUuid = (string) $site->coolify_app_uuid;
+
         $deployed = $coolify->deploy($appUuid);
         $deploymentUuid = $deployed->firstDeploymentUuid();
 
         $channel = $site->channel instanceof Channel ? $site->channel : Channel::from((string) $site->channel);
 
-        $deployment = $site->deployments()->create([
+        $values = [
             'channel' => $channel,
             'trigger' => DeploymentTrigger::Create,
             'coolify_deployment_uuid' => $deploymentUuid,
             'status' => $deploymentUuid === null ? DeploymentStatus::Failed : DeploymentStatus::InProgress,
             'started_at' => now(),
-            'requested_by' => $actorUserId,
-        ]);
+            'requested_by' => $into->requested_by ?? $actorUserId,
+        ];
+
+        if ($into instanceof Deployment) {
+            $into->forceFill($values)->save();
+            $deployment = $into;
+        } else {
+            $deployment = $site->deployments()->create($values);
+        }
 
         if ($deploymentUuid === null) {
             $this->markFailed($site, 'Coolify did not return a deployment uuid.', $deployment, $actorUserId, $ip);
@@ -330,14 +362,22 @@ class SiteProvisioner
     }
 
     /**
-     * Best effort: the provision already succeeded, so a refused follow-up deploy
-     * (deploy gate, busy host) is audited and left to the operator's Redeploy.
+     * Best effort: the provision already succeeded. A busy host queues the
+     * follow-up deploy in the Plane line; any other refusal is audited and left
+     * to the operator's Redeploy.
      */
     private function deployAfterDomainBind(Site $site, ?int $actorUserId, ?string $ip): void
     {
         try {
-            // Resolved late: SiteLanding depends on CoolifyDeploySettings.
-            $deployment = app(CoolifyDeploySettings::class)->deployAfterDomainBind($site->fresh() ?? $site);
+            // A full build cap queues the follow-up build in the Plane deploy
+            // line instead of dropping it (it used to be audited and forgotten).
+            $deployment = app(WaitingDeployQueue::class)->request(
+                $site->fresh() ?? $site,
+                WaitingDeployAction::Redeploy,
+                ['force' => false],
+                null,
+                $ip,
+            )->deployment;
         } catch (Throwable $exception) {
             $site->auditLogs()->create([
                 'actor_user_id' => $actorUserId,

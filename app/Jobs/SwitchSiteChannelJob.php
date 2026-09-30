@@ -4,8 +4,11 @@ namespace App\Jobs;
 
 use App\Enums\OpsLane;
 use App\Enums\SiteStatus;
+use App\Enums\WaitingDeployAction;
 use App\Jobs\Concerns\OnOpsLane;
 use App\Models\Site;
+use App\Models\User;
+use App\Services\Ops\WaitingDeployQueue;
 use App\Services\Sites\ChannelSwitcher;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -48,7 +51,15 @@ class SwitchSiteChannelJob implements ShouldBeUnique, ShouldQueue
         $lastRowBefore = (int) $site->deployments()->max('id');
 
         try {
-            $switcher->switchOnCoolify($site, $this->actorUserId, $this->ip);
+            // A full build cap does not fail the switch: the site stays
+            // `deploying` and the switch waits in the Plane deploy line.
+            app(WaitingDeployQueue::class)->request(
+                $site,
+                WaitingDeployAction::ChannelSwitch,
+                [],
+                $this->actorUserId !== null ? User::query()->find($this->actorUserId) : null,
+                $this->ip,
+            );
         } catch (Throwable $exception) {
             $fresh = $site->fresh() ?? $site;
             $switcher->markFailed(

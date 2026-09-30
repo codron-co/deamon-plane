@@ -182,10 +182,22 @@ return [
         /*
         | Cap concurrent Coolify builds per connection (or server uuid). Plane
         | counts unfinished Deployment rows for peer sites before starting another
-        | deploy. Default 1 keeps shared VPS memory from parallel compose builds.
+        | deploy. Default 2: two compose builds fit a shared VPS; a third waits.
+        |
+        | A single-site deploy (Tekrar deploy, HEAD'de deploy, commit pin, channel
+        | switch, provision, domain-bind redeploy) that finds the cap full is not
+        | refused: it is recorded as a `waiting` deployment and
+        | `WaitingDeployDispatcher` starts it FIFO per host once a slot frees.
+        | `waiting_max_minutes` / `waiting_max_attempts` bound how long a row
+        | may wait and how many transient start failures it may absorb.
         */
         'deploy' => [
-            'max_concurrent_per_server' => (int) env('COOLIFY_MAX_CONCURRENT_PER_SERVER', 1),
+            'max_concurrent_per_server' => (int) env('COOLIFY_MAX_CONCURRENT_PER_SERVER', 2),
+            'waiting_max_minutes' => (int) env('COOLIFY_DEPLOY_WAITING_MAX_MINUTES', 120),
+            'waiting_max_attempts' => (int) env('COOLIFY_DEPLOY_WAITING_MAX_ATTEMPTS', 5),
+            // How long an operator click waits for the host lock before it
+            // simply joins the line (the dispatcher holds it while starting).
+            'request_lock_wait_seconds' => (int) env('COOLIFY_DEPLOY_REQUEST_LOCK_WAIT_SECONDS', 5),
 
             /*
             | Every open ops tab polls `/jobs`, and each poll reads the Coolify queue

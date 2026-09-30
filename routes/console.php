@@ -4,6 +4,7 @@ use App\Jobs\DispatchSiteHealthChecksJob;
 use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileDeskronPushJob;
 use App\Jobs\ReconcileSiteSearchIntegrationsJob;
+use App\Jobs\StartWaitingDeploysJob;
 use App\Models\OpsNotification;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -49,6 +50,14 @@ Schedule::command('ops:watchdog')
     ->everyFiveMinutes()
     ->name('ops-watchdog')
     ->withoutOverlapping(10);
+
+// Plane deploy line: single-site deploys that found the per-server build cap
+// full wait as `waiting` rows. A finishing build kicks the line at once
+// (Deployment saved hook); this tick is the safety net for everything else.
+Schedule::job(new StartWaitingDeploysJob)
+    ->everyMinute()
+    ->name('ops-deploy-queue')
+    ->withoutOverlapping(5);
 
 // Queued ops alerts keep a delivery record; old rows are dropped after 90 days.
 Schedule::command('model:prune', ['--model' => [OpsNotification::class]])

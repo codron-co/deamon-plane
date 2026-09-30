@@ -634,6 +634,7 @@ return [
         'domain_removed_partial' => 'The Plane record is gone, but one step did not finish: :reason',
         'domain_redeploy_queued' => 'Bound on Coolify and a redeploy is queued; the host answers once the build finishes.',
         'domain_deploy_busy' => 'Bound on Coolify, but the deploy queue is busy. Redeploy the site by hand when the build finishes; the host stays dark until then.',
+        'domain_deploy_queued' => 'Bound on Coolify; the server is at its build cap, so the deploy was queued and starts on its own once a slot frees.',
         'domain_waiting_dns' => 'The Cloudflare zone is still pending. Confirming DNS will bind Coolify and redeploy.',
         'domain_zone_pending' => 'A separate Cloudflare zone was opened for :host. Point the registrar nameservers to: :ns',
         'attached' => 'Existing Coolify application attached. A new stack was not created.',

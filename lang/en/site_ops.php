@@ -116,4 +116,37 @@ return [
         'purge_limit' => 'Hard delete runs on at most :limit sites at a time. Select fewer sites.',
         'confirm_title' => 'Confirm bulk action',
     ],
+
+    // Plane deploy line: a single-site deploy that found the server's build cap
+    // full waits here (status `waiting`) and starts FIFO once a slot frees.
+    'queue' => [
+        'status' => 'Waiting in Plane',
+        'actions' => [
+            'redeploy' => 'Redeploy',
+            'update_head' => 'Update to HEAD',
+            'follow_head' => 'Deploy HEAD',
+            'pin' => 'Deploy commit',
+            'channel_switch' => 'Channel switch',
+            'provision' => 'First provision build',
+        ],
+        'queued' => 'The server is running :running build(s); the deploy was queued (position :position). It starts on its own once a slot frees.',
+        'already_queued' => 'This deploy is already queued (position :position; the server is running :running build(s)). It starts on its own once a slot frees.',
+        'position' => 'position :position',
+        'widget_position' => 'Plane queue :position / :depth',
+        'summary' => ':count waiting in Plane',
+        'since' => 'queued at :time',
+        'tab_title' => 'Deploys waiting in line',
+        'tab_hint' => 'Deploys held in Plane because the server is at its concurrent build cap. When a build finishes, the oldest one starts on its own. Pin, HEAD and auto-deploy changes are applied only when the deploy starts; cancelling a waiting deploy leaves the app untouched.',
+        'cancel' => 'Remove from queue',
+        'cancel_title' => 'Cancel the queued deploy?',
+        'cancel_confirm' => 'Cancel the deploy waiting in line for :name? Nothing was sent to Coolify yet; the app stays as it is.',
+        'cancel_done' => 'The queued deploy for :name was cancelled.',
+        'cancel_unavailable' => 'This deploy is no longer waiting: it started or was closed.',
+        'cancelled' => 'Removed from the queue; nothing was sent to Coolify.',
+        'site_gone' => 'The site was deleted or has no Coolify app; the queued deploy was cancelled.',
+        'expired' => 'No build slot freed on the server within :minutes minutes; the queued deploy was not started.',
+        'stale' => 'The site no longer waits for this action; the queued deploy was cancelled.',
+        'already_deployed' => 'A successful deploy of the same target finished after this one was queued; it was not built again.',
+        'start_failed' => 'The queued deploy could not start: :error',
+    ],
 ];

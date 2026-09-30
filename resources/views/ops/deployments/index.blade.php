@@ -28,6 +28,48 @@
         </div>
     </div>
 
+    @php
+        $waitingDeployments = $waitingDeployments ?? [];
+        $canCancelWaiting = auth()->user()?->can('update', $site) ?? false;
+    @endphp
+    @if ($waitingDeployments !== [])
+        <div class="deployments-waiting" data-deployments-waiting>
+            <h3 class="deployments-waiting-title">{{ __('site_ops.queue.tab_title') }} @include('ops.dashboard._hint', ['text' => __('site_ops.queue.tab_hint')])</h3>
+            <ul class="deployments-waiting-list">
+                @foreach ($waitingDeployments as $entry)
+                    @php($waiting = $entry['deployment'])
+                    @php($waitingRef = $waiting->queue_action === \App\Enums\WaitingDeployAction::Pin ? (string) (($waiting->queue_payload ?? [])['ref'] ?? '') : '')
+                    <li class="deployments-waiting-row" data-deployment-waiting="{{ $waiting->id }}">
+                        <span class="status-chip status-waiting">{{ $waiting->status->label() }}</span>
+                        <strong>{{ $waiting->queue_action?->label() ?? $waiting->trigger->label() }}</strong>
+                        @if ($waitingRef !== '')
+                            <code>{{ \Illuminate\Support\Str::limit($waitingRef, 12, '') }}</code>
+                        @endif
+                        <span class="muted">{{ __('site_ops.queue.position', ['position' => $entry['position']]) }}</span>
+                        <span class="muted">{{ __('site_ops.queue.since', ['time' => ($waiting->queued_at ?? $waiting->created_at)?->timezone(config('app.timezone'))->format('H:i')]) }}</span>
+                        @if ($waiting->requestedBy)
+                            <span class="muted">{{ $waiting->requestedBy->name }}</span>
+                        @endif
+                        @if ($canCancelWaiting)
+                            <form
+                                method="POST"
+                                action="{{ route('ops.sites.deployments.cancel-waiting', [$site, $waiting]) }}"
+                                data-ops-pending
+                                data-confirm="{{ __('site_ops.queue.cancel_confirm', ['name' => $site->name]) }}"
+                                data-confirm-title="{{ __('site_ops.queue.cancel_title') }}"
+                                data-confirm-label="{{ __('site_ops.queue.cancel') }}"
+                                data-confirm-danger="false"
+                            >
+                                @csrf
+                                <button type="submit" class="btn btn-ghost btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.queue.cancel') }}</button>
+                            </form>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     @if ($deployments->isEmpty())
         <p class="muted">{{ __('sites.deployments.empty') }}</p>
     @else

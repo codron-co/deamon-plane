@@ -69,6 +69,9 @@ Route::get('/sites/{site}/deployments/{deployment}', DeploymentShowController::c
 Route::post('/sites/{site}/deployments/{deployment}/diagnose', DeploymentDiagnosisController::class)
     ->scopeBindings()
     ->name('ops.sites.deployments.diagnose');
+Route::post('/sites/{site}/deployments/{deployment}/cancel-waiting', [SiteCoolifyOpsController::class, 'cancelWaiting'])
+    ->scopeBindings()
+    ->name('ops.sites.deployments.cancel-waiting');
 Route::get('/sites/{site}/edit', [SiteController::class, 'edit'])->name('ops.sites.edit');
 Route::put('/sites/{site}', [SiteController::class, 'update'])->name('ops.sites.update');
 Route::post('/sites/{site}/provision', [SiteController::class, 'provision'])->name('ops.sites.provision');

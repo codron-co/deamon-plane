@@ -141,7 +141,11 @@ class CoolifyDeploySettings
         return $app;
     }
 
-    public function pin(Site $site, string $ref, ?User $actor = null, ?string $ip = null): CoolifyApplication
+    /**
+     * `$into` is a Plane `waiting` row the dispatcher is starting: it becomes the
+     * live deployment instead of a new row being created.
+     */
+    public function pin(Site $site, string $ref, ?User $actor = null, ?string $ip = null, ?Deployment $into = null): CoolifyApplication
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
@@ -153,7 +157,7 @@ class CoolifyDeploySettings
                 'git_commit_sha' => $ref,
                 'is_auto_deploy_enabled' => false,
             ]);
-            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip);
+            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip, $into);
         } catch (CoolifyDeployBusyException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         } catch (CoolifyApiException $exception) {
@@ -170,7 +174,7 @@ class CoolifyDeploySettings
         return $app;
     }
 
-    public function followHead(Site $site, ?User $actor = null, ?string $ip = null): CoolifyApplication
+    public function followHead(Site $site, ?User $actor = null, ?string $ip = null, ?Deployment $into = null): CoolifyApplication
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
@@ -184,7 +188,7 @@ class CoolifyDeploySettings
                 // A CI-gated site follows HEAD too, but Plane keeps deploying it.
                 'is_auto_deploy_enabled' => $autoDeploy,
             ]);
-            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip);
+            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip, $into);
         } catch (CoolifyDeployBusyException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         } catch (CoolifyApiException $exception) {
@@ -207,7 +211,7 @@ class CoolifyDeploySettings
      * the next manual update. "Follow HEAD" is the variant that also turns
      * auto-deploy on.
      */
-    public function updateToHead(Site $site, ?User $actor = null, ?string $ip = null): CoolifyApplication
+    public function updateToHead(Site $site, ?User $actor = null, ?string $ip = null, ?Deployment $into = null): CoolifyApplication
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
@@ -218,7 +222,7 @@ class CoolifyDeploySettings
             $app = $coolify->patchApplication($uuid, [
                 'git_commit_sha' => CoolifyApplication::HEAD_REF,
             ]);
-            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip);
+            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip, $into);
         } catch (CoolifyDeployBusyException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         } catch (CoolifyApiException $exception) {
@@ -236,12 +240,18 @@ class CoolifyDeploySettings
         return $app;
     }
 
-    public function redeploy(Site $site, ?User $actor = null, ?string $ip = null): void
+    /**
+     * `force=true` is the operator's Tekrar deploy (no build cache); the
+     * domain-bind follow-up passes `false`.
+     */
+    public function redeploy(Site $site, ?User $actor = null, ?string $ip = null, bool $force = true, ?Deployment $into = null): Deployment
     {
-        $this->startDeploy($site, true, DeploymentTrigger::Manual, $actor, $ip);
+        $deployment = $this->startDeploy($site, $force, DeploymentTrigger::Manual, $actor, $ip, $into);
         $this->audit($site, $actor, $ip, 'site.redeployed', [
-            'force' => true,
+            'force' => $force,
         ]);
+
+        return $deployment;
     }
 
     /**
@@ -281,7 +291,7 @@ class CoolifyDeploySettings
         app(DeployPreflight::class)->run($site, $actor, $ip);
     }
 
-    private function startDeploy(Site $site, bool $force, DeploymentTrigger $trigger, ?User $actor, ?string $ip): Deployment
+    private function startDeploy(Site $site, bool $force, DeploymentTrigger $trigger, ?User $actor, ?string $ip, ?Deployment $into = null): Deployment
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
@@ -295,7 +305,7 @@ class CoolifyDeploySettings
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
-        return $this->recordDeployment($site, $result, $trigger, $actor, $ip);
+        return $this->recordDeployment($site, $result, $trigger, $actor, $ip, $into);
     }
 
     /**
@@ -324,7 +334,9 @@ class CoolifyDeploySettings
      */
     public function redeployMany(iterable $sites, ?User $actor = null, ?string $ip = null): array
     {
-        return $this->applyMany($sites, fn (Site $site) => $this->redeploy($site, $actor, $ip));
+        return $this->applyMany($sites, function (Site $site) use ($actor, $ip): void {
+            $this->redeploy($site, $actor, $ip);
+        });
     }
 
     /**
@@ -372,11 +384,12 @@ class CoolifyDeploySettings
         DeploymentTrigger $trigger,
         ?User $actor,
         ?string $ip = null,
+        ?Deployment $into = null,
     ): Deployment {
         $channel = $site->channel instanceof Channel ? $site->channel : Channel::from((string) $site->channel);
         $uuid = $result->firstDeploymentUuid();
 
-        $deployment = $site->deployments()->create([
+        $values = [
             'channel' => $channel,
             'trigger' => $trigger,
             'coolify_deployment_uuid' => $uuid,
@@ -385,7 +398,17 @@ class CoolifyDeploySettings
             'finished_at' => $uuid === null ? now() : null,
             'requested_by' => $actor?->id,
             'error_message' => $uuid === null ? 'Coolify did not return a deployment uuid.' : null,
-        ]);
+        ];
+
+        if ($into instanceof Deployment) {
+            // The waiting row keeps its id, requester and queue history; it only
+            // turns into the live build.
+            $values['requested_by'] = $into->requested_by ?? $values['requested_by'];
+            $into->forceFill($values)->save();
+            $deployment = $into;
+        } else {
+            $deployment = $site->deployments()->create($values);
+        }
 
         if ($uuid !== null) {
             PollDeploymentJob::dispatch($deployment->id, $actor?->id, $ip);

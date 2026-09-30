@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Ops;
 
 use App\Enums\Channel;
 use App\Enums\DeployGate;
+use App\Enums\DeploymentStatus;
+use App\Enums\WaitingDeployAction;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\QueuesOpsJob;
 use App\Http\Requests\Ops\BulkAutoDeploySiteRequest;
@@ -11,10 +13,12 @@ use App\Http\Requests\Ops\BulkDeployGateRequest;
 use App\Http\Requests\Ops\BulkPinSiteRequest;
 use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\PinSiteRequest;
+use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifySiteSync;
 use App\Services\Ops\BulkResultSummary;
+use App\Services\Ops\WaitingDeployQueue;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\ComposePackException;
@@ -59,6 +63,7 @@ class SiteCoolifyOpsController extends Controller
             'site' => $site,
             'snapshot' => $snapshot,
             'deployments' => $site->deployments()
+                ->notWaiting()
                 ->orderByDesc('started_at')
                 ->orderByDesc('id')
                 ->limit(25)
@@ -224,17 +229,13 @@ class SiteCoolifyOpsController extends Controller
         return back()->with('status', $this->bulkFlash($result, __('rollouts.bulk.done', ['gate' => $gate->label()])));
     }
 
-    public function pin(PinSiteRequest $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
+    public function pin(PinSiteRequest $request, Site $site, WaitingDeployQueue $queue): RedirectResponse
     {
         $this->authorize('update', $site);
 
-        try {
-            $settings->pin($site, (string) $request->validated('ref'), $request->user(), $request->ip());
-        } catch (ComposePackException $exception) {
-            return back()->with('error', $exception->getMessage());
-        }
-
-        return back()->with('status', __('site_ops.pin.done', ['name' => $site->name]));
+        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::Pin, [
+            'ref' => (string) $request->validated('ref'),
+        ], __('site_ops.pin.done', ['name' => $site->name]));
     }
 
     public function sync(Request $request, Site $site, CoolifySiteSync $sync): RedirectResponse|JsonResponse
@@ -497,43 +498,67 @@ class SiteCoolifyOpsController extends Controller
             ->with('status', __('sites.flash.channel_get'));
     }
 
-    public function followHead(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
+    public function followHead(Request $request, Site $site, WaitingDeployQueue $queue): RedirectResponse
     {
         $this->authorize('update', $site);
 
-        try {
-            $settings->followHead($site, $request->user(), $request->ip());
-        } catch (ComposePackException $exception) {
-            return back()->with('error', $exception->getMessage());
-        }
-
-        return back()->with('status', __('site_ops.pin.follow_done', ['name' => $site->name]));
+        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::FollowHead, [], __('site_ops.pin.follow_done', ['name' => $site->name]));
     }
 
-    public function updateHead(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
+    public function updateHead(Request $request, Site $site, WaitingDeployQueue $queue): RedirectResponse
     {
         $this->authorize('update', $site);
 
-        try {
-            $settings->updateToHead($site, $request->user(), $request->ip());
-        } catch (ComposePackException $exception) {
-            return back()->with('error', $exception->getMessage());
-        }
-
-        return back()->with('status', __('site_ops.pin.update_head_done', ['name' => $site->name]));
+        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::UpdateHead, [], __('site_ops.pin.update_head_done', ['name' => $site->name]));
     }
 
-    public function deploy(Request $request, Site $site, CoolifyDeploySettings $settings): RedirectResponse
+    public function deploy(Request $request, Site $site, WaitingDeployQueue $queue): RedirectResponse
     {
         $this->authorize('update', $site);
 
+        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::Redeploy, ['force' => true], __('site_ops.redeploy.done', ['name' => $site->name]));
+    }
+
+    /**
+     * Cancel a deploy still waiting in the Plane line. Nothing reached Coolify,
+     * so this never calls it.
+     */
+    public function cancelWaiting(Request $request, Site $site, Deployment $deployment, WaitingDeployQueue $queue): RedirectResponse
+    {
+        $this->authorize('update', $site);
+        abort_unless((string) $deployment->site_id === (string) $site->id, 404);
+
+        if ($deployment->status !== DeploymentStatus::Waiting) {
+            return back()->with('error', __('site_ops.queue.cancel_unavailable'));
+        }
+
+        $deployment->setRelation('site', $site);
+        $queue->cancel($deployment, $request->user(), $request->ip());
+
+        return back()->with('status', __('site_ops.queue.cancel_done', ['name' => $site->name]));
+    }
+
+    /**
+     * One single-site deploy: started on Coolify, or queued in Plane when the
+     * host is at its build cap. The build cap is never an error here.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function requestDeploy(
+        Request $request,
+        Site $site,
+        WaitingDeployQueue $queue,
+        WaitingDeployAction $action,
+        array $payload,
+        string $startedMessage,
+    ): RedirectResponse {
         try {
-            $settings->redeploy($site, $request->user(), $request->ip());
+            $outcome = $queue->request($site, $action, $payload, $request->user(), $request->ip());
         } catch (ComposePackException $exception) {
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('status', __('site_ops.redeploy.done', ['name' => $site->name]));
+        return back()->with('status', $outcome->flash($startedMessage));
     }
 
     public function bulkDeploy(BulkSiteIdsRequest $request, CoolifyDeploySettings $settings): RedirectResponse|JsonResponse

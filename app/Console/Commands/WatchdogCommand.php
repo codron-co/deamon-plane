@@ -149,8 +149,10 @@ class WatchdogCommand extends Command
             ->whereIn('status', [SiteStatus::Provisioning->value, SiteStatus::Deploying->value])
             ->where('updated_at', '<', now()->subHours(self::SITE_STALL_HOURS))
             ->whereDoesntHave('deployments', function ($query): void {
+                // A switch / provision waiting in the Plane deploy line is not
+                // stuck: the dispatcher starts it, or fails it at its age limit.
                 $query->whereNull('finished_at')
-                    ->whereIn('status', [DeploymentStatus::Queued->value, DeploymentStatus::InProgress->value]);
+                    ->whereIn('status', [DeploymentStatus::Waiting->value, DeploymentStatus::Queued->value, DeploymentStatus::InProgress->value]);
             })
             ->limit($this->budget())
             ->get();

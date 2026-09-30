@@ -217,7 +217,9 @@ class OpsJobRunner
         $actor = $this->actor($job);
         $ip = $this->ip($job);
 
-        $result = $this->fanout($job, $sites, fn (Site $site) => $settings->redeploy($site, $actor, $ip));
+        $result = $this->fanout($job, $sites, function (Site $site) use ($settings, $actor, $ip): void {
+            $settings->redeploy($site, $actor, $ip);
+        });
 
         return $this->triggerSummaryFor(__('site_ops.redeploy.bulk'), $result);
     }

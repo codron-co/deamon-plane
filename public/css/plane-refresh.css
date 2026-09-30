@@ -533,7 +533,8 @@ details[open] > summary.btn-secondary {
 .status-stopped,
 .status-archived,
 .status-cancelled,
-.status-queued {
+.status-queued,
+.status-waiting {
     border-color: var(--border);
     background: var(--surface-overlay);
     color: var(--text-faint);

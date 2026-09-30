@@ -57,7 +57,7 @@ class CoolifyDeployGate
 
     public function assertCanStartDeploy(Site $site): void
     {
-        $max = max(1, (int) config('ops.coolify.deploy.max_concurrent_per_server', 1));
+        $max = $this->maxConcurrent();
         $inFlight = $this->blockingCount($site);
 
         if ($inFlight >= $max) {
@@ -71,6 +71,55 @@ class CoolifyDeployGate
     public function unfinishedCount(Site $site): int
     {
         return $this->openDeployments($site)->count();
+    }
+
+    public function maxConcurrent(): int
+    {
+        return max(1, (int) config('ops.coolify.deploy.max_concurrent_per_server', 2));
+    }
+
+    /**
+     * Whether a new build may start on the site's host right now. Counts every
+     * open build on the host, sweep or not: the Plane waiting line must never
+     * start a row just because a sweep in this process looks past its own builds.
+     */
+    public function hasRoom(Site $site): bool
+    {
+        return $this->unfinishedCount($site) < $this->maxConcurrent();
+    }
+
+    /**
+     * The host a site's builds count against: connection first, else server
+     * uuid, else the site alone. `OpsCoolifyDeployQueue::queueStanding()` and the
+     * Plane waiting line group by the same key.
+     */
+    public static function hostKey(Site $site): string
+    {
+        return self::hostKeyFor($site->coolify_connection_id, $site->coolify_server_uuid, (string) $site->getKey());
+    }
+
+    public static function hostKeyFor(mixed $connectionId, mixed $serverUuid, string $siteId): string
+    {
+        if ($connectionId !== null && $connectionId !== '') {
+            return 'conn:'.$connectionId;
+        }
+
+        $serverUuid = trim((string) $serverUuid);
+        if ($serverUuid !== '') {
+            return 'server:'.$serverUuid;
+        }
+
+        return 'site:'.$siteId;
+    }
+
+    /**
+     * Sites that share the site's Coolify host (the site itself included).
+     *
+     * @return Builder<Site>
+     */
+    public function peersOf(Site $site): Builder
+    {
+        return $this->peerSites($site);
     }
 
     /**

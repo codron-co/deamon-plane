@@ -457,7 +457,7 @@ parameters:
 			path: app/Models/Deployment.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type App\\Enums\\DeploymentStatus\:\:Cancelled\|App\\Enums\\DeploymentStatus\:\:Failed\|App\\Enums\\DeploymentStatus\:\:Finished\|App\\Enums\\DeploymentStatus\:\:InProgress\|App\\Enums\\DeploymentStatus\:\:Queued\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non\-nullable type App\\Enums\\DeploymentStatus\:\:Cancelled\|App\\Enums\\DeploymentStatus\:\:Failed\|App\\Enums\\DeploymentStatus\:\:Finished\|App\\Enums\\DeploymentStatus\:\:InProgress\|App\\Enums\\DeploymentStatus\:\:Queued\|App\\Enums\\DeploymentStatus\:\:Waiting\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Models/Deployment.php

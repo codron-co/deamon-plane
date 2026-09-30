@@ -635,6 +635,7 @@ return [
         'domain_removed_partial' => 'Plane kaydı silindi ama bir adım tamamlanamadı: :reason',
         'domain_redeploy_queued' => 'Coolify’e bağlandı ve yeniden deploy kuyruğa alındı; host derleme bitince yanıt verir.',
         'domain_deploy_busy' => 'Coolify’e bağlandı ama deploy sırası dolu. Derleme bitince siteyi elle Tekrar deploy edin; host o zamana kadar yanıt vermez.',
+        'domain_deploy_queued' => 'Coolify’e bağlandı; sunucunun derleme sınırı dolu olduğu için deploy sıraya alındı ve yer açılınca kendiliğinden başlar.',
         'domain_waiting_dns' => 'Cloudflare zone hâlâ bekliyor. DNS’i onayladığınızda Coolify’e bağlanıp deploy edilecek.',
         'domain_zone_pending' => ':host için ayrı Cloudflare zone açıldı. Registrar’da nameserver’ları şuna çevirin: :ns',
         'attached' => 'Mevcut Coolify uygulaması bağlandı. Yeni stack oluşturulmadı.',

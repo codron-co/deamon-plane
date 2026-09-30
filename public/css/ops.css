@@ -1090,8 +1090,37 @@ button.status-chip {
 }
 
 .status-cancelled,
-.status-queued {
+.status-queued,
+.status-waiting {
     color: var(--text-faint);
+}
+
+.deployments-waiting {
+    margin: 0 0 16px;
+}
+
+.deployments-waiting-title {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+}
+
+.deployments-waiting-list {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.deployments-waiting-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.deployments-waiting-row form {
+    margin-left: auto;
 }
 
 .status-in_progress {

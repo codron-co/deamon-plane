@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Enums\Channel;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
+use App\Enums\WaitingDeployAction;
 use App\Jobs\DiagnoseDeploymentJob;
+use App\Jobs\StartWaitingDeploysJob;
 use App\Services\Sites\Diagnosis\DeploymentDiagnosis;
 use Carbon\CarbonImmutable;
 use Database\Factories\DeploymentFactory;
@@ -36,6 +38,10 @@ class Deployment extends Model
         'error_message',
         'diagnosis',
         'requested_by',
+        'queue_action',
+        'queue_payload',
+        'queue_attempts',
+        'queued_at',
     ];
 
     /**
@@ -50,6 +56,10 @@ class Deployment extends Model
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
             'diagnosis' => 'array',
+            'queue_action' => WaitingDeployAction::class,
+            'queue_payload' => 'array',
+            'queue_attempts' => 'integer',
+            'queued_at' => 'datetime',
         ];
     }
 
@@ -68,9 +78,59 @@ class Deployment extends Model
             if ($deployment->diagnosis !== null) {
                 return;
             }
+            // A Plane waiting row that failed before Coolify ever built it (age
+            // limit, refused start) has no build to diagnose; its own reason says it.
+            if ($deployment->queue_action !== null && blank($deployment->coolify_deployment_uuid)) {
+                return;
+            }
 
             DiagnoseDeploymentJob::dispatch($deployment->id)->afterCommit();
         });
+
+        // A build that ends frees a slot on its Coolify host: hand it to the Plane
+        // waiting line. The every-minute tick is the safety net for paths that
+        // end a row without a model save.
+        static::saved(static function (Deployment $deployment): void {
+            if (! $deployment->wasChanged('status')) {
+                return;
+            }
+            if (! in_array($deployment->status, [DeploymentStatus::Finished, DeploymentStatus::Failed, DeploymentStatus::Cancelled], true)) {
+                return;
+            }
+
+            $previous = $deployment->getPrevious()['status'] ?? null;
+            $previous = $previous instanceof DeploymentStatus ? $previous->value : $previous;
+            if (! in_array($previous, [DeploymentStatus::Queued->value, DeploymentStatus::InProgress->value], true)) {
+                return;
+            }
+
+            if (! self::query()->where('status', DeploymentStatus::Waiting)->exists()) {
+                return;
+            }
+
+            StartWaitingDeploysJob::dispatch()->afterCommit();
+        });
+    }
+
+    /**
+     * @param  Builder<Deployment>  $query
+     * @return Builder<Deployment>
+     */
+    public function scopeWaiting(Builder $query): Builder
+    {
+        return $query->where('status', DeploymentStatus::Waiting);
+    }
+
+    /**
+     * Everything except rows still waiting in Plane: the deployment history the
+     * Deployments tab and "latest deployment" readers mean.
+     *
+     * @param  Builder<Deployment>  $query
+     * @return Builder<Deployment>
+     */
+    public function scopeNotWaiting(Builder $query): Builder
+    {
+        return $query->where('status', '!=', DeploymentStatus::Waiting->value);
     }
 
     public function diagnosis(): ?DeploymentDiagnosis
@@ -156,9 +216,11 @@ class Deployment extends Model
     public function toWidget(): array
     {
         $site = $this->site;
-        $active = in_array($this->status, [DeploymentStatus::Queued, DeploymentStatus::InProgress], true);
+        $waiting = $this->status === DeploymentStatus::Waiting;
+        $active = $waiting || in_array($this->status, [DeploymentStatus::Queued, DeploymentStatus::InProgress], true);
         $widgetStatus = match ($this->status) {
-            DeploymentStatus::Queued => 'queued',
+            // Held in Plane: the widget renders it like any other wait (inert rail).
+            DeploymentStatus::Waiting, DeploymentStatus::Queued => 'queued',
             DeploymentStatus::Failed => 'failed',
             DeploymentStatus::Cancelled => 'cancelled',
             DeploymentStatus::Finished => 'completed',
@@ -170,7 +232,10 @@ class Deployment extends Model
         $kind = __('ops.jobs.deployment');
         $subject = trim((string) ($site?->name ?? ''));
         $statusLabel = $this->status?->label() ?? '';
-        $detail = $this->failureHeadline() ?? ($this->trigger?->label() ?? '');
+        $detail = $this->failureHeadline()
+            ?? ($waiting && $this->queue_action instanceof WaitingDeployAction
+                ? $this->queue_action->label()
+                : ($this->trigger?->label() ?? ''));
 
         $message = trim(implode(' · ', array_filter([$detail, $statusLabel], static fn (string $part): bool => $part !== '')));
 
@@ -190,8 +255,10 @@ class Deployment extends Model
             'url' => $site !== null ? route('ops.sites.deployments.show', [$site, $this]) : null,
             'deployment_id' => $this->id,
             'coolify_deployment_uuid' => $this->coolify_deployment_uuid,
+            'plane_waiting' => $waiting,
             'actions' => [
-                'cancel' => $active && filled($this->coolify_deployment_uuid),
+                // A Plane waiting row has no Coolify uuid yet; cancelling it is local.
+                'cancel' => $waiting || ($active && filled($this->coolify_deployment_uuid)),
                 'force_start' => $this->status === DeploymentStatus::Queued && filled($this->coolify_deployment_uuid),
                 'dismiss' => in_array($widgetStatus, ['completed', 'failed', 'cancelled'], true),
             ],

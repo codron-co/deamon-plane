@@ -217,7 +217,8 @@ class FleetRolloutTest extends TestCase
 
     public function test_fanout_continues_in_batches(): void
     {
-        config(['ops.ci.fanout_batch' => 1]);
+        // One build per host, so the first build visibly holds the gate.
+        config(['ops.ci.fanout_batch' => 1, 'ops.coolify.deploy.max_concurrent_per_server' => 1]);
         $this->site('regular-a');
         $this->site('regular-b');
 

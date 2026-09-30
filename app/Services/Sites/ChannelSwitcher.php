@@ -124,7 +124,11 @@ class ChannelSwitcher
         SwitchSiteChannelJob::dispatch($siteId, $actor->id, $ip);
     }
 
-    public function switchOnCoolify(Site $site, ?int $actorUserId = null, ?string $ip = null): Deployment
+    /**
+     * `$into` is the Plane `waiting` row the dispatcher is starting; it becomes
+     * the live channel-switch deployment instead of a new row.
+     */
+    public function switchOnCoolify(Site $site, ?int $actorUserId = null, ?string $ip = null, ?Deployment $into = null): Deployment
     {
         $appUuid = (string) $site->coolify_app_uuid;
         $target = $site->desired_channel instanceof Channel
@@ -143,19 +147,26 @@ class ChannelSwitcher
             'DEAMON_CHANNEL' => $target->value,
         ]);
 
-        app(DeployPreflight::class)->run($site, $actorUserId !== null ? \App\Models\User::query()->find($actorUserId) : null, $ip);
+        app(DeployPreflight::class)->run($site, $actorUserId !== null ? User::query()->find($actorUserId) : null, $ip);
 
         $deployed = $coolify->deploy($appUuid);
         $deploymentUuid = $deployed->firstDeploymentUuid();
 
-        $deployment = $site->deployments()->create([
+        $values = [
             'channel' => $target,
             'trigger' => DeploymentTrigger::ChannelSwitch,
             'coolify_deployment_uuid' => $deploymentUuid,
             'status' => $deploymentUuid === null ? DeploymentStatus::Failed : DeploymentStatus::InProgress,
             'started_at' => now(),
-            'requested_by' => $actorUserId,
-        ]);
+            'requested_by' => $into->requested_by ?? $actorUserId,
+        ];
+
+        if ($into instanceof Deployment) {
+            $into->forceFill($values)->save();
+            $deployment = $into;
+        } else {
+            $deployment = $site->deployments()->create($values);
+        }
 
         if ($deploymentUuid === null) {
             $this->markFailed($site, 'Coolify did not return a deployment uuid.', $deployment, $actorUserId, $ip);

@@ -116,4 +116,37 @@ return [
         'purge_limit' => 'Kalıcı silme bir seferde en çok :limit sitede çalışır. Daha az site seçin.',
         'confirm_title' => 'Toplu işlemi onayla',
     ],
+
+    // Plane deploy line: a single-site deploy that found the server's build cap
+    // full waits here (status `waiting`) and starts FIFO once a slot frees.
+    'queue' => [
+        'status' => 'Plane sırasında',
+        'actions' => [
+            'redeploy' => 'Tekrar deploy',
+            'update_head' => 'HEAD’e güncelle',
+            'follow_head' => 'HEAD’de deploy',
+            'pin' => 'Commite geç',
+            'channel_switch' => 'Kanal geçişi',
+            'provision' => 'İlk kurulum derlemesi',
+        ],
+        'queued' => 'Sunucuda :running derleme sürüyor; deploy sıraya alındı (sırada :position.) Yer açılınca kendiliğinden başlar.',
+        'already_queued' => 'Bu deploy zaten sırada (sırada :position; sunucuda :running derleme sürüyor). Yer açılınca kendiliğinden başlar.',
+        'position' => 'sırada :position',
+        'widget_position' => 'Plane sırasında :position / :depth',
+        'summary' => ':count Plane sırasında',
+        'since' => 'sıraya girdi :time',
+        'tab_title' => 'Sırada bekleyen deploylar',
+        'tab_hint' => 'Sunucunun eşzamanlı derleme üst sınırı dolu olduğu için Plane’de bekleyen deploylar. Bir derleme bitince en eskisi kendiliğinden başlar. Pin, HEAD ve oto-deploy değişiklikleri de ancak deploy başlarken uygulanır; sıradan çıkarılan bir deploy uygulamayı hiç değiştirmez.',
+        'cancel' => 'Sıradan çıkar',
+        'cancel_title' => 'Sıradaki deploy iptal edilsin mi?',
+        'cancel_confirm' => ':name için sırada bekleyen deploy iptal edilsin mi? Coolify’a henüz hiçbir şey gönderilmedi; uygulama olduğu gibi kalır.',
+        'cancel_done' => ':name için sıradaki deploy iptal edildi.',
+        'cancel_unavailable' => 'Bu deploy artık sırada değil: başladı ya da kapandı.',
+        'cancelled' => 'Sıradan çıkarıldı; Coolify’a hiçbir şey gönderilmedi.',
+        'site_gone' => 'Site silindi ya da Coolify uygulaması yok; sıradaki deploy iptal edildi.',
+        'expired' => ':minutes dakika içinde sunucuda derleme yeri açılmadı; sıradaki deploy başlatılmadı.',
+        'stale' => 'Site artık bu işlemi beklemiyor; sıradaki deploy iptal edildi.',
+        'already_deployed' => 'Sıraya girdikten sonra aynı hedefle başarılı bir deploy bitti; ayrıca derlenmedi.',
+        'start_failed' => 'Sıradaki deploy başlatılamadı: :error',
+    ],
 ];

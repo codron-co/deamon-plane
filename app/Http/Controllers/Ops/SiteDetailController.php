@@ -15,6 +15,7 @@ use App\Services\Coolify\CoolifyDeploymentSync;
 use App\Services\Mail\PlatformMailResolver;
 use App\Services\Mail\PlatformNotificationCatalog;
 use App\Services\Mail\SiteMailOrderBinder;
+use App\Services\Ops\WaitingDeployQueue;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -86,11 +87,14 @@ class SiteDetailController extends Controller
             'channelSwitchTargets' => $this->channelSwitchTargets($site),
             'channelSwitchInProgress' => $site->status === SiteStatus::Deploying,
             'deployments' => $site->deployments()
+                ->notWaiting()
                 ->with('requestedBy')
                 ->orderByDesc('started_at')
                 ->orderByDesc('id')
                 ->limit(25)
                 ->get(),
+            // Deploys held in the Plane line (host at its build cap), with their place.
+            'waitingDeployments' => app(WaitingDeployQueue::class)->forSite($site),
             'coolifyAppUrl' => $site->coolifyUiUrl(),
             'themeInstallations' => $site->themeInstallations,
             'assignableThemes' => $this->assignableThemes($site),

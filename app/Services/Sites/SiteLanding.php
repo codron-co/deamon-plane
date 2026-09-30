@@ -2,6 +2,7 @@
 
 namespace App\Services\Sites;
 
+use App\Enums\WaitingDeployAction;
 use App\Models\CloudflareSetting;
 use App\Models\CoolifyConnection;
 use App\Models\Site;
@@ -13,6 +14,7 @@ use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Cloudflare\CloudflareZoneService;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Ops\WaitingDeployQueue;
 use Throwable;
 
 class SiteLanding
@@ -25,10 +27,12 @@ class SiteLanding
 
     public const BIND_DEPLOY_BUSY = 'deploy_busy';
 
+    /** The host's build cap was full: the redeploy waits in the Plane deploy line. */
+    public const BIND_DEPLOY_QUEUED = 'deploy_queued';
+
     public function __construct(
         private readonly CloudflareZoneService $zones,
         private readonly CoolifyApplicationService $coolify,
-        private readonly CoolifyDeploySettings $deploys,
     ) {}
 
     /**
@@ -53,12 +57,12 @@ class SiteLanding
         $fresh->domains()->where('is_temporary', false)->update(['verified_at' => now()]);
 
         try {
-            $this->deploys->redeploy($fresh, $actor, $ip);
+            $outcome = app(WaitingDeployQueue::class)->request($fresh, WaitingDeployAction::Redeploy, ['force' => true], $actor, $ip);
         } catch (ComposePackException) {
             return self::BIND_DEPLOY_BUSY;
         }
 
-        return self::BIND_REDEPLOYED;
+        return $outcome->queued ? self::BIND_DEPLOY_QUEUED : self::BIND_REDEPLOYED;
     }
 
     public static function bindFlashSuffix(string $outcome): string
@@ -66,6 +70,7 @@ class SiteLanding
         return match ($outcome) {
             self::BIND_REDEPLOYED => ' '.__('sites.flash.domain_redeploy_queued'),
             self::BIND_DEPLOY_BUSY => ' '.__('sites.flash.domain_deploy_busy'),
+            self::BIND_DEPLOY_QUEUED => ' '.__('sites.flash.domain_deploy_queued'),
             self::BIND_WAITING_DNS => ' '.__('sites.flash.domain_waiting_dns'),
             default => '',
         };

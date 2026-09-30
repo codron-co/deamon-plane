@@ -140,7 +140,7 @@ class BulkDeployWaitingBucketTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_the_gate_still_refuses_a_single_redeploy_after_the_sweep_closes(): void
+    public function test_a_single_redeploy_after_the_sweep_waits_in_the_plane_line(): void
     {
         $sites = $this->sites(2);
         Http::fake(fn (Request $request) => $this->coolifyResponse($request));
@@ -148,16 +148,17 @@ class BulkDeployWaitingBucketTest extends TestCase
         app(OpsJobRunner::class)->run($this->job('sites.bulk_deploy', $sites));
 
         // The sweep left two open builds on the connection; an unrelated deploy
-        // must still queue behind them.
+        // must still queue behind them — in the Plane line, not as an error.
         $this->actingAs($this->operator())
             ->post(route('ops.sites.deploy', $sites[0]))
             ->assertRedirect()
-            ->assertSessionHas('error', __('coolify.errors.deploy_busy', [
-                'max' => 1,
-                'count' => 2,
+            ->assertSessionHas('status', __('site_ops.queue.queued', [
+                'running' => 2,
+                'position' => 1,
             ]));
 
-        $this->assertSame(1, $sites[0]->deployments()->count());
+        $this->assertSame(1, $sites[0]->deployments()->notWaiting()->count());
+        $this->assertSame(1, $sites[0]->deployments()->waiting()->count());
     }
 
     /**

@@ -2,6 +2,14 @@
 
 Durable orchestrator state. Do not re-dispatch completed tasks.
 
+## Deploy line: a full per-server build cap queues instead of refusing (2026-09-30)
+
+- Status: **committed on `alpha`**. Trigger: operators hitting `Bu sunucuda zaten bir Coolify derlemesi sürüyor (… üst sınır 1)` on Tekrar deploy / HEAD'de deploy and having to retry by hand.
+- `ops.coolify.deploy.max_concurrent_per_server` default **2** (env override kept). New status `deployments.status = waiting` + columns `queue_action`, `queue_payload`, `queue_attempts`, `queued_at` (migration `2026_09_30_210000`). `WaitingDeployQueue::request()` starts now or queues (host lock shared with the dispatcher); `WaitingDeployDispatcher` + `StartWaitingDeploysJob` start rows FIFO per host from the `Deployment` saved hook and an every-minute schedule; expiry 120 min, 5 transient attempts; stale / site-gone / already-deployed rows are cancelled.
+- Queued paths: site Tekrar deploy, HEAD'de deploy, HEAD'e güncelle, Commite geç, channel switch build, first provision build, domain-bind redeploy (+ provision follow-up). Side effects (unpin, auto-deploy, PATCHes, preflight) run at **start** time. Bulk sweeps / CI rollouts / App-health fixes unchanged.
+- UI: flash `Sunucuda N derleme sürüyor; deploy sıraya alındı (sırada K.)`; Deployments tab "Sırada bekleyen deploylar" + **Sıradan çıkar**; `/jobs` widget `Plane sırasında K / N` with cancel. Audits `site.deploy_queued|queue_started|queue_cancelled|queue_failed`.
+- Docs: [../modules/ops-sites.md](../modules/ops-sites.md) ("Plane deploy line"), [../modules/coolify-webhooks.md](../modules/coolify-webhooks.md). Tests: `WaitingDeployQueueTest` (14), `CoolifyDeployGateTest`, `BulkDeployWaitingBucketTest` updated.
+
 ## Arama & Analitik from Plane — Search Console + GA4/GTM (2026-09-30)
 
 - Status: **committed on `alpha`**. CMS 1.2.49 (`codron-co/deamon` alpha `3ac17600`): `GET`/`POST /internal/control/v1/search-integrations` (partial, managed subset only, raw HTML refused), `managed` marker + admin notice, health `search_integrations`, verification files pass the maintenance gate.

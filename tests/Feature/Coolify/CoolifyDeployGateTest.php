@@ -32,6 +32,8 @@ class CoolifyDeployGateTest extends TestCase
 
         $this->seed(RoleSeeder::class);
         Http::preventStrayRequests();
+        // These cases pin the gate's refusal semantics at a cap of one build.
+        config()->set('ops.coolify.deploy.max_concurrent_per_server', 1);
     }
 
     public function test_gate_blocks_when_peer_site_has_unfinished_deployment(): void
@@ -89,7 +91,7 @@ class CoolifyDeployGateTest extends TestCase
         $this->assertSame(0, app(CoolifyDeployGate::class)->unfinishedCount($other));
     }
 
-    public function test_redeploy_is_blocked_while_connection_has_open_deploy(): void
+    public function test_single_redeploy_waits_in_plane_while_connection_has_open_deploy(): void
     {
         [$busy, $peer] = $this->peerSites();
 
@@ -105,13 +107,14 @@ class CoolifyDeployGateTest extends TestCase
         $this->actingAs($this->operator())
             ->post(route('ops.sites.deploy', $peer))
             ->assertRedirect()
-            ->assertSessionHas('error', __('coolify.errors.deploy_busy', [
-                'max' => 1,
-                'count' => 1,
+            ->assertSessionHas('status', __('site_ops.queue.queued', [
+                'running' => 1,
+                'position' => 1,
             ]));
 
         Http::assertNothingSent();
-        $this->assertSame(0, $peer->deployments()->count());
+        $this->assertSame(1, $peer->deployments()->count());
+        $this->assertSame(DeploymentStatus::Waiting, $peer->deployments()->first()?->status);
     }
 
     public function test_redeploy_settings_wraps_busy_as_compose_pack_exception(): void
