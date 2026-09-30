@@ -177,6 +177,57 @@ class CoolifyDeployGateTest extends TestCase
     /**
      * @return array{0: Site, 1: Site}
      */
+    public function test_gate_holds_deploys_while_the_host_is_overloaded(): void
+    {
+        [$reporter, $peer] = $this->peerSites();
+        config()->set('ops.coolify.deploy.max_load_per_cpu', 6);
+
+        // 5 min load 237 on 8 CPUs: the 2026-09-30 build storm.
+        $reporter->forceFill([
+            'last_health_at' => now()->subMinutes(3),
+            'last_health_payload' => ['status' => 'ok', 'host_load' => [180.5, 237.8, 196.7], 'host_cpus' => 8],
+        ])->save();
+
+        $gate = app(CoolifyDeployGate::class);
+        $this->assertEqualsWithDelta(29.7, $gate->hostLoadPerCpu($peer), 0.1);
+        $this->assertFalse($gate->hasRoom($peer));
+
+        $this->expectException(CoolifyDeployBusyException::class);
+        $gate->assertCanStartDeploy($peer);
+    }
+
+    public function test_gate_ignores_normal_stale_or_missing_load(): void
+    {
+        [$reporter, $peer] = $this->peerSites();
+        config()->set('ops.coolify.deploy.max_load_per_cpu', 6);
+        $gate = app(CoolifyDeployGate::class);
+
+        // No reading at all (CMS before 1.2.63): never blocks.
+        $this->assertNull($gate->hostLoadPerCpu($peer));
+        $this->assertTrue($gate->hasRoom($peer));
+
+        // Everyday load on a shared 8-CPU host.
+        $reporter->forceFill([
+            'last_health_at' => now()->subMinutes(2),
+            'last_health_payload' => ['host_load' => [30.1, 28.0, 27.5], 'host_cpus' => 8],
+        ])->save();
+        $this->assertTrue($gate->hasRoom($peer));
+        $gate->assertCanStartDeploy($peer);
+
+        // An old overload reading says nothing about now.
+        $reporter->forceFill([
+            'last_health_at' => now()->subHour(),
+            'last_health_payload' => ['host_load' => [240.0, 237.0, 200.0], 'host_cpus' => 8],
+        ])->save();
+        $this->assertNull($gate->hostLoadPerCpu($peer));
+        $this->assertTrue($gate->hasRoom($peer));
+
+        // 0 turns the check off.
+        $reporter->forceFill(['last_health_at' => now()])->save();
+        config()->set('ops.coolify.deploy.max_load_per_cpu', 0);
+        $this->assertTrue($gate->hasRoom($peer));
+    }
+
     private function peerSites(): array
     {
         $connection = CoolifyConnection::factory()->create([

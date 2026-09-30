@@ -187,6 +187,7 @@ return [
         'unreachable' => 'Coolify’ye ulaşılamadı (bağlantı hatası veya zaman aşımı).',
         'no_base_url' => 'Coolify base URL ayarlı değil.',
         'not_configured' => 'Coolify bağlantısı ayarlı değil.',
+        'deploy_host_overloaded' => 'Sunucu aşırı yüklü (5 dk yük çekirdek başına :load, sınır :max). Deploy, yük düşene kadar bekler.',
         'deploy_busy' => 'Bu sunucuda zaten bir Coolify derlemesi sürüyor (:count devam ediyor, üst sınır :max). Bitmesini bekleyip tekrar deneyin.',
         'compose_domains_before_raw' => 'Domain bağlanamadı: Coolify henüz compose dosyasını git’ten yüklemedi. Önce bir deploy bitmeli (compose yüklensin), sonra domain tekrar bağlanır. Plane’deki domain doğru olabilir; sorun sıralama.',
         'errors_heading' => 'Coolify hataları:',

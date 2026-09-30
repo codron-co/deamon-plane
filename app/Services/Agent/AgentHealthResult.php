@@ -74,6 +74,10 @@ final class AgentHealthResult
                 // CMS 1.2.30+: false = themes/default on the volume is older than the
                 // image seed, so core:: views this CMS needs may be missing. Restart heals it.
                 'core_theme_in_sync' => self::nullableBool(is_array($payload['core_theme'] ?? null) ? ($payload['core_theme']['in_sync'] ?? null) : null),
+                // CMS 1.2.63+: the Docker host's 1/5/15 min load and CPU count.
+                // CoolifyDeployGate holds new builds back while the host is overloaded.
+                'host_load' => self::hostLoad($payload['host_load'] ?? null),
+                'host_cpus' => self::positiveInt($payload['host_cpus'] ?? null),
                 'http_status' => $httpStatus,
             ]),
         );
@@ -142,6 +146,31 @@ final class AgentHealthResult
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * @return list<float>|null
+     */
+    private static function hostLoad(mixed $value): ?array
+    {
+        if (! is_array($value) || count($value) < 3) {
+            return null;
+        }
+
+        $load = [];
+        foreach (array_slice(array_values($value), 0, 3) as $item) {
+            if (! is_int($item) && ! is_float($item)) {
+                return null;
+            }
+            $load[] = max(0.0, (float) $item);
+        }
+
+        return $load;
+    }
+
+    private static function positiveInt(mixed $value): ?int
+    {
+        return is_int($value) && $value > 0 ? $value : null;
     }
 
     private static function nullableBool(mixed $value): ?bool

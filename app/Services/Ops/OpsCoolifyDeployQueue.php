@@ -147,8 +147,8 @@ class OpsCoolifyDeployQueue
     /**
      * Where every open deploy stands in line on its own Coolify host.
      *
-     * `max_concurrent_per_server` is 1 by default, so a 23-site bulk deploy is one
-     * build plus 22 waits. A row that only says "kuyrukta" cannot tell the operator
+     * `max_concurrent_per_server` is 2 by default, so a 23-site bulk deploy is two
+     * builds plus 21 waits. A row that only says "kuyrukta" cannot tell the operator
      * whether that means two minutes or an hour, so the widget needs the position
      * inside the host queue and the depth of that queue.
      *

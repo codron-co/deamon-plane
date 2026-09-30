@@ -194,6 +194,13 @@ return [
         'deploy' => [
             'max_concurrent_per_server' => (int) env('COOLIFY_MAX_CONCURRENT_PER_SERVER', 2),
             'waiting_max_minutes' => (int) env('COOLIFY_DEPLOY_WAITING_MAX_MINUTES', 120),
+            // Host load gate: a new build waits while the host's 5 min load per CPU
+            // (reported by the CMS agent health poll, CMS 1.2.63+) is at or above
+            // this. ~30 sites keep an 8-CPU host near 3.5 per CPU; the 2026-09-30
+            // build storm plus a crawler reached ~30. 0 disables the check.
+            'max_load_per_cpu' => (float) env('COOLIFY_DEPLOY_MAX_LOAD_PER_CPU', 6),
+            // A load reading older than this says nothing about the host right now.
+            'load_reading_max_age_minutes' => (int) env('COOLIFY_DEPLOY_LOAD_READING_MAX_AGE_MINUTES', 20),
             'waiting_max_attempts' => (int) env('COOLIFY_DEPLOY_WAITING_MAX_ATTEMPTS', 5),
             // How long an operator click waits for the host lock before it
             // simply joins the line (the dispatcher holds it while starting).

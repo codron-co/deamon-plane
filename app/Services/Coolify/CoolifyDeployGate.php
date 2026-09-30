@@ -66,6 +66,14 @@ class CoolifyDeployGate
                 'count' => $inFlight,
             ]));
         }
+
+        $loadPerCpu = $this->overloadedLoadPerCpu($site);
+        if ($loadPerCpu !== null) {
+            throw new CoolifyDeployBusyException(__('coolify.errors.deploy_host_overloaded', [
+                'load' => number_format($loadPerCpu, 1),
+                'max' => number_format($this->maxLoadPerCpu(), 1),
+            ]));
+        }
     }
 
     public function unfinishedCount(Site $site): int
@@ -85,7 +93,58 @@ class CoolifyDeployGate
      */
     public function hasRoom(Site $site): bool
     {
-        return $this->unfinishedCount($site) < $this->maxConcurrent();
+        return $this->unfinishedCount($site) < $this->maxConcurrent()
+            && $this->overloadedLoadPerCpu($site) === null;
+    }
+
+    /**
+     * The host's 5 minute load per CPU from the freshest agent health poll of any
+     * site on it (every CMS container sees the host's /proc/loadavg). Null when no
+     * site on the host reported one recently (CMS before 1.2.63, agent down).
+     */
+    public function hostLoadPerCpu(Site $site): ?float
+    {
+        $maxAge = max(1, (int) config('ops.coolify.deploy.load_reading_max_age_minutes', 20));
+
+        $peers = $this->peerSites($site)
+            ->whereNotNull('last_health_at')
+            ->where('last_health_at', '>=', now()->subMinutes($maxAge))
+            ->orderByDesc('last_health_at')
+            ->limit(10)
+            ->get(['id', 'last_health_payload']);
+
+        foreach ($peers as $peer) {
+            $payload = is_array($peer->last_health_payload) ? $peer->last_health_payload : [];
+            $load = $payload['host_load'] ?? null;
+            $cpus = $payload['host_cpus'] ?? null;
+
+            if (is_array($load) && isset($load[1]) && is_numeric($load[1]) && is_int($cpus) && $cpus > 0) {
+                return (float) $load[1] / $cpus;
+            }
+        }
+
+        return null;
+    }
+
+    public function maxLoadPerCpu(): float
+    {
+        return max(0.0, (float) config('ops.coolify.deploy.max_load_per_cpu', 6));
+    }
+
+    /**
+     * Load per CPU when it is at or above the cap, else null. Unknown load never
+     * blocks: an old CMS or a silent agent must not freeze every deploy.
+     */
+    private function overloadedLoadPerCpu(Site $site): ?float
+    {
+        $max = $this->maxLoadPerCpu();
+        if ($max <= 0.0) {
+            return null;
+        }
+
+        $loadPerCpu = $this->hostLoadPerCpu($site);
+
+        return $loadPerCpu !== null && $loadPerCpu >= $max ? $loadPerCpu : null;
     }
 
     /**

@@ -187,6 +187,7 @@ return [
         'unreachable' => 'Coolify could not be reached (connection error or timeout).',
         'no_base_url' => 'Coolify base URL is not configured.',
         'not_configured' => 'Coolify connection is not configured.',
+        'deploy_host_overloaded' => 'The server is overloaded (5 min load :load per CPU, limit :max). The deploy waits until the load drops.',
         'deploy_busy' => 'Another Coolify build is already running on this server (:count in flight, max :max). Wait for it to finish, then retry.',
         'compose_domains_before_raw' => 'Domain could not be bound: Coolify has not loaded the compose file from git yet. Finish one deploy first (so compose is loaded), then bind the domain again. The Plane domain may be fine; the problem is ordering.',
         'errors_heading' => 'Coolify errors:',

@@ -107,6 +107,8 @@ class SiteHealthChecker
             'site_status',
             'site_name',
             'core_theme_in_sync',
+            'host_load',
+            'host_cpus',
             'http_status',
         ];
 
