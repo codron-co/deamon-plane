@@ -65,6 +65,41 @@ class FleetFailedDeployWindowTest extends TestCase
         $this->assertNotContains($first->id, $rows->pluck('id')->all());
     }
 
+    public function test_a_failure_fixed_by_a_later_successful_deploy_is_not_counted(): void
+    {
+        $recovered = Site::factory()->create(['name' => 'Recovered']);
+        $fixed = $this->failedDeploy(hoursAgo: 3, site: $recovered);
+        Deployment::factory()->create([
+            'site_id' => $recovered->id,
+            'status' => DeploymentStatus::Finished,
+            'finished_at' => now()->subHour(),
+        ]);
+        $stillBroken = $this->failedDeploy(hoursAgo: 2);
+
+        $kpis = app(FleetDashboardKpis::class);
+
+        $this->assertSame(1, $kpis->failedDeploySiteCount(), 'A site that deployed fine afterwards is not a problem now.');
+        $ids = $kpis->recentFailedDeploys()->pluck('id')->all();
+        $this->assertSame([$stillBroken->id], $ids);
+        $this->assertNotContains($fixed->id, $ids);
+    }
+
+    public function test_a_failure_after_the_last_successful_deploy_still_counts(): void
+    {
+        $site = Site::factory()->create(['name' => 'Broke Again']);
+        Deployment::factory()->create([
+            'site_id' => $site->id,
+            'status' => DeploymentStatus::Finished,
+            'finished_at' => now()->subHours(3),
+        ]);
+        $latest = $this->failedDeploy(hoursAgo: 1, site: $site);
+
+        $kpis = app(FleetDashboardKpis::class);
+
+        $this->assertSame(1, $kpis->failedDeploySiteCount());
+        $this->assertSame([$latest->id], $kpis->recentFailedDeploys()->pluck('id')->all());
+    }
+
     public function test_the_card_and_the_list_agree_and_the_overflow_is_named(): void
     {
         config(['ops.fleet.attention_limit' => 3]);

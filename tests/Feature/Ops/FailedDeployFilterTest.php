@@ -67,6 +67,23 @@ class FailedDeployFilterTest extends TestCase
             ->assertDontSee($stale->name);
     }
 
+    public function test_a_site_that_deployed_fine_after_failing_is_not_in_the_filtered_list(): void
+    {
+        $broken = $this->siteWithFailedDeploy('Hâlâ Kırık', hoursAgo: 2);
+        $recovered = $this->siteWithFailedDeploy('Düzelen Site', hoursAgo: 3);
+        Deployment::factory()->create([
+            'site_id' => $recovered->id,
+            'status' => DeploymentStatus::Finished,
+            'finished_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.sites', ['deploy' => 'failed']))
+            ->assertOk()
+            ->assertSee($broken->name)
+            ->assertDontSee($recovered->name);
+    }
+
     public function test_the_filtered_row_count_equals_the_number_on_the_fleet_card(): void
     {
         // Two sites broken, one of them three times over, plus noise.

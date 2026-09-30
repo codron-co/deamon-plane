@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 class Deployment extends Model
 {
@@ -103,7 +104,8 @@ class Deployment extends Model
     }
 
     /**
-     * Deploys that failed recently enough to still be "now".
+     * Deploys that failed recently enough to still be "now", and that no later
+     * successful deploy of the same site has since fixed.
      *
      * The fleet card, the attention list and the `deploy=failed` site filter all
      * read this one predicate. A drill-down that resolves a different set from
@@ -120,7 +122,15 @@ class Deployment extends Model
         return $query
             ->where('status', DeploymentStatus::Failed)
             // A deploy row can be created long before it fails, so judge it by when it ended.
-            ->whereRaw('COALESCE(finished_at, started_at, created_at) >= ?', [$since->toDateTimeString()]);
+            ->whereRaw('COALESCE(finished_at, started_at, created_at) >= ?', [$since->toDateTimeString()])
+            // A site that deployed fine after the failure is not broken now.
+            ->whereNotExists(static function (QueryBuilder $later) use ($query): void {
+                $later->selectRaw('1')
+                    ->from('deployments as later_success')
+                    ->whereColumn('later_success.site_id', $query->qualifyColumn('site_id'))
+                    ->whereColumn('later_success.id', '>', $query->qualifyColumn('id'))
+                    ->where('later_success.status', DeploymentStatus::Finished->value);
+            });
     }
 
     /**
