@@ -15,6 +15,7 @@ use App\Services\Coolify\Dto\CoolifyProjectEnvironment;
 use App\Services\Coolify\Dto\CoolifyServer;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 /**
@@ -228,8 +229,49 @@ class CoolifyApplicationService
     {
         $this->assertDeployGate($uuid);
         $this->syncSiteEnv($uuid);
+        $this->bindComposeDomainsIfMissing($uuid);
 
         return $this->client->deploy($uuid, $force);
+    }
+
+    /**
+     * A compose app only gets Traefik labels from `docker_compose_domains`. Apps whose
+     * hosts were left on the Dockerfile-era `fqdn` deploy healthy but unrouted, and the
+     * proxy serves the "domain is ready" fallback (doremanmedya, lokcetekstil, 2026-09).
+     * Bind them before the deploy so the labels are generated; never block the deploy.
+     */
+    private function bindComposeDomainsIfMissing(string $uuid): void
+    {
+        $site = $this->siteForAppUuid($uuid);
+        if (! $site instanceof Site) {
+            return;
+        }
+
+        try {
+            $app = $this->client->getApp($uuid);
+            if (! $app->isComposePack() || $app->composeDomains !== []) {
+                return;
+            }
+
+            $fqdn = trim((string) ($app->raw['fqdn'] ?? ''));
+            $domains = $fqdn !== '' ? $fqdn : implode(',', $site->operatorHosts());
+            if ($domains === '') {
+                return;
+            }
+
+            $this->client->setDomains($uuid, $domains);
+            Log::warning('coolify.compose_domains_bound', [
+                'site_id' => $site->id,
+                'site_slug' => $site->slug,
+                'source' => $fqdn !== '' ? 'fqdn' : 'site_domains',
+            ]);
+        } catch (CoolifyApiException $exception) {
+            Log::warning('coolify.compose_domains_bind_failed', [
+                'site_id' => $site->id,
+                'site_slug' => $site->slug,
+                'status' => $exception->status,
+            ]);
+        }
     }
 
     /**

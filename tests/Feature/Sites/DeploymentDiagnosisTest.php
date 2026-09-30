@@ -338,7 +338,10 @@ class DeploymentDiagnosisTest extends TestCase
         Http::fake(function (Request $request) use (&$pinned, $site) {
             $url = $request->url();
             if ($request->method() === 'PATCH' && str_ends_with($url, '/applications/'.self::APP)) {
-                $pinned = $request->data()['git_commit_sha'] ?? null;
+                // The deploy also binds compose domains (a separate PATCH); only the pin counts.
+                if (array_key_exists('git_commit_sha', $request->data())) {
+                    $pinned = $request->data()['git_commit_sha'];
+                }
 
                 return Http::response(['uuid' => self::APP, 'git_commit_sha' => $pinned], 200);
             }
