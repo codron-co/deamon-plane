@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/automation/{rule}', [SettingsController::class, 'toggleAutomation'])
         ->where('rule', '[a-z_]+')
         ->name('ops.settings.automation');
+    Route::post('/settings/ci-gate', [SettingsController::class, 'updateCiGate'])->name('ops.settings.ci_gate');
     Route::post('/settings/coolify/test', [SettingsController::class, 'testConnection'])->name('ops.settings.coolify.test');
     Route::post('/settings/github', [GithubSettingsController::class, 'update'])->name('ops.settings.github.update');
     Route::post('/settings/github/test', [GithubSettingsController::class, 'testConnection'])->name('ops.settings.github.test');

@@ -40,6 +40,12 @@ final class SettingsJump
                 'needles' => ['git', 'repository', 'repo', 'compose', 'müşteri', 'musteri', 'customer'],
             ],
             [
+                'id' => 'ci_gate',
+                'hash' => 'ci-gate-heading',
+                'label' => __('settings.ci_gate.title'),
+                'needles' => ['ci', 'github', 'actions', 'kapı', 'kapi', 'gate', 'rollout', 'yayın', 'yayin', 'deploy', 'bypass', 'pause'],
+            ],
+            [
                 'id' => 'automation',
                 'hash' => 'automation-heading',
                 'label' => __('settings.automation.title'),

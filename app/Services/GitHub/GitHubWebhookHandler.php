@@ -3,9 +3,12 @@
 namespace App\Services\GitHub;
 
 use App\Enums\Channel;
+use App\Enums\CiGateMode;
 use App\Jobs\SyncCoolifyEnvCatalogJob;
+use App\Models\CiGateSetting;
 use App\Models\Theme;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
+use App\Services\Rollouts\FleetRolloutService;
 use App\Services\Themes\ThemeWebhookFanout;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -54,6 +57,11 @@ class GitHubWebhookHandler
             $sha = $this->commitSha($payload);
             if ($sha !== null) {
                 $this->heads->recordPush($repo, $catalogChannel->value, $sha);
+
+                // CI gate in `bypass` (CI is off): the push is the go signal for CI-gated sites.
+                if (CiGateSetting::mode() === CiGateMode::Bypass) {
+                    app(FleetRolloutService::class)->startForPush($catalogChannel, $sha);
+                }
             }
             SyncCoolifyEnvCatalogJob::dispatch($catalogChannel->value);
 
@@ -105,16 +113,34 @@ class GitHubWebhookHandler
         $this->heads->recordPush($repo, $defaultRef, $sha);
 
         // CI-gated theme: the push is only a candidate. The green `CI` run for
-        // this exact commit moves the catalog (GitHubWorkflowRunHandler).
-        if ($theme->ci_gate || $sha === $theme->latest_sha) {
+        // this exact commit moves the catalog (GitHubWorkflowRunHandler) — unless
+        // the CI gate is in `bypass` (CI is off), then the push moves it now.
+        $bypass = $theme->ci_gate && CiGateSetting::mode() === CiGateMode::Bypass;
+        if (($theme->ci_gate && ! $bypass) || $sha === $theme->latest_sha) {
             return $this->result('push');
         }
 
+        $before = $theme->latest_sha;
         $theme->latest_sha = $sha;
         $theme->last_synced_at = Carbon::now();
         $theme->save();
 
         $counts = $this->fanout->fanOut($theme, $defaultRef);
+
+        if ($bypass) {
+            $theme->auditLogs()->create([
+                'actor_user_id' => null,
+                'action' => 'theme.ci_bypassed',
+                'before' => ['latest_sha' => $before],
+                'after' => [
+                    'latest_sha' => $sha,
+                    'branch' => $defaultRef,
+                    'fanout' => $counts['fanout'],
+                    'skipped' => $counts['skipped'],
+                ],
+                'ip' => null,
+            ]);
+        }
 
         return $this->result('push', updated: true, fanout: $counts['fanout'], skipped: $counts['skipped']);
     }

@@ -53,15 +53,30 @@ class FleetRolloutService
      */
     public function startForGreenCommit(Channel $channel, string $sha): ?FleetRollout
     {
+        return $this->start($channel, $sha, 'ci');
+    }
+
+    /**
+     * CI gate in `bypass` mode: the push itself is the go signal. Same canary,
+     * fan-out and head checks as a green run; a later green run of the same
+     * commit starts nothing (one rollout per commit).
+     */
+    public function startForPush(Channel $channel, string $sha): ?FleetRollout
+    {
+        return $this->start($channel, $sha, 'push_without_ci');
+    }
+
+    private function start(Channel $channel, string $sha, string $trigger): ?FleetRollout
+    {
         $lock = Cache::lock('fleet-rollout-start:'.$channel->value, 30);
 
-        return $lock->block(10, function () use ($channel, $sha): ?FleetRollout {
+        return $lock->block(10, function () use ($channel, $sha, $trigger): ?FleetRollout {
             if (FleetRollout::query()->where('channel', $channel->value)->where('sha', $sha)->exists()) {
                 return null;
             }
 
             foreach (FleetRollout::query()->open()->where('channel', $channel->value)->get() as $open) {
-                $this->supersede($open, 'newer_green', $sha);
+                $this->supersede($open, $trigger === 'ci' ? 'newer_green' : 'newer_push', $sha);
             }
 
             if (! $this->eligibleSites($channel)->exists()) {
@@ -80,6 +95,7 @@ class FleetRolloutService
             $this->audit($rollout, 'fleet_rollout.started', [
                 'channel' => $channel->value,
                 'sha' => $sha,
+                'trigger' => $trigger,
             ]);
 
             AdvanceFleetRolloutJob::dispatch($rollout->id);

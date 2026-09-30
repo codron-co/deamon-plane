@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Ops;
 
 use App\Enums\Channel;
+use App\Enums\CiGateMode;
 use App\Enums\CoolifyEnvKind;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\AutomationSetting;
+use App\Models\CiGateSetting;
 use App\Models\CoolifyEnvCatalogSource;
 use App\Models\CoolifyEnvDefault;
 use App\Models\GithubSetting;
@@ -63,7 +65,43 @@ class SettingsController extends Controller
             'envKeyHaystack' => $envKeyHaystack,
             'automationRules' => $this->automationRules(),
             'canEditAutomation' => request()->user()?->can('ops.danger') ?? false,
+            'ciGateMode' => CiGateSetting::mode(),
+            'ciGateSetting' => CiGateSetting::row(),
         ]);
+    }
+
+    /**
+     * Fleet-wide CI gate mode (CiGateMode). Changing it never deploys by itself.
+     */
+    public function updateCiGate(Request $request): RedirectResponse
+    {
+        $this->authorize('ops.danger');
+
+        $validated = $request->validate([
+            'mode' => ['required', Rule::enum(CiGateMode::class)],
+        ]);
+
+        $mode = CiGateMode::from($validated['mode']);
+        $before = CiGateSetting::mode();
+
+        $setting = CiGateSetting::row() ?? new CiGateSetting;
+        $setting->fill(['mode' => $mode, 'updated_by_user_id' => $request->user()?->id])->save();
+
+        if ($before !== $mode) {
+            AuditLog::query()->create([
+                'actor_user_id' => $request->user()?->id,
+                'action' => 'ci.gate_mode_updated',
+                'subject_type' => CiGateSetting::class,
+                'subject_id' => $setting->id,
+                'before' => ['mode' => $before->value],
+                'after' => ['mode' => $mode->value],
+                'ip' => $request->ip(),
+            ]);
+        }
+
+        return redirect()
+            ->to(route('ops.settings').'#ci-gate-heading')
+            ->with('status', __('settings.ci_gate.flash', ['mode' => $mode->label()]));
     }
 
     /**

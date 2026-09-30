@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ops;
 use App\Enums\DeployGate;
 use App\Http\Controllers\Controller;
 use App\Models\CiBranchHead;
+use App\Models\CiGateSetting;
 use App\Models\FleetRollout;
 use App\Models\Site;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
@@ -38,6 +39,7 @@ class FleetRolloutController extends Controller
                     ->get(),
             'gatedSites' => Site::query()->where('deploy_gate', DeployGate::Ci->value)->count(),
             'canarySites' => Site::query()->where('deploy_gate', DeployGate::Ci->value)->where('deploy_canary', true)->count(),
+            'ciGateMode' => CiGateSetting::mode(),
             'canWrite' => $request->user()?->can('ops.write') ?? false,
             'canDanger' => $request->user()?->can('ops.danger') ?? false,
         ]);

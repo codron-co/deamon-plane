@@ -12,6 +12,31 @@ return [
     'defaults_hint' => 'Ortamdan. Provision işleri git + Docker Compose app oluşturur — Nixpacks yok, ham POST /applications/dockercompose yok.',
     'repository' => 'Müşteri git deposu',
     'compose' => 'Compose dosyası',
+    'ci_gate' => [
+        'title' => 'CI kapısı',
+        'lede' => 'CI’a bağlı siteler (deploy kapısı “CI”) ve CI kapılı temalar normalde GitHub’daki CI yeşil olunca güncellenir. GitHub Actions kapalıysa ya da çalışmıyorsa buradan ne olacağını seçin. Coolify oto-deploy’daki siteler ve CI kapısı kapalı temalar bu ayardan etkilenmez.',
+        'current' => 'Şu an',
+        'updated' => 'Son değişiklik: :time, :user',
+        'save' => 'Kaydet',
+        'confirm' => 'CI kapısı “:mode” olsun mu?',
+        'flash' => 'CI kapısı: :mode.',
+        'modes' => [
+            'enforce' => [
+                'name' => 'CI yeşilini bekle',
+                'hint' => 'Varsayılan. Push yalnızca aday; o commit için CI yeşil olunca kanarya ve filo yayını başlar.',
+            ],
+            'bypass' => [
+                'name' => 'CI kapalı: push’ta hemen güncelle',
+                'hint' => 'CI beklenmez. CMS kanal dalına push gelince aynı kanarya + filo yayını hemen başlar; CI kapılı temalar push’ta yayılır. Test edilmemiş kod canlıya çıkar, kanarya sağlık kontrolü tek güvence.',
+            ],
+            'pause' => [
+                'name' => 'CI kapalı: otomatik güncellemeyi durdur',
+                'hint' => 'Hiçbir şey kendiliğinden güncellenmez (yeşil CI gelse bile). Push’lar kaydedilir; siteler “Deploy HEAD” ile, temalar site sayfasından elle güncellenir. Açık bir yayın varsa CI yayınları sayfasından durdurun.',
+            ],
+        ],
+        'rollouts_banner' => 'CI kapısı: :mode.',
+        'rollouts_banner_link' => 'Ayarlardan değiştir',
+    ],
     'automation' => [
         'title' => 'Otomasyon',
         'lede' => 'Plane’in kendi başına yaptığı işlemler. Her biri env bayrağına da bağlı; env’de kapalı bir kural buradan açılamaz. Aynı hata 15 dakika içinde 3 sitede görülürse kural kendiliğinden bir saat duraklar.',

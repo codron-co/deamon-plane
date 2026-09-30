@@ -95,6 +95,18 @@ With `ci_gate = true`:
 
 Theme repos without a workflow named `CI` never send a `workflow_run`, so a gated theme would never update. **Only enable `ci_gate` after the theme repo has a GitHub Actions workflow named `CI` that runs on push to the default branch.** UI: theme detail → Sync tab → **CI yeşil olunca güncelle**.
 
+## CI gate mode (CI off)
+
+Fleet-wide switch for when GitHub Actions is off or not running (billing, outage). **Settings → CI kapısı** (`POST /settings/ci-gate`, Super Admin / `ops.danger`), single row in `ci_gate_settings` (`CiGateSetting::mode()`, no row = `enforce`), enum `CiGateMode`. It only affects CI-gated targets: sites with `deploy_gate = ci` and themes with `ci_gate` on. Coolify auto-deploy sites and ungated themes behave the same in every mode. Changing the mode never deploys by itself; audit `ci.gate_mode_updated` (before / after mode). `/rollouts` shows a warning banner while the mode is not `enforce`.
+
+| Mode | CMS channel push | Green `CI` run | CI-gated theme push | Green theme run |
+|------|------------------|----------------|---------------------|-----------------|
+| `enforce` (default) | records the head | promotes (rollout) | records the head | promotes (fan-out) |
+| `bypass` — *CI kapalı: push'ta hemen güncelle* | records the head **and starts the rollout** (`FleetRolloutService::startForPush`, audit `fleet_rollout.started` with `trigger: push_without_ci`; a newer push supersedes the open one with `newer_push`) | starts nothing for a commit that already has a rollout (one rollout per commit) | moves `latest_sha` and fans out at once, audit `theme.ci_bypassed` | nothing (catalog already at that sha) |
+| `pause` — *CI kapalı: otomatik güncellemeyi durdur* | records the head | recorded, promotes nothing, audit `ci.run_paused` | records the head | recorded, nothing moves, audit `theme.ci_paused` |
+
+`bypass` keeps the canary, health checks, head checks and fan-out pacing: untested code reaches the sites, the canary health check is the only guard. `pause` leaves open rollouts running (halt them on `/rollouts`); sites update by hand with **Deploy HEAD**, themes from the site's theme tab. Switching back to `enforce` does not replay pushes made in the meantime: the next push + green run rolls out as usual.
+
 ## Config (`config/ops.php` → `ci`, no env keys)
 
 | Key | Default | Meaning |
@@ -122,4 +134,4 @@ Rollback: switch the sites back to **Coolify oto-deploy** (bulk). Open rollouts 
 
 ## Tests
 
-`GitHubWorkflowRunTest` (signal, verdicts, dedupe, theme gate), `FleetRolloutTest` (canary pass → fan-out, canary build / health failure, timeout, supersede, batches, untouched pinned / coolify / other-channel sites, job + watchdog), `CiGateControlsTest` (gate + canary switches, bulk gate, rollouts pages, halt / resume roles, theme checkbox).
+`GitHubWorkflowRunTest` (signal, verdicts, dedupe, theme gate), `FleetRolloutTest` (canary pass → fan-out, canary build / health failure, timeout, supersede, batches, untouched pinned / coolify / other-channel sites, job + watchdog), `CiGateControlsTest` (gate + canary switches, bulk gate, rollouts pages, halt / resume roles, theme checkbox), `CiGateModeTest` (enforce / bypass / pause for CMS pushes, green runs and gated themes; Settings form, audit, roles, /rollouts banner).

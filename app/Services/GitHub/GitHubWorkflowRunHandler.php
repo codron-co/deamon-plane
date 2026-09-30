@@ -3,8 +3,10 @@
 namespace App\Services\GitHub;
 
 use App\Enums\Channel;
+use App\Enums\CiGateMode;
 use App\Enums\CiRunVerdict;
 use App\Models\CiBranchHead;
+use App\Models\CiGateSetting;
 use App\Models\Theme;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Services\Rollouts\FleetRolloutService;
@@ -22,6 +24,10 @@ use Illuminate\Support\Facades\Log;
  *
  *   CMS repo, channel branch → FleetRolloutService (sites on the `ci` gate)
  *   theme repo, default ref, `ci_gate` on → catalog sha + ThemeWebhookFanout
+ *
+ * CI gate mode `pause` (Settings): runs are still recorded, a green one promotes
+ * nothing (audit `ci.run_paused` / `theme.ci_paused`). `bypass` needs nothing
+ * here: the push already rolled out and one rollout per commit is kept.
  */
 class GitHubWorkflowRunHandler
 {
@@ -67,6 +73,12 @@ class GitHubWorkflowRunHandler
 
         ['verdict' => $verdict, 'head' => $head] = $this->heads->recordRun($repo, $branch, $sha, $conclusion);
 
+        if ($verdict === CiRunVerdict::Promote && CiGateSetting::mode() === CiGateMode::Pause) {
+            $this->auditHead($head, $verdict, $sha, $conclusion, 'ci.run_paused');
+
+            return $this->result(false, $verdict);
+        }
+
         if ($verdict === CiRunVerdict::Promote) {
             $rollout = $this->rollouts->startForGreenCommit($channel, $sha);
 
@@ -87,10 +99,16 @@ class GitHubWorkflowRunHandler
             return $this->result(false, $verdict);
         }
 
-        if ($verdict !== CiRunVerdict::Promote) {
+        $paused = $verdict === CiRunVerdict::Promote && CiGateSetting::mode() === CiGateMode::Pause;
+
+        if ($verdict !== CiRunVerdict::Promote || $paused) {
             $theme->auditLogs()->create([
                 'actor_user_id' => null,
-                'action' => $verdict === CiRunVerdict::Red ? 'theme.ci_failed' : 'theme.ci_held',
+                'action' => match (true) {
+                    $paused => 'theme.ci_paused',
+                    $verdict === CiRunVerdict::Red => 'theme.ci_failed',
+                    default => 'theme.ci_held',
+                },
                 'before' => null,
                 'after' => [
                     'branch' => $branch,
@@ -135,9 +153,9 @@ class GitHubWorkflowRunHandler
      * A red, superseded or unprovable run of the CMS: nothing deploys; the Activity
      * page says which commit was held and why.
      */
-    private function auditHead(CiBranchHead $head, CiRunVerdict $verdict, string $sha, string $conclusion): void
+    private function auditHead(CiBranchHead $head, CiRunVerdict $verdict, string $sha, string $conclusion, ?string $action = null): void
     {
-        $action = match ($verdict) {
+        $action ??= match ($verdict) {
             CiRunVerdict::Red => 'ci.run_failed',
             CiRunVerdict::Superseded => 'ci.run_superseded',
             default => 'ci.run_head_unknown',

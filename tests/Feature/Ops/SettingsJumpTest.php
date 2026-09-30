@@ -37,9 +37,10 @@ class SettingsJumpTest extends TestCase
             ->assertSee('href="#customer-defaults-heading"', false)
             ->assertSee('href="#system-coolify-heading"', false)
             ->assertSee('href="#automation-heading"', false)
+            ->assertSee('href="#ci-gate-heading"', false)
             ->getContent();
 
-        $this->assertSame(6, substr_count($html, 'data-settings-section'));
+        $this->assertSame(7, substr_count($html, 'data-settings-section'));
         $this->assertStringContainsString('APP_KEY', $html);
         $this->assertMatchesRegularExpression('/data-settings-haystack="[^"]*APP_KEY/', $html);
         $this->assertStringContainsString('data-env-row', $html);

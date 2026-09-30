@@ -43,6 +43,8 @@
 
     @include('ops.settings.partials.github')
 
+    @include('ops.settings.partials.ci-gate')
+
     @include('ops.settings.partials.automation')
 
     <section

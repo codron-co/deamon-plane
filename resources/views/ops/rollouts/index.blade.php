@@ -7,6 +7,14 @@
 @section('content')
     <p class="page-lede">{{ __('rollouts.lede') }}</p>
 
+    @if ($ciGateMode !== \App\Enums\CiGateMode::Enforce)
+        <div class="ops-alert ops-alert-warning" role="status">
+            <strong>{{ __('settings.ci_gate.rollouts_banner', ['mode' => $ciGateMode->label()]) }}</strong>
+            {{ __('settings.ci_gate.modes.'.$ciGateMode->value.'.hint') }}
+            <a href="{{ route('ops.settings') }}#ci-gate-heading">{{ __('settings.ci_gate.rollouts_banner_link') }}</a>
+        </div>
+    @endif
+
     <section class="ops-panel" aria-labelledby="rollouts-heads-heading">
         <h2 id="rollouts-heads-heading">{{ __('rollouts.heads.title') }} @include('ops.dashboard._hint', ['text' => __('rollouts.heads.hint')])</h2>
         <dl class="site-fact-list">

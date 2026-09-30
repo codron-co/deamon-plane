@@ -12,6 +12,31 @@ return [
     'defaults_hint' => 'From environment. Provision jobs create git + Docker Compose apps — never Nixpacks, never raw POST /applications/dockercompose.',
     'repository' => 'Customer git repository',
     'compose' => 'Compose file',
+    'ci_gate' => [
+        'title' => 'CI gate',
+        'lede' => 'CI-gated sites (deploy gate “CI”) and CI-gated themes normally update once GitHub CI is green. When GitHub Actions is off or not running, choose what happens here. Sites on Coolify auto-deploy and themes without the CI gate are not affected.',
+        'current' => 'Now',
+        'updated' => 'Last change: :time, :user',
+        'save' => 'Save',
+        'confirm' => 'Set the CI gate to “:mode”?',
+        'flash' => 'CI gate: :mode.',
+        'modes' => [
+            'enforce' => [
+                'name' => 'Wait for green CI',
+                'hint' => 'Default. A push is only a candidate; the canary and fleet rollout start once CI is green for that commit.',
+            ],
+            'bypass' => [
+                'name' => 'CI off: update on push',
+                'hint' => 'CI is not awaited. A push to a CMS channel branch starts the same canary + fleet rollout right away; CI-gated themes fan out on push. Untested code goes live; the canary health check is the only guard.',
+            ],
+            'pause' => [
+                'name' => 'CI off: pause automatic updates',
+                'hint' => 'Nothing updates on its own (even on a green CI). Pushes are recorded; sites update with “Deploy HEAD”, themes from the site page. Halt an open rollout on the CI rollouts page.',
+            ],
+        ],
+        'rollouts_banner' => 'CI gate: :mode.',
+        'rollouts_banner_link' => 'Change in Settings',
+    ],
     'automation' => [
         'title' => 'Automation',
         'lede' => 'Actions Plane takes on its own. Each also needs its env flag; a rule turned off in env cannot be turned on here. A rule pauses for an hour by itself when the same failure shows up on 3 sites within 15 minutes.',
