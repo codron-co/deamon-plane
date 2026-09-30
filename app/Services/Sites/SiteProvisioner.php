@@ -273,8 +273,19 @@ class SiteProvisioner
         $site->save();
 
         // Compose domains need docker_compose_raw from the finished deploy.
+        // Coolify writes Traefik labels at deploy time, so hosts bound only now
+        // are not served until the app builds again: a first provision needs
+        // one follow-up deploy or the site answers with the Traefik default cert.
+        $domainsWereMissing = $deployment->trigger === DeploymentTrigger::Create
+            && $site->canBindCoolifyDomains()
+            && $this->domainsMissingOnCoolify($site);
+
         try {
             $this->landing->syncCoolifyDomains($site);
+
+            if ($domainsWereMissing) {
+                $this->deployAfterDomainBind($site, $actorUserId, $ip);
+            }
         } catch (Throwable $exception) {
             Log::warning('site.domain_bind_after_deploy_failed', [
                 'site_id' => $site->id,
@@ -297,6 +308,57 @@ class SiteProvisioner
             'actor_user_id' => $actorUserId,
             'action' => 'site.provision_succeeded',
             'after' => $this->auditSnapshot($site),
+            'ip' => $ip,
+        ]);
+    }
+
+    /**
+     * Whether Plane's hosts are absent from the live Coolify app. An unreadable
+     * app answers false: the follow-up deploy is skipped rather than guessed.
+     */
+    private function domainsMissingOnCoolify(Site $site): bool
+    {
+        try {
+            $app = CoolifyApplicationService::forSite($site)->getApp((string) $site->coolify_app_uuid);
+        } catch (Throwable) {
+            return false;
+        }
+
+        $reconciler = app(SiteDomainReconciler::class);
+
+        return $reconciler->missingOnCoolify($site, $reconciler->customerHosts($app)) !== [];
+    }
+
+    /**
+     * Best effort: the provision already succeeded, so a refused follow-up deploy
+     * (deploy gate, busy host) is audited and left to the operator's Redeploy.
+     */
+    private function deployAfterDomainBind(Site $site, ?int $actorUserId, ?string $ip): void
+    {
+        try {
+            // Resolved late: SiteLanding depends on CoolifyDeploySettings.
+            $deployment = app(CoolifyDeploySettings::class)->deployAfterDomainBind($site->fresh() ?? $site);
+        } catch (Throwable $exception) {
+            $site->auditLogs()->create([
+                'actor_user_id' => $actorUserId,
+                'action' => 'site.redeploy_after_domain_bind_failed',
+                'after' => [
+                    'slug' => $site->slug,
+                    'error' => $this->redactSecrets($site, $exception->getMessage()),
+                ],
+                'ip' => $ip,
+            ]);
+
+            return;
+        }
+
+        $site->auditLogs()->create([
+            'actor_user_id' => $actorUserId,
+            'action' => 'site.redeploy_after_domain_bind',
+            'after' => [
+                'slug' => $site->slug,
+                'deployment_id' => $deployment->id,
+            ],
             'ip' => $ip,
         ]);
     }

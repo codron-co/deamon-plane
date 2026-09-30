@@ -245,6 +245,15 @@ class CoolifyDeploySettings
     }
 
     /**
+     * Follow-up build after a first provision bound its hosts: Coolify only writes
+     * Traefik labels at deploy time. `force=false` reuses the build cache.
+     */
+    public function deployAfterDomainBind(Site $site): Deployment
+    {
+        return $this->startDeploy($site, false, DeploymentTrigger::Manual, null, null);
+    }
+
+    /**
      * The CI rollout build: `force=false`, so Coolify reuses its build cache and
      * a fleet sweep costs the host far less than a manual Redeploy. The app
      * follows the branch HEAD, which the rollout checked is the green commit.

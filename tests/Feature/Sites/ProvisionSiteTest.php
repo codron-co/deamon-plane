@@ -483,6 +483,135 @@ class ProvisionSiteTest extends TestCase
             ->assertDontSee('SHOULD_NOT_APPEAR', false);
     }
 
+    public function test_first_provision_redeploys_once_after_binding_missing_domains(): void
+    {
+        $bound = false;
+        $composeLoaded = false;
+        $deploys = 0;
+
+        // Coolify refuses docker_compose_domains until a finished deploy has loaded
+        // docker_compose_raw from git, so any bind attempted mid-build fails.
+        Http::fake(function (Request $request) use (&$bound, &$composeLoaded, &$deploys) {
+            if ($cf = $this->cloudflareProvisionResponse($request)) {
+                return $cf;
+            }
+
+            $url = $request->url();
+            $method = $request->method();
+            $app = [
+                'uuid' => 'coolify-app-1',
+                'name' => 'deamon-izyem',
+                'git_branch' => 'beta',
+                'build_pack' => 'dockercompose',
+                'docker_compose_location' => '/docker-compose.coolify.yml',
+                'docker_compose_domains' => $bound
+                    ? [['name' => 'app', 'domain' => 'https://shop.izyem.example.test,https://www.shop.izyem.example.test']]
+                    : [],
+            ];
+
+            if ($method === 'POST' && str_contains($url, '/applications/')) {
+                return Http::response($app, 201);
+            }
+
+            if ($method === 'GET' && str_contains($url, '/envs')) {
+                return Http::response([], 200);
+            }
+
+            if ($method === 'PATCH' && str_contains($url, '/envs/bulk')) {
+                return Http::response([], 200);
+            }
+
+            if ($method === 'GET' && preg_match('#/applications/coolify-app-1$#', $url) === 1) {
+                return Http::response($app, 200);
+            }
+
+            if ($method === 'PATCH' && preg_match('#/applications/coolify-app-1$#', $url) === 1) {
+                if (array_key_exists('docker_compose_domains', $request->data())) {
+                    if (! $composeLoaded) {
+                        return Http::response(['message' => 'You cannot set docker_compose_domains without docker_compose_raw.'], 422);
+                    }
+                    $bound = true;
+                }
+
+                return Http::response($app, 200);
+            }
+
+            if ($method === 'POST' && str_contains($url, '/deploy')) {
+                $deploys++;
+
+                return Http::response([
+                    'deployments' => [[
+                        'resource_uuid' => 'coolify-app-1',
+                        'deployment_uuid' => 'dep-'.$deploys,
+                        'message' => 'queued',
+                    ]],
+                ], 200);
+            }
+
+            if ($method === 'GET' && preg_match('#/deployments/(dep-\d+)#', $url, $m) === 1) {
+                $composeLoaded = true;
+
+                return Http::response(['uuid' => $m[1], 'status' => 'finished', 'commit' => 'abc123def'], 200);
+            }
+
+            if ($method === 'GET' && str_contains($url, '/deployments')) {
+                return Http::response([], 200);
+            }
+
+            return Http::response(['error' => 'unexpected '.$url], 404);
+        });
+
+        $operator = $this->user(OpsRole::Operator);
+        $site = $this->draftSite();
+
+        $this->actingAs($operator)
+            ->post(route('ops.sites.provision', $site))
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $site->refresh();
+
+        $this->assertSame(SiteStatus::Active, $site->status);
+        $this->assertTrue($bound, 'Domains were bound after the first deploy.');
+        $this->assertSame(2, $deploys, 'One follow-up deploy serves the freshly bound hosts.');
+
+        // The follow-up reuses the build cache: no `force=true` on any deploy call.
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST'
+            && str_contains($request->url(), '/deploy')
+            && str_contains($request->url(), 'force=true'));
+
+        $this->assertDatabaseHas('deployments', [
+            'site_id' => $site->id,
+            'trigger' => DeploymentTrigger::Create->value,
+            'coolify_deployment_uuid' => 'dep-1',
+        ]);
+        $this->assertDatabaseHas('deployments', [
+            'site_id' => $site->id,
+            'trigger' => DeploymentTrigger::Manual->value,
+            'coolify_deployment_uuid' => 'dep-2',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'site.redeploy_after_domain_bind',
+            'subject_id' => $site->id,
+        ]);
+    }
+
+    public function test_provision_does_not_redeploy_when_domains_were_already_bound(): void
+    {
+        $this->fakeCoolifyHappyPath();
+
+        $site = $this->draftSite();
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->post(route('ops.sites.provision', $site))
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $this->assertSame(1, $site->fresh()->deployments()->count());
+        $this->assertDatabaseMissing('audit_logs', [
+            'action' => 'site.redeploy_after_domain_bind',
+            'subject_id' => $site->id,
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      */
