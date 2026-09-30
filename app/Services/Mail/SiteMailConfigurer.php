@@ -11,6 +11,7 @@ use App\Services\Agent\ControlPlaneAgentContract;
 use App\Support\ControlPlaneAgentSignature;
 use App\Support\PublicAppUrl;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -65,20 +66,20 @@ class SiteMailConfigurer
                 'plane_base_url' => $this->planeBaseUrl(),
             ];
 
-        $body = ControlPlaneAgentContract::encodeJson($payload);
-        if ($body === '') {
+        if (ControlPlaneAgentContract::encodeJson($payload) === '') {
             $this->recordOutcome($site, 'encode_failed');
 
             return SiteMailConfigureResult::failure('Mail configure payload could not be encoded.');
         }
 
         $secret = (string) $site->agent_secret_encrypted;
-        $signed = ControlPlaneAgentSignature::headers($secret, $body);
         $timeout = max(1, (int) config('ops.agent.timeout_seconds', 10));
         $url = $baseUrl.ControlPlaneAgentContract::mailConfigurePath();
+        $send = function (array $payload) use ($secret, $timeout, $url, $retryConnection) {
+            $body = ControlPlaneAgentContract::encodeJson($payload);
+            $signed = ControlPlaneAgentSignature::headers($secret, $body);
 
-        try {
-            $response = $this->sendWithRetry(
+            return $this->sendWithRetry(
                 fn () => Http::timeout($timeout)
                     ->acceptJson()
                     ->withHeaders($signed['headers'])
@@ -86,6 +87,18 @@ class SiteMailConfigurer
                     ->post($url),
                 $retryConnection,
             );
+        };
+
+        try {
+            $response = $send($payload);
+
+            // CMS up to 1.2.39 checks the webmail link against the *Plane* host allowlist,
+            // so a Hostinger webmail URL fails the whole push with 422. The link is optional:
+            // push the mailbox config without it rather than leave the site unconfigured.
+            if ($this->rejectedOnlyWebmailUrl($response, $payload)) {
+                unset($payload['webmail_url']);
+                $response = $send($payload);
+            }
         } catch (ConnectionException) {
             $this->logFailure($site, 'timeout');
             $this->recordOutcome($site, 'timeout');
@@ -133,6 +146,19 @@ class SiteMailConfigurer
         $this->recordOutcome($site, null);
 
         return SiteMailConfigureResult::ok($enabled, $response->status());
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function rejectedOnlyWebmailUrl(Response $response, array $payload): bool
+    {
+        if ($response->status() !== 422 || ! array_key_exists('webmail_url', $payload)) {
+            return false;
+        }
+
+        return $response->json('error') === 'validation_failed'
+            && str_contains((string) $response->json('message'), 'not on the allowlist');
     }
 
     /**

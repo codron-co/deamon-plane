@@ -349,7 +349,7 @@ class SiteMailAssignTest extends TestCase
 
         Http::fake([
             'https://shop.example.test/internal/control/v1/mail/configure' => Http::sequence()
-                ->push(['ok' => false, 'error' => 'validation_failed', 'message' => 'URL host is not on the allowlist.'], 422)
+                ->push(['ok' => false, 'error' => 'validation_failed', 'message' => 'Unknown mail provider.'], 422)
                 ->push(['ok' => true], 200),
             'https://developers.hostinger.com/api/mail/v1/orders*' => Http::response([
                 'data' => [['id' => 'OR9siteorder', 'status' => 'active', 'domain' => ['name' => 'shop.example.test']]],
@@ -363,16 +363,53 @@ class SiteMailAssignTest extends TestCase
 
         $site->refresh();
         $this->assertSame('http_422', $site->mail_configure_error);
-        $this->assertSame('URL host is not on the allowlist.', $site->mail_configure_message);
+        $this->assertSame('Unknown mail provider.', $site->mail_configure_message);
 
         $this->actingAs($this->operator())
             ->get(route('ops.sites.show', $site))
             ->assertOk()
-            ->assertSee(__('mail.configure_state.cms_said', ['message' => 'URL host is not on the allowlist.']), false);
+            ->assertSee(__('mail.configure_state.cms_said', ['message' => 'Unknown mail provider.']), false);
 
         // A later success clears the stored message.
         $this->actingAs($this->operator())->post(route('ops.sites.mail-configure', $site));
         $this->assertNull($site->fresh()->mail_configure_message);
+    }
+
+    public function test_webmail_url_rejected_by_an_older_cms_is_dropped_and_the_push_succeeds(): void
+    {
+        $server = MailServer::factory()->hostingerReady(self::TOKEN)->create();
+        $site = Site::factory()->withSecrets()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Main,
+            'primary_domain' => 'shop.example.test',
+            'agent_base_url' => 'https://shop.example.test',
+        ]);
+
+        Http::fake([
+            'https://shop.example.test/internal/control/v1/mail/configure' => Http::sequence()
+                ->push(['ok' => false, 'error' => 'validation_failed', 'message' => 'URL host is not on the allowlist.'], 422)
+                ->push(['ok' => true, 'mail' => ['provider' => 'hostinger', 'enabled' => true]], 200),
+            'https://developers.hostinger.com/api/mail/v1/orders*' => Http::response([
+                'data' => [['id' => 'OR9siteorder', 'status' => 'active', 'domain' => ['name' => 'shop.example.test']]],
+                'meta' => ['last_page' => 1],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.mail', $site), ['mail_server_id' => $server->id])
+            ->assertRedirect(route('ops.sites.show', $site));
+
+        $site->refresh();
+        $this->assertNull($site->mail_configure_error);
+        $this->assertNotNull($site->mail_configured_at);
+
+        $sent = Http::recorded(fn (Request $request): bool => str_ends_with($request->url(), '/mail/configure'))
+            ->map(fn (array $pair): array => $pair[0]->data())
+            ->values();
+        $this->assertCount(2, $sent);
+        $this->assertArrayHasKey('webmail_url', $sent[0]);
+        $this->assertArrayNotHasKey('webmail_url', $sent[1]);
+        $this->assertTrue($sent[1]['enabled']);
     }
 
     public function test_configure_sends_an_https_plane_url_even_when_app_url_is_http(): void
