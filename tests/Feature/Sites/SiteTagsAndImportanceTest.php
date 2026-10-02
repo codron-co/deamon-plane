@@ -267,6 +267,60 @@ class SiteTagsAndImportanceTest extends TestCase
         $this->assertSame(1, $counts['problems']);
     }
 
+    public function test_site_form_saves_importance_and_tags_and_can_clear_them(): void
+    {
+        $site = Site::factory()->create([
+            'slug' => 'form-site',
+            'name' => 'Form Site',
+            'primary_domain' => 'form.example.test',
+            'channel' => 'main',
+        ]);
+        $site->domains()->create(['domain' => 'form.example.test', 'is_primary' => true]);
+        $keep = SiteTag::query()->create(['name' => 'Kalır', 'color' => 'blue']);
+        $drop = SiteTag::query()->create(['name' => 'Gider', 'color' => 'red']);
+        $site->tags()->attach($drop->id);
+        $operator = $this->operator();
+        $payload = [
+            'slug' => 'form-site',
+            'name' => 'Form Site',
+            'domain' => 'form.example.test',
+            'channel' => 'main',
+            'coolify_server_uuid' => 'no48ksggg0k8sk4o4w08gks8',
+        ];
+
+        $this->actingAs($operator)
+            ->get(route('ops.sites.edit', $site))
+            ->assertOk()
+            ->assertSee('name="importance"', false)
+            ->assertSee('name="tags_submitted"', false)
+            ->assertSee('name="tags[]" value="'.$drop->id.'" checked', false);
+
+        $this->actingAs($operator)
+            ->put(route('ops.sites.update', $site), $payload + [
+                'importance' => 'important',
+                'tags_submitted' => '1',
+                'tags' => [$keep->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(SiteImportance::Important, $site->fresh()->importance);
+        $this->assertSame([$keep->id], $site->tags()->pluck('site_tags.id')->all());
+
+        // A caller that does not post the tag set leaves tags and importance alone.
+        $this->actingAs($operator)
+            ->put(route('ops.sites.update', $site), $payload)
+            ->assertRedirect();
+        $this->assertSame(SiteImportance::Important, $site->fresh()->importance);
+        $this->assertSame(1, $site->tags()->count());
+
+        // The form with every box unticked clears them.
+        $this->actingAs($operator)
+            ->put(route('ops.sites.update', $site), $payload + ['importance' => 'normal', 'tags_submitted' => '1'])
+            ->assertRedirect();
+        $this->assertSame(SiteImportance::Normal, $site->fresh()->importance);
+        $this->assertSame(0, $site->tags()->count());
+    }
+
     private function operator(): User
     {
         $user = User::factory()->create();

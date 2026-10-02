@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Ops;
 
+use App\Enums\SiteImportance;
 use App\Http\Requests\Ops\Concerns\ValidatesCoolifySiteTargets;
 use App\Http\Requests\Ops\Concerns\ValidatesSiteDomains;
 use App\Models\Site;
+use App\Models\SiteTag;
 use App\Rules\NotHeldByArchivedSite;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -52,6 +54,12 @@ class StoreSiteRequest extends FormRequest
             'aliases.*' => ['nullable', 'string', 'max:255', 'distinct', 'regex:'.$this->hostnamePattern(), NotHeldByArchivedSite::host(), Rule::unique('sites', 'primary_domain')->whereNull('deleted_at'), Rule::unique('site_domains', 'domain')],
             'channel' => ['required', 'string', Rule::in(config('ops.channels', []))],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'importance' => ['sometimes', 'nullable', 'string', Rule::in(SiteImportance::keys())],
+            // The form posts `tags_submitted` so an empty selection can clear the tags;
+            // a request without it leaves them alone.
+            'tags_submitted' => ['sometimes', 'boolean'],
+            'tags' => ['sometimes', 'nullable', 'array', 'max:'.SiteTag::MAX],
+            'tags.*' => ['string', Rule::exists('site_tags', 'id')],
             'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
             'cloudflare_setting_id' => ['nullable', 'integer', Rule::exists('cloudflare_settings', 'id')->where('is_enabled', true)],
         ], $this->coolifyTargetRules());

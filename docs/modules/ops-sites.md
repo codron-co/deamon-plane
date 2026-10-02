@@ -377,6 +377,8 @@ Writers only (`canWriteOps`); each change writes an `audit_logs` row (`site_tag.
 
 **Seeing the important ones.** The row shows an **Önemli** / **Kritik** badge next to the name and the tags under the slug. The summary row gains an **Önemli siteler** tile (`SiteListSummary::importantCounts()`): how many sites are flagged and how many of those are unhealthy, have an App issue or a failed deploy in the window; it opens `?importance=flagged`. It is not part of `counts()` — the daily snapshot has no column for it, so it has no trend.
 
+**Site form.** Create and edit carry an *Önem ve etiketler* section (`_form.blade.php`): an importance select and one checkbox per tag. The form posts `tags_submitted=1`, so unticking every box clears the tags; a request without it (or without `importance`) leaves that part untouched (`SiteController::applyOrganisation`). New tags are still created from the bulk bar. Both values are in the `site.created` / `site.updated` audit snapshot.
+
 Tests: `SiteTagsAndImportanceTest`.
 
 ### Bulk defaults match the selection

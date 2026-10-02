@@ -6,6 +6,7 @@ use App\Enums\Channel;
 use App\Enums\CmsPublishStatus;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\OpsRole;
+use App\Enums\SiteImportance;
 use App\Enums\SiteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
@@ -507,6 +508,7 @@ class SiteController extends Controller
             'site' => $site,
             'channels' => config('ops.channels', []),
             'readonly' => false,
+            'siteTags' => SiteTag::query()->orderBy('name')->get(),
             'mailServers' => $this->mailServerOptions(),
             'cloudflareAccounts' => CloudflareAccounts::enabled(),
             ...$this->coolifyFormData($connection, $request, $site),
@@ -538,6 +540,7 @@ class SiteController extends Controller
                 ]);
 
                 $domains->sync($site, $data['domain'], $data['aliases'] ?? []);
+                $this->applyOrganisation($site, $data);
 
                 if (($data['placement'] ?? 'provision') === 'attach' && filled($data['attach_app_uuid'] ?? null)) {
                     $connection = CoolifyConnection::query()->find($targets['connection_id']);
@@ -597,6 +600,7 @@ class SiteController extends Controller
             'channels' => config('ops.channels', []),
             'readonly' => ! ($request->user()?->can('update', $site) ?? false),
             'channelLocked' => $site->status !== SiteStatus::Draft,
+            'siteTags' => SiteTag::query()->orderBy('name')->get(),
             'mailServers' => $this->mailServerOptions(),
             'cloudflareAccounts' => CloudflareAccounts::enabled(),
             ...$this->coolifyFormData($connection, $request, $site),
@@ -1059,6 +1063,7 @@ class SiteController extends Controller
 
             $domains->sync($site, $data['domain'], $data['aliases'] ?? []);
             $removedHosts = $domains->lastRemoved;
+            $this->applyOrganisation($site, $data);
 
             $after = $this->auditSnapshot($site->fresh() ?? $site);
 
@@ -1249,7 +1254,7 @@ class SiteController extends Controller
      */
     private function auditSnapshot(Site $site): array
     {
-        $site->loadMissing('mailBindings');
+        $site->loadMissing(['mailBindings', 'tags']);
 
         return [
             'slug' => $site->slug,
@@ -1266,7 +1271,29 @@ class SiteController extends Controller
             'mail_domain' => $site->mail_domain,
             'mail_domains' => $site->mailDomains(),
             'cloudflare_setting_id' => $site->cloudflare_setting_id,
+            'importance' => $site->importanceLevel()->key(),
+            'tags' => $site->tags->pluck('name')->all(),
         ];
+    }
+
+    /**
+     * Importance and tags from the site form. Plane metadata only. An absent
+     * `importance` or a request without `tags_submitted` leaves that part alone,
+     * so a caller that does not know the fields cannot wipe them.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function applyOrganisation(Site $site, array $data): void
+    {
+        $importance = SiteImportance::fromKey((string) ($data['importance'] ?? ''));
+        if ($importance !== null && $importance !== $site->importanceLevel()) {
+            $site->forceFill(['importance' => $importance])->save();
+        }
+
+        if ((bool) ($data['tags_submitted'] ?? false)) {
+            $site->tags()->sync(array_values(array_filter((array) ($data['tags'] ?? []), 'is_string')));
+            $site->unsetRelation('tags');
+        }
     }
 
     private function defaultServerUuid(): ?string

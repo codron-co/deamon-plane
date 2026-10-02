@@ -1898,6 +1898,30 @@ a.site-tag:hover {
     margin-top: 4px;
 }
 
+.site-form-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin-inline: 0;
+    padding: 0;
+    border: 0;
+}
+
+.site-form-tags > legend,
+.site-form-tags > p {
+    flex: 0 0 100%;
+    padding: 0;
+}
+
+.site-form-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    cursor: pointer;
+}
+
 .site-importance {
     display: inline-flex;
     align-items: center;

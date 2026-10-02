@@ -385,6 +385,42 @@
     </div>
 </section>
 
+<section class="ops-form-section" aria-labelledby="site-organisation-heading">
+    <h2 id="site-organisation-heading">{{ __('sites.form.organisation') }}</h2>
+    @php
+        $selectedImportance = (string) old('importance', $site->importanceLevel()->key());
+        $selectedTags = array_map('strval', (array) old('tags', $site->exists ? $site->tags->pluck('id')->all() : []));
+    @endphp
+    <div class="field">
+        <label class="field-label" for="site_importance">{{ __('sites.form.importance') }}</label>
+        <p class="field-hint">{{ __('sites.form.importance_hint') }}</p>
+        <select id="site_importance" class="field-input" name="importance" @disabled($readonly)>
+            @foreach (\App\Enums\SiteImportance::cases() as $level)
+                <option value="{{ $level->key() }}" @selected($selectedImportance === $level->key())>{{ $level->label() }}</option>
+            @endforeach
+        </select>
+        @error('importance') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
+    <fieldset class="field site-form-tags">
+        <legend class="field-label">{{ __('sites.form.tags') }}</legend>
+        <p class="field-hint">{{ __('sites.form.tags_hint') }}</p>
+        {{-- Marks the tag set as posted, so unticking every box clears it. --}}
+        @unless ($readonly)
+            <input type="hidden" name="tags_submitted" value="1">
+        @endunless
+        @forelse ($siteTags ?? [] as $siteTag)
+            <label class="site-form-tag">
+                <input type="checkbox" name="tags[]" value="{{ $siteTag->id }}" @checked(in_array((string) $siteTag->id, $selectedTags, true)) @disabled($readonly)>
+                <span class="site-tag is-{{ $siteTag->colorKey() }}">{{ $siteTag->name }}</span>
+            </label>
+        @empty
+            <p class="muted">{{ __('sites.form.tags_empty') }}</p>
+        @endforelse
+        @error('tags') <p class="field-error">{{ $message }}</p> @enderror
+        @error('tags.*') <p class="field-error">{{ $message }}</p> @enderror
+    </fieldset>
+</section>
+
 <section class="ops-form-section" aria-labelledby="site-notes-heading">
     <h2 id="site-notes-heading">{{ __('sites.form.notes') }}</h2>
     <div class="field">
