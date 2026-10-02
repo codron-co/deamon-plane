@@ -15,3 +15,5 @@
 <input type="hidden" name="filter_server" value="{{ $server ?? '' }}">
 <input type="hidden" name="filter_stale" value="{{ $stale ?? '' }}">
 <input type="hidden" name="filter_analytics" value="{{ $analytics ?? '' }}">
+<input type="hidden" name="filter_tag" value="{{ $tag ?? '' }}">
+<input type="hidden" name="filter_importance" value="{{ $importance ?? '' }}">

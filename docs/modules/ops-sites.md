@@ -349,6 +349,36 @@ List header checkbox **Select all** sends `all=1` for the current filters (every
 
 Every bulk confirm body carries the same number. Buttons ship a `data-confirm-template` whose `__COUNT__` (and, for branch, `__TARGET__`) is substituted on each selection change, so `sites.danger.hard_confirm_bulk` reads `Seçili 214 site kalıcı silinsin mi?` instead of an uncounted `Seçili siteler`. The server-rendered `data-confirm` fallback is interpolated with `$sites->total()` on purpose: if `ops-ui.js` fails to bind, the confirm over-warns with the widest reachable scope rather than under-warning. Tests: `SiteBulkSelectionScopeTest` (Blade tokens). Scope count + `__COUNT__` / `__TARGET__` interpolate: `node --test tests/js/*.js` — [ADR-11](../decisions/adr-11-dom-test-harness.md).
 
+### The bulk bar stays in view
+
+`.sites-bulk-bar` is `position: sticky; bottom: 0` (`ops-ui.css`): with 25 rows it used to sit under the last row, below the fold, so ticking a row near the top showed nothing. It now follows the viewport bottom while the table is on screen, and every menu inside it opens upward. The workspace tint is translucent, so the sticky bar layers it over `--surface-raised`. Sites and Domains share the class.
+
+### Tags and importance
+
+Operator-side organisation of the fleet. Both are **Plane metadata**: nothing is pushed to a site, Coolify is not contacted, nothing is queued (ADR-12 is not involved).
+
+- **Tags** — `site_tags` (`name` ≤ 32, unique case-insensitively; `color` one of `SiteTag::COLORS`) and the pivot `site_tag_assignments`. At most `SiteTag::MAX` (50).
+- **Importance** — `sites.importance` tinyint, `App\Enums\SiteImportance`: `normal` 0, `important` 1, `critical` 2. Numeric so the optional **Önem** column sorts by it.
+
+**Bulk bar.** `_bulk-organize.blade.php` puts two menus beside the selection summary (not in the deploy action row, which stays at six controls): **Etiket** — add / remove each existing tag, create a new one (name + colour) and attach it in one step, and under *Etiketleri düzenle* rename, recolour or delete — and **Önem**. All of it posts the surrounding bulk form, so `all=1` means every site matching the filter here too.
+
+| Route | Does |
+|---|---|
+| `POST /sites/bulk/tags` (`tag_op` = `create` \| `attach:<id>` \| `detach:<id>`) | `SiteTagController::bulk` |
+| `POST /sites/bulk/importance` (`importance` = enum key) | `SiteTagController::bulkImportance`; writes through `toBase()` so `updated_at` does not move |
+| `POST /site-tags/{tag}` (`tag_names[<id>]`, `tag_colors[<id>]`) | rename / recolour |
+| `POST /site-tags/{tag}/delete` | delete the tag everywhere (confirm) |
+
+Writers only (`canWriteOps`); each change writes an `audit_logs` row (`site_tag.*`, `site.importance_changed`).
+
+**No page change.** The JSON answer carries `refresh_list` and `keep_selection`. `ops-list.js` re-renders the region; `setupBulkSelection` (`ops-ui.js`) remembers the ticked ids on `ops:ajax-success` and re-ticks them on the fresh form, so several tags can be applied to the same selection in a row. Enter in a tag name field presses that group's own button (`data-ops-enter-submit`), never the form's first submit.
+
+**Filters.** `tag` (a tag id, or `none` for untagged) and `importance` (`flagged` = important + critical, `critical`, `important`, `normal`) are ordinary list filters: `Site::scopeMatchingListFilters`, `SiteSavedViews::FILTER_KEYS`, saved views, `filter_*` for bulk "all matching". A tag chip in a row links to its own filter.
+
+**Seeing the important ones.** The row shows an **Önemli** / **Kritik** badge next to the name and the tags under the slug. The summary row gains an **Önemli siteler** tile (`SiteListSummary::importantCounts()`): how many sites are flagged and how many of those are unhealthy, have an App issue or a failed deploy in the window; it opens `?importance=flagged`. It is not part of `counts()` — the daily snapshot has no column for it, so it has no trend.
+
+Tests: `SiteTagsAndImportanceTest`.
+
 ### Bulk defaults match the selection
 
 Two defaults used to lie at scale.

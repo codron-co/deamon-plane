@@ -33,6 +33,7 @@ final class SiteListColumns
         'live' => ['sort' => 'last_live_http_status', 'default' => true],
         'theme' => ['sort' => null, 'default' => true],
         'last_deploy' => ['sort' => null, 'default' => true],
+        'importance' => ['sort' => 'importance', 'default' => false],
         'server' => ['sort' => null, 'default' => false],
         'auto_deploy' => ['sort' => 'coolify_auto_deploy', 'default' => false],
         'mail' => ['sort' => null, 'default' => false],

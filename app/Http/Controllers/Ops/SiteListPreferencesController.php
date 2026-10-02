@@ -97,6 +97,8 @@ class SiteListPreferencesController extends Controller
             'server' => ['sometimes', 'nullable', 'string', 'max:64'],
             'stale' => ['sometimes', 'nullable', 'string', 'max:32'],
             'analytics' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'tag' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'importance' => ['sometimes', 'nullable', 'string', 'max:32'],
             'columns' => ['sometimes', 'array'],
             'columns.*' => ['string', 'max:32'],
             'sort_key' => ['sometimes', 'nullable', 'string', 'max:32'],

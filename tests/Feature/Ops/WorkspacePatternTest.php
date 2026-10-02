@@ -47,6 +47,7 @@ class WorkspacePatternTest extends TestCase
             ->assertSee('class="plane-metrics"', false)
             ->assertSee('data-ops-list-view="summary-total"', false)
             ->assertSee('data-ops-list-view="summary-git_themes"', false)
+            ->assertSee('data-ops-list-view="summary-important"', false)
             ->assertSee(e(route('ops.sites', ['health' => 'unhealthy'])), false)
             ->assertSee('class="ops-search plane-search"', false)
             ->assertSee('placeholder="'.e(__('sites.search_placeholder')).'"', false)
@@ -55,7 +56,8 @@ class WorkspacePatternTest extends TestCase
             ->assertSee('class="plane-git-icon"', false)
             ->getContent();
 
-        $this->assertSame(5, substr_count($html, 'class="plane-metric is-'));
+        // The five fleet counts plus the operator's "important sites" tile.
+        $this->assertSame(6, substr_count($html, 'class="plane-metric is-'));
     }
 
     public function test_fleet_snapshot_uses_tiles_with_the_since_yesterday_trend(): void

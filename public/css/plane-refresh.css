@@ -1016,7 +1016,8 @@ article.plane-metric:hover {
     margin: 0;
     padding: 10px 14px;
     border-top: 1px solid var(--border);
-    background: var(--accent-soft);
+    /* The tint is translucent and the bar is sticky: rows must not show through it. */
+    background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface-raised);
 }
 
 .plane-workspace .ops-pagination {

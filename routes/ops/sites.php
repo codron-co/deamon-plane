@@ -13,6 +13,7 @@ use App\Http\Controllers\Ops\SiteEnvController;
 use App\Http\Controllers\Ops\SiteListPreferencesController;
 use App\Http\Controllers\Ops\SitePublishStatusController;
 use App\Http\Controllers\Ops\SiteSearchIntegrationsController;
+use App\Http\Controllers\Ops\SiteTagController;
 use App\Http\Controllers\Ops\SiteThemeController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,10 @@ Route::post('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'liveSync
 Route::get('/sites/bulk/live-sync', [SiteCoolifyOpsController::class, 'redirectGetLiveSync'])->name('ops.sites.live-sync.get');
 Route::post('/sites/bulk/app-health-fix', [SiteAppHealthController::class, 'bulkFix'])->name('ops.sites.bulk.app-health-fix');
 Route::post('/sites/bulk/agent-secret', [SiteController::class, 'bulkInjectAgentSecret'])->name('ops.sites.bulk.agent-secret');
+Route::post('/sites/bulk/tags', [SiteTagController::class, 'bulk'])->name('ops.sites.bulk.tags');
+Route::post('/sites/bulk/importance', [SiteTagController::class, 'bulkImportance'])->name('ops.sites.bulk.importance');
+Route::post('/site-tags/{tag}', [SiteTagController::class, 'update'])->name('ops.site-tags.update');
+Route::post('/site-tags/{tag}/delete', [SiteTagController::class, 'destroy'])->name('ops.site-tags.destroy');
 Route::post('/sites/bulk/purge', [SiteCoolifyOpsController::class, 'bulkPurge'])->name('ops.sites.bulk.purge');
 Route::get('/sites/{site}/coolify-ops/panel', [SiteCoolifyOpsController::class, 'panel'])->name('ops.sites.coolify-ops.panel');
 Route::get('/sites/{site}/env/panel', [SiteEnvController::class, 'panel'])->name('ops.sites.env.panel');

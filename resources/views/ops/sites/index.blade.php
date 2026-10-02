@@ -126,6 +126,8 @@
             'pack' => $pack ?? '',
             'auto_deploy' => $autoDeploy ?? '',
             'server' => $server ?? '',
+            'tag' => $tag ?? '',
+            'importance' => $importance ?? '',
         ];
         $activeFilterCount = count(array_filter($filterValues, static fn (string $value): bool => $value !== ''));
 
@@ -146,6 +148,8 @@
         // chip row; open-ended sets (a theme, a server) are a Plane select.
         $filterGroups = [
             'channel' => [__('sites.filter_branch'), array_combine($channels, $channels), true, false],
+            'importance' => [__('sites.filter_importance'), $importanceFilters ?? [], false, false],
+            'tag' => [__('sites.filter_tag'), $tagFilters ?? [], false, true],
             'theme' => [__('sites.filter_theme'), $themeFilters ?? [], false, false],
             'theme_id' => [__('sites.filter_theme_id'), $themeIdFilters ?? [], false, true],
             'cms' => [__('sites.filter_cms'), $cmsFilters ?? [], false, false],
@@ -174,7 +178,23 @@
                     ['key' => 'git_themes', 'tone' => 'accent', 'url' => route('ops.sites', ['theme' => 'git']), 'icon' => 'M5 3.5v6M5 9.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM11 4.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM11 7.5c0 2-2.5 2-6 3'],
                 ];
             @endphp
-            <x-ops.metrics :label="__('sites.summary.label')">
+            <x-ops.metrics :label="__('sites.summary.label')" :columns="($importantSummary ?? null) !== null ? 6 : null">
+                @if (($importantSummary ?? null) !== null)
+                    {{-- The operator's own short list: how many sites are marked important, and how many of those need attention. --}}
+                    <x-ops.metric
+                        :label="__('sites.summary.important')"
+                        :value="$importantSummary['total']"
+                        :tone="$importantSummary['problems'] > 0 ? 'danger' : ($importantSummary['total'] > 0 ? 'success' : 'neutral')"
+                        :href="route('ops.sites', ['importance' => 'flagged'])"
+                        icon="M8 2.2l1.8 3.7 4 .6-2.9 2.8.7 4L8 11.4l-3.6 1.9.7-4L2.2 6.5l4-.6L8 2.2Z"
+                        :detail="$importantSummary['total'] === 0
+                            ? __('sites.summary.important_none')
+                            : ($importantSummary['problems'] > 0
+                                ? __('sites.summary.important_problems', ['count' => $importantSummary['problems']])
+                                : __('sites.summary.important_ok'))"
+                        data-ops-list-view="summary-important"
+                    />
+                @endif
                 @foreach ($tiles as $tile)
                     <x-ops.metric
                         :label="__('sites.summary.'.$tile['key'])"

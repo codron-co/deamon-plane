@@ -1187,6 +1187,9 @@
         };
     }
 
+    const keptBulkSelections = {};
+    let bulkKeeperBound = false;
+
     function setupBulkSelection(scope) {
         findIn(scope, "[data-ops-bulk]").forEach(function (form) {
             if (!(form instanceof HTMLFormElement) || form.dataset.bulkEnhanced === "true") {
@@ -1314,7 +1317,68 @@
                 });
             }
 
+            // A label change re-rendered the region: put the selection back.
+            const kept = form.id ? keptBulkSelections[form.id] : null;
+            if (kept) {
+                delete keptBulkSelections[form.id];
+                if (Date.now() - kept.at < 15000) {
+                    rows.forEach(function (box) {
+                        if (box instanceof HTMLInputElement) {
+                            box.checked = kept.all || kept.ids.indexOf(box.value) !== -1;
+                        }
+                    });
+                    if (all instanceof HTMLInputElement) {
+                        all.checked = kept.all;
+                    }
+                }
+            }
+
             sync();
+        });
+
+        if (bulkKeeperBound) {
+            return;
+        }
+        bulkKeeperBound = true;
+
+        /*
+         * Tagging and importance answer with `keep_selection`: the list is about
+         * to be re-rendered, and the operator is not done with these rows yet.
+         */
+        document.addEventListener("ops:ajax-success", function (event) {
+            const detail = event.detail || {};
+            const form = detail.form;
+            if (!(form instanceof HTMLFormElement) || !form.matches("[data-ops-bulk]") || !form.id) {
+                return;
+            }
+            if (!detail.payload || detail.payload.keep_selection !== true) {
+                return;
+            }
+
+            const all = form.querySelector("[data-ops-bulk-all]");
+            keptBulkSelections[form.id] = {
+                at: Date.now(),
+                all: all instanceof HTMLInputElement && all.checked,
+                ids: Array.prototype.slice.call(form.querySelectorAll('input[type="checkbox"][name$="_ids[]"]:checked')).map(function (box) {
+                    return box.value;
+                }),
+            };
+        });
+
+        /*
+         * A text field inside the bulk form must not fire the form's first
+         * submit button on Enter; it presses the button of its own little group.
+         */
+        document.addEventListener("keydown", function (event) {
+            if (event.key !== "Enter" || !(event.target instanceof HTMLElement) || !event.target.matches("[data-ops-enter-submit]")) {
+                return;
+            }
+            event.preventDefault();
+            const group = event.target.closest("[data-ops-enter-scope]");
+            const button = group ? group.querySelector("[data-ops-enter-button]") : null;
+            if (button instanceof HTMLElement) {
+                button.click();
+            }
         });
     }
 

@@ -21,6 +21,7 @@ use App\Models\Deployment;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\SiteMailboxRequest;
+use App\Models\SiteTag;
 use App\Models\Theme;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\SiteHealthChecker;
@@ -90,6 +91,8 @@ class SiteController extends Controller
         $server = $savedViews->filters['server'] ?? '';
         $stale = $savedViews->filters['stale'] ?? '';
         $analytics = $savedViews->filters['analytics'] ?? '';
+        $tag = $savedViews->filters['tag'] ?? '';
+        $importance = $savedViews->filters['importance'] ?? '';
 
         $allowedChannels = config('ops.channels', []);
         $publishFilters = [...CmsPublishStatus::values(), 'unknown'];
@@ -129,6 +132,19 @@ class SiteController extends Controller
         foreach (Site::ANALYTICS_FILTERS as $analyticsOption) {
             $analyticsFilters[$analyticsOption] = (string) __('sites.analytics_states.'.$analyticsOption);
         }
+        $importanceFilters = [];
+        foreach (Site::IMPORTANCE_FILTERS as $importanceOption) {
+            $importanceFilters[$importanceOption] = (string) __('sites.importance_states.'.$importanceOption);
+        }
+        // The bulk bar inside the region lists every tag, so this is loaded for region responses too.
+        $siteTags = SiteTag::query()->orderBy('name')->get();
+        $tagFilters = [];
+        if ($siteTags->isNotEmpty()) {
+            $tagFilters['none'] = (string) __('sites.tags.untagged');
+            foreach ($siteTags as $siteTag) {
+                $tagFilters[(string) $siteTag->id] = (string) $siteTag->name;
+            }
+        }
 
         /*
          * Theme / CMS options read the whole fleet's payloads, and server options the
@@ -144,7 +160,7 @@ class SiteController extends Controller
         $listView->rememberSort($request->user());
 
         $query = Site::query()
-            ->with(['activeThemeInstallation.theme', 'latestDeployment', 'coolifyConnection'])
+            ->with(['activeThemeInstallation.theme', 'latestDeployment', 'coolifyConnection', 'tags'])
             ->matchingListFilters(...SiteSavedViews::scopeArguments($savedViews->filters));
 
         // A search reaches alias hosts, so a matched row must be able to say which host
@@ -185,6 +201,8 @@ class SiteController extends Controller
             'server' => $serverFilters,
             'stale' => $staleFilters,
             'analytics' => $analyticsFilters,
+            'tag' => $tagFilters,
+            'importance' => $importanceFilters,
         ]);
         $bulkPinCommits = $this->bulkPinSuggestions($sites);
 
@@ -201,10 +219,12 @@ class SiteController extends Controller
         // Summary tiles sit above the toolbar, so a region re-render never needs them.
         $summary = null;
         $summaryTrend = null;
+        $importantSummary = null;
         if (! ListFragment::wanted($request)) {
             $summaryService = app(SiteListSummary::class);
             $summary = $summaryService->counts();
             $summaryTrend = $summaryService->trend($summary);
+            $importantSummary = $summaryService->importantCounts();
         }
 
         return ListFragment::respond($request, 'ops.sites.index', 'ops.sites._region', [
@@ -225,6 +245,12 @@ class SiteController extends Controller
             'server' => $server,
             'stale' => $stale,
             'analytics' => $analytics,
+            'tag' => $tag,
+            'importance' => $importance,
+            'siteTags' => $siteTags,
+            'tagFilters' => $tagFilters,
+            'importanceFilters' => $importanceFilters,
+            'importantSummary' => $importantSummary,
             'savedViews' => $savedViews,
             'channels' => $allowedChannels,
             'statuses' => SiteStatus::values(),
@@ -288,6 +314,8 @@ class SiteController extends Controller
             'server' => __('sites.filter_server'),
             'stale' => __('sites.filter_stale'),
             'analytics' => __('sites.filter_analytics'),
+            'tag' => __('sites.filter_tag'),
+            'importance' => __('sites.filter_importance'),
         ];
 
         $translated = [

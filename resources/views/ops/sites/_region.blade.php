@@ -233,12 +233,15 @@
                         data-copy-selected="{{ __('site_ops.bulk.summary_page', ['count' => '__COUNT__']) }}"
                         data-copy-all="{{ __('site_ops.bulk.summary_all', ['total' => $sites->total()]) }}"
                     >
+                        <div class="sites-bulk-head">
                         <p class="sites-bulk-summary">
                             {{-- Filled by ops-ui.js: without JS there is no selection to count. --}}
                             <strong data-ops-bulk-summary-text aria-live="polite"></strong>
                             <button type="button" class="btn btn-ghost btn-sm" data-ops-bulk-select-all hidden>{{ __('site_ops.bulk.select_all_matching', ['total' => $sites->total()]) }}</button>
                             <button type="button" class="btn btn-ghost btn-sm" data-ops-bulk-select-page hidden>{{ __('site_ops.bulk.select_page_only') }}</button>
                         </p>
+                        @include('ops.sites._bulk-organize')
+                        </div>
                         <div class="form-actions sites-bulk-actions" role="group" aria-label="{{ __('sites.bulk') }}">
                             <label class="ops-bulk-channel">
                                 <span class="visually-hidden">{{ __('sites.channel_switch.target') }}</span>

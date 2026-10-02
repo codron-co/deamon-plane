@@ -5,6 +5,7 @@ namespace App\Services\Sites;
 use App\Models\FleetDailySnapshot;
 use App\Models\Site;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Fleet-wide counts behind the Sites summary tiles. The list page and the daily
@@ -31,6 +32,28 @@ class SiteListSummary
             'failed_deploys' => Site::query()->matchingListFilters(deploy: 'failed')->count(),
             'app_issues' => Site::query()->withAppIssues()->count(),
             'git_themes' => Site::query()->matchingListFilters(theme: 'git')->count(),
+        ];
+    }
+
+    /**
+     * Sites the operator marked important or critical, and how many of those
+     * need attention right now: unhealthy, an App issue, or a failed deploy.
+     * Kept out of counts(): the daily snapshot has no column for it.
+     *
+     * @return array{total: int, critical: int, problems: int}
+     */
+    public function importantCounts(): array
+    {
+        $flagged = static fn (): Builder => Site::query()->matchingListFilters(importance: 'flagged');
+
+        return [
+            'total' => $flagged()->count(),
+            'critical' => Site::query()->matchingListFilters(importance: 'critical')->count(),
+            'problems' => $flagged()->where(static function (Builder $problem): void {
+                $problem->where(static fn (Builder $unhealthy): Builder => $unhealthy->unhealthy())
+                    ->orWhere(static fn (Builder $app): Builder => $app->withAppIssues())
+                    ->orWhereHas('deployments', static fn (Builder $deployments): Builder => $deployments->failedInWindow());
+            })->count(),
         ];
     }
 

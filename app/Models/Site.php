@@ -7,6 +7,7 @@ use App\Enums\CmsPublishStatus;
 use App\Enums\CoolifyGitSourceKind;
 use App\Enums\DeployGate;
 use App\Enums\DeploymentStatus;
+use App\Enums\SiteImportance;
 use App\Enums\SiteStatus;
 use App\Services\Agent\AgentHealthReason;
 use App\Services\Agent\AgentHealthStatus;
@@ -64,6 +65,7 @@ class Site extends Model
         'agent_secret_encrypted',
         'agent_base_url',
         'notes',
+        'importance',
         'last_health_at',
         'last_health_payload',
         'last_live_http_status',
@@ -121,6 +123,7 @@ class Site extends Model
             'deploy_gate' => DeployGate::class,
             'deploy_canary' => 'boolean',
             'status' => SiteStatus::class,
+            'importance' => SiteImportance::class,
             'cms_site_status' => CmsPublishStatus::class,
             'cms_site_status_at' => 'datetime',
             'app_key_encrypted' => 'encrypted',
@@ -200,6 +203,24 @@ class Site extends Model
     public function mailServer(): BelongsTo
     {
         return $this->belongsTo(MailServer::class);
+    }
+
+    /**
+     * Operator labels; Plane metadata, never pushed to the site.
+     *
+     * @return BelongsToMany<SiteTag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(SiteTag::class, 'site_tag_assignments')->orderBy('site_tags.name');
+    }
+
+    public function importanceLevel(): SiteImportance
+    {
+        // A model created in this request has no `importance` attribute until it is re-read.
+        $importance = $this->getAttribute('importance');
+
+        return $importance instanceof SiteImportance ? $importance : SiteImportance::Normal;
     }
 
     /**
@@ -914,6 +935,19 @@ class Site extends Model
      */
     public const ANALYTICS_FILTERS = ['gsc_missing', 'measurement_missing', 'push_failed'];
 
+    /**
+     * A site tag id (`site_tags.id`), or `none` for sites without any tag.
+     */
+    public const TAG_FILTER_PATTERN = '/^(none|[0-9a-z]{26})$/';
+
+    /**
+     * Importance list filters: the SiteImportance keys plus `flagged`, every
+     * site above normal — the set the "important sites" tile counts.
+     *
+     * @var list<string>
+     */
+    public const IMPORTANCE_FILTERS = ['flagged', 'critical', 'important', 'normal'];
+
     public const STALE_HEALTH_HOURS = 24;
 
     /**
@@ -955,6 +989,8 @@ class Site extends Model
         string $server = '',
         string $stale = '',
         string $analytics = '',
+        string $tag = '',
+        string $importance = '',
     ): Builder {
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
@@ -972,6 +1008,20 @@ class Site extends Model
         $server = preg_match(self::SERVER_FILTER_PATTERN, $server) === 1 ? $server : '';
         $stale = in_array($stale, self::STALE_FILTERS, true) ? $stale : '';
         $analytics = in_array($analytics, self::ANALYTICS_FILTERS, true) ? $analytics : '';
+        $tag = preg_match(self::TAG_FILTER_PATTERN, $tag) === 1 ? $tag : '';
+        $importance = in_array($importance, self::IMPORTANCE_FILTERS, true) ? $importance : '';
+
+        if ($tag === 'none') {
+            $query->whereDoesntHave('tags');
+        } elseif ($tag !== '') {
+            $query->whereHas('tags', static fn (Builder $tags): Builder => $tags->where('site_tags.id', $tag));
+        }
+
+        if ($importance === 'flagged') {
+            $query->where('importance', '>', SiteImportance::Normal->value);
+        } elseif ($importance !== '') {
+            $query->where('importance', (SiteImportance::fromKey($importance) ?? SiteImportance::Normal)->value);
+        }
 
         if ($search !== '') {
             $term = addcslashes($search, '%_\\');

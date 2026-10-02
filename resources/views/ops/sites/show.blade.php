@@ -44,6 +44,10 @@
             <div class="site-identity-copy">
                 <div class="site-title-row">
                     <h2>{{ $site->name }}</h2>
+                    @include('ops.sites._importance-badge', ['level' => $site->importanceLevel()])
+                    @foreach ($site->tags as $siteTag)
+                        <a class="site-tag is-{{ $siteTag->colorKey() }}" href="{{ route('ops.sites', ['tag' => $siteTag->id]) }}" title="{{ __('sites.tags.filter_by', ['tag' => $siteTag->name]) }}">{{ $siteTag->name }}</a>
+                    @endforeach
                     <span class="status-chip status-{{ $site->status?->value }}">{{ $site->status?->label() ?? __('ops.unknown') }}</span>
                     <span
                         class="status-chip status-{{ $site->publishTone() }}"

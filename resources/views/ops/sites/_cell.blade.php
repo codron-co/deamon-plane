@@ -24,11 +24,25 @@
                 <div>
                     <div class="site-name-row">
                         <a class="site-name" href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
+                        @include('ops.sites._importance-badge', ['level' => $site->importanceLevel()])
                         @if ($site->hasDockerfileBuildPackWarning())
                             <span class="status-chip status-dockerfile">{{ __('ops.dockerfile_chip') }}</span>
                         @endif
                     </div>
                     <div class="site-slug">{{ $site->slug }}</div>
+                    @if ($site->relationLoaded('tags') && $site->tags->isNotEmpty())
+                        {{-- A tag is also a filter: clicking one narrows the list to it. --}}
+                        <div class="site-tags">
+                            @foreach ($site->tags as $siteTag)
+                                <a
+                                    class="site-tag is-{{ $siteTag->colorKey() }}"
+                                    href="{{ route('ops.sites', ['tag' => $siteTag->id]) }}"
+                                    title="{{ __('sites.tags.filter_by', ['tag' => $siteTag->name]) }}"
+                                    data-row-action
+                                >{{ $siteTag->name }}</a>
+                            @endforeach
+                        </div>
+                    @endif
                     {{-- The card layout drops the domain column into the identity block; the table keeps its own column. --}}
                     @if (filled($site->primary_domain))
                         <div class="site-card-domain">{{ $site->primary_domain }}</div>
@@ -222,6 +236,16 @@
                         <code class="plane-sha" title="{{ __('sites.cells.deploy_commit', ['sha' => substr((string) $deployment->commit_sha, 0, 12)]) }}">{{ $deploySha }}</code>
                     @endif
                 </div>
+            @endif
+        </td>
+        @break
+
+    @case ('importance')
+        <td data-col="{{ $column }}" data-label="{{ $cellLabel }}">
+            @if ($site->importanceLevel()->isFlagged())
+                @include('ops.sites._importance-badge', ['level' => $site->importanceLevel()])
+            @else
+                <span class="muted">{{ $site->importanceLevel()->label() }}</span>
             @endif
         </td>
         @break

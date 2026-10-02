@@ -1822,10 +1822,198 @@ html.ops-hints-ready .site-hint.is-open [role="tooltip"] {
     color: var(--danger-text-strong, var(--danger));
 }
 
-/* The bulk bar is the last thing on the page, so its menu opens upward. */
-.sites-bulk-danger .ops-action-popover {
+/*
+ * The bar follows the selection instead of waiting under the last row: with 25
+ * rows it used to sit below the fold. Sticky to the viewport bottom, so every
+ * menu in it opens upward.
+ */
+.sites-bulk-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    box-shadow: 0 -8px 18px -12px rgba(0, 0, 0, 0.45);
+}
+
+.sites-bulk-bar .ops-action-popover {
     top: auto;
     bottom: calc(100% + 6px);
+    max-height: min(70vh, 34rem);
+    overflow-y: auto;
+}
+
+.sites-bulk-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+}
+
+.sites-bulk-organize {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ---------- Site tags + importance ---------- */
+
+.site-tag {
+    --tag: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    max-width: 14rem;
+    height: 18px;
+    padding: 0 7px;
+    border: 1px solid color-mix(in srgb, var(--tag) 38%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tag) 14%, transparent);
+    color: color-mix(in srgb, var(--tag) 62%, var(--text));
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+a.site-tag:hover {
+    background: color-mix(in srgb, var(--tag) 24%, transparent);
+}
+
+.site-tag.is-blue, .site-tag-swatch.is-blue { --tag: #4f8ff7; }
+.site-tag.is-green, .site-tag-swatch.is-green { --tag: #2fa866; }
+.site-tag.is-amber, .site-tag-swatch.is-amber { --tag: #d99a1c; }
+.site-tag.is-red, .site-tag-swatch.is-red { --tag: #e5565f; }
+.site-tag.is-purple, .site-tag-swatch.is-purple { --tag: #9a6bf2; }
+.site-tag.is-teal, .site-tag-swatch.is-teal { --tag: #1fa8a8; }
+.site-tag.is-pink, .site-tag-swatch.is-pink { --tag: #e667ad; }
+.site-tag-swatch.is-gray { --tag: var(--text-muted); }
+
+.site-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.site-importance {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 18px;
+    padding: 0 7px;
+    border: 1px solid var(--warning-border);
+    border-radius: 999px;
+    background: var(--warning-surface);
+    color: var(--warning-text);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.site-importance.is-critical {
+    border-color: var(--danger-border);
+    background: var(--danger-surface);
+    color: var(--danger-text, var(--danger));
+}
+
+/* The menus sit at the right end of the bar, so the popover grows leftward (right: 0). */
+.sites-tag-popover {
+    width: min(21rem, calc(100vw - 32px));
+}
+
+.sites-tag-popover .field-input {
+    width: 100%;
+    max-width: none;
+}
+
+.sites-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 2px 6px;
+}
+
+.sites-tag-row .site-tag {
+    margin-right: auto;
+}
+
+.sites-tag-new,
+.sites-tag-edit {
+    display: grid;
+    gap: 8px;
+    padding: 4px 6px 6px;
+}
+
+.sites-tag-edit {
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.sites-tag-edit-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.sites-tag-manage > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.sites-tag-manage > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sites-tag-manage > summary::after {
+    content: "▸";
+    margin-left: auto;
+    color: var(--text-faint);
+}
+
+.sites-tag-manage[open] > summary::after {
+    content: "▾";
+}
+
+.site-tag-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.site-tag-swatch {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.site-tag-swatch input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.site-tag-swatch > span[aria-hidden] {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--surface-raised);
+    border-radius: 999px;
+    background: var(--tag);
+    box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+.site-tag-swatch input:checked + span[aria-hidden] {
+    box-shadow: 0 0 0 2px var(--text);
+}
+
+.site-tag-swatch input:focus-visible + span[aria-hidden] {
+    box-shadow: 0 0 0 2px var(--focus);
 }
 
 /* ---------- Empty states + filter chips ---------- */

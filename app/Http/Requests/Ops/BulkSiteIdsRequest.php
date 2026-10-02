@@ -41,6 +41,8 @@ class BulkSiteIdsRequest extends FormRequest
             'filter_server' => ['sometimes', 'nullable', 'string', 'max:64'],
             'filter_stale' => ['sometimes', 'nullable', 'string', 'max:32'],
             'filter_analytics' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_tag' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'filter_importance' => ['sometimes', 'nullable', 'string', 'max:32'],
         ];
     }
 }
