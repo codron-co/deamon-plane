@@ -10,6 +10,15 @@
         @if (isset($savedViews) && \App\Support\Lists\ListFragment::wanted(request()))
             <template data-sites-segment-next>@include('ops.sites._segment')</template>
         @endif
+        {{-- Same for the tag filter: a tag created or renamed from the bulk bar must reach the panel without a page load. --}}
+        @if (isset($tagFilters) && \App\Support\Lists\ListFragment::wanted(request()))
+            <template data-sites-tag-options>
+                <option value="" @selected(($tag ?? '') === '')>{{ __('sites.filter_panel.all') }}</option>
+                @foreach ($tagFilters as $tagValue => $tagLabel)
+                    <option value="{{ $tagValue }}" @selected(($tag ?? '') === (string) $tagValue)>{{ $tagLabel }}</option>
+                @endforeach
+            </template>
+        @endif
         @if ($sites->isEmpty() && ! $filtersActive)
             <div class="empty-panel">
                 <h2>{{ __('sites.empty.title') }}</h2>

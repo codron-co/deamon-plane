@@ -139,12 +139,11 @@ class SiteController extends Controller
         }
         // The bulk bar inside the region lists every tag, so this is loaded for region responses too.
         $siteTags = SiteTag::query()->orderBy('name')->get();
-        $tagFilters = [];
-        if ($siteTags->isNotEmpty()) {
-            $tagFilters['none'] = (string) __('sites.tags.untagged');
-            foreach ($siteTags as $siteTag) {
-                $tagFilters[(string) $siteTag->id] = (string) $siteTag->name;
-            }
+        // Always offered, even before the first tag exists: the first one is created
+        // from the bulk bar without a page load, and the panel must already be there.
+        $tagFilters = ['none' => (string) __('sites.tags.untagged')];
+        foreach ($siteTags as $siteTag) {
+            $tagFilters[(string) $siteTag->id] = (string) $siteTag->name;
         }
 
         /*

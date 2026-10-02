@@ -243,8 +243,27 @@
         });
     }
 
+    /**
+     * Tags are created, renamed and deleted from the bulk bar inside the region,
+     * while the tag filter sits in the panel outside it. Each fetched region
+     * brings the current option list; the enhanced select redraws on its own.
+     */
+    const swapTagOptions = function () {
+        const next = root.querySelector("[data-ops-list-region] template[data-sites-tag-options]");
+        const select = root.querySelector("select[name='tag'][data-ops-list-filter]");
+        if (!next) {
+            return;
+        }
+        const options = next.content.cloneNode(true);
+        next.remove();
+        if (select) {
+            select.replaceChildren(options);
+        }
+    };
+
     root.addEventListener("ops:list-updated", function (event) {
         swapSegment();
+        swapTagOptions();
         sync(event.detail && event.detail.url);
     });
 

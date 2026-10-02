@@ -9,6 +9,7 @@ use App\Models\Site;
 use App\Models\SiteTag;
 use App\Models\User;
 use App\Services\Sites\SiteListSummary;
+use App\Support\Lists\ListFragment;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -265,6 +266,33 @@ class SiteTagsAndImportanceTest extends TestCase
         $this->assertSame(2, $counts['total']);
         $this->assertSame(1, $counts['critical']);
         $this->assertSame(1, $counts['problems']);
+    }
+
+    public function test_tag_filter_is_offered_before_any_tag_exists_and_follows_region_updates(): void
+    {
+        Site::factory()->create(['name' => 'Lonely Site']);
+        $operator = $this->operator();
+
+        // No tag yet: the panel still has the filter, so the first tag made from
+        // the bulk bar has somewhere to appear.
+        $this->actingAs($operator)
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->assertSee('id="sites-filter-tag"', false)
+            ->assertSee(__('sites.tags.untagged'))
+            ->assertDontSee('data-sites-tag-options', false);
+
+        $tag = SiteTag::query()->create(['name' => 'Sonradan', 'color' => 'teal']);
+
+        // A region response carries the fresh option list for the panel outside it.
+        $html = (string) $this->actingAs($operator)
+            ->withHeader(ListFragment::HEADER, ListFragment::VALUE)
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('data-sites-tag-options', $html);
+        $this->assertStringContainsString('<option value="'.$tag->id.'"', $html);
     }
 
     public function test_site_form_saves_importance_and_tags_and_can_clear_them(): void
