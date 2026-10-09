@@ -66,9 +66,11 @@ services:
       - plane_mysql:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uplane", "-pplane"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+      interval: 120s
+      start_interval: 5s
+      start_period: 120s
+      timeout: 10s
+      retries: 3
     mem_limit: 768m
     cpus: "1.0"
     pids_limit: 256
@@ -83,9 +85,11 @@ services:
       - plane_redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      interval: 120s
+      start_interval: 5s
+      start_period: 60s
+      timeout: 5s
+      retries: 3
     mem_limit: 128m
     cpus: "0.25"
     pids_limit: 64

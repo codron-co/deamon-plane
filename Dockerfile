@@ -98,7 +98,7 @@ ENV APP_ENV=production \
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+HEALTHCHECK --interval=120s --start-interval=5s --timeout=5s --start-period=90s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8080/up || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
