@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\InstagramOAuthController;
 use App\Http\Controllers\Ops\AccountController;
 use App\Http\Controllers\Ops\ActivityController;
 use App\Http\Controllers\Ops\DeamonGitConnectionController;
@@ -18,6 +19,16 @@ Route::get('/platform-mail/unsubscribe', [PlatformMailUnsubscribeController::cla
 Route::post('/platform-mail/unsubscribe', [PlatformMailUnsubscribeController::class, 'show'])
     ->middleware('signed')
     ->name('ops.platform-mail.unsubscribe.post');
+
+// Instagram OAuth broker for CMS sites (customers' browsers, no Plane login).
+Route::get('/instagram/connect', [InstagramOAuthController::class, 'connect'])
+    ->middleware('throttle:30,1')
+    ->name('instagram.oauth.connect');
+Route::get('/instagram/callback', [InstagramOAuthController::class, 'callback'])
+    ->middleware('throttle:30,1')
+    ->name('instagram.oauth.callback');
+Route::get('/instagram/veri-silme', [InstagramOAuthController::class, 'dataDeletion'])
+    ->name('instagram.data-deletion');
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');
@@ -45,6 +56,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/ops/cloudflare.php';
     require __DIR__.'/ops/mail-servers.php';
     require __DIR__.'/ops/deskron.php';
+    require __DIR__.'/ops/instagram.php';
     require __DIR__.'/ops/themes.php';
     require __DIR__.'/ops/rollouts.php';
 

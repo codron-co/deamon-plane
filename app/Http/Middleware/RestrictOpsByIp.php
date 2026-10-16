@@ -13,6 +13,10 @@ class RestrictOpsByIp
         if ($request->routeIs([
             'ops.platform-mail.unsubscribe',
             'ops.platform-mail.unsubscribe.post',
+            // Instagram OAuth broker: CMS customers' browsers, from any network.
+            'instagram.oauth.connect',
+            'instagram.oauth.callback',
+            'instagram.data-deletion',
         ])) {
             return $next($request);
         }

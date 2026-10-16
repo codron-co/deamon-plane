@@ -576,3 +576,7 @@ Subagent-driven: overnight closer (this track) — CMS Task 11 separate
 ## Slice 1 — server IP (2026-09-10)
 
 - Status: **ship**. `coolify_servers.ip` from Coolify `public_ip`/`public` else `ip`. Connection show table has IP column. Sync does not write `is_active` (does not zero it).
+
+## Instagram OAuth broker (2026-10-16)
+
+- Status: **code**. Ops `Instagram` page (Meta app id + encrypted secret), public `/instagram/connect` + `/instagram/callback` broker, oauth-config push + hourly reconcile for CMS 1.2.76+, `/instagram/veri-silme`. Doc: [instagram-oauth.md](../modules/instagram-oauth.md). CMS side: `feat/instagram-feed` (1.2.76), rolled out to doremanmedya.com first.

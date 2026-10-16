@@ -3,6 +3,7 @@
 use App\Jobs\DispatchSiteHealthChecksJob;
 use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileDeskronPushJob;
+use App\Jobs\ReconcileInstagramPushJob;
 use App\Jobs\ReconcileSiteSearchIntegrationsJob;
 use App\Jobs\StartWaitingDeploysJob;
 use App\Models\OpsNotification;
@@ -35,6 +36,13 @@ Schedule::command('ops:sync-env-catalog')
 Schedule::job(new ReconcileDeskronPushJob)
     ->hourly()
     ->name('ops-deskron-push-reconcile')
+    ->withoutOverlapping();
+
+// Instagram: a CMS that reaches 1.2.76 after the app was configured reports
+// instagram.oauth_configured=false; push it the connect URL.
+Schedule::job(new ReconcileInstagramPushJob)
+    ->hourly()
+    ->name('ops-instagram-push-reconcile')
     ->withoutOverlapping();
 
 // Arama & Analitik: saves push at once (PushSiteSearchIntegrationsJob); this pass
