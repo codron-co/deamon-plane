@@ -16,6 +16,7 @@ return [
         'mail_servers' => 'Posta sunucuları',
         'platform_mail' => 'Yazılım maili',
         'deskron' => 'DeskRon destek',
+        'instagram' => 'Instagram',
         'themes' => 'Temalar',
         'settings' => 'Sistem',
     ],

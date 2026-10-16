@@ -112,6 +112,10 @@
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 7.5a5 5 0 0 1 10 0v2.5a1.5 1.5 0 0 1-1.5 1.5H11V8h2M3 8h2v3.5H4.5A1.5 1.5 0 0 1 3 10V7.5Zm8 4v.5a1.5 1.5 0 0 1-1.5 1.5H8" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     {{ __('ops.nav.deskron') }}
                 </a>
+                <a class="ops-nav-item {{ request()->routeIs('ops.instagram*') ? 'is-active' : '' }}" href="{{ route('ops.instagram.edit') }}">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="3.25" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="8" cy="8" r="2.6" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="11.2" cy="4.8" r=".7" fill="currentColor"/></svg>
+                    {{ __('ops.nav.instagram') }}
+                </a>
                 <a class="ops-nav-item {{ request()->routeIs('ops.themes*') ? 'is-active' : '' }}" href="{{ route('ops.themes') }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10v9H3v-9Zm2 3h6M5 9h4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
                     {{ __('ops.nav.themes') }}

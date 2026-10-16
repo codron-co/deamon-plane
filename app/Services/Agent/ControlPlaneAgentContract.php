@@ -53,6 +53,13 @@ final class ControlPlaneAgentContract
     /** CMS 1.2.22+: stores the DeskRon application the admin Support page uses. */
     public const DESKRON_CONFIGURE_PATH = '/internal/control/v1/deskron/configure';
 
+    /** CMS 1.2.76+: Instagram feed module. Plane pushes the OAuth connect URL and, after the OAuth flow, the account token. */
+    public const INSTAGRAM_OAUTH_CONFIG_PATH = '/internal/control/v1/instagram/oauth-config';
+
+    public const INSTAGRAM_CONNECT_PATH = '/internal/control/v1/instagram/connect';
+
+    public const INSTAGRAM_MIN_VERSION = '1.2.76';
+
     /** CMS 1.2.49+: reads (GET) and partially sets (POST) search verification + GA4/GTM ids. */
     public const SEARCH_INTEGRATIONS_PATH = '/internal/control/v1/search-integrations';
 
@@ -183,6 +190,16 @@ final class ControlPlaneAgentContract
     public static function deskronConfigurePath(): string
     {
         return self::configuredPath('ops.agent.deskron_configure_path', self::DESKRON_CONFIGURE_PATH);
+    }
+
+    public static function instagramOAuthConfigPath(): string
+    {
+        return self::configuredPath('ops.agent.instagram_oauth_config_path', self::INSTAGRAM_OAUTH_CONFIG_PATH);
+    }
+
+    public static function instagramConnectPath(): string
+    {
+        return self::configuredPath('ops.agent.instagram_connect_path', self::INSTAGRAM_CONNECT_PATH);
     }
 
     public static function searchIntegrationsPath(): string

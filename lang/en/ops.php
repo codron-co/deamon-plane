@@ -16,6 +16,7 @@ return [
         'mail_servers' => 'Mail servers',
         'platform_mail' => 'Product mail',
         'deskron' => 'DeskRon support',
+        'instagram' => 'Instagram',
         'themes' => 'Themes',
         'settings' => 'Settings',
     ],
