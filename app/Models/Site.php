@@ -265,7 +265,7 @@ class Site extends Model
     }
 
     /**
-     * CMS'in son health'te bildirdiği Turnstile durumu (1.2.77+); yoksa null.
+     * CMS'in son health'te bildirdiği Turnstile durumu (1.2.78+); yoksa null.
      *
      * @return array{enabled: bool, mode: string|null, source: string|null, ready: bool, sitekeys: array<string, string>}|null
      */

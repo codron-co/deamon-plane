@@ -77,7 +77,7 @@ return [
         'timeout' => 'The site did not answer (timeout).',
         'http_error' => 'Could not reach the site.',
         'invalid_response' => 'The site gave an unexpected answer.',
-        'cms_too_old' => 'The site\'s CMS does not support bot protection (needs 1.2.77+).',
+        'cms_too_old' => 'The site\'s CMS does not support bot protection (needs 1.2.78+).',
         'signature' => 'Signature rejected (agent secret mismatch).',
         'secret_echoed' => 'The site echoed the secret back; the push was failed for safety.',
         'http_status' => 'The site returned HTTP :status.',

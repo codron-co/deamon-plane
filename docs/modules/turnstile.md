@@ -1,6 +1,6 @@
 # Bot koruması (Cloudflare Turnstile)
 
-> CMS tarafı: `deamon/docs/modules/turnstile.md` (1.2.77+). Agent ucu: `GET`/`POST /internal/control/v1/turnstile`.
+> CMS tarafı: `deamon/docs/modules/turnstile.md` (1.2.78+). Agent ucu: `GET`/`POST /internal/control/v1/turnstile`.
 
 Plane her sitenin herkese açık formlarını Cloudflare Turnstile ile korur: widget'ları sitenin Cloudflare hesabında açar, anahtarları siteye imzalı agent ile iter. Ücretsizdir; site Cloudflare'de olmak zorunda değildir (widget hesabı sitenin bağlı Cloudflare hesabı, yoksa varsayılan hesap).
 
@@ -32,7 +32,7 @@ Paylaşılan widget'ta bir sitenin token'ı diğerinde de geçerli olurdu; CMS s
 
 `SyncSiteTurnstileJob`: Cloudflare hatası gönderimi durdurmaz (mod/form değişikliği eski widget'larla gider). 4 deneme, 60/180/600 sn. `validation_failed`, `cms_too_old`, `secret_echoed`, `no_base_url` yeniden denenmez.
 
-Sürüm: CMS health'te 1.2.77'den eski sürüm bildiriyorsa gönderim yapılmaz (`cms_too_old`). Sürüm henüz bilinmiyorsa (yeni site) denenir; eski CMS 404 döner.
+Sürüm: CMS health'te 1.2.78'den eski sürüm bildiriyorsa gönderim yapılmaz (`cms_too_old`). Sürüm henüz bilinmiyorsa (yeni site) denenir; eski CMS 404 döner.
 
 ## CMS gövdesi
 

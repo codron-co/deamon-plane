@@ -77,7 +77,7 @@ return [
         'timeout' => 'Site cevap vermedi (zaman aşımı).',
         'http_error' => 'Siteye bağlanılamadı.',
         'invalid_response' => 'Site beklenmeyen bir cevap verdi.',
-        'cms_too_old' => 'Sitenin CMS sürümü bot korumasını desteklemiyor (1.2.77+ gerekir).',
+        'cms_too_old' => 'Sitenin CMS sürümü bot korumasını desteklemiyor (1.2.78+ gerekir).',
         'signature' => 'İmza reddedildi (agent anahtarı uyuşmuyor).',
         'secret_echoed' => 'Site gizli anahtarı cevapta geri döndürdü; gönderim güvenlik için başarısız sayıldı.',
         'http_status' => 'Site HTTP :status döndü.',
