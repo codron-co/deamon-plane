@@ -312,6 +312,7 @@
                         <li>{{ __('cloudflare.permissions_items.resource') }}</li>
                         <li>{{ __('cloudflare.permissions_items.dns') }}</li>
                         <li>{{ __('cloudflare.permissions_items.zone') }}</li>
+                        <li>{{ __('cloudflare.permissions_items.turnstile') }}</li>
                     </ol>
                     <p class="ops-alert ops-alert-warning" role="status">{{ __('cloudflare.permissions_items.template') }}</p>
                 </section>

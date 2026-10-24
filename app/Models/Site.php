@@ -255,6 +255,47 @@ class Site extends Model
     }
 
     /**
+     * Cloudflare Turnstile bot koruması: mod, formlar ve widget ataması (POST /turnstile).
+     *
+     * @return HasOne<SiteTurnstile, $this>
+     */
+    public function turnstile(): HasOne
+    {
+        return $this->hasOne(SiteTurnstile::class);
+    }
+
+    /**
+     * CMS'in son health'te bildirdiği Turnstile durumu ; yoksa null (eski CMS ya da health henüz gelmedi).
+     *
+     * @return array{enabled: bool, mode: string|null, source: string|null, ready: bool, sitekeys: array<string, string>}|null
+     */
+    public function reportedTurnstile(): ?array
+    {
+        $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
+        $turnstile = $payload['turnstile'] ?? null;
+        if (! is_array($turnstile)) {
+            return null;
+        }
+
+        return [
+            'enabled' => ($turnstile['enabled'] ?? false) === true,
+            'mode' => is_string($turnstile['mode'] ?? null) ? $turnstile['mode'] : null,
+            'source' => is_string($turnstile['source'] ?? null) ? $turnstile['source'] : null,
+            'ready' => ($turnstile['ready'] ?? false) === true,
+            'sitekeys' => array_filter((array) ($turnstile['sitekeys'] ?? []), 'is_string'),
+        ];
+    }
+
+    /**
+     * Turnstile'ı bilen CMS health'te `turnstile` alanını bildirir. Sürüm numarasına
+     * bağlanmaz: özellik hangi toplu deploy turunda çıkarsa çıksın doğru kalır.
+     */
+    public function supportsTurnstile(): bool
+    {
+        return $this->reportedTurnstile() !== null;
+    }
+
+    /**
      * Coolify UI deep link. Path uses project + environment uuids, never the env/channel name.
      */
     public function coolifyUiUrl(): ?string

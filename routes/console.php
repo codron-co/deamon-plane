@@ -5,6 +5,7 @@ use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileDeskronPushJob;
 use App\Jobs\ReconcileInstagramPushJob;
 use App\Jobs\ReconcileSiteSearchIntegrationsJob;
+use App\Jobs\ReconcileSiteTurnstileJob;
 use App\Jobs\StartWaitingDeploysJob;
 use App\Models\OpsNotification;
 use Illuminate\Foundation\Inspiring;
@@ -50,6 +51,13 @@ Schedule::job(new ReconcileInstagramPushJob)
 Schedule::job(new ReconcileSiteSearchIntegrationsJob)
     ->hourly()
     ->name('ops-search-integrations-reconcile')
+    ->withoutOverlapping();
+
+// Bot koruması (Turnstile): alan adı değişen siteyi widget'larla eşitler, CMS'in
+// almadığı ya da health'te farklı anahtar bildirdiği gönderimi yeniden iter.
+Schedule::job(new ReconcileSiteTurnstileJob)
+    ->hourlyAt(25)
+    ->name('ops-turnstile-reconcile')
     ->withoutOverlapping();
 
 // Work left mid-way (killed worker, lost webhook, timeout) is closed or re-read

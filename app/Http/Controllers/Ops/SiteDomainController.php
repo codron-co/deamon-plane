@@ -10,6 +10,7 @@ use App\Services\Sites\SiteDomainSync;
 use App\Services\Sites\SiteLanding;
 use App\Services\Sites\SitePrimaryDomain;
 use App\Services\Sites\SiteProvisionException;
+use App\Services\Turnstile\SiteTurnstileSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,8 @@ class SiteDomainController extends Controller
         }
 
         $site->refresh();
+        // Bot koruması widget'ı yeni alan adını da kapsasın.
+        app(SiteTurnstileSync::class)->queue($site);
         $site->auditLogs()->create([
             'actor_user_id' => $request->user()?->id,
             'action' => 'site.domain_added',
@@ -102,6 +105,8 @@ class SiteDomainController extends Controller
         } catch (SiteProvisionException $exception) {
             $bindError = $exception->getMessage();
         }
+
+        app(SiteTurnstileSync::class)->queue($site);
 
         $site->auditLogs()->create([
             'actor_user_id' => $request->user()?->id,

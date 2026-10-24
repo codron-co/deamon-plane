@@ -50,6 +50,7 @@ class SiteDetailController extends Controller
             'cloudflareAccount',
             'activeThemeInstallation.theme',
             'searchIntegration',
+            'turnstile.cloudflareAccount',
         ]);
 
         $user = $request->user();

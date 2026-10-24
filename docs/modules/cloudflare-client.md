@@ -9,6 +9,7 @@ Ops browser → Plane → Cloudflare API v4 (`Authorization: Bearer`). No Global
 | Class | Role |
 |-------|------|
 | `App\Services\Cloudflare\CloudflareClient` | Bearer HTTP to `config('ops.cloudflare.api_base')` |
+| `CloudflareClient::*TurnstileWidget*` | Account-level Turnstile widgets (`/accounts/{id}/challenges/widgets`): list, create, update (PUT sends name + domains + mode), delete. Token needs **Account → Turnstile → Edit**; without it only bot protection fails (`sync_error = cloudflare_forbidden`), DNS and provision are unaffected. See [turnstile.md](turnstile.md) |
 | `App\Services\Cloudflare\CloudflarePermissionProbe` | Test connection: verify token, Zone Read, Zone Edit (POST `/zones` **without `name`**), DNS Read/Edit |
 | `App\Services\Cloudflare\CloudflareZoneService` | Attach hostname to a covering zone, or create a Free full zone on the registrable apex; persist NS on the site |
 | `App\Services\Cloudflare\CloudflareHostname` | Normalize host; walk parent labels (`a.b.c.example.com` → parent zones); apex for new customer zones |

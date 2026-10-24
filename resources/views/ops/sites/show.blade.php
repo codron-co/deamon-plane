@@ -219,6 +219,7 @@
                 @include('ops.sites._landing')
                 @include('ops.sites._domains')
                 @include('ops.sites._cloudflare')
+                @include('ops.sites._turnstile')
                 @include('ops.sites._mail')
                 @include('ops.sites._platform-mail')
                 @include('ops.sites._publish-state')
