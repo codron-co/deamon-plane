@@ -3,12 +3,14 @@
 namespace App\Services\Sites;
 
 use App\Jobs\PushDeskronJob;
+use App\Jobs\SyncSiteTurnstileJob;
 use App\Models\CoolifyConnection;
 use App\Models\DeskronSetting;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Turnstile\SiteTurnstileSync;
 use Illuminate\Support\Str;
 
 class SiteAgentSecretInjector
@@ -52,6 +54,14 @@ class SiteAgentSecretInjector
         // application once its agent routes are up. The job retries until then.
         if (DeskronSetting::current()->isReady()) {
             PushDeskronJob::dispatch((string) $site->id)->delay(now()->addMinutes(2));
+        }
+
+        // Bot koruması (Turnstile): yeni site kendiliğinden kaydolur; widget'lar
+        // ayrılır ve anahtarlar CMS açılınca itilir. Hesap Turnstile izni yoksa
+        // hata site sayfasında görünür, provision etkilenmez.
+        if ((bool) config('ops.turnstile.auto_enroll', true) && app(SiteTurnstileSync::class)->accountFor($site) !== null) {
+            app(SiteTurnstileSync::class)->enroll($site, $actor?->id);
+            SyncSiteTurnstileJob::dispatch((string) $site->id)->delay(now()->addMinutes(2));
         }
     }
 }

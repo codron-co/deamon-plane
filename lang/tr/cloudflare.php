@@ -28,6 +28,7 @@ return [
         'resource' => 'Kaynak: hesap altındaki tüm zone’lar (gelecekteki zone’lar dahil). Tek domain seçmeyin.',
         'dns' => 'DNS & Zones → DNS: Read + Edit',
         'zone' => 'DNS & Zones → Zone: Read + Edit',
+        'turnstile' => 'Account → Turnstile: Edit (bot koruması widget\'ları; yoksa siteler bot korumasız kalır, DNS etkilenmez)',
         'template' => 'Hazır şablon DNS Write yetmez: Zone satırında Edit de işaretlenmeli.',
     ],
     'not_required' => 'Developer Platform, AI, App Security, Rules, Zero Trust, Analytics, Network, Email Routing, Cache, SSL, Apps veya Page Shield vermeyin. Plane MX/TXT’yi DNS Edit ile yazar.',

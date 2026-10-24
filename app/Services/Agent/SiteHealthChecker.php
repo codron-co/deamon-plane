@@ -109,6 +109,7 @@ class SiteHealthChecker
             'core_theme_in_sync',
             'host_load',
             'host_cpus',
+            'turnstile',
             'http_status',
         ];
 

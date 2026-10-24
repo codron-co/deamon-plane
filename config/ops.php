@@ -170,6 +170,11 @@ return [
         'wildcard_domain' => env('CLOUDFLARE_WILDCARD_DOMAIN', 'codron.co'),
     ],
 
+    // Cloudflare Turnstile bot koruması: yeni site provision edilince kendiliğinden kaydolur.
+    'turnstile' => [
+        'auto_enroll' => (bool) env('OPS_TURNSTILE_AUTO_ENROLL', true),
+    ],
+
     'coolify' => [
         'base_url' => env('COOLIFY_BASE_URL'),
         'api_token' => env('COOLIFY_API_TOKEN'),
