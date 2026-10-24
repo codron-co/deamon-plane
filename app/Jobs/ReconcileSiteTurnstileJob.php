@@ -62,7 +62,7 @@ class ReconcileSiteTurnstileJob implements ShouldQueue
             $record->refresh();
         }
 
-        if ($site->reportedDeamonVersion() !== null && ! $site->supportsTurnstile()) {
+        if ($site->last_health_at !== null && ! $site->supportsTurnstile()) {
             return;
         }
 

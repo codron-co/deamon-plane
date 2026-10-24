@@ -265,7 +265,7 @@ class Site extends Model
     }
 
     /**
-     * CMS'in son health'te bildirdiği Turnstile durumu (1.2.78+); yoksa null.
+     * CMS'in son health'te bildirdiği Turnstile durumu ; yoksa null (eski CMS ya da health henüz gelmedi).
      *
      * @return array{enabled: bool, mode: string|null, source: string|null, ready: bool, sitekeys: array<string, string>}|null
      */
@@ -287,14 +287,12 @@ class Site extends Model
     }
 
     /**
-     * Bilinmeyen sürüm eski sayılır: eski CMS /turnstile ucunu tanımaz.
+     * Turnstile'ı bilen CMS health'te `turnstile` alanını bildirir. Sürüm numarasına
+     * bağlanmaz: özellik hangi toplu deploy turunda çıkarsa çıksın doğru kalır.
      */
     public function supportsTurnstile(): bool
     {
-        $reported = $this->reportedDeamonVersion();
-
-        return $reported !== null
-            && version_compare(ltrim($reported, 'vV'), ControlPlaneAgentContract::TURNSTILE_MIN_VERSION, '>=');
+        return $this->reportedTurnstile() !== null;
     }
 
     /**

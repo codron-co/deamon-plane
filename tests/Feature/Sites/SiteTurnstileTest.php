@@ -178,12 +178,12 @@ class SiteTurnstileTest extends TestCase
         $sync->enroll($site);
         $sync->syncWidgets($site);
 
-        $site->forceFill(['last_health_payload' => ['deamon_version' => '1.2.77']])->save();
+        $site->forceFill(['last_health_at' => now(), 'last_health_payload' => ['deamon_version' => '1.2.78']])->save();
         $this->assertFalse(app(SiteTurnstileAgent::class)->push($site->fresh()));
         $this->assertSame('cms_too_old', $site->turnstile()->value('push_error'));
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/internal/control/v1/turnstile'));
 
-        $site->forceFill(['last_health_payload' => ['deamon_version' => '1.2.78']])->save();
+        $site->forceFill(['last_health_at' => now(), 'last_health_payload' => ['deamon_version' => '1.2.78', 'turnstile' => ['enabled' => false, 'ready' => false, 'sitekeys' => []]]])->save();
         $this->assertFalse(app(SiteTurnstileAgent::class)->push($site->fresh()));
         $this->assertSame('secret_echoed', $site->turnstile()->value('push_error'));
     }
@@ -286,7 +286,7 @@ class SiteTurnstileTest extends TestCase
             'status' => SiteStatus::Active,
             'primary_domain' => $host,
             'agent_base_url' => 'https://'.$host,
-            'last_health_payload' => ['deamon_version' => '1.2.78'],
+            'last_health_payload' => ['deamon_version' => '1.2.78', 'turnstile' => ['enabled' => false, 'ready' => false, 'sitekeys' => []]],
         ]);
     }
 

@@ -78,7 +78,7 @@ final class AgentHealthResult
                 // CoolifyDeployGate holds new builds back while the host is overloaded.
                 'host_load' => self::hostLoad($payload['host_load'] ?? null),
                 'host_cpus' => self::positiveInt($payload['host_cpus'] ?? null),
-                // CMS 1.2.78+: Turnstile state; site keys only (public), never a secret.
+                // CMS with Turnstile: state; site keys only (public), never a secret.
                 'turnstile' => self::turnstile($payload['turnstile'] ?? null),
                 'http_status' => $httpStatus,
             ]),
