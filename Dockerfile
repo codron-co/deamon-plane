@@ -38,7 +38,7 @@ RUN mkdir -p .deamon \
 RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php bootstrap/cache/config.php \
     && composer dump-autoload --optimize --classmap-authoritative --no-scripts
 
-FROM php:8.2-fpm-bookworm AS runtime
+FROM php:8.2.35-fpm-bookworm AS runtime
 
 LABEL org.opencontainers.image.title="Deamon Plane"
 LABEL org.opencontainers.image.description="Internal ops control plane (Laravel) for Coolify Compose"
