@@ -183,6 +183,11 @@ class SiteTurnstileTest extends TestCase
         $this->assertSame('cms_too_old', $site->turnstile()->value('push_error'));
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/internal/control/v1/turnstile'));
 
+        // Failed health (no version reported) is not proof of an old CMS: the push is tried.
+        $site->forceFill(['last_health_at' => now(), 'last_health_payload' => ['status' => 'unhealthy', 'reason' => 'timeout']])->save();
+        $this->assertFalse(app(SiteTurnstileAgent::class)->push($site->fresh()));
+        $this->assertSame('secret_echoed', $site->turnstile()->value('push_error'));
+
         $site->forceFill(['last_health_at' => now(), 'last_health_payload' => ['deamon_version' => '1.2.78', 'turnstile' => ['enabled' => false, 'ready' => false, 'sitekeys' => []]]])->save();
         $this->assertFalse(app(SiteTurnstileAgent::class)->push($site->fresh()));
         $this->assertSame('secret_echoed', $site->turnstile()->value('push_error'));
