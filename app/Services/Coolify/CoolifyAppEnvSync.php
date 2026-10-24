@@ -10,6 +10,7 @@ use App\Services\Coolify\Dto\CoolifyEnvironmentVariable;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogException;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogSync;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
+use App\Services\Databases\SiteDatabasePlacement;
 use App\Services\Sites\ChannelEnvironmentMap;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -54,6 +55,12 @@ class CoolifyAppEnvSync
         'CONTROL_PLANE_AGENT_SECRET',
         'CONTROL_PLANE_HOST_ALLOWLIST',
         'DEAMON_CHANNEL',
+        // Database placement (SiteDatabasePlacement, written by sync() for shared-DB
+        // sites): pruning them would point a moved site back at its old local MySQL.
+        'DB_HOST',
+        'DB_PORT',
+        'DB_DATABASE',
+        'DB_USERNAME',
     ];
 
     /**
@@ -108,6 +115,17 @@ class CoolifyAppEnvSync
             }
 
             $desired[$row->key] = $next;
+        }
+
+        // Not catalog rows: the CMS compose defaults DB_* to its own `mysql` service.
+        // A site on a shared server gets them from Plane on every sync, so a deleted
+        // or edited value cannot point it back at the old local database.
+        if ($site->usesSharedDatabase()) {
+            foreach (SiteDatabasePlacement::envFor($site) as $key => $value) {
+                if (($existing[$key] ?? null) !== $value) {
+                    $desired[$key] = $value;
+                }
+            }
         }
 
         $written = [];

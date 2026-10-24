@@ -11,6 +11,7 @@ return [
         'sites' => 'Sites',
         'domains' => 'Domains',
         'coolify' => 'Coolify',
+        'databases' => 'Databases',
         'cloudflare' => 'Cloudflare',
         'mail' => 'Mail',
         'mail_servers' => 'Mail servers',

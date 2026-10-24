@@ -25,6 +25,7 @@
 - [Async list regions](modules/ops-list-async.md) — search / filter / sort / paging / column prefs without a page reload
 - [Activity](modules/ops-activity.md) — jobs + deploys + audit rows; fleet history the widget is not
 - [Mail servers](modules/mail-servers.md) — Hostinger token in Plane; CMS HMAC proxy
+- [Database servers](modules/database-servers.md) — shared MySQL for sites, SQL console, moving a site, watch list
 - [Software mail](modules/platform-mail.md) — Deamon product SMTP + notification toggles (global + per-site)
 - [Deployment (Coolify Compose)](modules/deployment.md)
 - [Coolify HTTP adapter](modules/coolify-client.md) — N connections, allowlists, site dropdowns

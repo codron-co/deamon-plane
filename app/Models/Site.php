@@ -94,6 +94,9 @@ class Site extends Model
         'last_health_notify_status',
         'health_fail_streak',
         'last_health_notify_at',
+        'database_server_id',
+        'db_database',
+        'db_username',
     ];
 
     /**
@@ -203,6 +206,22 @@ class Site extends Model
     public function mailServer(): BelongsTo
     {
         return $this->belongsTo(MailServer::class);
+    }
+
+    /**
+     * Shared MySQL server holding this site's database; null = the `mysql`
+     * service inside the site's own compose stack.
+     */
+    public function databaseServer(): BelongsTo
+    {
+        return $this->belongsTo(DatabaseServer::class);
+    }
+
+    public function usesSharedDatabase(): bool
+    {
+        return filled($this->database_server_id)
+            && filled($this->db_database)
+            && filled($this->db_username);
     }
 
     /**

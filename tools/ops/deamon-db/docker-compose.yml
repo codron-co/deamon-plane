@@ -1,0 +1,44 @@
+# Shared MySQL for Deamon CMS sites on the coolify VPS (/opt/deamon-db).
+# Not a Coolify resource on purpose: Coolify recreates every container of a stack on
+# each deploy, and this one must only restart when we restart it. Plane manages the
+# site databases on it (Databases page, `ops:site-db`); see tools/ops/README.md.
+#
+# Reachable only on the external `deamon-db` network as `deamon-db-mysql`; no port is
+# published. Secrets live in /opt/deamon-db/.env (600): MYSQL_ROOT_PASSWORD, PLANE_ADMIN_PASSWORD.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: deamon-db-mysql
+    command: >-
+      --innodb-buffer-pool-size=1G --innodb-buffer-pool-instances=1
+      --innodb-flush-log-at-trx-commit=2 --max-connections=500
+      --performance-schema=OFF --skip-log-bin
+      --tmp-table-size=32M --max-heap-table-size=32M
+      --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # Read by init/01-plane-admin.sh on the first start only.
+      PLANE_ADMIN_PASSWORD: ${PLANE_ADMIN_PASSWORD}
+    volumes:
+      - ./data:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d:ro
+    networks:
+      deamon-db:
+        aliases:
+          - deamon-db-mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+      start_interval: 5s
+    mem_limit: 2g
+    cpus: "1.5"
+    pids_limit: 512
+    # Every site depends on this server: it must come back after a host reboot.
+    restart: unless-stopped
+
+networks:
+  deamon-db:
+    external: true

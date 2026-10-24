@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/ops/instagram.php';
     require __DIR__.'/ops/themes.php';
     require __DIR__.'/ops/rollouts.php';
+    require __DIR__.'/ops/databases.php';
 
     Route::get('/account', [AccountController::class, 'show'])->name('ops.account.show');
     Route::put('/account', [AccountController::class, 'update'])->name('ops.account.update');

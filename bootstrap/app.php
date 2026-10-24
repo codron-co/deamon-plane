@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Internal\WatchListController;
 use App\Http\Middleware\ConvertOpsAjaxRedirect;
 use App\Http\Middleware\RestrictOpsByIp;
 use App\Http\Middleware\SetOpsLocale;
@@ -24,6 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
             Route::prefix('internal/site/v1/mail')
                 ->group(base_path('routes/internal-site.php'));
+
+            Route::get('internal/ops/v1/watch-list', WatchListController::class)
+                ->middleware('throttle:30,1')
+                ->name('internal.watch-list');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

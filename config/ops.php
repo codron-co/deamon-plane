@@ -298,4 +298,18 @@ return [
         'allowed_build_packs' => ['dockercompose', 'dockerfile'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Off-host uptime watch
+    |--------------------------------------------------------------------------
+    |
+    | tools/ops/deamon-watch.sh on main.codron reads the active site domains from
+    | GET /internal/ops/v1/watch-list with this bearer token. Empty = endpoint off.
+    |
+    */
+
+    'watch' => [
+        'token' => (string) env('PLANE_WATCH_TOKEN', ''),
+    ],
+
 ];

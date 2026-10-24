@@ -11,6 +11,7 @@ return [
         'sites' => 'Siteler',
         'domains' => 'Domainler',
         'coolify' => 'Coolify',
+        'databases' => 'Veritabanları',
         'cloudflare' => 'Cloudflare',
         'mail' => 'Posta',
         'mail_servers' => 'Posta sunucuları',
