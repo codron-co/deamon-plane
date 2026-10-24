@@ -155,6 +155,53 @@ class CloudflareClient
         return $this->http()->post('/zones/'.$zoneId.'/dns_records', []);
     }
 
+    /**
+     * Turnstile widget'ları (hesap düzeyi; token'da Account → Turnstile → Edit gerekir).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listTurnstileWidgets(string $accountId): array
+    {
+        return $this->paginateList('/accounts/'.$accountId.'/challenges/widgets');
+    }
+
+    /**
+     * @param  list<string>  $domains
+     * @return array<string, mixed> `sitekey` ve `secret` dahil
+     */
+    public function createTurnstileWidget(string $accountId, string $name, array $domains, string $mode): array
+    {
+        $result = $this->decode($this->http()->post('/accounts/'.$accountId.'/challenges/widgets', [
+            'name' => $name,
+            'domains' => array_values($domains),
+            'mode' => $mode,
+        ]));
+
+        return is_array($result) ? $result : [];
+    }
+
+    /**
+     * Ad, alan adları ve mod birlikte gönderilir (Cloudflare PUT tam nesne ister).
+     *
+     * @param  list<string>  $domains
+     * @return array<string, mixed>
+     */
+    public function updateTurnstileWidget(string $accountId, string $sitekey, string $name, array $domains, string $mode): array
+    {
+        $result = $this->decode($this->http()->put('/accounts/'.$accountId.'/challenges/widgets/'.$sitekey, [
+            'name' => $name,
+            'domains' => array_values($domains),
+            'mode' => $mode,
+        ]));
+
+        return is_array($result) ? $result : [];
+    }
+
+    public function deleteTurnstileWidget(string $accountId, string $sitekey): void
+    {
+        $this->decode($this->http()->delete('/accounts/'.$accountId.'/challenges/widgets/'.$sitekey));
+    }
+
     public function rawGet(string $path, array $query = []): Response
     {
         return $this->http()->get($path, $query);

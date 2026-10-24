@@ -78,6 +78,8 @@ final class AgentHealthResult
                 // CoolifyDeployGate holds new builds back while the host is overloaded.
                 'host_load' => self::hostLoad($payload['host_load'] ?? null),
                 'host_cpus' => self::positiveInt($payload['host_cpus'] ?? null),
+                // CMS 1.2.77+: Turnstile state; site keys only (public), never a secret.
+                'turnstile' => self::turnstile($payload['turnstile'] ?? null),
                 'http_status' => $httpStatus,
             ]),
         );
@@ -130,6 +132,31 @@ final class AgentHealthResult
      * @param  array<string, mixed>  $summary
      * @return array<string, mixed>
      */
+    /**
+     * @return array{enabled: bool, mode: string|null, source: string|null, ready: bool, sitekeys: array<string, string>}|null
+     */
+    private static function turnstile(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $sitekeys = [];
+        foreach ((array) ($value['sitekeys'] ?? []) as $mode => $sitekey) {
+            if (is_string($mode) && is_string($sitekey) && preg_match('/\A[0-9A-Za-z_-]{10,100}\z/', $sitekey) === 1) {
+                $sitekeys[$mode] = $sitekey;
+            }
+        }
+
+        return [
+            'enabled' => ($value['enabled'] ?? false) === true,
+            'mode' => self::nullableString($value['mode'] ?? null),
+            'source' => self::nullableString($value['source'] ?? null),
+            'ready' => ($value['ready'] ?? false) === true,
+            'sitekeys' => $sitekeys,
+        ];
+    }
+
     private static function summary(array $summary): array
     {
         unset($summary['agent_secret'], $summary['secret'], $summary['CONTROL_PLANE_AGENT_SECRET']);

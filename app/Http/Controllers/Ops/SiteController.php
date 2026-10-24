@@ -48,6 +48,7 @@ use App\Services\Sites\SiteListSummary;
 use App\Services\Sites\SitePrimaryDomain;
 use App\Services\Sites\SiteProvisioner;
 use App\Services\Sites\SiteProvisionException;
+use App\Services\Turnstile\SiteTurnstileSync;
 use App\Support\Lists\ListFragment;
 use App\Support\Lists\SiteListView;
 use App\Support\Lists\SiteSavedViews;
@@ -1112,6 +1113,10 @@ class SiteController extends Controller
             $site->refresh();
         }
 
+        if ($previousHosts !== $site->operatorHosts()) {
+            app(SiteTurnstileSync::class)->queue($site);
+        }
+
         if ($outcome !== null && $previousDomain !== $site->primary_domain) {
             app(SitePrimaryDomain::class)->followAgentBaseUrl($site, (string) $previousDomain, $outcome);
         }
@@ -1236,6 +1241,12 @@ class SiteController extends Controller
     public function purge(Request $request, Site $site, SiteLifecycle $lifecycle): RedirectResponse
     {
         $this->authorize('forceDelete', $site);
+
+        // Kalıcı silinen sitenin alan adları paylaşılan Turnstile widget'ında yer tutmasın.
+        $turnstile = $site->turnstile()->first();
+        if ($turnstile !== null) {
+            app(SiteTurnstileSync::class)->releaseWidgets($turnstile);
+        }
 
         try {
             $lifecycle->purge($site, $request->user(), $request->ip());

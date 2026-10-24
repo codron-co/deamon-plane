@@ -60,6 +60,11 @@ final class ControlPlaneAgentContract
 
     public const INSTAGRAM_MIN_VERSION = '1.2.76';
 
+    /** CMS 1.2.77+: Cloudflare Turnstile keys, mode and protected forms (GET/POST). */
+    public const TURNSTILE_PATH = '/internal/control/v1/turnstile';
+
+    public const TURNSTILE_MIN_VERSION = '1.2.77';
+
     /** CMS 1.2.49+: reads (GET) and partially sets (POST) search verification + GA4/GTM ids. */
     public const SEARCH_INTEGRATIONS_PATH = '/internal/control/v1/search-integrations';
 
@@ -205,6 +210,11 @@ final class ControlPlaneAgentContract
     public static function searchIntegrationsPath(): string
     {
         return self::configuredPath('ops.agent.search_integrations_path', self::SEARCH_INTEGRATIONS_PATH);
+    }
+
+    public static function turnstilePath(): string
+    {
+        return self::configuredPath('ops.agent.turnstile_path', self::TURNSTILE_PATH);
     }
 
     public static function adminsPath(): string

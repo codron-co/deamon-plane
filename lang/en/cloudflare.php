@@ -28,6 +28,7 @@ return [
         'resource' => 'Resource: all zones in the account, including future zones. Do not pick a single domain.',
         'dns' => 'DNS & Zones → DNS: Read + Edit',
         'zone' => 'DNS & Zones → Zone: Read + Edit',
+        'turnstile' => 'Account → Turnstile: Edit (bot protection widgets; without it sites stay unprotected, DNS is unaffected)',
         'template' => 'The DNS Write template is not enough: Zone must also have Edit.',
     ],
     'not_required' => 'Do not grant Developer Platform, AI, App Security, Rules, Zero Trust, Analytics, Network, Email Routing, Cache, SSL, Apps, or Page Shield. Plane writes MX/TXT with DNS Edit.',

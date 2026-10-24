@@ -255,6 +255,49 @@ class Site extends Model
     }
 
     /**
+     * Cloudflare Turnstile bot koruması: mod, formlar ve widget ataması (POST /turnstile).
+     *
+     * @return HasOne<SiteTurnstile, $this>
+     */
+    public function turnstile(): HasOne
+    {
+        return $this->hasOne(SiteTurnstile::class);
+    }
+
+    /**
+     * CMS'in son health'te bildirdiği Turnstile durumu (1.2.77+); yoksa null.
+     *
+     * @return array{enabled: bool, mode: string|null, source: string|null, ready: bool, sitekeys: array<string, string>}|null
+     */
+    public function reportedTurnstile(): ?array
+    {
+        $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
+        $turnstile = $payload['turnstile'] ?? null;
+        if (! is_array($turnstile)) {
+            return null;
+        }
+
+        return [
+            'enabled' => ($turnstile['enabled'] ?? false) === true,
+            'mode' => is_string($turnstile['mode'] ?? null) ? $turnstile['mode'] : null,
+            'source' => is_string($turnstile['source'] ?? null) ? $turnstile['source'] : null,
+            'ready' => ($turnstile['ready'] ?? false) === true,
+            'sitekeys' => array_filter((array) ($turnstile['sitekeys'] ?? []), 'is_string'),
+        ];
+    }
+
+    /**
+     * Bilinmeyen sürüm eski sayılır: eski CMS /turnstile ucunu tanımaz.
+     */
+    public function supportsTurnstile(): bool
+    {
+        $reported = $this->reportedDeamonVersion();
+
+        return $reported !== null
+            && version_compare(ltrim($reported, 'vV'), ControlPlaneAgentContract::TURNSTILE_MIN_VERSION, '>=');
+    }
+
+    /**
      * Coolify UI deep link. Path uses project + environment uuids, never the env/channel name.
      */
     public function coolifyUiUrl(): ?string
