@@ -42,7 +42,7 @@ src=$(grep "^mysql-$uuid" <<< "$names" | head -1)
 docker inspect "$app" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' | grep -qw deamon-db \
   || die "app is not on the deamon-db network yet (deploy the CMS with the deamon-db compose first)"
 
-srcsql() { docker exec "$src" sh -c 'exec mysql -udeamon -p"$MYSQL_PASSWORD" -N deamon' 2>/dev/null; }
+srcsql() { docker exec -i "$src" sh -c 'exec mysql -udeamon -p"$MYSQL_PASSWORD" -N deamon' 2>/dev/null; }
 dstsql() { docker exec -i "$DB_CONTAINER" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N "$target_db" 2>/dev/null; }
 counts() { # "<table> <rows>" per base table, exact counts
   local run=$1 tables
@@ -61,6 +61,17 @@ artisan ops:site-db prepare "$SITE" > /dev/null || die "prepare failed"
 existing=$(dstsql <<< "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()")
 [ "$existing" = 0 ] || die "target schema $target_db is not empty ($existing tables)"
 
+# Coolify runs restarts through its deployment queue (one at a time on this VPS): the
+# switch's restart would wait behind any build, with the site in maintenance meanwhile.
+coolify_q() { docker exec coolify-db psql -U coolify -d coolify -At -c "$1" 2>/dev/null; }
+for i in $(seq 1 60); do
+  busy=$(coolify_q "SELECT COUNT(*) FROM application_deployment_queues WHERE status IN ('queued','in_progress')")
+  [ "$busy" = 0 ] && break
+  [ "$i" = 1 ] && log "waiting for the Coolify deploy queue to drain ($busy job(s))"
+  sleep 30
+done
+[ "$busy" = 0 ] || die "Coolify deploy queue still busy after 30 min; try again later"
+
 log "maintenance on"
 docker exec "$app" php artisan down --retry=60 >/dev/null || die "could not enter maintenance"
 restore_up() { docker exec "$app" php artisan up >/dev/null 2>&1 || true; }
@@ -76,11 +87,21 @@ if ! diff -q "$WORK/src.counts" "$WORK/dst.counts" >/dev/null; then
 fi
 log "imported $(wc -l < "$WORK/src.counts") tables, row counts match"
 
+switched_at=$(date -u '+%F %T')
 artisan ops:site-db switch "$SITE" > /dev/null || { restore_up; die "switch failed (site still on local MySQL)"; }
-log "switched, waiting for the new container"
+log "switched, waiting for Coolify's restart of the app"
+
+# Follow the restart through Coolify's queue, then check the container it produced.
+restart_status() { coolify_q "SELECT q.status FROM application_deployment_queues q JOIN applications a ON a.id::text = q.application_id::text WHERE a.uuid = '$uuid' AND q.created_at >= '$switched_at'::timestamp - interval '5 seconds' ORDER BY q.created_at DESC LIMIT 1"; }
+for i in $(seq 1 60); do
+  s=$(restart_status)
+  case "$s" in finished|failed|cancelled*) break;; esac
+  sleep 10
+done
+log "coolify restart: ${s:-not found}"
 
 ok=""
-for i in $(seq 1 60); do
+for i in $(seq 1 36); do
   sleep 5
   new=$(docker ps --format '{{.Names}}' | grep "^app-$uuid" | head -1) || true
   [ -n "$new" ] || continue
@@ -94,7 +115,13 @@ done
 
 if [ -z "$ok" ]; then
   log "new container did not come up on the shared DB; switching back to local"
+  switched_at=$(date -u '+%F %T')
   artisan ops:site-db local "$SITE" > /dev/null || log "ROLLBACK FAILED: run ops:site-db local $SITE by hand"
+  for i in $(seq 1 60); do
+    s=$(restart_status)
+    case "$s" in finished|failed|cancelled*) break;; esac
+    sleep 10
+  done
   for i in $(seq 1 24); do
     sleep 5
     back=$(docker ps --format '{{.Names}}' | grep "^app-$uuid" | head -1) || true
