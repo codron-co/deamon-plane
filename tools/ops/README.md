@@ -69,10 +69,17 @@ is on the `deamon-db` network) and Plane is deployed with `ops:site-db`.
 ```
 
 Steps: prepare schema + user → maintenance on → dump → import into the empty schema →
-exact row counts compared per table → `ops:site-db switch` (DB_* env + restart) → the new
-container must show `DB_HOST=deamon-db-mysql` and answer `/up` → maintenance off. If the new
-container does not come up, the script runs `ops:site-db local` and the site goes back to
-its own MySQL, which still holds the same data. Log: `/opt/deamon-db/move.log`.
+exact row counts compared per table (one query per side) → `ops:site-db switch --no-restart`
+(Plane + Coolify env) → the same DB_* written into Coolify's generated
+`/data/coolify/applications/<uuid>/.env` → only the `app` container recreated from its
+existing image (`docker compose -p <uuid> up -d --no-build --no-deps --force-recreate app`)
+→ it must show `DB_HOST=deamon-db-mysql` and answer `/up`. If it does not, Plane and the
+`.env` go back to local and the app is recreated on its own MySQL, which still holds the
+same data. Log: `/opt/deamon-db/move.log`.
+
+Do not use a Coolify "restart" for this: on compose apps it rebuilds the image (≈9 min with
+the site in maintenance, plus one Docker build per site). deamon-test, 2026-10-24: 10 MB,
+201 tables, 18 s in maintenance with the recreate; rollback path 8 s.
 
 By hand: `php artisan ops:site-db status|prepare|switch|local <site>` in the Plane container.
 
