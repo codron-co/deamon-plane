@@ -43,8 +43,9 @@ final class SiteTurnstileAgent
             return false;
         }
 
-        // Health geldi ama `turnstile` yok: CMS eski. Health henüz yoksa (yeni site) dene; eski CMS 404 döner.
-        if ($site->last_health_at !== null && ! $site->supportsTurnstile()) {
+        // Başarılı health (sürüm bildirmiş) ama `turnstile` yok: CMS eski. Health hiç gelmediyse ya da
+        // son health başarısızsa (DNS, zaman aşımı) dene: eski CMS 404 döner, iş yeniden dener.
+        if ($site->reportedDeamonVersion() !== null && ! $site->supportsTurnstile()) {
             $this->recordPush($record, 'cms_too_old');
 
             return false;

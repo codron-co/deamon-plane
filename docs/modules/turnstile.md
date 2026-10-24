@@ -32,7 +32,7 @@ Paylaşılan widget'ta bir sitenin token'ı diğerinde de geçerli olurdu; CMS s
 
 `SyncSiteTurnstileJob`: Cloudflare hatası gönderimi durdurmaz (mod/form değişikliği eski widget'larla gider). 4 deneme, 60/180/600 sn. `validation_failed`, `cms_too_old`, `secret_echoed`, `no_base_url` yeniden denenmez.
 
-CMS desteği sürüm numarasıyla değil health'teki `turnstile` alanıyla anlaşılır (özellik hangi deploy turunda çıktıysa o sürümden itibaren). Health gelmiş ama alan yoksa gönderim yapılmaz (`cms_too_old`); health henüz yoksa (yeni site) denenir, eski CMS 404 döner.
+CMS desteği sürüm numarasıyla değil health'teki `turnstile` alanıyla anlaşılır (özellik hangi deploy turunda çıktıysa o sürümden itibaren). Başarılı health (sürüm bildirmiş) ama alan yoksa gönderim yapılmaz (`cms_too_old`). Health henüz yoksa ya da son health başarısızsa (DNS, zaman aşımı) denenir; eski CMS 404 döner, iş yeniden dener.
 
 ## CMS gövdesi
 
