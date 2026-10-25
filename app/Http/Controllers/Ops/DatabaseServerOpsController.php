@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Ops;
 
 use App\Http\Controllers\Controller;
 use App\Models\DatabaseServer;
+use App\Models\RedisServer;
 use App\Services\Databases\DatabaseServerClient;
 use App\Services\Databases\DatabaseServerException;
+use App\Services\Databases\RedisServerClient;
+use App\Services\Databases\RedisServerException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,8 +19,30 @@ class DatabaseServerOpsController extends Controller
     {
         return view('ops.databases.index', [
             'servers' => DatabaseServer::query()->withCount('sites')->orderByDesc('is_default')->orderBy('name')->get(),
+            'redisServers' => RedisServer::query()
+                ->withCount(['sites as shared_sites_count' => fn ($query) => $query->where('redis_shared', true)])
+                ->orderByDesc('is_default')->orderBy('name')->get(),
+            'canWrite' => $request->user()?->can('ops.write') ?? false,
             'canDanger' => $request->user()?->can('ops.danger') ?? false,
         ]);
+    }
+
+    /**
+     * Re-read INFO of a shared Redis server (servers are registered with ops:redis-server).
+     */
+    public function probeRedis(RedisServer $redisServer, RedisServerClient $client): RedirectResponse
+    {
+        $this->authorize('ops.write');
+
+        $redirect = redirect()->to(route('ops.databases.index').'#redis');
+
+        try {
+            $client->refresh($redisServer);
+        } catch (RedisServerException $e) {
+            return $redirect->with('error', __('databases.errors.probe_failed', ['message' => $e->getMessage()]));
+        }
+
+        return $redirect->with('status', __('databases.redis.flash.probed', ['name' => $redisServer->name]));
     }
 
     public function create(): View

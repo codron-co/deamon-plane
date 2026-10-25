@@ -1,6 +1,7 @@
 @php
     /** @var \App\Models\Site $site */
     $sharedDatabase = $site->usesSharedDatabase();
+    $sharedRedis = $site->usesSharedRedis();
 @endphp
 
 <article class="site-card site-operation" id="site-database" aria-labelledby="site-database-heading">
@@ -16,4 +17,12 @@
             <a class="btn btn-secondary btn-sm" href="{{ route('ops.sites.database', $site) }}">{{ __('databases.site.open') }}</a>
         @endcan
     @endif
+    <p class="muted" data-site-redis>
+        {{ __('databases.redis.site.label') }}:
+        @if ($sharedRedis)
+            {{ __('databases.redis.site.shared', ['server' => $site->redisServer?->name ?? '?', 'db' => $site->redis_db, 'cache_db' => (int) $site->redis_db + 1]) }}
+        @else
+            {{ __('databases.redis.site.local') }}
+        @endif
+    </p>
 </article>

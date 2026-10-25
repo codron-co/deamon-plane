@@ -11,6 +11,7 @@ use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogException;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogSync;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Services\Databases\SiteDatabasePlacement;
+use App\Services\Databases\SiteRedisPlacement;
 use App\Services\Sites\ChannelEnvironmentMap;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -61,6 +62,16 @@ class CoolifyAppEnvSync
         'DB_PORT',
         'DB_DATABASE',
         'DB_USERNAME',
+        // Redis placement (SiteRedisPlacement, written by sync() for shared-Redis sites):
+        // pruning them would send a moved site back to its old local Redis, or log it
+        // into the shared server with the wrong user.
+        'REDIS_HOST',
+        'REDIS_PORT',
+        'REDIS_USERNAME',
+        'REDIS_PASSWORD',
+        'REDIS_DB',
+        'REDIS_CACHE_DB',
+        'REDIS_PREFIX',
     ];
 
     /**
@@ -122,6 +133,21 @@ class CoolifyAppEnvSync
         // or edited value cannot point it back at the old local database.
         if ($site->usesSharedDatabase()) {
             foreach (SiteDatabasePlacement::envFor($site) as $key => $value) {
+                if (($existing[$key] ?? null) !== $value) {
+                    $desired[$key] = $value;
+                }
+            }
+        }
+
+        // Same for REDIS_*: the compose defaults are the site's own `redis` service.
+        if ($site->usesSharedRedis()) {
+            $redisEnv = SiteRedisPlacement::envFor($site);
+            if ($redisEnv['REDIS_PASSWORD'] === '') {
+                // A blank password would lock the site out of the shared server.
+                unset($redisEnv['REDIS_PASSWORD']);
+                Log::error('coolify.env_redis_password_missing', ['site_id' => $site->id, 'site_slug' => $site->slug]);
+            }
+            foreach ($redisEnv as $key => $value) {
                 if (($existing[$key] ?? null) !== $value) {
                     $desired[$key] = $value;
                 }

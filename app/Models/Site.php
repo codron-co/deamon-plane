@@ -97,6 +97,10 @@ class Site extends Model
         'database_server_id',
         'db_database',
         'db_username',
+        'redis_server_id',
+        'redis_db',
+        'redis_username',
+        'redis_shared',
     ];
 
     /**
@@ -109,6 +113,7 @@ class Site extends Model
         'agent_secret_encrypted',
         'db_password_encrypted',
         'mysql_root_password_encrypted',
+        'redis_password_encrypted',
     ];
 
     /**
@@ -133,6 +138,9 @@ class Site extends Model
             'agent_secret_encrypted' => 'encrypted',
             'db_password_encrypted' => 'encrypted',
             'mysql_root_password_encrypted' => 'encrypted',
+            'redis_password_encrypted' => 'encrypted',
+            'redis_db' => 'integer',
+            'redis_shared' => 'boolean',
             'last_health_at' => 'datetime',
             'last_health_payload' => 'array',
             'health_unhealthy' => 'boolean',
@@ -222,6 +230,25 @@ class Site extends Model
         return filled($this->database_server_id)
             && filled($this->db_database)
             && filled($this->db_username);
+    }
+
+    /**
+     * Shared Redis server holding (or reserving) this site's DB pair and ACL user;
+     * whether the site actually uses it is `redis_shared` (see usesSharedRedis()).
+     *
+     * @return BelongsTo<RedisServer, $this>
+     */
+    public function redisServer(): BelongsTo
+    {
+        return $this->belongsTo(RedisServer::class);
+    }
+
+    public function usesSharedRedis(): bool
+    {
+        return (bool) $this->redis_shared
+            && filled($this->redis_server_id)
+            && $this->redis_db !== null
+            && filled($this->redis_username);
     }
 
     /**

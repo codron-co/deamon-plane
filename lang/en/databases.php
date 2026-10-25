@@ -84,6 +84,23 @@ return [
         'deleted' => 'Server deleted.',
         'probed' => 'Server read: :count databases.',
     ],
+    'redis' => [
+        'title' => 'Redis',
+        'lede' => 'Redis servers shared by sites. Each site has its own key prefix, its own ACL user and its own DB pair. Servers are added with ops:redis-server.',
+        'empty' => 'No shared Redis server; sites run on the Redis inside their own stacks.',
+        'memory' => 'Memory (used / limit)',
+        'no_limit' => 'no limit',
+        'clients' => 'Clients',
+        'evicted' => 'Evicted keys',
+        'site' => [
+            'label' => 'Redis',
+            'local' => 'local (site stack)',
+            'shared' => 'shared: :server, DB :db / :cache_db',
+        ],
+        'flash' => [
+            'probed' => ':name refreshed.',
+        ],
+    ],
     'danger' => [
         'confirm' => 'Remove :name from Plane? Data on the server is not touched.',
         'confirm_title' => 'Delete server',

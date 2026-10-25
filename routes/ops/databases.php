@@ -5,6 +5,7 @@ use App\Http\Controllers\Ops\SiteDatabaseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/databases', [DatabaseServerOpsController::class, 'index'])->name('ops.databases.index');
+Route::post('/databases/redis/{redisServer}/probe', [DatabaseServerOpsController::class, 'probeRedis'])->name('ops.databases.redis.probe');
 Route::get('/databases/create', [DatabaseServerOpsController::class, 'create'])->name('ops.databases.create');
 Route::post('/databases', [DatabaseServerOpsController::class, 'store'])->name('ops.databases.store');
 Route::get('/databases/{databaseServer}', [DatabaseServerOpsController::class, 'show'])->name('ops.databases.show');

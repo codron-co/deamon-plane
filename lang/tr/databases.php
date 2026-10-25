@@ -84,6 +84,23 @@ return [
         'deleted' => 'Sunucu silindi.',
         'probed' => 'Sunucu okundu: :count veritabanı.',
     ],
+    'redis' => [
+        'title' => 'Redis',
+        'lede' => 'Sitelerin paylaştığı Redis sunucuları. Her site kendi önekiyle, kendi ACL kullanıcısıyla ve kendi DB çiftiyle çalışır. Sunucu ops:redis-server ile eklenir.',
+        'empty' => 'Paylaşılan Redis sunucusu yok; siteler kendi yığınlarındaki Redis ile çalışıyor.',
+        'memory' => 'Bellek (kullanılan / sınır)',
+        'no_limit' => 'sınırsız',
+        'clients' => 'İstemci',
+        'evicted' => 'Silinen anahtar (evicted)',
+        'site' => [
+            'label' => 'Redis',
+            'local' => 'yerel (site yığını)',
+            'shared' => 'paylaşılan: :server, DB :db / :cache_db',
+        ],
+        'flash' => [
+            'probed' => ':name okundu.',
+        ],
+    ],
     'danger' => [
         'confirm' => ':name sunucusu Plane\'den silinsin mi? Sunucudaki veriye dokunulmaz.',
         'confirm_title' => 'Sunucuyu sil',
