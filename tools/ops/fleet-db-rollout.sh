@@ -3,7 +3,8 @@
 #   1. wait for the Coolify deploy queue to drain (auto-deploy sites after an alpha push),
 #   2. deploy each app in DEPLOY_UUIDS one at a time (Plane → Coolify), each when the
 #      queue is empty and the load is below MAX_LOAD, and check it comes back healthy,
-#   3. move each app in MOVE_UUIDS to the shared MySQL with move-site-db.sh, in order.
+#   3. move each app in MOVE_UUIDS to the shared MySQL with move-site-db.sh, in order
+#      (MOVE_SCRIPT=/opt/deamon-redis/move-site-redis.sh MOVE_TARGET=Redis for the shared Redis).
 # Stops and sends a WhatsApp alert when a site is left unhealthy; a site the move script
 # rolled back (still healthy on its own MySQL) is reported and skipped.
 #
@@ -14,6 +15,7 @@ DEPLOY_LIST=${1:?deploy list}; MOVE_LIST=${2:?move list}
 LOG=/opt/deamon-db/rollout.log; MAX_LOAD=${MAX_LOAD:-6}; MAX_WAIT_MIN=${MAX_WAIT_MIN:-120}
 # Moves do not build (the app is recreated from its image), so they wait on CPU use, not load.
 MAX_CPU=${MAX_CPU:-80}
+MOVE_SCRIPT=${MOVE_SCRIPT:-/opt/deamon-db/move-site-db.sh}; MOVE_TARGET=${MOVE_TARGET:-MySQL}
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 alert() { log "ALERT: $*"; /usr/local/bin/wa-alert.sh "Deamon gece işi: $*" >/dev/null 2>&1 || true; }
 q() { docker exec coolify-db psql -U coolify -d coolify -At -c "$1" 2>/dev/null; }
@@ -90,7 +92,7 @@ for u in $(uuids "$MOVE_LIST"); do
   n=$(name_of "$u")
   wait_cpu || { alert "taşıma sırası durdu: CPU $MAX_WAIT_MIN dk boyunca %$MAX_CPU üstünde kaldı ($n bekliyordu); $moved site taşındı"; exit 1; }
   log "move $n ($u)"
-  if /opt/deamon-db/move-site-db.sh "$u" --yes >> "$LOG" 2>&1; then
+  if "$MOVE_SCRIPT" "$u" --yes >> "$LOG" 2>&1; then
     moved=$((moved + 1))
   else
     skipped="$skipped $n"
@@ -101,4 +103,4 @@ for u in $(uuids "$MOVE_LIST"); do
 done
 
 log "=== done: $moved moved; skipped:${skipped:- none}"
-/usr/local/bin/wa-alert.sh "Deamon gece işi bitti: $moved site paylaşılan MySQL'e taşındı.${skipped:+ Atlanan/geri alınan:$skipped}" >/dev/null 2>&1 || true
+/usr/local/bin/wa-alert.sh "Deamon gece işi bitti: $moved site paylaşılan $MOVE_TARGET'e taşındı.${skipped:+ Atlanan/geri alınan:$skipped}" >/dev/null 2>&1 || true
