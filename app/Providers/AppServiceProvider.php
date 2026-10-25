@@ -15,7 +15,10 @@ use App\Services\Coolify\CoolifyDeployGate;
 use App\Services\Coolify\CoolifyRateGuard;
 use App\Support\OpsAppearance;
 use App\Support\ProductionDebugGuard;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -38,6 +41,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Theme::class, ThemePolicy::class);
         Gate::policy(ThemeGitConnection::class, ThemeGitConnectionPolicy::class);
         Gate::policy(CoolifyConnection::class, CoolifyConnectionPolicy::class);
+
+        // Keyed by the bearer token (hashed), so one runaway agent cannot starve another.
+        RateLimiter::for('mcp', static fn (Request $request): Limit => Limit::perMinute((int) config('ops.mcp.rate_limit_per_minute', 240))
+            ->by('mcp:'.hash('sha256', (string) ($request->bearerToken() ?? $request->ip()))));
 
         ProductionDebugGuard::assert();
 

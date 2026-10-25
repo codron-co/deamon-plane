@@ -64,6 +64,17 @@ return [
     ],
 
     /*
+    | MCP endpoint (/mcp, docs/modules/mcp.md). Bearer tokens from `ops:mcp-token`;
+    | OPS_IP_ALLOWLIST does not apply (agents run from cloud IPs), use
+    | OPS_MCP_IP_ALLOWLIST to pin tokens to fixed addresses.
+    */
+    'mcp' => [
+        'enabled' => (bool) env('OPS_MCP_ENABLED', true),
+        'ip_allowlist' => env('OPS_MCP_IP_ALLOWLIST'),
+        'rate_limit_per_minute' => 240,
+    ],
+
+    /*
     | CI-gated rollout (docs/modules/ci-gated-rollout.md). A GitHub `workflow_run`
     | named `workflow_name` that completes green for a `push` promotes that commit:
     | CMS channel → fleet rollout of `ci`-gated sites (canary first), theme with

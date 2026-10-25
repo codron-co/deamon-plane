@@ -37,6 +37,7 @@ This Plane-specific skill is the only UI skill routed from this repo. Do not cop
 - Deploy: [docs/modules/deployment.md](docs/modules/deployment.md), [docs/runbooks/README.md](docs/runbooks/README.md)
 - Sites / Coolify: [docs/modules/ops-sites.md](docs/modules/ops-sites.md), [docs/modules/coolify-client.md](docs/modules/coolify-client.md)
 - Site agent: [docs/modules/agent-client.md](docs/modules/agent-client.md)
+- MCP for AI agents (`/mcp`, `app/Mcp`): [docs/modules/mcp.md](docs/modules/mcp.md) — a new panel action is one `RouteToolCatalog` entry
 - Themes (catalog + assign, not CMS theme authoring): [docs/modules/theme-catalog.md](docs/modules/theme-catalog.md), [docs/modules/theme-agent-client.md](docs/modules/theme-agent-client.md)
 
 ## Site configuration rule (ADR-12)
