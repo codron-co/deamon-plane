@@ -71,7 +71,7 @@ class SiteComailApiTest extends TestCase
             ->assertJsonPath('usage.storage_allocated_mb', 512)
             ->assertJsonPath('usage.storage_used_bytes', 2048)
             ->assertJsonPath('webmail_url', FakeMailcow::BASE)
-            ->assertJsonPath('panel_url', FakeMailcow::BASE.'/user')
+            ->assertJsonPath('panel_url', FakeMailcow::BASE.'/?panel=1')
             ->assertJsonPath('client.imap', ['host' => 'mail.example.test', 'port' => 993, 'security' => 'SSL'])
             ->assertJsonPath('client.smtp.port', 465)
             ->assertJsonPath('client.smtp_alt', ['host' => 'mail.example.test', 'port' => 587, 'security' => 'STARTTLS'])

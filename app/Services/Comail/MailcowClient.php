@@ -138,12 +138,15 @@ class MailcowClient
     }
 
     /**
+     * `sogo_access` is always 0: CoMail's webmail is Roundcube at the web root,
+     * so a login must land there (or in the user panel), never in SOGo.
+     *
      * @param  array<string, mixed>  $attributes  local_part, domain, name, quota (MB), password
      * @return list<array<string, mixed>>
      */
     public function addMailbox(array $attributes): array
     {
-        return $this->write('/add/mailbox', $attributes);
+        return $this->write('/add/mailbox', ['sogo_access' => 0] + $attributes);
     }
 
     /**

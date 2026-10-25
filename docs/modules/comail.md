@@ -76,7 +76,7 @@ Success bodies carry `"ok": true`. A single object (mailbox, alias, migration) i
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| GET | `/overview` | – | `package{name,slug,mailbox_limit,storage_mb,mailbox_max_quota_mb,alias_limit,domain_limit}`, `usage{mailboxes,aliases,domains,storage_allocated_mb,storage_used_bytes}`, `webmail_url` (`{base}`: login lands in the inbox), `panel_url` (`{base}/user`: spam filter, app passwords, 2FA), `client{imap,pop3,smtp,smtp_alt,managesieve}`, `domains[{domain,is_primary,status,mx_active,dns_managed,webmail_url}]` (`https://mail.D` once MX is on CoMail, unless the last DNS check saw the `mail.D` CNAME missing or different; else null), `available_domains[]` |
+| GET | `/overview` | – | `package{name,slug,mailbox_limit,storage_mb,mailbox_max_quota_mb,alias_limit,domain_limit}`, `usage{mailboxes,aliases,domains,storage_allocated_mb,storage_used_bytes}`, `webmail_url` (`{base}`: Roundcube at the web root), `panel_url` (`{base}/?panel=1`: mail user panel — spam filter, app passwords, 2FA), `client{imap,pop3,smtp,smtp_alt,managesieve}`, `domains[{domain,is_primary,status,mx_active,dns_managed,webmail_url}]` (`https://mail.D` once MX is on CoMail, unless the last DNS check saw the `mail.D` CNAME missing or different; else null), `available_domains[]` |
 | POST | `/domains` | `{domain}` | domain row, 201 (`domain_not_owned`, `limit_domains`; an already active own domain answers 200) |
 | DELETE | `/domains/{domain}` | – | `{ok:true}` (primary → `validation_failed`; mailboxes → `domain_has_mailboxes`) |
 | GET | `/domains/{domain}/dns` | – | `{domain,dns_managed,mx_active,records[{key,type,name,value,priority?,status,current?}]}` (fresh check) |

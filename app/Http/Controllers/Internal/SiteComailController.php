@@ -58,10 +58,10 @@ class SiteComailController extends Controller
             return $this->ok([
                 'package' => $this->limits->package($site)->toLimitsArray(),
                 'usage' => $this->limits->usage($directory),
-                // Logging in at the root lands in the inbox; /user is the advanced
-                // panel (spam filter, app passwords, 2FA).
+                // The web root opens Roundcube (the inbox); /?panel=1 is the mail
+                // user panel (spam filter, app passwords, 2FA).
                 'webmail_url' => $base,
-                'panel_url' => $base.'/user',
+                'panel_url' => $base.'/?panel=1',
                 'client' => [
                     'imap' => ['host' => $host, 'port' => 993, 'security' => 'SSL'],
                     'pop3' => ['host' => $host, 'port' => 995, 'security' => 'SSL'],

@@ -174,7 +174,7 @@ class ComailDnsTest extends TestCase
         $this->signed('GET', '/overview', $site)
             ->assertOk()
             ->assertJsonPath('webmail_url', 'https://mail.example.test')
-            ->assertJsonPath('panel_url', 'https://mail.example.test/user')
+            ->assertJsonPath('panel_url', 'https://mail.example.test/?panel=1')
             ->assertJsonPath('domains.0.mx_active', true)
             ->assertJsonPath('domains.0.webmail_url', 'https://mail.acme.test');
 

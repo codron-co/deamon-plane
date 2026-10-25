@@ -45,6 +45,15 @@ class MailcowClientTest extends TestCase
         Http::assertSent(fn (Request $request): bool => $request['domain'] === 'acme.test' && $request['mailboxes'] === 1);
     }
 
+    public function test_new_mailboxes_never_get_sogo_access(): void
+    {
+        Http::fake([self::BASE.'/add/mailbox' => Http::response([['type' => 'success', 'msg' => ['mailbox_added', 'a@acme.test']]])]);
+
+        $this->client()->addMailbox(['local_part' => 'a', 'domain' => 'acme.test', 'password' => 'Secret-123', 'sogo_access' => 1]);
+
+        Http::assertSent(fn (Request $request): bool => $request['sogo_access'] === 0 && $request['local_part'] === 'a');
+    }
+
     public function test_danger_element_in_a_200_answer_throws_with_the_translation_key(): void
     {
         Http::fake([self::BASE.'/add/mailbox' => Http::response([
