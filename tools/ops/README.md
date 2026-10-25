@@ -46,7 +46,7 @@ Coolify resource: Coolify recreates all containers of a stack on every deploy.
   renamed. The running container was not recreated; the next planned restart of this
   stack needs `docker compose down && docker compose up -d` (the old service name is gone).
   Check: `docker run --rm --network deamon-db busybox nslookup mysql` must fail.
-- Limits: 1.5 CPU, 2 GB, buffer pool 1 GB, `max_connections` 500, `restart: unless-stopped`.
+- Limits: 1.5 CPU, 4 GB (2 GB was reached with 34 sites), buffer pool 1 GB, `max_connections` 500, `restart: unless-stopped`.
 - Secrets: `/opt/deamon-db/.env` (600) — `MYSQL_ROOT_PASSWORD`, `PLANE_ADMIN_PASSWORD`.
   `plane_admin` is created on first init (`init/01-plane-admin.sh`).
 - Backup: `backup.sh`, cron `15 3 * * *`, one gzip per schema in `backups/<date>/`, 7 days,
