@@ -6,7 +6,11 @@
 # Reachable only on the external `deamon-db` network as `deamon-db-mysql`; no port is
 # published. Secrets live in /opt/deamon-db/.env (600): MYSQL_ROOT_PASSWORD, PLANE_ADMIN_PASSWORD.
 services:
-  mysql:
+  # The service name becomes a DNS alias on every network it joins. It must NOT be `mysql`:
+  # site apps sit on deamon-db and on their own stack network, where `mysql` is their own
+  # database. With a `mysql` alias here, sites that were not moved resolved `mysql` to this
+  # server and failed to boot (2026-10-25, 5 sites down after the 1.2.80 rollout).
+  deamon-db-mysql:
     image: mysql:8.0
     container_name: deamon-db-mysql
     command: >-

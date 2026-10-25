@@ -38,6 +38,14 @@ schema (`site_<slug>`) and user, with its existing `DB_PASSWORD`. It is delibera
 Coolify resource: Coolify recreates all containers of a stack on every deploy.
 
 - Container `deamon-db-mysql`, network `deamon-db` (external), no published port.
+- Its only name on `deamon-db` must be `deamon-db-mysql`, never `mysql`: site apps are on
+  this network and on their own stack network, where `mysql` is their own database. The
+  compose service was first named `mysql`; that alias sent unmoved sites to this server and
+  5 sites failed to boot after the 1.2.80 rollout (2026-10-25). Fixed live with
+  `docker network disconnect` + `connect --alias deamon-db-mysql`, then the service was
+  renamed. The running container was not recreated; the next planned restart of this
+  stack needs `docker compose down && docker compose up -d` (the old service name is gone).
+  Check: `docker run --rm --network deamon-db busybox nslookup mysql` must fail.
 - Limits: 1.5 CPU, 2 GB, buffer pool 1 GB, `max_connections` 500, `restart: unless-stopped`.
 - Secrets: `/opt/deamon-db/.env` (600) — `MYSQL_ROOT_PASSWORD`, `PLANE_ADMIN_PASSWORD`.
   `plane_admin` is created on first init (`init/01-plane-admin.sh`).
