@@ -1,6 +1,18 @@
 # Tek Redis'e geçiş planı (Deamon siteleri)
 
-Durum: **plan, uygulanmadı** (2026-10-25). Hedef: 200 site (1 ay). Paylaşılan MySQL geçişi (`docs/modules/database-servers.md`, `tools/ops/README.md`) ile aynı yöntem ve aynı derslerle.
+Durum: **uygulanıyor** (2026-10-25'te başladı). Hedef: 200 site (1 ay). Paylaşılan MySQL geçişi (`docs/modules/database-servers.md`, `tools/ops/README.md`) ile aynı yöntem ve aynı derslerle.
+
+## İlerleme
+
+| Faz | Durum |
+|---|---|
+| 0 Envanter | ✅ Bütün siteler yalnız DB 0/1; ilk 2.000 anahtarda süresiz anahtar yok; en büyük anahtar ~300 B; Plane'de phpredis 6.3.0 |
+| 1 Sunucu | ✅ `deamon-redis` (7.4.11): `redis` adı çözülmüyor, şifresiz komut `NOAUTH`, yeniden başlatmada veri kalıyor, izleme ve yedek cron'u çalışıyor |
+| 2 Plane | ⏳ kod yazılıyor (`feat/shared-redis`); `tools/ops/move-site-redis.sh` ve `redis-copy.php` hazır |
+| 3 CMS | ⏳ codron-co/deamon #50, 1.2.82 turunda (önce alpha + deamon-test, sonra beta) |
+| 4 Prova | ✅ kısmen (sunucuda): deamon-test anahtarları TTL ve önek değişimiyle test DB'sine kopyalandı, sayılar tuttu. ACL: başka önek (başka DB'de de) `NOPERM`; `FLUSHALL`/`FLUSHDB`/`KEYS`/`CONFIG` `NOPERM`; kendi anahtarlarıyla Lua çalışıyor, Lua içinden başka anahtar `NOPERM`. Kalan: Plane komutlarıyla uçtan uca prova |
+| 5 deamon-test | bekliyor |
+| 6 Bütün siteler | bekliyor |
 
 ## Neden
 
