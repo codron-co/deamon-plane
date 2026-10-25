@@ -95,8 +95,16 @@ wait_app() { # expected DB_HOST → prints container name when /up answers 200
 }
 
 log "maintenance on"
+app_id=$(docker inspect "$app" --format '{{.Id}}')
+down_at=$(date -u '+%F %T')
 docker exec "$app" php artisan down --retry=60 >/dev/null || die "could not enter maintenance"
 restore_up() { docker exec "$app" php artisan up >/dev/null 2>&1 || true; }
+# A deploy that lands during the window starts a fresh (not-in-maintenance) container on
+# the local DB: writes after the dump would be lost by the switch. Refuse in that case.
+untouched() {
+  [ "$(docker inspect "$app" --format '{{.Id}}' 2>/dev/null)" = "$app_id" ] || return 1
+  [ "$(coolify_q "SELECT COUNT(*) FROM application_deployment_queues q JOIN applications a ON a.id::text = q.application_id::text WHERE a.uuid = '$uuid' AND (q.status IN ('queued','in_progress') OR q.created_at >= '$down_at'::timestamp)")" = 0 ]
+}
 
 docker exec "$src" sh -c 'exec mysqldump -udeamon -p"$MYSQL_PASSWORD" --single-transaction --quick --routines --triggers --no-tablespaces --set-gtid-purged=OFF deamon' \
   > "$WORK/dump.sql" 2>"$WORK/dump.err" || { restore_up; die "dump failed: $(head -c 300 "$WORK/dump.err")"; }
@@ -109,6 +117,7 @@ if ! diff -q "$WORK/src.counts" "$WORK/dst.counts" >/dev/null; then
   restore_up; die "row counts differ: $(diff "$WORK/src.counts" "$WORK/dst.counts" | head -5 | tr '\n' ' ')"
 fi
 log "imported $(wc -l < "$WORK/src.counts") tables, row counts match"
+untouched || { restore_up; die "a deploy of this app started during the maintenance window; not switching (site stays on its own MySQL; drop $target_db before retrying)"; }
 
 env_out=$(artisan ops:site-db switch "$SITE" --no-restart) || { restore_up; die "switch failed (site still on local MySQL)"; }
 for key in DB_HOST DB_PORT DB_DATABASE DB_USERNAME; do set_env "$key" "$(kv "$key" "$env_out")"; done
