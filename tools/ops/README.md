@@ -38,6 +38,14 @@ schema (`site_<slug>`) and user, with its existing `DB_PASSWORD`. It is delibera
 Coolify resource: Coolify recreates all containers of a stack on every deploy.
 
 - Container `deamon-db-mysql`, network `deamon-db` (external), no published port.
+- Its only name on `deamon-db` must be `deamon-db-mysql`, never `mysql`: site apps are on
+  this network and on their own stack network, where `mysql` is their own database. The
+  compose service was first named `mysql`; that alias sent unmoved sites to this server and
+  5 sites failed to boot after the 1.2.80 rollout (2026-10-25). Fixed live with
+  `docker network disconnect` + `connect --alias deamon-db-mysql`, then the service was
+  renamed. The running container was not recreated; the next planned restart of this
+  stack needs `docker compose down && docker compose up -d` (the old service name is gone).
+  Check: `docker run --rm --network deamon-db busybox nslookup mysql` must fail.
 - Limits: 1.5 CPU, 2 GB, buffer pool 1 GB, `max_connections` 500, `restart: unless-stopped`.
 - Secrets: `/opt/deamon-db/.env` (600) — `MYSQL_ROOT_PASSWORD`, `PLANE_ADMIN_PASSWORD`.
   `plane_admin` is created on first init (`init/01-plane-admin.sh`).
@@ -69,10 +77,17 @@ is on the `deamon-db` network) and Plane is deployed with `ops:site-db`.
 ```
 
 Steps: prepare schema + user → maintenance on → dump → import into the empty schema →
-exact row counts compared per table → `ops:site-db switch` (DB_* env + restart) → the new
-container must show `DB_HOST=deamon-db-mysql` and answer `/up` → maintenance off. If the new
-container does not come up, the script runs `ops:site-db local` and the site goes back to
-its own MySQL, which still holds the same data. Log: `/opt/deamon-db/move.log`.
+exact row counts compared per table (one query per side) → `ops:site-db switch --no-restart`
+(Plane + Coolify env) → the same DB_* written into Coolify's generated
+`/data/coolify/applications/<uuid>/.env` → only the `app` container recreated from its
+existing image (`docker compose -p <uuid> up -d --no-build --no-deps --force-recreate app`)
+→ it must show `DB_HOST=deamon-db-mysql` and answer `/up`. If it does not, Plane and the
+`.env` go back to local and the app is recreated on its own MySQL, which still holds the
+same data. Log: `/opt/deamon-db/move.log`.
+
+Do not use a Coolify "restart" for this: on compose apps it rebuilds the image (≈9 min with
+the site in maintenance, plus one Docker build per site). deamon-test, 2026-10-24: 10 MB,
+201 tables, 18 s in maintenance with the recreate; rollback path 8 s.
 
 By hand: `php artisan ops:site-db status|prepare|switch|local <site>` in the Plane container.
 

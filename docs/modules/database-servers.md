@@ -33,7 +33,7 @@ send a moved site back to its stale local database.
 |---|---|
 | `status` | Placement and the DB_* env it implies, plus the target names (`KEY=value` lines) |
 | `prepare` | Create/align schema + user on the server (default, or `--server=`); site keeps running |
-| `switch` | Record the placement, write DB_* to Coolify, restart (`--no-restart` to skip) |
+| `switch` | Record the placement, write DB_* to Coolify, restart (`--no-restart` to skip; the move script always skips it, because a Coolify restart rebuilds compose images) |
 | `local` | Back to the site's own MySQL (env only; its volume was never touched) |
 
 `tools/ops/move-site-db.sh` wraps these with maintenance mode, dump/import, row-count
