@@ -1,0 +1,39 @@
+# Shared Redis for Deamon CMS sites on the coolify VPS (/opt/deamon-redis).
+# Not a Coolify resource: Coolify recreates every container of a stack on each deploy.
+# Plane manages the per-site ACL users and DB numbers (docs/plans/2026-10-25-shared-redis.md).
+#
+# The service, container and network alias are `deamon-redis` and must never be `redis`:
+# site apps sit on deamon-db and on their own stack network, where `redis` is their own
+# Redis. (The shared MySQL was first named `mysql`; that alias took 5 sites down.)
+# Secrets: /opt/deamon-redis/.env (600) — REDIS_ADMIN_PASSWORD; ACL users in data/users.acl.
+services:
+  deamon-redis:
+    image: redis:7.4.11-alpine
+    container_name: deamon-redis
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    environment:
+      # Only the health check reads it; the server takes its users from data/users.acl.
+      REDIS_ADMIN_PASSWORD: ${REDIS_ADMIN_PASSWORD}
+    volumes:
+      - ./data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      deamon-db:
+        aliases:
+          - deamon-redis
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning --user plane_admin --pass \"$$REDIS_ADMIN_PASSWORD\" ping | grep -q PONG"]
+      interval: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    mem_limit: 1536m
+    cpus: "0.5"
+    pids_limit: 256
+    # Every site depends on this server: it must come back after a host reboot.
+    restart: unless-stopped
+
+networks:
+  deamon-db:
+    external: true
