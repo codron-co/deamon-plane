@@ -12,19 +12,45 @@
 set -uo pipefail
 DEPLOY_LIST=${1:?deploy list}; MOVE_LIST=${2:?move list}
 LOG=/opt/deamon-db/rollout.log; MAX_LOAD=${MAX_LOAD:-6}; MAX_WAIT_MIN=${MAX_WAIT_MIN:-120}
+# Moves do not build (the app is recreated from its image), so they wait on CPU use, not load.
+MAX_CPU=${MAX_CPU:-80}
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 alert() { log "ALERT: $*"; /usr/local/bin/wa-alert.sh "Deamon gece işi: $*" >/dev/null 2>&1 || true; }
 q() { docker exec coolify-db psql -U coolify -d coolify -At -c "$1" 2>/dev/null; }
 plane() { docker ps --format '{{.Names}}' | grep '^app-d6ovbjzxgpao23faam3vrcve' | head -1; }
 uuids() { grep -vE '^\s*(#|$)' "$1" | awk '{print $1}'; }
 
-wait_calm() { # queue empty and load < MAX_LOAD; gives up after MAX_WAIT_MIN
+wait_calm() { # queue empty and (DEPLOY_GATE=cpu: CPU < MAX_CPU | default: load < MAX_LOAD); gives up after MAX_WAIT_MIN
   local i busy load
   for i in $(seq 1 "$MAX_WAIT_MIN"); do
     busy=$(q "SELECT COUNT(*) FROM application_deployment_queues WHERE status IN ('queued','in_progress')")
-    load=$(cut -d' ' -f1 /proc/loadavg)
-    if [ "$busy" = 0 ] && awk "BEGIN{exit !($load < $MAX_LOAD)}"; then return 0; fi
+    if [ "$busy" = 0 ]; then
+      if [ "${DEPLOY_GATE:-load}" = cpu ]; then
+        [ "$(cpu_busy)" -lt "$MAX_CPU" ] && return 0
+      else
+        load=$(cut -d' ' -f1 /proc/loadavg)
+        awk "BEGIN{exit !($load < $MAX_LOAD)}" && return 0
+      fi
+    fi
     sleep 60
+  done
+  return 1
+}
+
+cpu_busy() { # % CPU busy over 5 s, from /proc/stat
+  local a b
+  a=($(awk '/^cpu /{print $2+$3+$4+$6+$7+$8+$9, $5}' /proc/stat)); sleep 5
+  b=($(awk '/^cpu /{print $2+$3+$4+$6+$7+$8+$9, $5}' /proc/stat))
+  awk -v bu=$((b[0] - a[0])) -v id=$((b[1] - a[1])) 'BEGIN{ t = bu + id; printf "%d", (t > 0 ? 100 * bu / t : 0) }'
+}
+
+wait_cpu() { # CPU below MAX_CPU; gives up after MAX_WAIT_MIN
+  local i c
+  for i in $(seq 1 "$MAX_WAIT_MIN"); do
+    c=$(cpu_busy)
+    [ "$c" -lt "$MAX_CPU" ] && return 0
+    [ "$i" = 1 ] && log "waiting: CPU ${c}% >= ${MAX_CPU}%"
+    sleep 55
   done
   return 1
 }
@@ -57,13 +83,12 @@ for u in $(uuids "$DEPLOY_LIST"); do
   sleep 30
   if site_ok "$u"; then log "deploy $n: $s, healthy"; else alert "$n deploy sonrası sağlıksız (deploy: ${s:-?}); sıra durdu"; exit 1; fi
 done
-wait_calm || { alert "taşıma öncesi kuyruk/yük sakinleşmedi; taşımalar başlamadı"; exit 1; }
 
 # 3. moves
 moved=0; skipped=""
 for u in $(uuids "$MOVE_LIST"); do
   n=$(name_of "$u")
-  wait_calm || { alert "taşıma sırası durdu: kuyruk/yük sakinleşmedi ($n bekliyordu); $moved site taşındı"; exit 1; }
+  wait_cpu || { alert "taşıma sırası durdu: CPU $MAX_WAIT_MIN dk boyunca %$MAX_CPU üstünde kaldı ($n bekliyordu); $moved site taşındı"; exit 1; }
   log "move $n ($u)"
   if /opt/deamon-db/move-site-db.sh "$u" --yes >> "$LOG" 2>&1; then
     moved=$((moved + 1))

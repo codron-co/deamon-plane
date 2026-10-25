@@ -37,7 +37,8 @@ services:
       retries: 3
       start_period: 120s
       start_interval: 5s
-    mem_limit: 2g
+    # 34 sites, ~1.7 GB of data: 2g was reached on the first night (2026-10-25).
+    mem_limit: 4g
     cpus: "1.5"
     pids_limit: 512
     # Every site depends on this server: it must come back after a host reboot.
