@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Internal\WatchListController;
+use App\Http\Controllers\Mcp\McpController;
+use App\Http\Middleware\AuthenticateMcpToken;
 use App\Http\Middleware\ConvertOpsAjaxRedirect;
 use App\Http\Middleware\RestrictOpsByIp;
 use App\Http\Middleware\SetOpsLocale;
@@ -29,6 +31,11 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::get('internal/ops/v1/watch-list', WatchListController::class)
                 ->middleware('throttle:30,1')
                 ->name('internal.watch-list');
+
+            // MCP for AI agents: bearer token, no session/CSRF (docs/modules/mcp.md).
+            Route::match(['GET', 'POST', 'DELETE'], 'mcp', McpController::class)
+                ->middleware(['throttle:mcp', AuthenticateMcpToken::class])
+                ->name('mcp');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
