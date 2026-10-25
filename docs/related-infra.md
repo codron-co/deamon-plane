@@ -6,14 +6,14 @@ Plane ile birlikte konuşulan ama **bu repoda uygulanmayan** komşu sistemler.
 
 **Karar (ADR-8):** Tek ortak Mailcow (veya HA çifti). Her müşteriye ayrı Mailcow kurulmaz.
 
-Plane UI: provider select shows Mailcow as **Coming soon** and rejects `provider=mailcow`. No Mailcow API client.
+**CoMail (2026-10-26):** the shared mailcow runs on main.codron (`https://mail.codron.co`, behind Coolify Traefik). Plane is wired to it: mailcow API client, packages, per-site mail domains, DNS, CMS configure push and the CMS → Plane mailbox API. Details: [modules/comail.md](modules/comail.md). The mailcow server itself (install, updates, backups, Rspamd) is still operated outside this repo.
 
 **Hostinger (in scope):** [modules/mail-servers.md](modules/mail-servers.md). Token in Plane; CMS plugin via HMAC configure + reverse mailbox proxy.
 
 | | |
 |--|--|
-| Model | Hostinger (now) / Mailcow (later): müşteri başına domain + mailbox |
-| Plane entegrasyonu | Hostinger v1 done. Mailcow API yok. |
+| Model | Hostinger (mevcut siteler) / CoMail = ortak mailcow (yeni siteler): müşteri başına domain + mailbox, paket sınırları Plane’de |
+| Plane entegrasyonu | Hostinger v1 done. CoMail (mailcow) v1 done: [modules/comail.md](modules/comail.md). |
 
 ### Neden ortak?
 
