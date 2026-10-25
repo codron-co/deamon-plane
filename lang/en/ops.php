@@ -15,6 +15,7 @@ return [
         'cloudflare' => 'Cloudflare',
         'mail' => 'Mail',
         'mail_servers' => 'Mail servers',
+        'mail_packages' => 'Mail packages',
         'platform_mail' => 'Product mail',
         'deskron' => 'DeskRon support',
         'instagram' => 'Instagram',

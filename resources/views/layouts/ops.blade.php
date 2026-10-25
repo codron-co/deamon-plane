@@ -107,6 +107,10 @@
                         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11v7h-11v-7Zm0 0 5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
                         {{ __('ops.nav.mail_servers') }}
                     </a>
+                    <a class="ops-nav-item is-sub {{ request()->routeIs('ops.mail-packages*') ? 'is-active' : '' }}" href="{{ route('ops.mail-packages.index') }}">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11V5Zm0 0L8 7.5 13.5 5M8 7.5v6" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+                        {{ __('ops.nav.mail_packages') }}
+                    </a>
                     <a class="ops-nav-item is-sub {{ request()->routeIs('ops.platform-mail*') ? 'is-active' : '' }}" href="{{ route('ops.platform-mail.edit') }}">
                         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 2.5 2.5 7l4.3 1.7L8.5 13l5-10.5Zm0 0L6.8 8.7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
                         {{ __('ops.nav.platform_mail') }}

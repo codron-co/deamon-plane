@@ -6,6 +6,7 @@ use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Ops\Concerns\LoadsSiteOpsContext;
+use App\Models\MailPackage;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\Theme;
@@ -47,6 +48,8 @@ class SiteDetailController extends Controller
             'mailServer',
             'mailBindings',
             'mailboxRequests',
+            'mailPackage',
+            'comailDomains',
             'cloudflareAccount',
             'activeThemeInstallation.theme',
             'searchIntegration',
@@ -100,7 +103,9 @@ class SiteDetailController extends Controller
             'themeInstallations' => $site->themeInstallations,
             'assignableThemes' => $this->assignableThemes($site),
             'canAssignTheme' => $user?->can('assign', Theme::class) ?? false,
-            'mailServers' => MailServer::query()->where('is_enabled', true)->orderBy('name')->get(),
+            'mailServers' => MailServer::query()->where('is_enabled', true)->where('provider', 'hostinger')->orderBy('name')->get(),
+            'comailServer' => MailServer::comail(),
+            'mailPackages' => MailPackage::query()->orderBy('sort')->orderBy('name')->get(),
             'mailCatalog' => $mailBinder->optionsForSite($site),
             'mailboxRequests' => $site->mailboxRequests,
             'cloudflareAccounts' => CloudflareAccounts::enabled(),

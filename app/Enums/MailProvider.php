@@ -9,7 +9,7 @@ enum MailProvider: string
 
     public function isImplemented(): bool
     {
-        return $this === self::Hostinger;
+        return true;
     }
 
     public function label(): string

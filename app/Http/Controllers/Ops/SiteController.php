@@ -15,6 +15,7 @@ use App\Http\Requests\Ops\BulkSiteIdsRequest;
 use App\Http\Requests\Ops\StoreSiteRequest;
 use App\Http\Requests\Ops\SwitchSiteChannelRequest;
 use App\Http\Requests\Ops\UpdateSiteRequest;
+use App\Jobs\EnsureComailDomainJob;
 use App\Jobs\PushPlatformMailJob;
 use App\Models\CoolifyConnection;
 use App\Models\CoolifyServer;
@@ -60,7 +61,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class SiteController extends Controller
 {
@@ -583,6 +586,14 @@ class SiteController extends Controller
             $message .= $this->mailQueueSuffix($site, $bind, $configurer);
         }
 
+        // CoMail: the primary domain gets its mail domain right away (idempotent;
+        // provision success enrolls again once the Cloudflare zone exists).
+        try {
+            EnsureComailDomainJob::dispatchForPrimary($site);
+        } catch (Throwable $exception) {
+            Log::warning('comail.enroll_dispatch_failed', ['site_id' => $site->id, 'error' => $exception->getMessage()]);
+        }
+
         return redirect()
             ->route('ops.sites.show', $site)
             ->with('status', $message);
@@ -857,7 +868,7 @@ class SiteController extends Controller
         ]);
 
         $validated = $request->validate([
-            'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
+            'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')->where('provider', 'hostinger')],
             'mail_bindings_explicit' => ['sometimes', 'boolean'],
             'hostinger_order_ids' => ['sometimes', 'array'],
             'hostinger_order_ids.*' => ['nullable', 'string', 'max:128'],
@@ -1323,7 +1334,8 @@ class SiteController extends Controller
      */
     private function mailServerOptions()
     {
-        return MailServer::query()->where('is_enabled', true)->orderBy('name')->get();
+        // CoMail (mailcow) is not assigned per site; it is the shared server.
+        return MailServer::query()->where('is_enabled', true)->where('provider', 'hostinger')->orderBy('name')->get();
     }
 
     /**

@@ -85,6 +85,11 @@ class Site extends Model
         'mail_configure_failed_at',
         'mail_configure_error',
         'mail_configure_message',
+        'mail_package_id',
+        'comail_configured_at',
+        'comail_configure_failed_at',
+        'comail_configure_error',
+        'comail_configure_message',
         'platform_notification_overrides',
         'platform_mail_recipient',
         'platform_mail_pushed_at',
@@ -159,6 +164,8 @@ class Site extends Model
             'platform_mail_push_failed_at' => 'datetime',
             'mail_configured_at' => 'datetime',
             'mail_configure_failed_at' => 'datetime',
+            'comail_configured_at' => 'datetime',
+            'comail_configure_failed_at' => 'datetime',
             'last_health_notify_at' => 'datetime',
             'health_fail_streak' => 'integer',
         ];
@@ -275,6 +282,26 @@ class Site extends Model
     public function mailBindings(): HasMany
     {
         return $this->hasMany(SiteMailBinding::class)->orderBy('mail_domain');
+    }
+
+    /**
+     * CoMail package (null = default package, see MailPackage::forSite()).
+     *
+     * @return BelongsTo<MailPackage, $this>
+     */
+    public function mailPackage(): BelongsTo
+    {
+        return $this->belongsTo(MailPackage::class);
+    }
+
+    /**
+     * Mail domains on the shared CoMail (mailcow) server, primary first.
+     *
+     * @return HasMany<SiteComailDomain, $this>
+     */
+    public function comailDomains(): HasMany
+    {
+        return $this->hasMany(SiteComailDomain::class)->orderByDesc('is_primary')->orderBy('domain');
     }
 
     /**
@@ -471,6 +498,33 @@ class Site extends Model
         }
 
         if ($this->mail_configured_at !== null) {
+            return 'configured';
+        }
+
+        return 'not_pushed';
+    }
+
+    /**
+     * Last CMS CoMail configure outcome: none | needs_secret | failed | configured | not_pushed.
+     */
+    public function comailConfigureState(): string
+    {
+        $hasDomains = $this->relationLoaded('comailDomains')
+            ? $this->comailDomains->isNotEmpty()
+            : $this->comailDomains()->exists();
+        if (! $hasDomains) {
+            return 'none';
+        }
+
+        if (! $this->hasAgentSecret()) {
+            return 'needs_secret';
+        }
+
+        if ($this->comail_configure_failed_at !== null) {
+            return 'failed';
+        }
+
+        if ($this->comail_configured_at !== null) {
             return 'configured';
         }
 

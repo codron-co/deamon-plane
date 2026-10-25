@@ -4,6 +4,7 @@ namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareDnsDefault;
 use App\Models\CloudflareSetting;
+use App\Models\MailServer;
 use App\Models\Site;
 use App\Services\Sites\SiteProvisionException;
 use Illuminate\Support\Facades\Log;
@@ -506,7 +507,10 @@ class CloudflareZoneService
     private function upsertTemplate(CloudflareClient $client, string $zoneId, string $zoneName, CloudflareSetting $settings): void
     {
         $records = CloudflareDnsDefault::templateRecords();
-        $mailEnabled = (bool) $settings->mail_template_enabled;
+        // With CoMail on, the template's (Hostinger) mail rows stay out: CoMail writes
+        // MX/SPF/DKIM/DMARC itself once the mail domain exists (ComailDns). Zones that
+        // already have them are not touched.
+        $mailEnabled = (bool) $settings->mail_template_enabled && ! MailServer::comail() instanceof MailServer;
         $templateMx = [];
         foreach ($records as $record) {
             if ($record['type'] === 'MX') {

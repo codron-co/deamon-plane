@@ -2,6 +2,7 @@
 
 use App\Jobs\DispatchSiteHealthChecksJob;
 use App\Jobs\KickStalledFleetRolloutsJob;
+use App\Jobs\ReconcileComailPushJob;
 use App\Jobs\ReconcileDeskronPushJob;
 use App\Jobs\ReconcileInstagramPushJob;
 use App\Jobs\ReconcileSiteSearchIntegrationsJob;
@@ -58,6 +59,13 @@ Schedule::job(new ReconcileSiteSearchIntegrationsJob)
 Schedule::job(new ReconcileSiteTurnstileJob)
     ->hourlyAt(25)
     ->name('ops-turnstile-reconcile')
+    ->withoutOverlapping();
+
+// CoMail: re-push the configure to CMSes with a CoMail domain whose last push
+// failed or never happened (older CMS, container down during enrollment).
+Schedule::job(new ReconcileComailPushJob)
+    ->hourlyAt(35)
+    ->name('ops-comail-push-reconcile')
     ->withoutOverlapping();
 
 // Work left mid-way (killed worker, lost webhook, timeout) is closed or re-read

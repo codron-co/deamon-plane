@@ -88,7 +88,7 @@ class UpdateSiteRequest extends FormRequest
             'tags_submitted' => ['sometimes', 'boolean'],
             'tags' => ['sometimes', 'nullable', 'array', 'max:'.SiteTag::MAX],
             'tags.*' => ['string', Rule::exists('site_tags', 'id')],
-            'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')],
+            'mail_server_id' => ['nullable', 'string', Rule::exists('mail_servers', 'id')->where('provider', 'hostinger')],
             'cloudflare_setting_id' => ['nullable', 'integer', Rule::exists('cloudflare_settings', 'id')->where('is_enabled', true)],
         ], $this->coolifyTargetRules());
     }

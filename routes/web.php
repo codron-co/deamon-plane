@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/ops/coolify.php';
     require __DIR__.'/ops/cloudflare.php';
     require __DIR__.'/ops/mail-servers.php';
+    require __DIR__.'/ops/mail-packages.php';
     require __DIR__.'/ops/deskron.php';
     require __DIR__.'/ops/instagram.php';
     require __DIR__.'/ops/themes.php';
