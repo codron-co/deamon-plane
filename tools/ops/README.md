@@ -7,6 +7,19 @@ Scripts that run on the servers, kept here so the live copies have a source.
 | `deamon-watch.sh` | main.codron (`/usr/local/bin`, cron `*/2`) | Per-site uptime watch, WhatsApp alert |
 | `deamon-db/` | coolify VPS (`/opt/deamon-db`) | Shared MySQL for CMS sites + nightly backup |
 | `move-site-db.sh` | coolify VPS | Move one site from its own MySQL to the shared one |
+| `deamon-redis/` | coolify VPS (`/opt/deamon-redis`) | Shared Redis for CMS sites, watch (cron `*/5`), nightly RDB (03:40) |
+
+## deamon-redis (shared Redis) — plan: `docs/plans/2026-10-25-shared-redis.md`
+
+- Container/service/alias `deamon-redis` (never `redis`), `redis:7.4.11-alpine`, network
+  `deamon-db`, 0.5 CPU / 1.5 GB, `unless-stopped`. `maxmemory 1gb`, `volatile-lru`, AOF
+  everysec, `databases 1024`.
+- Auth only: `default` user off; `plane_admin` in `data/users.acl`; password in `.env` (600).
+  Site users (`site_<slug>`, key pattern = prefix, no FLUSHDB/FLUSHALL/KEYS) are created by Plane.
+- Installed 2026-10-25. Checks: `nslookup redis` on deamon-db must fail, an unauthenticated
+  `redis-cli ping` must answer NOAUTH, a key survives `docker restart deamon-redis`.
+- `watch.sh`: WhatsApp when it stops answering (2 checks), memory ≥ 70% of maxmemory, or
+  `evicted_keys` grows. `backup.sh`: BGSAVE → `backups/dump-<date>.rdb.gz`, 7 days.
 
 ## deamon-watch (off-host uptime)
 
