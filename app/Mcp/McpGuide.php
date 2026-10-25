@@ -64,7 +64,7 @@ final class McpGuide
 
             1. whoami, get_setup_options. Check list_sites that {$domain} is not used yet.
             2. list_themes (sync_theme_catalog first if the theme was pushed recently). Confirm {$theme} exists and its minimum CMS version.
-            3. create_site: slug from the name, name "{$siteName}", domain {$domain}, channel main unless I say otherwise. Defaults for Coolify and Cloudflare.
+            3. create_site: slug from the name, name "{$siteName}", domain {$domain}, channel beta (every customer site runs on beta) unless I say otherwise. Defaults for Coolify and Cloudflare.
             4. provision_site. Poll get_site until status is active (or error: list_site_activity, fix, provision again). get_deployment shows the build.
             5. Tell me the Cloudflare nameservers from get_site.cloudflare.nameservers; the customer sets them at the registrar. Until then the site answers on its temporary host.
             6. check_site_health, then assign_theme {$theme} with activate and sync true. Poll get_site.themes until installed and active.

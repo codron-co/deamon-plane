@@ -74,7 +74,7 @@ final class RouteToolCatalog
                     'name' => ['type' => 'string', 'description' => 'Display name (pushed to the CMS).'],
                     'domain' => ['type' => 'string', 'description' => 'Primary hostname, e.g. shop.example.com (www is added).'],
                     'aliases' => $hosts,
-                    'channel' => ['type' => 'string', 'enum' => config('ops.channels', []), 'default' => 'main', 'description' => 'CMS release channel (git branch).'],
+                    'channel' => ['type' => 'string', 'enum' => config('ops.channels', []), 'default' => 'beta', 'description' => 'CMS release channel (git branch). Customer sites run on beta; alpha is only the test site.'],
                     ...$organisation,
                     ...$coolify,
                     'placement' => ['type' => 'string', 'enum' => ['provision', 'attach'], 'default' => 'provision'],
@@ -784,7 +784,7 @@ final class RouteToolCatalog
             : null;
 
         $defaults = array_filter([
-            'channel' => 'main',
+            'channel' => 'beta',
             'placement' => 'provision',
             'coolify_connection_id' => $connection?->id,
             'coolify_server_uuid' => $connection?->default_server_uuid ?: config('ops.coolify.default_server_uuid'),

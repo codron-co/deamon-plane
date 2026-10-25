@@ -135,7 +135,7 @@ class McpEndpointTest extends TestCase
         $this->assertFalse($created['isError'], json_encode($created['structuredContent']));
         $site = Site::query()->where('slug', 'acme-shop')->firstOrFail();
         $this->assertSame(SiteStatus::Draft, $site->status);
-        $this->assertSame('main', $site->channel->value);
+        $this->assertSame('beta', $site->channel->value);
         $this->assertContains('acme-store.example.test', $site->operatorHosts());
         $this->assertSame('acme-shop', $created['structuredContent']['site']['slug'] ?? $site->slug);
         $this->assertTrue(AuditLog::query()->where('action', 'site.created')->where('actor_user_id', $user->id)->exists());
