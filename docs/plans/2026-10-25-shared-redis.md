@@ -8,10 +8,10 @@ Durum: **uygulanıyor** (2026-10-25'te başladı). Hedef: 200 site (1 ay). Payla
 |---|---|
 | 0 Envanter | ✅ Bütün siteler yalnız DB 0/1; ilk 2.000 anahtarda süresiz anahtar yok; en büyük anahtar ~300 B; Plane'de phpredis 6.3.0 |
 | 1 Sunucu | ✅ `deamon-redis` (7.4.11): `redis` adı çözülmüyor, şifresiz komut `NOAUTH`, yeniden başlatmada veri kalıyor, izleme ve yedek cron'u çalışıyor |
-| 2 Plane | ⏳ kod yazılıyor (`feat/shared-redis`); `tools/ops/move-site-redis.sh` ve `redis-copy.php` hazır |
-| 3 CMS | ⏳ codron-co/deamon #50, 1.2.82 turunda (önce alpha + deamon-test, sonra beta) |
-| 4 Prova | ✅ kısmen (sunucuda): deamon-test anahtarları TTL ve önek değişimiyle test DB'sine kopyalandı, sayılar tuttu. ACL: başka önek (başka DB'de de) `NOPERM`; `FLUSHALL`/`FLUSHDB`/`KEYS`/`CONFIG` `NOPERM`; kendi anahtarlarıyla Lua çalışıyor, Lua içinden başka anahtar `NOPERM`. Kalan: Plane komutlarıyla uçtan uca prova |
-| 5 deamon-test | bekliyor |
+| 2 Plane | ✅ canlıda (alpha `1f458a1`, migration batch 45). `Deamon Redis` kayıtlı ve varsayılan (`ops:redis-server`) |
+| 3 CMS | ⏳ codron-co/deamon #50: alpha'da (1.2.82, deamon-test); beta push'u 1.2.82 turunun sahibinde |
+| 4 Prova | ✅ deamon-test anahtarları TTL ve önek değişimiyle test DB'sine kopyalandı, sayılar tuttu. ACL: başka önek (başka DB'de de) `NOPERM`; `FLUSHALL`/`FLUSHDB`/`KEYS`/`CONFIG` `NOPERM`; kendi anahtarlarıyla Lua çalışıyor, Lua içinden başka anahtar `NOPERM`. `ops:site-redis prepare test` → DB 2/3, `site_test` ACL dosyasına yazıldı |
+| 5 deamon-test | ⏳ 2026-10-26 01:14'te paylaşılan Redis'te, 24 saat gözlemde. İleri 9 sn, `--back` 6 sn, yeniden ileri 8 sn; site ve admin 200; kuyruk işi işlendi, `queue:work`/`schedule:work` ayakta; Coolify'da 7 REDIS_* kayıtlı (deploy'da kalır). Provada bulunan: `--back` sonrası paylaşılan çiftte eski kopya kalıyordu ve yeniden ileri kopya reddediliyordu; ileri taşıma artık `prepare` sonrası `flush` yapıyor. `watch.sh` ACL reddini de bildiriyor |
 | 6 Bütün siteler | bekliyor |
 
 ## Neden
