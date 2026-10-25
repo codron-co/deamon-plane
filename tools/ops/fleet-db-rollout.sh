@@ -20,12 +20,18 @@ q() { docker exec coolify-db psql -U coolify -d coolify -At -c "$1" 2>/dev/null;
 plane() { docker ps --format '{{.Names}}' | grep '^app-d6ovbjzxgpao23faam3vrcve' | head -1; }
 uuids() { grep -vE '^\s*(#|$)' "$1" | awk '{print $1}'; }
 
-wait_calm() { # queue empty and load < MAX_LOAD; gives up after MAX_WAIT_MIN
+wait_calm() { # queue empty and (DEPLOY_GATE=cpu: CPU < MAX_CPU | default: load < MAX_LOAD); gives up after MAX_WAIT_MIN
   local i busy load
   for i in $(seq 1 "$MAX_WAIT_MIN"); do
     busy=$(q "SELECT COUNT(*) FROM application_deployment_queues WHERE status IN ('queued','in_progress')")
-    load=$(cut -d' ' -f1 /proc/loadavg)
-    if [ "$busy" = 0 ] && awk "BEGIN{exit !($load < $MAX_LOAD)}"; then return 0; fi
+    if [ "$busy" = 0 ]; then
+      if [ "${DEPLOY_GATE:-load}" = cpu ]; then
+        [ "$(cpu_busy)" -lt "$MAX_CPU" ] && return 0
+      else
+        load=$(cut -d' ' -f1 /proc/loadavg)
+        awk "BEGIN{exit !($load < $MAX_LOAD)}" && return 0
+      fi
+    fi
     sleep 60
   done
   return 1
