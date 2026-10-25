@@ -79,8 +79,15 @@ existing=$(dstsql <<< "SELECT COUNT(*) FROM information_schema.tables WHERE tabl
 # DB_* in Coolify's generated .env, then recreate only the app from its current image.
 cp -p "$APPDIR/.env" "$WORK/env.before"
 set_env() { # KEY VALUE
-  if grep -q "^$1=" "$APPDIR/.env"; then sed -i "s|^$1=.*|$1=\"$2\"|" "$APPDIR/.env"; else echo "$1=\"$2\"" >> "$APPDIR/.env"; fi
+  if grep -q "^$1=" "$APPDIR/.env"; then
+    sed -i "s|^$1=.*|$1=\"$2\"|" "$APPDIR/.env"
+  else
+    # Coolify's .env has no trailing newline: an append would glue onto the last line.
+    [ -z "$(tail -c1 "$APPDIR/.env")" ] || echo >> "$APPDIR/.env"
+    echo "$1=\"$2\"" >> "$APPDIR/.env"
+  fi
 }
+env_has() { [ "$(grep -c "^$1=\"$2\"$" "$APPDIR/.env")" = 1 ]; }
 recreate_app() { (cd "$APPDIR" && docker compose -p "$uuid" -f docker-compose.yaml up -d --no-build --no-deps --force-recreate app) >> "$LOG" 2>&1; }
 wait_app() { # expected DB_HOST → prints container name when /up answers 200
   local want=$1 c i
@@ -121,6 +128,13 @@ untouched || { restore_up; die "a deploy of this app started during the maintena
 
 env_out=$(artisan ops:site-db switch "$SITE" --no-restart) || { restore_up; die "switch failed (site still on local MySQL)"; }
 for key in DB_HOST DB_PORT DB_DATABASE DB_USERNAME; do set_env "$key" "$(kv "$key" "$env_out")"; done
+for key in DB_HOST DB_PORT DB_DATABASE DB_USERNAME; do
+  if ! env_has "$key" "$(kv "$key" "$env_out")"; then
+    artisan ops:site-db local "$SITE" --no-restart > /dev/null || log "ROLLBACK FAILED in Plane: run ops:site-db local $SITE by hand"
+    cp -p "$WORK/env.before" "$APPDIR/.env"; restore_up
+    die "$key was not written cleanly to $APPDIR/.env; nothing recreated, site stays on its own MySQL"
+  fi
+done
 log "switched (Plane + Coolify env), recreating the app container"
 recreate_app || log "compose recreate reported an error"
 
@@ -130,6 +144,11 @@ if ok=$(wait_app "$DB_CONTAINER"); then
 fi
 
 log "new container did not come up on the shared DB; switching back to local"
+c=$(docker ps -a --format '{{.Names}}' | grep "^app-$uuid" | head -1)
+{ echo "--- $c state: $(docker inspect "$c" --format '{{.State.Status}} exit={{.State.ExitCode}} health={{if .State.Health}}{{.State.Health.Status}}{{end}} restarts={{.RestartCount}}' 2>&1)";
+  echo "--- env: $(docker exec "$c" printenv DB_HOST DB_DATABASE DB_USERNAME 2>&1 | tr '\n' ' ')";
+  echo "--- /up: $(docker exec "$c" curl -s -m 5 http://127.0.0.1:8080/up 2>&1 | head -c 300)";
+  echo "--- last log lines:"; docker logs --tail 40 "$c" 2>&1; } >> "$LOG"
 artisan ops:site-db local "$SITE" --no-restart > /dev/null || log "ROLLBACK FAILED in Plane: run ops:site-db local $SITE by hand"
 cp -p "$WORK/env.before" "$APPDIR/.env"
 recreate_app || log "compose recreate (rollback) reported an error"
