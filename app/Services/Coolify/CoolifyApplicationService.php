@@ -126,6 +126,7 @@ class CoolifyApplicationService
                 instantDeploy: $request->instantDeploy,
                 dockerComposeDomains: $request->dockerComposeDomains,
                 dockerComposeLocation: $compose,
+                destinationUuid: $request->destinationUuid,
             );
         }
 

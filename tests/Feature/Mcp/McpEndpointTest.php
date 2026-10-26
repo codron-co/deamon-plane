@@ -157,7 +157,8 @@ class McpEndpointTest extends TestCase
         $this->assertSame(SiteStatus::Draft, $site->status);
         $this->assertSame('beta', $site->channel->value);
         $this->assertContains('acme-store.example.test', $site->operatorHosts());
-        $this->assertSame('acme-shop', $created['structuredContent']['site']['slug'] ?? $site->slug);
+        $this->assertSame('acme-shop', $created['structuredContent']['site']['slug']);
+        $this->assertSame('draft', $created['structuredContent']['site']['status']);
         $this->assertTrue(AuditLog::query()->where('action', 'site.created')->where('actor_user_id', $user->id)->exists());
 
         $duplicate = $this->tool('create_site', ['slug' => 'acme-shop', 'name' => 'Again', 'domain' => 'other.example.test'], $plain);

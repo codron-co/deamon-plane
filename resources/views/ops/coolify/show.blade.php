@@ -353,6 +353,11 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="field">
+                            <label class="field-label" for="default-destination">{{ __('coolify.show.default_destination') }} @include('ops.coolify._hint', ['text' => __('coolify.show.default_destination_hint')])</label>
+                            <input id="default-destination" class="field-input" type="text" name="default_destination_uuid" value="{{ $connection->default_destination_uuid }}" placeholder="{{ config('ops.coolify.default_destination_uuid') }}" autocomplete="off" spellcheck="false" @disabled(! $canWrite)>
+                            @error('default_destination_uuid') <p class="field-error">{{ $message }}</p> @enderror
+                        </div>
                         @if ($canWrite)
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">{{ __('coolify.show.save_defaults') }}</button>
@@ -377,6 +382,7 @@
                         <div><dt>{{ __('coolify.technical.default_project') }}</dt><dd><code>{{ $connection->default_project_uuid ?: __('ops.none') }}</code></dd></div>
                         <div><dt>{{ __('coolify.technical.default_env') }}</dt><dd><code>{{ $connection->default_environment_uuid ?: __('ops.none') }}</code></dd></div>
                         <div><dt>{{ __('coolify.technical.default_git') }}</dt><dd><code>{{ $connection->default_git_source_uuid ?: __('ops.none') }}</code></dd></div>
+                        <div><dt>{{ __('coolify.technical.default_destination') }}</dt><dd><code>{{ $connection->default_destination_uuid ?: __('ops.none') }}</code></dd></div>
                     </dl>
                 </details>
             </aside>

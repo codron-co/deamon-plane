@@ -55,6 +55,8 @@ final class RouteTool implements McpTool
         private readonly array $required = [],
         private readonly array $params = [],
         private readonly ?Closure $prepare = null,
+        // A route that creates a site has no site parameter; find it by this argument afterwards.
+        private readonly ?string $siteFromArgument = null,
     ) {}
 
     public function name(): string
@@ -135,6 +137,13 @@ final class RouteTool implements McpTool
 
         if (isset($output['job']['id'])) {
             $output['next'] = 'Background job queued: poll list_jobs with job_id='.$output['job']['id'].' until completed or failed.';
+        }
+
+        if ($this->siteFromArgument !== null && filled($arguments[$this->siteFromArgument] ?? null)) {
+            $created = Site::query()->where('slug', strtolower(trim((string) $arguments[$this->siteFromArgument])))->first();
+            if ($created instanceof Site) {
+                $output['site'] = McpPresenter::siteSummary($created);
+            }
         }
 
         foreach ($resolved as $model) {

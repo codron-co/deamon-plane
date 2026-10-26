@@ -646,6 +646,7 @@ class SiteProvisioner
             instantDeploy: false,
             dockerComposeDomains: null,
             dockerComposeLocation: CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
+            destinationUuid: CoolifyConnection::newAppDestinationUuid($connection),
         );
     }
 

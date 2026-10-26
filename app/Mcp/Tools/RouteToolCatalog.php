@@ -84,6 +84,7 @@ final class RouteToolCatalog
                 ],
                 required: ['slug', 'name', 'domain'],
                 prepare: static fn (array $body): array => self::withCreateDefaults($body),
+                siteFromArgument: 'slug',
             ),
             new RouteTool(
                 name: 'update_site',

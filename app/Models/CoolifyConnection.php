@@ -32,6 +32,7 @@ class CoolifyConnection extends Model
         'default_environment_name',
         'default_git_source_uuid',
         'default_git_source_kind',
+        'default_destination_uuid',
         'github_apps_list_available',
         'last_synced_at',
     ];
@@ -199,6 +200,17 @@ class CoolifyConnection extends Model
             : (string) config('ops.coolify.api_token', '');
 
         return new CoolifyCredentials($base, $token);
+    }
+
+    /**
+     * Destination (Docker network) for new apps: the connection's setting, else the config default.
+     * Coolify refuses a create without one once the server has more than one destination.
+     */
+    public static function newAppDestinationUuid(?self $connection): ?string
+    {
+        $uuid = trim((string) ($connection?->default_destination_uuid ?: config('ops.coolify.default_destination_uuid')));
+
+        return $uuid !== '' ? $uuid : null;
     }
 
     public static function default(): ?self
