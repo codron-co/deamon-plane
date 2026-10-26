@@ -103,6 +103,27 @@ class DangerousActionsRoleTest extends TestCase
         $this->assertSame('srv_other', $connection->fresh()->default_server_uuid);
     }
 
+    public function test_operator_saves_the_default_destination_and_a_bad_one_is_refused(): void
+    {
+        $connection = CoolifyConnection::factory()->create(['base_url' => 'https://coolify.test', 'api_token' => 'token']);
+        $form = ['name' => $connection->name, 'base_url' => $connection->base_url, 'is_enabled' => '1'];
+        $operator = $this->userWith(OpsRole::Operator);
+
+        $this->actingAs($operator)
+            ->put(route('ops.coolify.update', $connection), $form + ['default_destination_uuid' => 'gokgcs84s8s88gggwoows4ks'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('gokgcs84s8s88gggwoows4ks', $connection->fresh()->default_destination_uuid);
+
+        // A form without the field (credentials card) leaves it alone.
+        $this->actingAs($operator)->put(route('ops.coolify.update', $connection), $form)->assertSessionHasNoErrors();
+        $this->assertSame('gokgcs84s8s88gggwoows4ks', $connection->fresh()->default_destination_uuid);
+
+        $this->actingAs($operator)
+            ->put(route('ops.coolify.update', $connection), $form + ['default_destination_uuid' => 'bad uuid;'])
+            ->assertSessionHasErrors('default_destination_uuid');
+        $this->assertSame('gokgcs84s8s88gggwoows4ks', $connection->fresh()->default_destination_uuid);
+    }
+
     public function test_hard_delete_is_capped_per_request(): void
     {
         $sites = Site::factory()->count(11)->create();

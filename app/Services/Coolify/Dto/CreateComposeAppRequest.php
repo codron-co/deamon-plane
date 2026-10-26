@@ -25,6 +25,8 @@ final class CreateComposeAppRequest
         public readonly bool $instantDeploy = false,
         public readonly string|array|null $dockerComposeDomains = null,
         public readonly string $dockerComposeLocation = self::DEFAULT_COMPOSE_LOCATION,
+        // Required by Coolify once the server has more than one destination (Docker network).
+        public readonly ?string $destinationUuid = null,
     ) {
         if ($this->projectUuid === '' || $this->serverUuid === '') {
             throw new InvalidArgumentException('project_uuid and server_uuid are required to create a Coolify compose app.');
@@ -73,6 +75,10 @@ final class CreateComposeAppRequest
             $payload['environment_uuid'] = $this->environmentUuid;
         } else {
             $payload['environment_name'] = $this->environmentName;
+        }
+
+        if (filled($this->destinationUuid)) {
+            $payload['destination_uuid'] = $this->destinationUuid;
         }
 
         if (filled($this->githubAppUuid)) {

@@ -105,7 +105,10 @@ class ProvisionSiteTest extends TestCase
                 && ! array_key_exists('fqdn', $body)
                 && ! array_key_exists('docker_compose_domains', $body)
                 && empty($body['instant_deploy'])
-                && ! array_key_exists('docker_compose_raw', $body);
+                && ! array_key_exists('docker_compose_raw', $body)
+                // No setting anywhere: the config default destination is still sent.
+                && filled($body['destination_uuid'] ?? null)
+                && ($body['destination_uuid'] ?? null) === config('ops.coolify.default_destination_uuid');
         });
 
         Http::assertSent(function (Request $request): bool {
@@ -217,6 +220,44 @@ class ProvisionSiteTest extends TestCase
             ->getContent();
         $this->assertStringContainsString('title="', $html);
         $this->assertStringContainsString('Validation failed.', $html);
+    }
+
+    public function test_provision_sends_the_configured_destination(): void
+    {
+        // A server with more than one destination makes Coolify refuse a create without one.
+        config()->set('ops.coolify.default_destination_uuid', 'dest-coolify');
+        $this->fakeCoolifyHappyPath();
+        $site = $this->draftSite();
+
+        $this->actingAs($this->user(OpsRole::Operator))->post(route('ops.sites.provision', $site));
+
+        $this->assertSame(SiteStatus::Active, $site->fresh()->status);
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://coolify.test/api/v1/applications/public'
+            && ($request->data()['destination_uuid'] ?? null) === 'dest-coolify');
+    }
+
+    public function test_connection_destination_wins_over_config(): void
+    {
+        config()->set('ops.coolify.default_destination_uuid', 'dest-config');
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.test',
+            'api_token' => 'test-coolify-token',
+            'is_default' => true,
+            'default_server_uuid' => 'srv_test',
+            'default_project_uuid' => 'proj_test',
+            'default_destination_uuid' => 'dest-connection',
+        ]);
+        // A connection makes provision check the server list first.
+        Http::fake(['https://coolify.test/api/v1/servers' => Http::response([['uuid' => 'srv_test', 'name' => 'srv']], 200)]);
+        $this->fakeCoolifyHappyPath();
+        $site = $this->draftSite(['coolify_connection_id' => $connection->id]);
+
+        $this->actingAs($this->user(OpsRole::Operator))->post(route('ops.sites.provision', $site));
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && str_contains($request->url(), '/api/v1/applications/')
+            && ($request->data()['destination_uuid'] ?? null) === 'dest-connection');
     }
 
     public function test_preflight_rejects_server_missing_from_list_servers(): void

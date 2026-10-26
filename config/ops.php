@@ -215,6 +215,10 @@ return [
         'api_token' => env('COOLIFY_API_TOKEN'),
         'default_project_uuid' => env('COOLIFY_DEFAULT_PROJECT_UUID'),
         'default_server_uuid' => env('COOLIFY_DEFAULT_SERVER_UUID'),
+        // Destination (Docker network) for new apps; the connection's setting wins.
+        // Coolify refuses a create without one once the server has several destinations.
+        // Default: srv2's standalone docker destination on the `coolify` network.
+        'default_destination_uuid' => env('COOLIFY_DEFAULT_DESTINATION_UUID', 'gokgcs84s8s88gggwoows4ks'),
         'webhook_secret' => env('COOLIFY_WEBHOOK_SECRET'),
         'timeout' => (int) env('COOLIFY_HTTP_TIMEOUT', 30),
         'auto_rebind_domains' => filter_var(env('COOLIFY_AUTO_REBIND_DOMAINS', true), FILTER_VALIDATE_BOOLEAN),

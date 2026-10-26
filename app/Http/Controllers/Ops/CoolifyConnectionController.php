@@ -155,6 +155,16 @@ class CoolifyConnectionController extends Controller
         $connection->default_environment_uuid = $env?->uuid;
         $connection->default_environment_name = $env !== null ? (trim((string) $env->name) ?: null) : null;
 
+        if ($request->has('default_destination_uuid')) {
+            $destination = $this->nullableString($request->input('default_destination_uuid'));
+            if ($destination !== null && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $destination) !== 1) {
+                throw ValidationException::withMessages([
+                    'default_destination_uuid' => __('coolify.errors.destination_invalid'),
+                ]);
+            }
+            $connection->default_destination_uuid = $destination;
+        }
+
         $git = $this->nullableString($request->input('default_git_source'));
         if ($git !== null && str_contains($git, ':')) {
             [$kind, $uuid] = explode(':', $git, 2);
