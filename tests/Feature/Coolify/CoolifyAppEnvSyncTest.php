@@ -6,6 +6,8 @@ use App\Enums\Channel;
 use App\Enums\SiteStatus;
 use App\Models\CoolifyEnvDefault;
 use App\Models\CoolifySetting;
+use App\Models\DatabaseServer;
+use App\Models\RedisServer;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyAppEnvSync;
 use App\Services\Coolify\CoolifyApplicationService;
@@ -13,6 +15,8 @@ use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Mockery;
 use Tests\TestCase;
 
 class CoolifyAppEnvSyncTest extends TestCase
@@ -186,9 +190,6 @@ class CoolifyAppEnvSyncTest extends TestCase
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH');
     }
 
-    /**
-     * @param  list<array{key: string, value: string, uuid?: string}>  $envs
-     */
     public function test_a_catalog_without_bootstrap_keys_never_deletes_them(): void
     {
         $site = $this->site();
@@ -269,6 +270,116 @@ class CoolifyAppEnvSyncTest extends TestCase
         $this->assertNull($site->refresh()->mysql_root_password_encrypted);
     }
 
+    /**
+     * A Docker Image app has no compose file: QUEUE_CONNECTION, SESSION_DRIVER, ... are
+     * Coolify env rows outside the catalog (deamon-test, 2026-10-26: 20 keys pruned).
+     */
+    public function test_a_docker_image_app_keeps_env_outside_the_catalog_but_still_gets_catalog_and_placement_keys(): void
+    {
+        $site = $this->site(['slug' => 'test', 'channel' => Channel::Alpha]);
+        $site->forceFill([
+            'database_server_id' => DatabaseServer::factory()->create()->id,
+            'db_database' => 'site_test',
+            'db_username' => 'site_test',
+            'redis_server_id' => RedisServer::factory()->create()->id,
+            'redis_db' => 4,
+            'redis_username' => 'site_test',
+            'redis_password_encrypted' => 'redis-password-value-00000000001',
+            'redis_shared' => true,
+        ])->save();
+        $site->refresh();
+        $this->assertTrue($site->usesSharedDatabase());
+        $this->assertTrue($site->usesSharedRedis());
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => 'live-db-password-value-0000000001', 'uuid' => 'env-db'],
+            ['key' => 'QUEUE_CONNECTION', 'value' => 'redis', 'uuid' => 'env-queue'],
+            ['key' => 'SESSION_DRIVER', 'value' => 'redis', 'uuid' => 'env-session'],
+            ['key' => 'CACHE_STORE', 'value' => 'redis', 'uuid' => 'env-cache'],
+            ['key' => 'DB_CONNECTION', 'value' => 'mysql', 'uuid' => 'env-db-connection'],
+            ['key' => 'NGINX_PORT', 'value' => '80', 'uuid' => 'env-nginx-port'],
+        ], 'dockerimage');
+
+        Log::spy();
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        foreach (['QUEUE_CONNECTION', 'SESSION_DRIVER', 'CACHE_STORE', 'DB_CONNECTION', 'NGINX_PORT'] as $key) {
+            $this->assertNotContains($key, $keys);
+        }
+        $this->assertContains('DEAMON_CHANNEL', $keys);
+        $this->assertContains('DB_HOST', $keys);
+        $this->assertContains('REDIS_HOST', $keys);
+
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
+        Http::assertSent(function (Request $request): bool {
+            $map = $this->bulkMap($request);
+
+            return $request->method() === 'PATCH'
+                && ($map['DEAMON_CHANNEL'] ?? null) === Channel::Alpha->value
+                && array_key_exists('DB_HOST', $map)
+                && array_key_exists('REDIS_HOST', $map);
+        });
+        Log::shouldHaveReceived('info')->with('coolify.env_prune_skipped_dockerimage', Mockery::on(
+            fn (array $context): bool => $context['build_pack'] === 'dockerimage'
+                && in_array('QUEUE_CONNECTION', $context['keys'], true),
+        ))->once();
+    }
+
+    public function test_a_compose_app_still_prunes_env_outside_the_catalog(): void
+    {
+        $site = $this->site();
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => 'live-db-password-value-0000000001', 'uuid' => 'env-db'],
+            ['key' => 'QUEUE_CONNECTION', 'value' => 'redis', 'uuid' => 'env-queue'],
+        ], 'dockercompose');
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('QUEUE_CONNECTION', $keys);
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-queue'));
+    }
+
+    public function test_a_dockerfile_app_still_prunes_env_outside_the_catalog(): void
+    {
+        $site = $this->site();
+        $this->fakeEnvs([
+            ['key' => 'QUEUE_CONNECTION', 'value' => 'redis', 'uuid' => 'env-queue'],
+        ], 'dockerfile');
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('QUEUE_CONNECTION', $keys);
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-queue'));
+    }
+
+    public function test_nothing_is_pruned_when_the_build_pack_cannot_be_read(): void
+    {
+        $site = $this->site();
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => ''],
+            ['key' => 'QUEUE_CONNECTION', 'value' => 'redis', 'uuid' => 'env-queue'],
+        ], null);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertNotContains('QUEUE_CONNECTION', $keys);
+        $this->assertContains('DB_PASSWORD', $keys);
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');
+    }
+
+    public function test_the_app_is_not_read_when_nothing_is_left_to_prune(): void
+    {
+        $site = $this->site();
+        $this->fakeEnvs([['key' => 'DB_PASSWORD', 'value' => '']]);
+
+        app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'GET'
+            && preg_match('#/applications/[^/]+$#', $request->url()) === 1);
+    }
+
     public function test_live_db_passwords_are_captured_on_the_site_row(): void
     {
         $site = $this->site();
@@ -339,9 +450,18 @@ class CoolifyAppEnvSyncTest extends TestCase
             && ($this->bulkMap($request)['DB_PASSWORD'] ?? null) === $copy);
     }
 
-    private function fakeEnvs(array $envs): void
+    /**
+     * @param  list<array{key: string, value: string, uuid?: string}>  $envs
+     * @param  string|null  $buildPack  null: GET /applications/{uuid} fails
+     */
+    private function fakeEnvs(array $envs, ?string $buildPack = 'dockercompose'): void
     {
-        Http::fake(function (Request $request) use ($envs) {
+        Http::fake(function (Request $request) use ($envs, $buildPack) {
+            if ($request->method() === 'GET' && preg_match('#/applications/[^/]+$#', $request->url()) === 1) {
+                return $buildPack === null
+                    ? Http::response(['message' => 'boom'], 500)
+                    : Http::response(['uuid' => 'env-app-1', 'name' => 'izyem', 'build_pack' => $buildPack], 200);
+            }
             if ($request->method() === 'GET' && str_contains($request->url(), '/envs')) {
                 return Http::response(array_map(static function (array $row): array {
                     return [

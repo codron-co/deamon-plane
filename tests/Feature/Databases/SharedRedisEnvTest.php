@@ -249,6 +249,10 @@ class SharedRedisEnvTest extends TestCase
     private function fakeCoolify(array $envs): void
     {
         Http::fake(function (Request $request) use ($envs) {
+            // The env sync reads the build pack before it prunes leftovers.
+            if ($request->method() === 'GET' && preg_match('#/applications/[^/]+$#', $request->url()) === 1) {
+                return Http::response(['uuid' => 'env-app-1', 'name' => 'izyem', 'build_pack' => 'dockercompose'], 200);
+            }
             if ($request->method() === 'GET' && str_contains($request->url(), '/envs')) {
                 return Http::response(array_map(static fn (array $row): array => $row + ['uuid' => 'env-'.md5($row['key'])], $envs), 200);
             }

@@ -106,7 +106,7 @@ class CoolifyAppEnvSync
      * Align Coolify application env with the catalog for this site's git channel
      * (synced from the CMS `.env.production.example` on that branch).
      * Upserts catalog keys, then deletes leftovers that are no longer in the catalog
-     * (except Coolify-managed injects). Never logs values. Generated secrets that
+     * (except Coolify-managed injects; never on a Docker Image app, see prune()). Never logs values. Generated secrets that
      * already have a real value are left alone (MySQL volume may already be initialized).
      *
      * @return list<string> keys written or deleted (never values)
@@ -175,7 +175,7 @@ class CoolifyAppEnvSync
             $coolify->updateEnvs($uuid, $desired);
         }
 
-        $deleted = $this->prune($coolify, $uuid, $defaults, $existingVars);
+        $deleted = $this->prune($site, $coolify, $uuid, $defaults, $existingVars);
 
         $touched = array_values(array_unique([...$written, ...$deleted]));
 
@@ -235,11 +235,20 @@ class CoolifyAppEnvSync
     }
 
     /**
+     * Delete leftovers only on compose/dockerfile apps. Their constants
+     * (QUEUE_CONNECTION, SESSION_DRIVER, DB_CONNECTION, ...) live in the CMS compose
+     * file, so any env outside the catalog really is a leftover. A Docker Image app has
+     * no compose file: those constants are Coolify env rows, and pruning them drops the
+     * site's queue, session and cache settings (deamon-test, 2026-10-26: 20 keys lost).
+     * When the build pack cannot be read nothing is deleted: a deleted env is not
+     * recoverable, a leftover is harmless.
+     *
      * @param  Collection<int, CoolifyEnvDefault>  $defaults
      * @param  Collection<int, mixed>  $existingVars
      * @return list<string> deleted keys
      */
     private function prune(
+        Site $site,
         CoolifyApplicationService $coolify,
         string $uuid,
         Collection $defaults,
@@ -252,7 +261,7 @@ class CoolifyAppEnvSync
             }
         }
 
-        $deleted = [];
+        $candidates = [];
 
         foreach ($existingVars as $env) {
             if (! $env instanceof CoolifyEnvironmentVariable || $env->key === '' || $env->isPreview) {
@@ -265,6 +274,16 @@ class CoolifyAppEnvSync
                 continue;
             }
 
+            $candidates[] = $env;
+        }
+
+        if ($candidates === [] || ! $this->mayPrune($site, $coolify, $uuid, $candidates)) {
+            return [];
+        }
+
+        $deleted = [];
+
+        foreach ($candidates as $env) {
             $envUuid = trim((string) ($env->uuid ?? ''));
             if ($envUuid === '') {
                 Log::warning('coolify.env_prune_skipped_no_uuid', [
@@ -280,6 +299,38 @@ class CoolifyAppEnvSync
         }
 
         return $deleted;
+    }
+
+    /**
+     * @param  list<CoolifyEnvironmentVariable>  $candidates
+     */
+    private function mayPrune(Site $site, CoolifyApplicationService $coolify, string $uuid, array $candidates): bool
+    {
+        $context = [
+            'site_id' => $site->id,
+            'site_slug' => $site->slug,
+            'app_uuid' => $uuid,
+            'keys' => array_map(static fn (CoolifyEnvironmentVariable $env): string => $env->key, $candidates),
+        ];
+
+        try {
+            $app = $coolify->getApp($uuid);
+        } catch (\Throwable $e) {
+            Log::warning('coolify.env_prune_skipped_unknown_build_pack', $context + ['error' => $e->getMessage()]);
+
+            return false;
+        }
+
+        if ($app->isComposePack() || $app->isDockerfilePack()) {
+            return true;
+        }
+
+        Log::info(
+            $app->isDockerImagePack() ? 'coolify.env_prune_skipped_dockerimage' : 'coolify.env_prune_skipped_build_pack',
+            $context + ['build_pack' => $app->buildPack],
+        );
+
+        return false;
     }
 
     /**

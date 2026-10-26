@@ -247,6 +247,10 @@ class SiteEnvEditorTest extends TestCase
     private function fakeEnvs(array $envs): void
     {
         Http::fake(function (Request $request) use ($envs) {
+            // The env sync reads the build pack before it prunes leftovers.
+            if ($request->method() === 'GET' && preg_match('#/applications/[^/]+$#', $request->url()) === 1) {
+                return Http::response(['uuid' => 'env-app-1', 'name' => 'izyem', 'build_pack' => 'dockercompose'], 200);
+            }
             if ($request->method() === 'GET' && str_contains($request->url(), '/envs')) {
                 return Http::response($envs, 200);
             }
