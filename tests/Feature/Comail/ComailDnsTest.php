@@ -41,7 +41,11 @@ class ComailDnsTest extends TestCase
         $this->assertSame(10, $mx[0]['priority']);
         $this->assertSame('v=spf1 mx a:mail.example.test ~all', $this->cloudflare->at('acme.test', 'TXT')[0]['content']);
         $this->assertSame(self::DKIM, $this->cloudflare->at('dkim._domainkey.acme.test', 'TXT')[0]['content']);
-        $this->assertSame('v=DMARC1; p=none', $this->cloudflare->at('_dmarc.acme.test', 'TXT')[0]['content']);
+        // A fresh domain is local mode: DMARC with reports plus the v3 security records.
+        $this->assertSame('v=DMARC1; p=none; rua=mailto:dmarc@codron.co; fo=1', $this->cloudflare->at('_dmarc.acme.test', 'TXT')[0]['content']);
+        $this->assertSame('31.97.79.49', $this->cloudflare->at('mta-sts.acme.test', 'A')[0]['content']);
+        $this->assertStringStartsWith('v=STSv1; id=', $this->cloudflare->at('_mta-sts.acme.test', 'TXT')[0]['content']);
+        $this->assertSame('v=TLSRPTv1; rua=mailto:tlsrpt@codron.co', $this->cloudflare->at('_smtp._tls.acme.test', 'TXT')[0]['content']);
         foreach (['mail', 'autodiscover', 'autoconfig'] as $name) {
             $cname = $this->cloudflare->at($name.'.acme.test', 'CNAME');
             $this->assertSame('mail.example.test', $cname[0]['content']);

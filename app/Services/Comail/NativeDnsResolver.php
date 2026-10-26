@@ -10,6 +10,7 @@ class NativeDnsResolver implements DnsResolver
     public function lookup(string $name, string $type): array
     {
         $flag = match ($type) {
+            'A' => DNS_A,
             'MX' => DNS_MX,
             'TXT' => DNS_TXT,
             'CNAME' => DNS_CNAME,
@@ -28,6 +29,7 @@ class NativeDnsResolver implements DnsResolver
             }
 
             $out[] = match ($type) {
+                'A' => ['ip' => (string) ($record['ip'] ?? '')],
                 'MX' => ['target' => self::host($record['target'] ?? ''), 'priority' => (int) ($record['pri'] ?? 0)],
                 'TXT' => ['value' => is_array($record['entries'] ?? null)
                     ? implode('', array_map('strval', $record['entries']))

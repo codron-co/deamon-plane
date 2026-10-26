@@ -102,6 +102,36 @@ For sites still bound to Hostinger mail (`mailServer` is a ready Hostinger serve
 
 `POST`: every id must be one of the site's H-Posta boxes (else 404 `not_found`) and every box's domain must already be a CoMail domain (else 422 `domain_not_in_comail`, nothing changed). Then, one box at a time: package limits first (so a full package never leaves a changed H-Posta password), a generated 16-character password (upper, lower, digit, one of `!#%*-_+=`) is set on H-Posta (`changePassword`) and on CoMail (create with the default quota, or edit the existing box), and a sync job `imap.hostinger.com:993 SSL` with that address and password is added unless one exists for the address. The password is returned **once** in that item's result (also when a later step failed, since the H-Posta password already changed) and is never stored, logged or audited (`comail.hposta_migrated` records email, ok, error).
 
+## Mail security (v3)
+
+Contract: `C:\www\tek-seferlik-isler\comail\CONTRACT-v3-security.md`. Already live on the server (not Plane's job): ClamAV, rspamd, the `dmarc@` / `tlsrpt@codron.co` report aliases, `ADDITIONAL_SAN` with `mta-sts.*`.
+
+- **Local mode** = CoMail receives the domain's mail (`mx_active_at` set, or no MX at all). **Relay mode** domains (MX still elsewhere) keep exactly the v1 DNS set; their security checks are `not_applicable` except SPF/DKIM.
+- Records (`ComailSecurityRecords`, written by `ComailSecurity::writeRecords()` from `ComailDns::write()` whenever CoMail receives the mail; also listed in the DNS plan of local domains as `mta_sts`, `mta_sts_txt`, `tls_rpt` for manual zones):
+  - `_dmarc.D` TXT `v=DMARC1; p=<dmarc_policy>; rua=mailto:dmarc@codron.co; fo=1`. An existing record is merged: policy set, CoMail's `rua` added next to the customer's, `fo=1` only when no `fo`, other tags kept. A **customer** record (no CoMail `rua`) with a stricter policy than requested is never touched and reports `different`; Plane's own record may go either way.
+  - `mta-sts.D` A `ops.comail.mail_ipv4` (31.97.79.49, DNS only) and `_mta-sts.D` TXT `v=STSv1; id=<mta_sts_id>` — only after the mailcow policy exists and only when `mta-sts.D` is free or already ours (a customer's own policy host stays).
+  - `_smtp._tls.D` TXT `v=TLSRPTv1; rua=mailto:tlsrpt@codron.co` when D has no TLS-RPT record.
+  - `D._report._dmarc.codron.co` TXT `v=DMARC1` in Plane's codron.co zone (external report authorization; `report_auth_at`). Not needed for codron.co and its subdomains. Removed when the domain leaves CoMail.
+- **Wildcard guard** (same rule as #29): before writing, every hostname-like ancestor below the zone apex (D itself for `mta-sts.D`, `_dmarc.D`, …) gets the parent wildcard's A/AAAA/CNAME pinned (`ComailDns::pinWildcardAddress`). Underscore labels are skipped.
+- **mailcow MTA-STS policy**: `POST /add/mta-sts {domain, version: STSv1, mode: testing, mx: <mail host>, max_age: 86400, active: 1}` once per domain (`mta_sts_id` = Plane's YmdHis). mailcow has no read route; an existing policy answers danger with a duplicate-entry SQL text and counts as present (ops' mode is kept). Also created when a DNS check first sees the MX on CoMail (unmanaged zones).
+- **Rate limit**: `add/domain` sends `rl_value = mail_packages.rate_limit_per_hour` (default 300), `rl_frame = h`. `edit/domain` never sends rate-limit keys (codron.co keeps its manual 1000/h). No ops form field yet.
+- `GET /security` runs a fresh DNS check per active domain (cached 60 s, `ComailDns::check()` clears the cache). `mta_sts` is `ok` only when both records are right **and** `https://mta-sts.D/.well-known/mta-sts.txt` answers `version: STSv1` over valid TLS.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/security` | – | `{domains[{domain, mode: local|relay, dns_managed, checks{mx,spf,dkim,dmarc,mta_sts,tls_rpt: {status: ok|missing|different|not_applicable, current?, expected?}}, dmarc_policy, rate_limit{value,frame}}], antivirus: true, spam{default_score: "8,15"}}` |
+| POST | `/domains/{domain}/dmarc` | `{policy: none|quarantine|reject}` | the domain's security row. 422 `dns_not_managed` (zone not in Plane's Cloudflare), `validation_failed` (relay mode, bad policy) |
+| GET / PUT | `/mailboxes/{address}/spam` | `{level: relaxed|normal|strict}` | `{level (or custom), score{low,high}, allow[{id,value}], block[{id,value}]}` — relaxed 10/20, normal 8/15, strict 5/10 (mailcow `spam-score` "low,high") |
+| POST | `/mailboxes/{address}/spam/{allow|block}` | `{value}` (`user@x.com`, `*@x.com`; `@x.com` / `x.com` become `*@x.com`) | same, 201 |
+| DELETE | `/mailboxes/{address}/spam/{allow|block}/{id}` | – | same (only the mailbox's own entries; mailcow also lists domain-wide ones, they are hidden) |
+| GET | `/quarantine` | – | `{items[{id, mailbox, sender, subject, score, virus, created_at}]}` (recipient in the site's domains, newest first, max 200) |
+| POST | `/quarantine/{id}/release` | – | `{ok:true}` (`edit/qitem action=release`) |
+| DELETE | `/quarantine/{id}` | – | `{ok:true}` (`delete/qitem [id]`) |
+
+Audit: `comail.dmarc_policy`, `comail.spam_level`, `comail.spam_list`, `comail.quarantine_release`, `comail.quarantine_deleted`.
+
+mailcow shapes verified live (2026-10-26, version 2026-10): `get/spam-score/{a}` → `{"score":"8,15"}` (server default when none); `get/rl-domain/{d}` → `{"value":"1000","frame":"h"}` or `{}`; `get/policy_*_mailbox/{a}` → `[{object, value, prefid}]` or `{}`; `get/quarantine/all` → `[{id, qid, subject, virus_flag (LOCATE position, 0 = clean), score, rcpt, sender, action, created (unix), notified}]`; no `get/mta-sts` route.
+
 ## Ops UI
 
 - `/mail-servers`: provider select offers CoMail (mailcow): base URL (`https://`), mail hostname, API key (password input, never rendered). Creating a CoMail server needs `ops.danger`. **Bağlantıyı dene** = `GET /get/status/version`. The show page lists every CoMail domain. The provider of a saved server is fixed. Site mail-server selects and `mail_server_id` validation only offer Hostinger servers.

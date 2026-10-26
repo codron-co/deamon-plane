@@ -196,6 +196,14 @@ return [
         'timeout_seconds' => (int) env('COMAIL_HTTP_TIMEOUT', 15),
         'dkim_selector' => 'dkim',
         'dkim_key_size' => 2048,
+        // v3 mail security: the CoMail server's address for mta-sts.<domain>,
+        // the report mailboxes (aliases on codron.co) and mailcow's spam default.
+        'mail_ipv4' => env('COMAIL_MAIL_IPV4', '31.97.79.49'),
+        'dmarc_rua' => env('COMAIL_DMARC_RUA', 'dmarc@codron.co'),
+        'tlsrpt_rua' => env('COMAIL_TLSRPT_RUA', 'tlsrpt@codron.co'),
+        'mta_sts_max_age' => 86400,
+        'spam_default_score' => '8,15',
+        'security_cache_seconds' => 60,
     ],
 
     'cloudflare' => [

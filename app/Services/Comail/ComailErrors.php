@@ -38,6 +38,11 @@ final class ComailErrors
         'target_mailbox_invalid' => 'Hedef posta kutusu geçersiz.',
         'sieve_error' => 'Otomatik yanıt kuralı kaydedilemedi.',
         'value_missing' => 'Gerekli bir alan eksik.',
+        'policy_list_from_exists' => 'Bu adres listede zaten var.',
+        'policy_list_from_invalid' => 'Adres biçimi geçersiz.',
+        'mode_invalid' => 'MTA-STS kipi geçersiz.',
+        'max_age_invalid' => 'MTA-STS süresi geçersiz.',
+        'mx_invalid' => 'MTA-STS için MX adı geçersiz.',
     ];
 
     public static function turkish(?string $key): string

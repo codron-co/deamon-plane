@@ -117,6 +117,116 @@ class MailcowClient
         ]);
     }
 
+    // ── Mail security (v3): rate limit, MTA-STS, spam filter, quarantine ─
+
+    /**
+     * Outbound rate limit of a domain: `{value: "300", frame: "h"}`, `{}` when none.
+     *
+     * @return array{value: int|null, frame: string|null}
+     */
+    public function domainRateLimit(string $domain): array
+    {
+        $row = $this->single($this->get('/get/rl-domain/'.rawurlencode($domain))) ?? [];
+        $value = $row['value'] ?? null;
+
+        return [
+            'value' => is_numeric($value) && (int) $value > 0 ? (int) $value : null,
+            'frame' => is_string($row['frame'] ?? null) && $row['frame'] !== '' ? $row['frame'] : null,
+        ];
+    }
+
+    /**
+     * mailcow has no read route for MTA-STS; an existing policy (primary key = domain)
+     * answers danger with the database's duplicate-entry text.
+     *
+     * @param  array{version: string, mode: string, mx: string, max_age: string, active: string}  $attributes
+     * @return list<array<string, mixed>>
+     */
+    public function addMtaSts(string $domain, array $attributes): array
+    {
+        return $this->write('/add/mta-sts', ['domain' => $domain] + $attributes);
+    }
+
+    /**
+     * Mailbox spam thresholds "low,high" (`{score: "8,15"}`; the server default
+     * when the mailbox has none of its own).
+     */
+    public function spamScore(string $address): ?string
+    {
+        $row = $this->single($this->get('/get/spam-score/'.rawurlencode($address))) ?? [];
+        $score = $row['score'] ?? $row['spam_score'] ?? null;
+
+        return is_string($score) && str_contains($score, ',') ? str_replace(' ', '', $score) : null;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function editSpamScore(string $address, string $score): array
+    {
+        return $this->write('/edit/spam-score', ['items' => [$address], 'attr' => ['spam_score' => $score]]);
+    }
+
+    /**
+     * Allow (`wl`) or block (`bl`) list of a mailbox: `[{object, value, prefid}]`.
+     * mailcow also returns the domain-wide entries (object = domain).
+     *
+     * @param  'wl'|'bl'  $list
+     * @return list<array<string, mixed>>
+     */
+    public function mailboxPolicies(string $address, string $list): array
+    {
+        return $this->rows($this->get('/get/policy_'.$list.'_mailbox/'.rawurlencode($address)));
+    }
+
+    /**
+     * @param  'wl'|'bl'  $list
+     * @return list<array<string, mixed>>
+     */
+    public function addMailboxPolicy(string $address, string $list, string $from): array
+    {
+        return $this->write('/add/mailbox-policy', [
+            'username' => $address,
+            'object_list' => $list,
+            'object_from' => $from,
+        ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function deleteMailboxPolicy(int $prefid): array
+    {
+        return $this->write('/delete/mailbox-policy', [(string) $prefid]);
+    }
+
+    /**
+     * Every quarantined message on the server (filter by rcpt client side):
+     * `[{id, qid, subject, virus_flag, score, rcpt, sender, action, created (unix), notified}]`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function quarantine(): array
+    {
+        return $this->rows($this->get('/get/quarantine/all'));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function releaseQuarantineItem(int $id): array
+    {
+        return $this->write('/edit/qitem', ['items' => [(string) $id], 'attr' => ['action' => 'release']]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function deleteQuarantineItem(int $id): array
+    {
+        return $this->write('/delete/qitem', [(string) $id]);
+    }
+
     // ── Mailboxes ───────────────────────────────────────────────────────
 
     /**
