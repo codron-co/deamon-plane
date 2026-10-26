@@ -15,6 +15,7 @@ use App\Services\Comail\ComailDomainProvisioner;
 use App\Services\Comail\ComailException;
 use App\Services\Comail\ComailLimits;
 use App\Services\Comail\ComailSiteConfigurer;
+use App\Services\Comail\ComailWebmailHost;
 use App\Services\Comail\ComailWebmailSso;
 use App\Services\Comail\MailcowClient;
 use App\Services\Comail\MailcowException;
@@ -48,6 +49,7 @@ class SiteComailController extends Controller
         private readonly ComailSiteConfigurer $configurer,
         private readonly ComailWebmailSso $sso,
         private readonly MailBilling $billing,
+        private readonly ComailWebmailHost $webmailHost,
     ) {}
 
     // ── Overview ────────────────────────────────────────────────────────
@@ -57,7 +59,8 @@ class SiteComailController extends Controller
         return $this->run($request, function (Site $site, ComailDirectory $directory, MailServer $server): JsonResponse {
             $host = $server->comailHostname();
             $base = $server->comailBaseUrl();
-            $taken = $site->comailDomains()->pluck('domain')->all();
+            $domains = $site->comailDomains()->get();
+            $taken = $domains->pluck('domain')->all();
 
             $package = $this->limits->package($site);
             $usage = $this->limits->usage($directory);
@@ -75,8 +78,9 @@ class SiteComailController extends Controller
                     'grace_ends_at' => $subscription['grace_ends_at'],
                 ],
                 // The web root opens Roundcube (the inbox); /?panel=1 is the mail
-                // user panel (spam filter, app passwords, 2FA).
-                'webmail_url' => $base,
+                // user panel (spam filter, app passwords, 2FA). The inbox link
+                // prefers the primary domain's own mail.<domain> when usable.
+                'webmail_url' => $this->overviewWebmailUrl($server, $domains),
                 'panel_url' => $base.'/?panel=1',
                 'client' => [
                     'imap' => ['host' => $host, 'port' => 993, 'security' => 'SSL'],
@@ -85,7 +89,7 @@ class SiteComailController extends Controller
                     'smtp_alt' => ['host' => $host, 'port' => 587, 'security' => 'STARTTLS'],
                     'managesieve' => ['host' => $host, 'port' => 4190, 'security' => 'STARTTLS'],
                 ],
-                'domains' => $site->comailDomains()->get()
+                'domains' => $domains
                     ->map(fn (SiteComailDomain $row): array => $this->domainRow($row))
                     ->values()
                     ->all(),
@@ -1024,6 +1028,31 @@ class SiteComailController extends Controller
             'dns_managed' => $this->dns->isManaged($row),
             'webmail_url' => $this->domainWebmailUrl($row),
         ];
+    }
+
+    /**
+     * Site-level inbox link: the primary (else first) active CoMail domain's own
+     * `https://mail.<domain>` when ComailWebmailHost finds it usable, else base_url.
+     *
+     * @param  iterable<SiteComailDomain>  $domains
+     */
+    private function overviewWebmailUrl(MailServer $server, iterable $domains): string
+    {
+        $pick = null;
+        foreach ($domains as $row) {
+            if (! $row->isActive()) {
+                continue;
+            }
+            if ($row->is_primary) {
+                $pick = $row;
+                break;
+            }
+            $pick ??= $row;
+        }
+
+        return $pick instanceof SiteComailDomain
+            ? $this->webmailHost->forDomain($server, (string) $pick->domain)
+            : $server->comailBaseUrl();
     }
 
     /**
