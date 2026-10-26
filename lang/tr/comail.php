@@ -26,6 +26,7 @@ return [
             'aliases' => 'Yönlendirme',
             'domains' => 'Alan adı',
             'price' => 'Aylık fiyat',
+            'price_yearly' => 'Yıllık fiyat',
             'sites' => 'Site',
         ],
         'fields' => [
@@ -43,6 +44,8 @@ return [
             'domain_limit_hint' => 'Boş = sitenin kendi alan adlarının hepsi.',
             'price_monthly' => 'Aylık fiyat',
             'price_hint' => 'Boş = fiyatsız (ücretsiz ya da teklifle).',
+            'price_yearly' => 'Yıllık fiyat',
+            'price_yearly_hint' => 'Boş = yıllık satılmaz.',
             'currency' => 'Para birimi',
             'sort' => 'Sıra',
             'is_active' => 'Satışta (siteye atanabilir)',
@@ -52,6 +55,7 @@ return [
         'errors' => [
             'default' => 'Varsayılan paket silinemez. Önce başka bir paketi varsayılan yapın.',
             'in_use' => 'Bu paketi kullanan siteler var. Önce sitelerin paketini değiştirin.',
+            'has_orders' => 'Bu paketle verilmiş sipariş ya da abonelik var; silinemez. Satıştan kaldırmak için pasif yapın.',
         ],
         'flash' => [
             'saved' => 'Paket kaydedildi.',

@@ -8,6 +8,7 @@ use App\Enums\SiteImportance;
 use App\Enums\ThemeVisibility;
 use App\Mcp\McpModels;
 use App\Models\CoolifyConnection;
+use App\Models\MailOrder;
 use App\Models\McpToken;
 use App\Models\Site;
 use App\Models\SiteTurnstile;
@@ -787,12 +788,14 @@ final class RouteToolCatalog
             'alias_limit' => ['type' => 'integer', 'minimum' => 0],
             'domain_limit' => ['type' => ['integer', 'null'], 'description' => 'null = any of the site\'s own domains.'],
             'price_monthly' => ['type' => ['number', 'null']],
+            'price_yearly' => ['type' => ['number', 'null']],
             'currency' => ['type' => 'string', 'default' => 'TRY'],
             'is_active' => ['type' => 'boolean'],
             'is_default' => ['type' => 'boolean', 'description' => 'Exactly one default; setting it moves the default here.'],
             'sort' => ['type' => 'integer'],
         ];
         $package = ['package' => ['type' => 'string', 'description' => 'Package slug or id.']];
+        $order = ['order' => ['type' => 'string', 'description' => 'Order reference (CM-XXXXXX) or id, from list_mail_orders.']];
 
         return [
             new RouteTool(
@@ -868,8 +871,36 @@ final class RouteToolCatalog
                 params: ['mailPackage' => 'mail_package'],
                 prepare: static fn (array $body, array $resolved): array => $body + $resolved['mailPackage']->only([
                     'name', 'slug', 'description', 'mailbox_limit', 'storage_mb', 'mailbox_max_quota_mb', 'alias_limit',
-                    'domain_limit', 'price_monthly', 'currency', 'is_active', 'is_default', 'sort',
+                    'domain_limit', 'price_monthly', 'price_yearly', 'currency', 'is_active', 'is_default', 'sort',
                 ]),
+            ),
+            new RouteTool(
+                name: 'list_mail_orders',
+                description: 'List CoMail package orders (newest first, at most 100). Filter by status (pending, awaiting_transfer, transfer_reported, paid, failed, canceled, expired) and method (iyzico, paytr, eft).',
+                route: 'ops.billing.orders.index',
+                ability: McpToken::ABILITY_READ,
+                properties: [
+                    'status' => ['type' => 'string', 'enum' => MailOrder::STATUSES],
+                    'method' => ['type' => 'string', 'enum' => MailOrder::METHODS],
+                ],
+            ),
+            new RouteTool(
+                name: 'confirm_mail_order',
+                description: 'Confirm a bank transfer (EFT) order: the site\'s CoMail package is activated as paid. Only when the user has checked the money reached the account.',
+                route: 'ops.billing.orders.confirm',
+                ability: McpToken::ABILITY_DANGER,
+                properties: $order + ['confirmed' => self::CONFIRMED],
+                required: ['order', 'confirmed'],
+                params: ['mailOrder' => 'mail_order'],
+            ),
+            new RouteTool(
+                name: 'cancel_mail_order',
+                description: 'Cancel an open CoMail order (unpaid card checkout or EFT not yet confirmed).',
+                route: 'ops.billing.orders.cancel',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $order + ['reason' => ['type' => 'string']],
+                required: ['order'],
+                params: ['mailOrder' => 'mail_order'],
             ),
             new RouteTool(
                 name: 'delete_mail_package',

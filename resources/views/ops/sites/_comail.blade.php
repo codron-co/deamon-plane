@@ -27,6 +27,27 @@
         @endif
     </div>
 
+    @php
+        $comailSubscription = $site->mailSubscription()->with('mailPackage')->first();
+        $comailGraceDays = \App\Models\BillingSetting::current()->graceDays();
+    @endphp
+    <p class="site-note" data-comail-subscription="{{ $comailSubscription?->status ?? 'none' }}">
+        {{ __('billing.site.subscription') }}:
+        @if ($comailSubscription)
+            <span class="status-chip {{ $comailSubscription->status === 'active' ? 'status-active' : '' }}">{{ __('billing.subscription_statuses.'.$comailSubscription->status) }}</span>
+            {{ $comailSubscription->mailPackage?->name }} · {{ __('billing.periods.'.$comailSubscription->period) }}
+            @if ($comailSubscription->current_period_end)
+                · {{ __('billing.site.period_end', ['date' => $comailSubscription->current_period_end->format('Y-m-d')]) }}
+            @endif
+            @if ($comailSubscription->status === 'grace')
+                · {{ __('billing.site.grace_until', ['date' => $comailSubscription->graceEndsAt($comailGraceDays)?->format('Y-m-d')]) }}
+            @endif
+        @else
+            <span class="muted">{{ __('billing.site.none') }}</span>
+        @endif
+        · <a href="{{ route('ops.billing.orders.index', ['site' => $site->id]) }}">{{ __('billing.site.orders') }}</a>
+    </p>
+
     @if (! $comailServer)
         <p class="muted" data-comail-no-server>
             {{ __('comail.site.no_server') }}

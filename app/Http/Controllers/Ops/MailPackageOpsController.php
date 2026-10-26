@@ -105,6 +105,10 @@ class MailPackageOpsController extends Controller
             return back()->with('error', __('comail.packages.errors.in_use'));
         }
 
+        if ($mailPackage->subscriptions()->exists() || $mailPackage->orders()->exists()) {
+            return back()->with('error', __('comail.packages.errors.has_orders'));
+        }
+
         $this->audit($mailPackage, $request, 'mail_package.deleted', $this->snapshot($mailPackage), null);
         $mailPackage->delete();
 
@@ -143,6 +147,7 @@ class MailPackageOpsController extends Controller
             'alias_limit' => ['required', 'integer', 'min:0', 'max:100000'],
             'domain_limit' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'price_monthly' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'price_yearly' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'currency' => ['required', 'string', 'size:3', 'alpha'],
             'is_default' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
@@ -171,6 +176,7 @@ class MailPackageOpsController extends Controller
             'alias_limit' => (int) $validated['alias_limit'],
             'domain_limit' => filled($validated['domain_limit'] ?? null) ? (int) $validated['domain_limit'] : null,
             'price_monthly' => filled($validated['price_monthly'] ?? null) ? $validated['price_monthly'] : null,
+            'price_yearly' => filled($validated['price_yearly'] ?? null) ? $validated['price_yearly'] : null,
             'currency' => strtoupper((string) $validated['currency']),
             'is_default' => (bool) ($validated['is_default'] ?? $package->is_default ?? false),
             'is_active' => (bool) ($validated['is_active'] ?? $package->is_active ?? true),
@@ -185,7 +191,7 @@ class MailPackageOpsController extends Controller
     {
         return $package->only([
             'name', 'slug', 'mailbox_limit', 'storage_mb', 'mailbox_max_quota_mb', 'alias_limit',
-            'domain_limit', 'price_monthly', 'currency', 'is_default', 'is_active', 'sort',
+            'domain_limit', 'price_monthly', 'price_yearly', 'currency', 'is_default', 'is_active', 'sort',
         ]);
     }
 

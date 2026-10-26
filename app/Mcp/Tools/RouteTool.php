@@ -37,6 +37,7 @@ final class RouteTool implements McpTool
         'rollout' => ['rollout_id'],
         'comail_domain' => ['domain'],
         'mail_package' => ['package'],
+        'mail_order' => ['order'],
     ];
 
     /**
@@ -173,6 +174,7 @@ final class RouteTool implements McpTool
             'rollout' => McpModels::rollout($arguments['rollout_id'] ?? 0),
             'comail_domain' => McpModels::comailDomain($site, $arguments['domain'] ?? ''),
             'mail_package' => McpModels::mailPackage($arguments['package'] ?? ''),
+            'mail_order' => McpModels::mailOrder($arguments['order'] ?? ''),
             default => throw new \LogicException("Unknown resolver [{$resolver}]."),
         };
     }

@@ -111,6 +111,14 @@
                         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11V5Zm0 0L8 7.5 13.5 5M8 7.5v6" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
                         {{ __('ops.nav.mail_packages') }}
                     </a>
+                    <a class="ops-nav-item is-sub {{ request()->routeIs('ops.billing.orders*') ? 'is-active' : '' }}" href="{{ route('ops.billing.orders.index') }}">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h9v11l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1v-11Zm2.5 3h4m-4 2.5h4m-4 2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                        {{ __('billing.nav.orders') }}
+                    </a>
+                    <a class="ops-nav-item is-sub {{ request()->routeIs('ops.billing.settings*') ? 'is-active' : '' }}" href="{{ route('ops.billing.settings.edit') }}">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4" width="12" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M2 7h12M4.5 10.25h2.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+                        {{ __('billing.nav.settings') }}
+                    </a>
                     <a class="ops-nav-item is-sub {{ request()->routeIs('ops.platform-mail*') ? 'is-active' : '' }}" href="{{ route('ops.platform-mail.edit') }}">
                         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 2.5 2.5 7l4.3 1.7L8.5 13l5-10.5Zm0 0L6.8 8.7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
                         {{ __('ops.nav.platform_mail') }}
