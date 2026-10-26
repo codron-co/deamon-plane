@@ -9,6 +9,7 @@ use App\Models\Site;
 use App\Models\User;
 use App\Services\Databases\DatabaseQueryResult;
 use App\Services\Databases\DatabaseServerClient;
+use App\Services\Databases\DatabaseServerException;
 use App\Services\Databases\SqlStatementRejected;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -135,6 +136,61 @@ class DatabaseOpsPagesTest extends TestCase
             ->assertSee(__('databases.errors.rejected.write_not_allowed'));
     }
 
+    public function test_operator_sees_slow_queries_linked_to_sites_and_can_filter_by_schema(): void
+    {
+        $server = $this->probedServer();
+        $site = $this->sharedSite($server);
+        $client = $this->mock(DatabaseServerClient::class);
+        $client->shouldReceive('slowQueries')->once()
+            ->withArgs(fn (DatabaseServer $s, ?string $schema): bool => $s->is($server) && $schema === 'site_izyem')
+            ->andReturn($this->slowLog([$this->slowRow('site_izyem', 'SELECT * FROM products WHERE slug LIKE \'%x%\'')]));
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.databases.show', ['databaseServer' => $server, 'slow_db' => 'site_izyem']))
+            ->assertOk()
+            ->assertSee(__('databases.slow.title'))
+            ->assertSee('SELECT * FROM products WHERE slug LIKE', false)
+            ->assertSee(route('ops.sites.database', $site), false)
+            ->assertSee('3.21');
+    }
+
+    public function test_unknown_schema_filter_is_ignored(): void
+    {
+        $server = $this->probedServer();
+        $this->mock(DatabaseServerClient::class)->shouldReceive('slowQueries')->once()
+            ->withArgs(fn (DatabaseServer $s, ?string $schema): bool => $schema === null)
+            ->andReturn($this->slowLog([]));
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.databases.show', ['databaseServer' => $server, 'slow_db' => 'mysql']))
+            ->assertOk()
+            ->assertSee(__('databases.slow.empty'));
+    }
+
+    public function test_viewer_does_not_see_slow_query_text(): void
+    {
+        $server = $this->probedServer();
+        $this->mock(DatabaseServerClient::class)->shouldNotReceive('slowQueries');
+
+        $this->actingAs($this->user(OpsRole::Viewer))
+            ->get(route('ops.databases.show', $server))
+            ->assertOk()
+            ->assertDontSee(__('databases.slow.title'));
+    }
+
+    public function test_slow_query_errors_do_not_break_the_page(): void
+    {
+        $server = $this->probedServer();
+        $this->mock(DatabaseServerClient::class)->shouldReceive('slowQueries')
+            ->andThrow(new DatabaseServerException('Access denied for user plane_admin', [self::ADMIN_PASSWORD]));
+
+        $this->actingAs($this->user(OpsRole::Operator))
+            ->get(route('ops.databases.show', $server))
+            ->assertOk()
+            ->assertSee('Access denied for user plane_admin')
+            ->assertDontSee(self::ADMIN_PASSWORD);
+    }
+
     public function test_watch_list_needs_the_token_and_lists_active_domains(): void
     {
         Site::factory()->create(['status' => SiteStatus::Active, 'primary_domain' => 'izyem.com']);
@@ -149,6 +205,38 @@ class DatabaseOpsPagesTest extends TestCase
         $body = $this->withToken('watch-token')->get(route('internal.watch-list'))->assertOk()->getContent();
         $this->assertStringContainsString("izyem.com\n", (string) $body);
         $this->assertStringNotContainsString('draft.example.com', (string) $body);
+    }
+
+    private function probedServer(): DatabaseServer
+    {
+        return DatabaseServer::factory()->create([
+            'admin_password' => self::ADMIN_PASSWORD,
+            'last_probe_at' => now(),
+            'last_probe_payload' => ['version' => '8.0.46', 'uptime_seconds' => 60, 'connections' => 3, 'databases' => [
+                'site_izyem' => ['size_mb' => 40.0, 'tables' => 205],
+                'site_test' => ['size_mb' => 12.0, 'tables' => 205],
+            ]],
+        ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return array<string, mixed>
+     */
+    private function slowLog(array $rows): array
+    {
+        return ['enabled' => true, 'threshold_seconds' => 2.0, 'to_table' => true, 'rows' => $rows];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function slowRow(string $schema, string $sql): array
+    {
+        return [
+            'at' => '2026-10-26 07:30:00.123456', 'database' => $schema, 'user' => $schema,
+            'seconds' => 3.21, 'lock_seconds' => 0.0, 'rows_sent' => 10, 'rows_examined' => 48211, 'sql' => $sql,
+        ];
     }
 
     private function sharedSite(DatabaseServer $server): Site
