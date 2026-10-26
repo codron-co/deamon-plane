@@ -16,6 +16,7 @@ return [
         'mail' => 'Posta',
         'mail_servers' => 'Posta sunucuları',
         'mail_packages' => 'E-posta paketleri',
+        'comail_mailboxes' => 'Posta kutuları',
         'platform_mail' => 'Yazılım maili',
         'deskron' => 'DeskRon destek',
         'instagram' => 'Instagram',
