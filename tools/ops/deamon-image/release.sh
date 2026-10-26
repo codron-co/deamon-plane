@@ -36,10 +36,13 @@ RES=$(mktemp -d); trap 'rm -rf "$RES"' EXIT
 deploy_site() { # <uuid>: deploy one site to $sha and verify; result file $RES/<uuid>.ok|.fail
   local u=$1 name c s img h up out since try i
   name=$(q "SELECT name FROM applications WHERE uuid = '$u'")
-  local want pin
+  local want pin deploy
+  # Docker Image sites deploy through the Coolify client directly: Plane's deploy() first
+  # syncs env against the CMS catalog and prunes every key not in it, and these apps keep
+  # the compose constants (DB_CONNECTION, QUEUE_CONNECTION, ...) in their Coolify env.
   if [ "$(q "SELECT build_pack FROM applications WHERE uuid = '$u'")" = dockerimage ]; then
-    want="$REG:$sha"; pin="'docker_registry_image_tag' => '$sha'"
-  else want="deamon-cms:$sha"; pin="'git_commit_sha' => '$sha'"; fi
+    want="$REG:$sha"; pin="'docker_registry_image_tag' => '$sha'"; deploy="\$c->client()->deploy('$u')"
+  else want="deamon-cms:$sha"; pin="'git_commit_sha' => '$sha'"; deploy="\$c->deploy('$u')"; fi
   # Coolify leaves SOURCE_COMMIT empty unless this is on; the compose image tag needs it.
   # rememberPin mirrors the release pin onto the Plane site row (sites list, CI rollouts).
   q "UPDATE application_settings SET include_source_commit_in_build = true WHERE application_id = (SELECT id FROM applications WHERE uuid = '$u')" >/dev/null
@@ -47,7 +50,7 @@ deploy_site() { # <uuid>: deploy one site to $sha and verify; result file $RES/<
   # Plane may be restarting (its own deploy); find the container again and retry.
   for try in 1 2 3; do
     plane=$(docker ps --format '{{.Names}}' | grep '^app-d6ovbjzxgpao23faam3vrcve' | head -1)
-    out=$(tinker "\$s = App\Models\Site::where('coolify_app_uuid', '$u')->firstOrFail(); \$c = App\Services\Coolify\CoolifyApplicationService::forSite(\$s); \$c->patchApplication('$u', [$pin, 'is_auto_deploy_enabled' => false]); App\Services\Sites\CoolifyDeploySettings::rememberPin(\$s, '$sha'); echo json_encode(\$c->deploy('$u'));")
+    out=$(tinker "\$s = App\Models\Site::where('coolify_app_uuid', '$u')->firstOrFail(); \$c = App\Services\Coolify\CoolifyApplicationService::forSite(\$s); \$c->patchApplication('$u', [$pin, 'is_auto_deploy_enabled' => false]); App\Services\Sites\CoolifyDeploySettings::rememberPin(\$s, '$sha'); echo json_encode($deploy);")
     grep -q 'deployment queued' <<< "$out" && break
     log "deploy call for $name did not queue (try $try): ${out:0:160}"; sleep 30
   done
