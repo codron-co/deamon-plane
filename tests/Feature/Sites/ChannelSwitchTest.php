@@ -172,7 +172,7 @@ class ChannelSwitchTest extends TestCase
                 }
             }
 
-            return ($map['APP_ENV'] ?? null) === 'staging'
+            return ($map['APP_ENV'] ?? null) === 'production'
                 && ($map['DEAMON_CHANNEL'] ?? null) === 'beta';
         });
     }
