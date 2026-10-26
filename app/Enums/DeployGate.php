@@ -26,4 +26,15 @@ enum DeployGate: string
     {
         return __('rollouts.gate.'.$this->value);
     }
+
+    /**
+     * A site that runs built images never auto-deploys: its `coolify` gate is a
+     * manual release (release.sh or a deploy from Plane).
+     */
+    public function labelFor(bool $runsBuiltImages): string
+    {
+        return $runsBuiltImages && $this === self::Coolify
+            ? __('rollouts.gate.manual')
+            : $this->label();
+    }
 }

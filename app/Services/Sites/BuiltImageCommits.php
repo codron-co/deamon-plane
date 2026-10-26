@@ -45,6 +45,21 @@ class BuiltImageCommits
         return $this->appliesToChannel(self::channelOf($site));
     }
 
+    /**
+     * Every channel Plane offers has an image builder: fleet-wide controls (the
+     * Sites list bulk menus) can describe the built-image behaviour only.
+     */
+    public function coversFleet(): bool
+    {
+        foreach (Channel::cases() as $channel) {
+            if ($channel->isAllowed() && ! $this->appliesToChannel($channel)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function appliesToChannel(Channel $channel): bool
     {
         return $this->builderFor($channel) !== null;
@@ -128,6 +143,37 @@ class BuiltImageCommits
         }
 
         return $this->latest($channel, $coolify);
+    }
+
+    /**
+     * Full shas the channel builder finished (newest first, within the scanned
+     * deployments). A site pinned to one of them runs a release of its channel.
+     *
+     * @return list<string>
+     *
+     * @throws BuiltImageException
+     */
+    public function builtShas(Channel $channel, CoolifyApplicationService $coolify): array
+    {
+        return array_values(array_unique(array_map(
+            static fn (array $build): string => $build['sha'],
+            $this->builds($channel, $coolify),
+        )));
+    }
+
+    /**
+     * Newest builds of the channel for the site page's commit picker (sha and
+     * finish time), newest first. Empty when the builder cannot be read.
+     *
+     * @return list<array{sha: string, finished_at: ?string}>
+     */
+    public function recentBuilds(Channel $channel, CoolifyApplicationService $coolify): array
+    {
+        try {
+            return $this->builds($channel, $coolify);
+        } catch (BuiltImageException) {
+            return [];
+        }
     }
 
     /**

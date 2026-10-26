@@ -16,9 +16,11 @@ use App\Http\Requests\Ops\PinSiteRequest;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Coolify\CoolifyApiException;
+use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifySiteSync;
 use App\Services\Ops\BulkResultSummary;
 use App\Services\Ops\WaitingDeployQueue;
+use App\Services\Sites\BuiltImageCommits;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ChannelSwitchException;
 use App\Services\Sites\ComposePackException;
@@ -59,9 +61,18 @@ class SiteCoolifyOpsController extends Controller
             }
         }
 
+        // Build once, run many: the commit picker lists the channel builder's builds.
+        $images = app(BuiltImageCommits::class);
+        $runsImages = $images->appliesTo($site);
+        $builds = $runsImages && $canOps && filled($site->coolify_app_uuid)
+            ? $images->recentBuilds(BuiltImageCommits::channelOf($site), CoolifyApplicationService::forSite($site))
+            : [];
+
         return response()->view('ops.sites._coolify-ops-body', [
             'site' => $site,
             'snapshot' => $snapshot,
+            'runsImages' => $runsImages,
+            'builds' => $builds,
             'deployments' => $site->deployments()
                 ->notWaiting()
                 ->orderByDesc('started_at')
@@ -175,7 +186,7 @@ class SiteCoolifyOpsController extends Controller
 
         return back()->with('status', __('rollouts.site.gate_done', [
             'name' => $site->name,
-            'gate' => $gate->label(),
+            'gate' => $gate->labelFor($this->runsImages($site)),
         ]));
     }
 
@@ -226,7 +237,7 @@ class SiteCoolifyOpsController extends Controller
 
         $result = $settings->setDeployGateMany($sites, $gate, $request->user(), $request->ip());
 
-        return back()->with('status', $this->bulkFlash($result, __('rollouts.bulk.done', ['gate' => $gate->label()])));
+        return back()->with('status', $this->bulkFlash($result, __('rollouts.bulk.done', ['gate' => $gate->labelFor(app(BuiltImageCommits::class)->coversFleet())])));
     }
 
     public function pin(PinSiteRequest $request, Site $site, WaitingDeployQueue $queue): RedirectResponse
@@ -235,7 +246,9 @@ class SiteCoolifyOpsController extends Controller
 
         return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::Pin, [
             'ref' => (string) $request->validated('ref'),
-        ], __('site_ops.pin.done', ['name' => $site->name]));
+        ], $this->runsImages($site)
+            ? __('site_ops.release.pin_done', ['name' => $site->name])
+            : __('site_ops.pin.done', ['name' => $site->name]));
     }
 
     public function sync(Request $request, Site $site, CoolifySiteSync $sync): RedirectResponse|JsonResponse
@@ -502,14 +515,18 @@ class SiteCoolifyOpsController extends Controller
     {
         $this->authorize('update', $site);
 
-        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::FollowHead, [], __('site_ops.pin.follow_done', ['name' => $site->name]));
+        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::FollowHead, [], $this->runsImages($site)
+            ? __('site_ops.release.latest_done', ['name' => $site->name])
+            : __('site_ops.pin.follow_done', ['name' => $site->name]));
     }
 
     public function updateHead(Request $request, Site $site, WaitingDeployQueue $queue): RedirectResponse
     {
         $this->authorize('update', $site);
 
-        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::UpdateHead, [], __('site_ops.pin.update_head_done', ['name' => $site->name]));
+        return $this->requestDeploy($request, $site, $queue, WaitingDeployAction::UpdateHead, [], $this->runsImages($site)
+            ? __('site_ops.release.latest_done', ['name' => $site->name])
+            : __('site_ops.pin.update_head_done', ['name' => $site->name]));
     }
 
     public function deploy(Request $request, Site $site, WaitingDeployQueue $queue): RedirectResponse
@@ -579,7 +596,7 @@ class SiteCoolifyOpsController extends Controller
             'sites.bulk_follow_head',
             __('ops.jobs.bulk_follow_head'),
             fn (Collection $sites) => $settings->followHeadMany($sites, $request->user(), $request->ip()),
-            __('site_ops.pin.bulk_follow'),
+            app(BuiltImageCommits::class)->coversFleet() ? __('site_ops.release.bulk_latest') : __('site_ops.pin.bulk_follow'),
         );
     }
 
@@ -590,7 +607,7 @@ class SiteCoolifyOpsController extends Controller
             'sites.bulk_update_head',
             __('ops.jobs.bulk_update_head'),
             fn (Collection $sites) => $settings->updateToHeadMany($sites, $request->user(), $request->ip()),
-            __('site_ops.pin.bulk_update_head'),
+            app(BuiltImageCommits::class)->coversFleet() ? __('site_ops.release.bulk_latest') : __('site_ops.pin.bulk_update_head'),
         );
     }
 
@@ -683,5 +700,10 @@ class SiteCoolifyOpsController extends Controller
     private function bulkTriggerFlash(array $result, string $prefix): string
     {
         return BulkResultSummary::formatTriggered($prefix, $result, errorLimit: 3);
+    }
+
+    private function runsImages(Site $site): bool
+    {
+        return app(BuiltImageCommits::class)->appliesTo($site);
     }
 }

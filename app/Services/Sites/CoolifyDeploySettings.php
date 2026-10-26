@@ -86,7 +86,9 @@ class CoolifyDeploySettings
      * `coolify`: Coolify auto-deploys every push (auto-deploy on).
      * `ci`: auto-deploy off and the app follows the branch HEAD; Plane deploys it
      * after a green CI run. Neither direction starts a deploy.
-     * A site that runs built images keeps its pin and can never go to `coolify`.
+     * A site that runs built images keeps its pin and auto-deploy stays off either
+     * way: its `coolify` gate is a manual release (release.sh or a Plane deploy),
+     * i.e. the site only leaves the CI rollouts.
      */
     public function setDeployGate(Site $site, DeployGate $gate, ?User $actor = null, ?string $ip = null): CoolifyApplication
     {
@@ -94,11 +96,7 @@ class CoolifyDeploySettings
         $before = $site->usesCiGate() ? DeployGate::Ci : DeployGate::Coolify;
         $runsImages = $this->runsBuiltImages($site);
 
-        if ($gate === DeployGate::Coolify && $runsImages) {
-            throw new BuiltImageException(__('site_ops.image.auto_deploy_blocked', ['name' => $site->name]));
-        }
-
-        if ($gate === DeployGate::Ci && $runsImages) {
+        if ($runsImages) {
             $app = $this->patchAutoDeploy($site, $uuid, false, ['include_source_commit_in_build' => true]);
             $this->remember($site, false, $app->gitCommitSha());
         } elseif ($gate === DeployGate::Ci) {
@@ -120,7 +118,7 @@ class CoolifyDeploySettings
             'before' => ['deploy_gate' => $before->value],
             'after' => [
                 'deploy_gate' => $gate->value,
-                'is_auto_deploy' => $gate === DeployGate::Coolify,
+                'is_auto_deploy' => $gate === DeployGate::Coolify && ! $runsImages,
                 'git_commit_sha' => $gate === DeployGate::Ci && ! $runsImages ? CoolifyApplication::HEAD_REF : null,
             ],
             'ip' => $ip,
@@ -182,7 +180,8 @@ class CoolifyDeploySettings
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
-        $this->remember($site, false, $ref);
+        // An operator pin holds the version: CI rollouts skip the site until it is released.
+        $this->remember($site, false, $ref, held: true);
 
         $this->audit($site, $actor, $ip, 'site.git_pinned', [
             'git_commit_sha' => $ref,
@@ -288,7 +287,8 @@ class CoolifyDeploySettings
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
-        $this->remember($site, false, $sha);
+        // The newest build is a release pin, never an operator hold.
+        $this->remember($site, false, $sha, held: false);
 
         $this->audit($site, $actor, $ip, $action, [
             'git_commit_sha' => $sha,
@@ -544,10 +544,12 @@ class CoolifyDeploySettings
      * list can show them without one Coolify call per row. Written without
      * touching `updated_at`: learning a setting is not an edit to the site.
      * A response without `git_commit_sha` keeps the last known pin.
+     * `$held`: true for an operator pin, false for a release pin, null keeps the
+     * hold while the commit stays the same (see mirrorOntoSite).
      */
-    private function remember(Site $site, ?bool $autoDeploy, ?string $sha): void
+    private function remember(Site $site, ?bool $autoDeploy, ?string $sha, ?bool $held = null): void
     {
-        self::mirrorOntoSite($site, $autoDeploy, $sha);
+        self::mirrorOntoSite($site, $autoDeploy, $sha, $held);
     }
 
     /**
@@ -560,14 +562,22 @@ class CoolifyDeploySettings
     }
 
     /**
-     * Mirror a built-image pin Plane wrote outside this class (provision, channel switch).
+     * Mirror a built-image pin written outside this class (provision, channel switch,
+     * activate, the host's release.sh). A new commit is a release pin; the same
+     * commit keeps an operator hold.
      */
     public static function rememberPin(Site $site, string $sha): void
     {
         self::mirrorOntoSite($site, false, $sha);
     }
 
-    private static function mirrorOntoSite(Site $site, ?bool $autoDeploy, ?string $sha): void
+    /**
+     * `coolify_pin_held`: an explicit `$held` wins; otherwise a pin keeps its hold
+     * only while it stays on the same commit. Plane's Commite geç is the one path
+     * that sets it; a pin that moved elsewhere (release.sh, Coolify UI, a release)
+     * is not an operator hold any more. No pin, no hold.
+     */
+    private static function mirrorOntoSite(Site $site, ?bool $autoDeploy, ?string $sha, ?bool $held = null): void
     {
         if ($autoDeploy === null || ! $site->exists) {
             return;
@@ -579,13 +589,33 @@ class CoolifyDeploySettings
         ];
         if ($sha !== null) {
             $sha = trim($sha);
-            $values['coolify_pinned_sha'] = $sha === '' || CoolifyApplication::isHeadRef($sha)
+            $pin = $sha === '' || CoolifyApplication::isHeadRef($sha)
                 ? null
                 : mb_substr($sha, 0, 64);
+            $values['coolify_pinned_sha'] = $pin;
+            if ($pin !== null && $held === null) {
+                // Read the stored pin, not the model: a sync loop may hold a stale copy.
+                $stored = Site::query()->toBase()->where('id', $site->getKey())->first(['coolify_pinned_sha', 'coolify_pin_held']);
+                $held = $stored !== null
+                    && (bool) $stored->coolify_pin_held
+                    && self::sameCommit((string) $stored->coolify_pinned_sha, $pin);
+            }
+            $values['coolify_pin_held'] = $pin !== null && (bool) $held;
         }
 
         Site::query()->toBase()->where('id', $site->getKey())->update($values);
         $site->forceFill($values)->syncOriginalAttributes(array_keys($values));
+    }
+
+    /**
+     * Full or abbreviated shas of the same commit.
+     */
+    private static function sameCommit(string $a, string $b): bool
+    {
+        $a = strtolower(trim($a));
+        $b = strtolower(trim($b));
+
+        return $a !== '' && $b !== '' && (str_starts_with($a, $b) || str_starts_with($b, $a));
     }
 
     /**

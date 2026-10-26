@@ -50,6 +50,8 @@ A late verdict for an older commit never overwrites the head's own verdict on th
 - **Deploy HEAD** (follow HEAD) keeps auto-deploy off;
 - **Pin commit** still works (auto-deploy off); a pinned site is skipped by every rollout until it follows HEAD again.
 
+Built-image sites (a channel with an image builder, see [ops-sites.md](ops-sites.md#deploys-target-the-latest-built-image)): auto-deploy stays off on both gates and the pin is kept. Their `coolify` gate is shown as **Elle yayın** (manual release: release.sh or a Plane deploy) and the switch back is **CI kapısından çıkar**.
+
 `sites.deploy_canary` (default false) marks canary sites.
 
 UI: site detail → Coolify panel → **Deploy kapısı** card (gate switch + canary toggle). Sites list bulk bar → **Oto-deploy** menu → **CI kapısına al** / **Coolify oto-deploy'a dön** (`POST /sites/bulk/deploy-gate`, ops job `sites.bulk_deploy_gate`, same per-site `update` policy as bulk auto-deploy).
@@ -58,7 +60,18 @@ UI: site detail → Coolify panel → **Deploy kapısı** card (gate switch + ca
 
 One row per channel + green commit: `status` `canary` → `fanout` → `done`, or `halted` / `superseded`; `summary` JSON holds per-stage site ids, deployment ids, healthy / failed / skipped lists and errors; `halted_reason`, `halted_by`.
 
-Eligible site: channel matches, `deploy_gate = ci`, `status = active`, has a Coolify app, **not pinned** (`coolify_pinned_sha` empty). `coolify`-gated, pinned and inactive sites are never touched.
+Eligible site: channel matches, `deploy_gate = ci`, `status = active`, has a Coolify app, and **follows the channel** (`FleetRolloutService::followsChannel`). `coolify`-gated, held and inactive sites are never touched.
+
+Build once, run many pins every built-image site, so a pin alone no longer means "hold":
+
+| Mirrored pin (`coolify_pinned_sha`) | `coolify_pin_held` | Rollout |
+|---|---|---|
+| empty / `HEAD` | — | included |
+| any | true (operator hold) | skipped |
+| a commit the channel builder finished (`BuiltImageCommits::builtShas`, the last 20 builder deployments) | false | included (**release pin**) |
+| anything else, or a channel without a builder | false | skipped |
+
+`coolify_pin_held` is written by the mirror (`CoolifyDeploySettings::mirrorOntoSite`): **Commite geç** / rollback last good (`pin()`) set it; **En yeni imajı deploy et** (follow / update HEAD) clears it; every other write (redeploy, activate, provision, channel switch, rollout, the Coolify sync mirror, release.sh via `CoolifyDeploySettings::rememberPin`) keeps it while the commit stays the same and clears it when the commit changes. So release.sh moving a held site releases the hold, and a pin set by hand in Coolify to an unbuilt commit is skipped. The migration backfills `true` where the latest ref-changing audit of the site is a `site.git_pinned` to the mirrored commit. A builder that cannot be read counts as "not built" for that tick (pins skipped, unpinned sites still included).
 
 1. **Start.** A promoted CMS run supersedes any open rollout of that channel, then creates the rollout (skipped when the channel has no eligible site; a re-run of the same commit starts nothing).
 2. **Canary.** Every eligible site with `deploy_canary = true` gets `CoolifyDeploySettings::deployForRollout` — `POST /deploy` **without** `force` (build cache on), trigger `ci_rollout`, a `deployments` row + `PollDeploymentJob`, audit `site.ci_rollout_deployed`. Each tick waits until every canary deployment is terminal (poll / Coolify webhook) and the site passes health:

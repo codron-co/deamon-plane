@@ -157,7 +157,7 @@ return [
             'title' => 'Pinned commit / branch does not exist',
             'cause' => 'Coolify could not find the pinned SHA or branch (force-push, deleted branch, wrong SHA).',
             'steps' => [
-                'Use “Follow HEAD” to return to the branch tip, or pin a valid SHA under deploy settings.',
+                'Use “Move to the newest release” to return to the channel’s newest release (the newest image on a built-image site), or switch to a built commit on the Release card.',
             ],
             'commands' => [],
         ],
@@ -242,7 +242,7 @@ return [
             'cause' => 'The new version’s migration failed on this site’s data (SQLSTATE). Code or data related; redeploying does not help.',
             'steps' => [
                 '“Roll back to last good” brings the site up immediately (pin).',
-                'Send the SQLSTATE line to a developer; once the fix lands in the CMS, follow HEAD again.',
+                'Send the SQLSTATE line to a developer; once the fix lands in the CMS and its image is built, “Move to the newest release”.',
             ],
             'commands' => [
                 'docker logs :container --tail 120 | grep -i -A5 SQLSTATE',
@@ -264,7 +264,7 @@ return [
             'cause' => 'A Dockerfile / npm / composer step failed. The cause is in the code; the same commit fails on other sites too.',
             'steps' => [
                 '“Roll back to last good” keeps the site on the previous version.',
-                'Send the first ERROR line of the build log to a developer. When the fix lands, “Follow HEAD”.',
+                'Send the first ERROR line of the build log to a developer. When the fix lands, “Move to the newest release”.',
             ],
             'commands' => [],
         ],

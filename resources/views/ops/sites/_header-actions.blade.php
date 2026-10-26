@@ -11,6 +11,8 @@
     $showSettingsMenu = ($canEdit ?? false) || ($canDelete ?? false) || $canForceDelete;
     $siteUrl = filled($site->primary_domain) ? 'https://'.$site->primary_domain : null;
     $adminUrl = $siteUrl ? $siteUrl.'/admin' : null;
+    // Build once, run many: follow HEAD and update HEAD both deploy the newest image.
+    $runsImages = $canDeploy && app(\App\Services\Sites\BuiltImageCommits::class)->appliesTo($site);
 @endphp
 
 @if ($showDeployMenu)
@@ -22,7 +24,11 @@
                     method="POST"
                     action="{{ route('ops.sites.deploy', $site) }}"
                     data-ops-pending
-                    data-confirm="{{ __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
+                    data-confirm="{{ $runsImages
+                        ? ($site->hasPinnedCommit()
+                            ? __('site_ops.release.confirm_redeploy', ['name' => $site->name, 'sha' => substr((string) $site->coolify_pinned_sha, 0, 7)])
+                            : __('site_ops.release.confirm_redeploy_none', ['name' => $site->name]))
+                        : __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
                     data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
                     data-confirm-label="{{ __('sites.menu.redeploy') }}"
                     data-confirm-danger="true"
@@ -30,31 +36,46 @@
                     @csrf
                     <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('site_ops.redeploy.working') }}">{{ __('sites.menu.redeploy') }}</button>
                 </form>
-                <form
-                    method="POST"
-                    action="{{ route('ops.sites.follow-head', $site) }}"
-                    data-ops-pending
-                    data-confirm="{{ __('site_ops.pin.confirm_follow', ['name' => $site->name]) }}"
-                    data-confirm-title="{{ __('site_ops.pin.confirm_follow_title') }}"
-                    data-confirm-label="{{ __('sites.menu.follow_head') }}"
-                    data-confirm-danger="false"
-                >
-                    @csrf
-                    <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.follow_head') }}</button>
-                </form>
-                @if ($site->hasPinnedCommit())
+                @if ($runsImages)
                     <form
                         method="POST"
                         action="{{ route('ops.sites.update-head', $site) }}"
                         data-ops-pending
-                        data-confirm="{{ __('site_ops.pin.confirm_update_head', ['name' => $site->name]) }}"
-                        data-confirm-title="{{ __('site_ops.pin.confirm_update_head_title') }}"
-                        data-confirm-label="{{ __('sites.menu.update_head') }}"
+                        data-confirm="{{ __('site_ops.release.confirm_latest', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('site_ops.release.confirm_latest_title') }}"
+                        data-confirm-label="{{ __('site_ops.release.deploy_latest') }}"
                         data-confirm-danger="false"
                     >
                         @csrf
-                        <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.update_head') }}</button>
+                        <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('site_ops.release.deploy_latest') }}</button>
                     </form>
+                @else
+                    <form
+                        method="POST"
+                        action="{{ route('ops.sites.follow-head', $site) }}"
+                        data-ops-pending
+                        data-confirm="{{ __('site_ops.pin.confirm_follow', ['name' => $site->name]) }}"
+                        data-confirm-title="{{ __('site_ops.pin.confirm_follow_title') }}"
+                        data-confirm-label="{{ __('sites.menu.follow_head') }}"
+                        data-confirm-danger="false"
+                    >
+                        @csrf
+                        <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.follow_head') }}</button>
+                    </form>
+                    @if ($site->hasPinnedCommit())
+                        <form
+                            method="POST"
+                            action="{{ route('ops.sites.update-head', $site) }}"
+                            data-ops-pending
+                            data-confirm="{{ __('site_ops.pin.confirm_update_head', ['name' => $site->name]) }}"
+                            data-confirm-title="{{ __('site_ops.pin.confirm_update_head_title') }}"
+                            data-confirm-label="{{ __('sites.menu.update_head') }}"
+                            data-confirm-danger="false"
+                        >
+                            @csrf
+                            <button type="submit" class="ops-menu-button" role="menuitem" data-pending-label="{{ __('ops.actions.working') }}">{{ __('sites.menu.update_head') }}</button>
+                        </form>
+                    @endif
                 @endif
             @endif
             @if (filled($coolifyAppUrl))

@@ -20,10 +20,11 @@ class SiteAppHealthInspector
 {
     /**
      * Keys that must be filled even when the channel catalog has not been synced yet.
+     * No MYSQL_ROOT_PASSWORD: since CMS 1.2.86 a site has no MySQL container of its own.
      *
      * @var list<string>
      */
-    private const COMPOSE_REQUIRED_FALLBACK = ['DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'APP_KEY'];
+    private const COMPOSE_REQUIRED_FALLBACK = ['DB_PASSWORD', 'APP_KEY'];
 
     public function __construct(
         private readonly SiteHealthEvaluator $agentHealth,

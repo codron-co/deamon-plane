@@ -32,9 +32,10 @@ for u in $uuids; do
   name=$(q "SELECT name FROM applications WHERE uuid = '$u'")
   for i in $(seq 1 120); do [ "$(cpu_busy)" -lt "$MAX_CPU" ] && [ "$(q "SELECT COUNT(*) FROM application_deployment_queues WHERE status IN ('queued','in_progress')")" = 0 ] && break; sleep 25; done
   # Coolify leaves SOURCE_COMMIT empty unless this is on; the compose image tag needs it.
+  # rememberPin mirrors the release pin onto the Plane site row (sites list, CI rollouts).
   q "UPDATE application_settings SET include_source_commit_in_build = true WHERE application_id = (SELECT id FROM applications WHERE uuid = '$u')" >/dev/null
   since=$(date -u '+%F %T')
-  out=$(tinker "\$s = App\Models\Site::where('coolify_app_uuid', '$u')->firstOrFail(); \$c = App\Services\Coolify\CoolifyApplicationService::forSite(\$s); \$c->patchApplication('$u', ['git_commit_sha' => '$sha', 'is_auto_deploy_enabled' => false]); echo json_encode(\$c->deploy('$u'));")
+  out=$(tinker "\$s = App\Models\Site::where('coolify_app_uuid', '$u')->firstOrFail(); \$c = App\Services\Coolify\CoolifyApplicationService::forSite(\$s); \$c->patchApplication('$u', ['git_commit_sha' => '$sha', 'is_auto_deploy_enabled' => false]); App\Services\Sites\CoolifyDeploySettings::rememberPin(\$s, '$sha'); echo json_encode(\$c->deploy('$u'));")
   s=""; for i in $(seq 1 60); do
     s=$(q "SELECT q.status FROM application_deployment_queues q JOIN applications a ON a.id::text = q.application_id::text WHERE a.uuid = '$u' AND q.created_at >= '$since'::timestamp - interval '10 seconds' ORDER BY q.id DESC LIMIT 1")
     case "$s" in finished|failed|cancelled*) break;; esac; sleep 5; done

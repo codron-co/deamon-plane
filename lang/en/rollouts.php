@@ -7,6 +7,7 @@ return [
     'gate' => [
         'coolify' => 'Coolify auto-deploy',
         'ci' => 'CI gate',
+        'manual' => 'Manual release',
         'auto_deploy_blocked' => ':name is on the CI gate: auto-deploy cannot be turned on. Switch its deploy gate to Coolify first.',
     ],
     'status' => [
@@ -125,6 +126,11 @@ return [
         'canary_on' => ':name is now a canary.',
         'canary_off' => ':name is no longer a canary.',
         'pinned_note' => 'This site is pinned to a commit; CI rollouts never touch a pinned site. Follow HEAD to put it back in the rollout.',
+        'hint_image' => 'The site runs built images; Coolify auto-deploy is always off. Manual release: a new image arrives through release.sh or a deploy from Plane. CI gate: once GitHub’s CI is green, Plane moves the site to that commit’s image (when the builder finished it); canary sites go first. A release held by hand (Switch to this commit) is left out. Switching the gate never deploys.',
+        'switch_to_manual' => 'Take off the CI gate',
+        'confirm_ci_image' => 'Put :name on the CI gate? The site stays on the image it runs; later green commits roll out from Plane. Nothing deploys.',
+        'confirm_manual' => 'Take :name off the CI gate? Auto-deploy stays off; a new image arrives through release.sh or a deploy from Plane. Nothing deploys.',
+        'held_note' => 'The release is held by hand (Switch to this commit); CI rollouts leave this site alone. “Deploy newest image” puts it back in the rollout.',
         'open_rollouts' => 'CI rollouts',
     ],
     'bulk' => [
@@ -133,6 +139,9 @@ return [
         'to_coolify' => 'Back to Coolify auto-deploy',
         'confirm_ci' => 'Put :count sites on the CI gate? Coolify auto-deploy turns off and the apps follow HEAD. Nothing deploys.',
         'confirm_coolify' => 'Return :count sites to Coolify auto-deploy? Every push builds without waiting for CI.',
+        'to_manual' => 'Take off the CI gate',
+        'confirm_ci_image' => 'Put :count sites on the CI gate? The sites stay on the images they run. Nothing deploys.',
+        'confirm_manual' => 'Take :count sites off the CI gate? Auto-deploy stays off; a new image arrives through release.sh or a deploy from Plane. Nothing deploys.',
         'done' => 'Deploy gate → :gate',
     ],
     'theme' => [

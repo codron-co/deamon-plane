@@ -7,6 +7,7 @@ return [
     'gate' => [
         'coolify' => 'Coolify oto-deploy',
         'ci' => 'CI kapısı',
+        'manual' => 'Elle yayın',
         'auto_deploy_blocked' => ':name CI kapısında: oto-deploy açılamaz. Önce deploy kapısını Coolify’a çevirin.',
     ],
     'status' => [
@@ -125,6 +126,11 @@ return [
         'canary_on' => ':name artık kanarya.',
         'canary_off' => ':name kanarya değil.',
         'pinned_note' => 'Bu site bir commit’e sabitli; CI yayınları sabitli siteye dokunmaz. HEAD’i izleyince yeniden yayına girer.',
+        'hint_image' => 'Site derlenmiş imajla çalışır; Coolify oto-deploy hep kapalıdır. Elle yayın: yeni imaj release.sh ya da Plane’den deploy ile gelir. CI kapısı: GitHub’daki CI yeşil olunca Plane siteyi o commitin imajına geçirir (üretici bitirince); kanarya siteler önce. Elle tutulan sürüm (Bu commite geç) yayına girmez. Kapıyı değiştirmek deploy başlatmaz.',
+        'switch_to_manual' => 'CI kapısından çıkar',
+        'confirm_ci_image' => ':name CI kapısına alınsın mı? Site bulunduğu imajda kalır; sonraki yeşil commit’ler Plane’den yayılır. Deploy başlamaz.',
+        'confirm_manual' => ':name CI kapısından çıkarılsın mı? Oto-deploy kapalı kalır; yeni imaj release.sh ya da Plane’den deploy ile gelir. Deploy başlamaz.',
+        'held_note' => 'Sürüm elle tutuluyor (Bu commite geç); CI yayınları bu siteye dokunmaz. «En yeni imajı deploy et» ile yeniden yayına girer.',
         'open_rollouts' => 'CI yayınları',
     ],
     'bulk' => [
@@ -133,6 +139,9 @@ return [
         'to_coolify' => 'Coolify oto-deploy’a dön',
         'confirm_ci' => ':count site CI kapısına alınsın mı? Coolify oto-deploy kapanır ve uygulamalar HEAD’i izler. Deploy başlamaz.',
         'confirm_coolify' => ':count site Coolify oto-deploy’a dönsün mü? Her push CI beklemeden derlenir.',
+        'to_manual' => 'CI kapısından çıkar',
+        'confirm_ci_image' => ':count site CI kapısına alınsın mı? Siteler bulundukları imajda kalır. Deploy başlamaz.',
+        'confirm_manual' => ':count site CI kapısından çıkarılsın mı? Oto-deploy kapalı kalır; yeni imaj release.sh ya da Plane’den deploy ile gelir. Deploy başlamaz.',
         'done' => 'Deploy kapısı → :gate',
     ],
     'theme' => [

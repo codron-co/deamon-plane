@@ -64,7 +64,7 @@ return [
     'errors' => [
         'key_format' => 'The key must start with an upper-case letter and contain only A–Z, 0–9 and _.',
         'protected' => ':key is managed by Coolify and cannot be changed from Plane.',
-        'bootstrap' => ':key is a site bootstrap key and cannot be changed by hand. DB_PASSWORD / MYSQL_ROOT_PASSWORD are the passwords the existing MySQL volume was initialised with: if they change in env the site can no longer reach its database and goes down (this is what took cukurovaprofil.com down). APP_KEY and the agent secret must match what Plane stores.',
+        'bootstrap' => ':key is a site bootstrap key and cannot be changed by hand. DB_PASSWORD is the password of the site’s database user (on the shared MySQL too): if it changes in env the site can no longer reach its database and goes down (this is what took cukurovaprofil.com down). APP_KEY and the agent secret must match what Plane stores.',
         'no_app' => 'This site is not linked to a Coolify application.',
         'load_failed' => 'Could not read the Coolify env. Check the Coolify connection and retry.',
         'write_failed' => 'Could not write the Coolify env: :error',

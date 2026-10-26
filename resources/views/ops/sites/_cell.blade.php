@@ -286,7 +286,7 @@
                         title="{{ $autoAsOf }}"
                     >{{ $site->coolify_auto_deploy ? __('sites.cells.auto_on') : __('sites.cells.auto_off') }}</span>
                     @if ($pinnedSha !== '')
-                        <code class="plane-sha is-pinned" title="{{ __('sites.cells.pinned', ['sha' => $pinnedSha]) }}">
+                        <code class="plane-sha is-pinned" title="{{ __($site->holdsPinnedCommit() ? 'sites.cells.pinned_held' : 'sites.cells.pinned', ['sha' => $pinnedSha]) }}">
                             <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M9.5 2.5l4 4-2 1-2.5 2.5.5 3-1 1-3-3-3.5 3.5M5.5 9.5l-3-3 1-1 3 .5L9 3.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
                             <span class="visually-hidden">{{ __('sites.cells.pinned', ['sha' => '']) }}</span>{{ substr($pinnedSha, 0, 7) }}
                         </code>

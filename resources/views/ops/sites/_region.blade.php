@@ -176,6 +176,12 @@
                                             $rowCanCheck = auth()->user()?->can('checkHealth', $site) ?? false;
                                             $rowCanDeploy = (auth()->user()?->can('update', $site) ?? false) && filled($site->coolify_app_uuid);
                                             $rowCoolifyUrl = filled($site->coolify_app_uuid) ? $site->coolifyUiUrl() : null;
+                                            $builtImages ??= app(\App\Services\Sites\BuiltImageCommits::class);
+                                            $rowRedeployConfirm = ! ($rowCanDeploy && $builtImages->appliesTo($site))
+                                                ? __('site_ops.redeploy.confirm', ['name' => $site->name])
+                                                : ($site->hasPinnedCommit()
+                                                    ? __('site_ops.release.confirm_redeploy', ['name' => $site->name, 'sha' => substr((string) $site->coolify_pinned_sha, 0, 7)])
+                                                    : __('site_ops.release.confirm_redeploy_none', ['name' => $site->name]));
                                         @endphp
                                         <div class="ops-action-popover" role="menu">
                                             <a class="ops-menu-button" role="menuitem" href="{{ route('ops.sites.show', $site) }}">{{ __('ops.actions.view') }}</a>
@@ -211,7 +217,7 @@
                                                     data-ops-pending
                                                     data-ops-list-refresh
                                                     data-row-redeploy
-                                                    data-confirm="{{ __('site_ops.redeploy.confirm', ['name' => $site->name]) }}"
+                                                    data-confirm="{{ $rowRedeployConfirm }}"
                                                     data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
                                                     data-confirm-label="{{ __('sites.menu.redeploy') }}"
                                                     data-confirm-danger="true"
@@ -295,6 +301,13 @@
                                 >{{ __('site_ops.bulk.compose') }}</button>
                             @endif
                             {{-- Deploy and auto-deploy sweeps live in menus: eleven controls on one row overflowed and read as a wall. --}}
+                            @php
+                                // Build once, run many: every channel has an image builder, so the sweeps
+                                // deploy built images (follow HEAD = update HEAD = newest image, no auto-deploy).
+                                $imagesFleet = app(\App\Services\Sites\BuiltImageCommits::class)->coversFleet();
+                                $bulkRedeployKey = $imagesFleet ? 'site_ops.release.bulk_confirm_redeploy' : 'site_ops.bulk.confirm_redeploy';
+                                $bulkPinKey = $imagesFleet ? 'site_ops.release.bulk_confirm_pin' : 'site_ops.bulk.confirm_pin';
+                            @endphp
                             <details class="ops-action-menu" data-ops-action-menu data-bulk-menu="deploy">
                                 <summary class="btn btn-secondary btn-sm">{{ __('site_ops.bulk.deploy_menu') }}</summary>
                                 <div class="ops-action-popover" role="menu">
@@ -303,12 +316,25 @@
                                     class="ops-menu-button"
                                     role="menuitem"
                                     formaction="{{ route('ops.sites.bulk.deploy') }}"
-                                    data-confirm="{{ __('site_ops.bulk.confirm_redeploy', ['count' => $sites->total()]) }}"
-                                    data-confirm-template="{{ __('site_ops.bulk.confirm_redeploy', ['count' => '__COUNT__']) }}"
+                                    data-confirm="{{ __($bulkRedeployKey, ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __($bulkRedeployKey, ['count' => '__COUNT__']) }}"
                                     data-confirm-title="{{ __('site_ops.redeploy.confirm_title') }}"
                                     data-confirm-label="{{ __('site_ops.bulk.redeploy') }}"
                                     data-confirm-danger="true"
                                 >{{ __('site_ops.bulk.redeploy') }}</button>
+                                @if ($imagesFleet)
+                                <button
+                                    type="submit"
+                                    class="ops-menu-button"
+                                    role="menuitem"
+                                    formaction="{{ route('ops.sites.bulk.update-head') }}"
+                                    data-confirm="{{ __('site_ops.release.bulk_confirm_latest', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __('site_ops.release.bulk_confirm_latest', ['count' => '__COUNT__']) }}"
+                                    data-confirm-title="{{ __('site_ops.release.confirm_latest_title') }}"
+                                    data-confirm-label="{{ __('site_ops.release.deploy_latest') }}"
+                                    data-confirm-danger="true"
+                                >{{ __('site_ops.release.deploy_latest') }}</button>
+                                @else
                                 <button
                                     type="submit"
                                     class="ops-menu-button"
@@ -331,6 +357,7 @@
                                     data-confirm-label="{{ __('site_ops.bulk.update_head') }}"
                                     data-confirm-danger="true"
                                 >{{ __('site_ops.bulk.update_head') }}</button>
+                                @endif
                                     <div class="ops-action-sep" role="separator"></div>
                                 <label class="ops-bulk-channel sites-bulk-pin">
                                     <span class="visually-hidden">{{ __('site_ops.bulk.ref') }}</span>
@@ -363,8 +390,8 @@
                                     class="ops-menu-button"
                                     role="menuitem"
                                     formaction="{{ route('ops.sites.bulk.pin') }}"
-                                    data-confirm="{{ __('site_ops.bulk.confirm_pin', ['count' => $sites->total()]) }}"
-                                    data-confirm-template="{{ __('site_ops.bulk.confirm_pin', ['count' => '__COUNT__']) }}"
+                                    data-confirm="{{ __($bulkPinKey, ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __($bulkPinKey, ['count' => '__COUNT__']) }}"
                                     data-confirm-title="{{ __('site_ops.pin.confirm_title') }}"
                                     data-confirm-label="{{ __('site_ops.bulk.pin') }}"
                                     data-confirm-danger="true"
@@ -374,6 +401,9 @@
                             <details class="ops-action-menu" data-ops-action-menu data-bulk-menu="auto">
                                 <summary class="btn btn-ghost btn-sm">{{ __('site_ops.bulk.auto_menu') }}</summary>
                                 <div class="ops-action-popover" role="menu">
+                                @if ($imagesFleet)
+                                <span class="ops-menu-label">{{ __('site_ops.release.bulk_auto_note') }}</span>
+                                @else
                                 <button
                                     type="submit"
                                     class="ops-menu-button"
@@ -387,6 +417,7 @@
                                     data-confirm-label="{{ __('site_ops.bulk.auto_on') }}"
                                     data-confirm-danger="false"
                                 >{{ __('site_ops.bulk.auto_on') }}</button>
+                                @endif
                                 <button
                                     type="submit"
                                     class="ops-menu-button"
@@ -409,8 +440,8 @@
                                     formaction="{{ route('ops.sites.bulk.deploy-gate') }}"
                                     name="gate"
                                     value="ci"
-                                    data-confirm="{{ __('rollouts.bulk.confirm_ci', ['count' => $sites->total()]) }}"
-                                    data-confirm-template="{{ __('rollouts.bulk.confirm_ci', ['count' => '__COUNT__']) }}"
+                                    data-confirm="{{ __($imagesFleet ? 'rollouts.bulk.confirm_ci_image' : 'rollouts.bulk.confirm_ci', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __($imagesFleet ? 'rollouts.bulk.confirm_ci_image' : 'rollouts.bulk.confirm_ci', ['count' => '__COUNT__']) }}"
                                     data-confirm-title="{{ __('rollouts.site.confirm_title') }}"
                                     data-confirm-label="{{ __('rollouts.bulk.to_ci') }}"
                                     data-confirm-danger="false"
@@ -422,12 +453,12 @@
                                     formaction="{{ route('ops.sites.bulk.deploy-gate') }}"
                                     name="gate"
                                     value="coolify"
-                                    data-confirm="{{ __('rollouts.bulk.confirm_coolify', ['count' => $sites->total()]) }}"
-                                    data-confirm-template="{{ __('rollouts.bulk.confirm_coolify', ['count' => '__COUNT__']) }}"
+                                    data-confirm="{{ __($imagesFleet ? 'rollouts.bulk.confirm_manual' : 'rollouts.bulk.confirm_coolify', ['count' => $sites->total()]) }}"
+                                    data-confirm-template="{{ __($imagesFleet ? 'rollouts.bulk.confirm_manual' : 'rollouts.bulk.confirm_coolify', ['count' => '__COUNT__']) }}"
                                     data-confirm-title="{{ __('rollouts.site.confirm_title') }}"
-                                    data-confirm-label="{{ __('rollouts.bulk.to_coolify') }}"
+                                    data-confirm-label="{{ __($imagesFleet ? 'rollouts.bulk.to_manual' : 'rollouts.bulk.to_coolify') }}"
                                     data-confirm-danger="false"
-                                >{{ __('rollouts.bulk.to_coolify') }}</button>
+                                >{{ __($imagesFleet ? 'rollouts.bulk.to_manual' : 'rollouts.bulk.to_coolify') }}</button>
                                 </div>
                             </details>
                             <button

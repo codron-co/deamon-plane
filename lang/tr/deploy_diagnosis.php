@@ -164,7 +164,7 @@ return [
             'title' => 'Pinlenen commit / dal repoda yok',
             'cause' => 'Coolify pinli SHA’yı ya da dalı bulamadı (force-push, silinmiş dal, yanlış SHA).',
             'steps' => [
-                '“HEAD’i takip et” ile dalın son commit’ine dön, ya da Dağıtım ayarlarından geçerli bir SHA pinle.',
+                '“Son sürüme geç” ile kanalın son sürümüne dön (derlenmiş imajlı sitede en yeni imaj), ya da Sürüm kartından derlenmiş bir commite geç.',
             ],
             'commands' => [],
         ],
@@ -249,7 +249,7 @@ return [
             'cause' => 'Yeni sürümün migration’ı bu sitenin verisinde hata verdi (SQLSTATE). Kod ya da veri kaynaklı; tekrar deploy çözmez.',
             'steps' => [
                 '“Son çalışan sürüme dön” siteyi hemen ayağa kaldırır (pin).',
-                'SQLSTATE satırını geliştiriciye ilet; düzeltme CMS’e girince HEAD’i takip et.',
+                'SQLSTATE satırını geliştiriciye ilet; düzeltme CMS’e girip imajı derlenince “Son sürüme geç”.',
             ],
             'commands' => [
                 'docker logs :container --tail 120 | grep -i -A5 SQLSTATE',
@@ -271,7 +271,7 @@ return [
             'cause' => 'Dockerfile / npm / composer adımı hata verdi. Sebep koddadır; aynı commit başka sitede de düşer.',
             'steps' => [
                 '“Son çalışan sürüme dön” ile siteyi eski sürümde tut.',
-                'Build logundaki ilk ERROR satırını geliştiriciye ilet. Düzeltme gelince “HEAD’i takip et”.',
+                'Build logundaki ilk ERROR satırını geliştiriciye ilet. Düzeltme gelince “Son sürüme geç”.',
             ],
             'commands' => [],
         ],

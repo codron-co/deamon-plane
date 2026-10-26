@@ -42,7 +42,7 @@ This Plane-specific skill is the only UI skill routed from this repo. Do not cop
 
 ## Site configuration rule (ADR-12)
 
-Customer site env = bootstrap only (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`). Env prune never deletes these. Every other per-site/agency setting is pushed over a signed agent endpoint and persisted in the site DB; the security baseline is fixed in CMS code. **Do not add catalog keys** and do not map channel → `APP_ENV` (live sites are always `production`). See [docs/decisions/adr-12-site-config-from-plane.md](docs/decisions/adr-12-site-config-from-plane.md).
+Customer site env = bootstrap only (`APP_KEY`, `DB_PASSWORD`, `CONTROL_PLANE_AGENT_SECRET`, `CONTROL_PLANE_HOST_ALLOWLIST`, `DEAMON_CHANNEL`). Env prune never deletes these. `MYSQL_ROOT_PASSWORD` is no longer one (CMS 1.2.86: no site MySQL container); a catalog without it gets it pruned, Plane keeps its copy column. Every other per-site/agency setting is pushed over a signed agent endpoint and persisted in the site DB; the security baseline is fixed in CMS code. **Do not add catalog keys** and do not map channel → `APP_ENV` (live sites are always `production`). See [docs/decisions/adr-12-site-config-from-plane.md](docs/decisions/adr-12-site-config-from-plane.md).
 
 ## Hard limits
 

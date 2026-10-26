@@ -1,6 +1,8 @@
 @php
     /** @var \App\Models\Site $site */
     $canOps = auth()->user()?->can('update', $site) ?? false;
+    // Build once, run many: a site on a channel with an image builder gets the release card.
+    $runsImages = $runsImages ?? app(\App\Services\Sites\BuiltImageCommits::class)->appliesTo($site);
     // Filled by SiteCoolifyOpsController::panel; the page itself never calls Coolify.
     $snapshot = array_merge([
         'build_pack' => null,
@@ -107,7 +109,9 @@
     </article>
 @endif
 
-@if (filled($site->coolify_app_uuid) && ($canOps || filled($snapshot['git_commit_sha']) || filled($snapshot['error'])))
+@if (filled($site->coolify_app_uuid) && ($canOps || filled($snapshot['git_commit_sha']) || filled($snapshot['error'])) && $runsImages)
+    @include('ops.sites._built-image-release', ['site' => $site, 'snapshot' => $snapshot, 'builds' => $builds ?? [], 'canOps' => $canOps])
+@elseif (filled($site->coolify_app_uuid) && ($canOps || filled($snapshot['git_commit_sha']) || filled($snapshot['error'])))
     <article class="site-card site-operation" data-autodeploy aria-labelledby="coolify-ops-heading">
         <div class="site-card-head">
             <h3 id="coolify-ops-heading">{{ __('site_ops.auto_deploy.title') }} @include('ops.dashboard._hint', ['text' => $autoDeployHint])</h3>
@@ -256,5 +260,5 @@
 @endif
 
 @if (filled($site->coolify_app_uuid))
-    @include('ops.sites._deploy-gate-card', ['site' => $site, 'canOps' => $canOps])
+    @include('ops.sites._deploy-gate-card', ['site' => $site, 'canOps' => $canOps, 'runsImages' => $runsImages])
 @endif

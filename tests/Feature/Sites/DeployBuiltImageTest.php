@@ -178,28 +178,99 @@ class DeployBuiltImageTest extends TestCase
             && ! array_key_exists('git_commit_sha', $r->data()));
     }
 
-    public function test_deploy_gate_coolify_is_refused_and_ci_keeps_the_pin(): void
+    public function test_both_deploy_gates_keep_auto_deploy_off_and_the_pin(): void
     {
         $this->appSha = self::OLDER;
         $site = $this->site();
         $settings = app(CoolifyDeploySettings::class);
 
-        try {
-            $settings->setDeployGate($site, DeployGate::Coolify);
-            $this->fail('Auto-deploy must stay off for a site that runs built images.');
-        } catch (BuiltImageException) {
-            $this->assertNothingChangedOnTheSiteApp();
-        }
-
         $settings->setDeployGate($site, DeployGate::Ci);
+        $this->assertSame(DeployGate::Ci, $site->fresh()->deploy_gate);
 
+        // Leaving the CI gate is a manual release: auto-deploy is never turned on.
+        $settings->setDeployGate($site, DeployGate::Coolify);
+        $this->assertSame(DeployGate::Coolify, $site->fresh()->deploy_gate);
+
+        Http::assertNotSent(fn (Request $r): bool => $r->method() === 'PATCH'
+            && ($r->data()['is_auto_deploy_enabled'] ?? false) === true);
         Http::assertSent(fn (Request $r): bool => $r->method() === 'PATCH'
             && ($r->data()['is_auto_deploy_enabled'] ?? null) === false
             && ($r->data()['include_source_commit_in_build'] ?? null) === true
             && ! array_key_exists('git_commit_sha', $r->data()));
         Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), '/deploy?'));
-        $this->assertSame(DeployGate::Ci, $site->fresh()->deploy_gate);
         $this->assertSame(self::OLDER, $site->fresh()->coolify_pinned_sha);
+        $this->assertFalse($site->fresh()->coolify_auto_deploy);
+    }
+
+    public function test_the_site_panel_shows_the_release_card_instead_of_auto_deploy_and_head(): void
+    {
+        $this->appSha = self::OLDER;
+        $site = $this->site();
+        $site->forceFill(['coolify_pinned_sha' => self::OLDER, 'coolify_pin_held' => true, 'deploy_gate' => DeployGate::Ci])->save();
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.coolify-ops.panel', $site))
+            ->assertOk()
+            ->assertSee('data-built-image', false)
+            ->assertSee(__('site_ops.release.title'))
+            ->assertSee(__('site_ops.release.status_behind', ['sha' => substr(self::OLDER, 0, 7), 'latest' => substr(self::LATEST, 0, 7), 'count' => 1]))
+            ->assertSee(__('site_ops.release.held'))
+            ->assertSee(__('site_ops.release.deploy_latest'))
+            ->assertSee('value="'.self::LATEST.'"', false)
+            ->assertSee('value="'.self::OLDER.'"', false)
+            ->assertDontSee('value="'.self::UNBUILT.'"', false)
+            ->assertDontSee(__('site_ops.auto_deploy.on_button'))
+            ->assertDontSee(__('site_ops.pin.follow_button'))
+            ->assertDontSee(route('ops.sites.follow-head', $site), false)
+            // Deploy gate card: CI gate, held release, the way back keeps auto-deploy off.
+            ->assertSee(__('rollouts.site.held_note'))
+            ->assertSee(__('rollouts.site.switch_to_manual'))
+            ->assertDontSee(__('rollouts.site.switch_to_coolify'));
+
+        $site->forceFill(['deploy_gate' => DeployGate::Coolify])->save();
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.coolify-ops.panel', $site))
+            ->assertOk()
+            ->assertSee('">'.__('rollouts.gate.manual').'</span>', false)
+            ->assertDontSee('">'.__('rollouts.gate.coolify').'</span>', false);
+    }
+
+    public function test_the_header_and_list_menus_offer_the_newest_image_instead_of_head(): void
+    {
+        $site = $this->site();
+        $operator = $this->operator();
+
+        $this->actingAs($operator)
+            ->get(route('ops.sites.show', $site))
+            ->assertOk()
+            ->assertSee(__('site_ops.release.deploy_latest'))
+            ->assertDontSee(route('ops.sites.follow-head', $site), false);
+
+        $this->actingAs($operator)
+            ->get(route('ops.sites'))
+            ->assertOk()
+            ->assertSee(__('site_ops.release.deploy_latest'))
+            ->assertSee(__('site_ops.release.bulk_auto_note'))
+            ->assertSee(__('rollouts.bulk.to_manual'))
+            ->assertDontSee(route('ops.sites.bulk.follow-head'), false)
+            ->assertDontSee(__('site_ops.bulk.auto_on'))
+            ->assertDontSee(__('rollouts.bulk.to_coolify'));
+    }
+
+    public function test_flashes_describe_the_newest_image(): void
+    {
+        $site = $this->site();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.update-head', $site))
+            ->assertSessionHas('status', __('site_ops.release.latest_done', ['name' => $site->name]));
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.deploy-gate', $site), ['gate' => 'ci'])
+            ->assertSessionHas('status', __('rollouts.site.gate_done', ['name' => $site->name, 'gate' => __('rollouts.gate.ci')]));
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.deploy-gate', $site), ['gate' => 'coolify'])
+            ->assertSessionHas('status', __('rollouts.site.gate_done', ['name' => $site->name, 'gate' => __('rollouts.gate.manual')]));
     }
 
     public function test_ci_rollout_pins_the_green_commit_and_waits_while_it_is_not_built(): void
