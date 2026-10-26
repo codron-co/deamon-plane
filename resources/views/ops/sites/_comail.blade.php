@@ -148,6 +148,17 @@
             </div>
         @endif
 
+        @if ($comailRows->contains(fn ($row) => $row->status === \App\Models\SiteComailDomain::STATUS_ACTIVE))
+            {{-- Mailbox list from mailcow, loaded after the page so the detail page never waits on it. --}}
+            <div data-lazy-panel data-lazy-url="{{ route('ops.sites.comail.mailboxes.panel', $site) }}" aria-live="polite" aria-busy="true">
+                <p class="site-note" data-lazy-loading>{{ __('sites.detail.panel_loading') }}</p>
+                <p class="ops-alert" role="alert" data-lazy-error hidden>
+                    {{ __('sites.detail.panel_failed') }}
+                    <button type="button" class="btn btn-secondary btn-sm" data-lazy-retry>{{ __('sites.detail.panel_retry') }}</button>
+                </p>
+            </div>
+        @endif
+
         @if ($canEditComail)
             <div class="site-operation-line">
                 @if ($availableComail !== [])

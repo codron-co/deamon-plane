@@ -111,6 +111,12 @@
                         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11V5Zm0 0L8 7.5 13.5 5M8 7.5v6" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
                         {{ __('ops.nav.mail_packages') }}
                     </a>
+                    @if ($role === \App\Enums\OpsRole::SuperAdmin)
+                        <a class="ops-nav-item is-sub {{ request()->routeIs('ops.comail.mailboxes*') ? 'is-active' : '' }}" href="{{ route('ops.comail.mailboxes') }}">
+                            <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="m10.2 10.2 3.3 3.3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+                            {{ __('ops.nav.comail_mailboxes') }}
+                        </a>
+                    @endif
                     <a class="ops-nav-item is-sub {{ request()->routeIs('ops.billing.orders*') ? 'is-active' : '' }}" href="{{ route('ops.billing.orders.index') }}">
                         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h9v11l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1v-11Zm2.5 3h4m-4 2.5h4m-4 2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/></svg>
                         {{ __('billing.nav.orders') }}

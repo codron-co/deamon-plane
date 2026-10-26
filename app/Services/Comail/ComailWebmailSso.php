@@ -18,6 +18,12 @@ class ComailWebmailSso
 {
     public const APP_NAME = 'CoMail tek tık giriş';
 
+    /**
+     * Plane staff (ops "Webmail'e gir") use their own app password name, so a
+     * support login never revokes the customer's open one-click session.
+     */
+    public const OPS_APP_NAME = 'CoMail destek girişi';
+
     public const TTL_SECONDS = 120;
 
     public const SKEW_SECONDS = 60;
@@ -25,15 +31,17 @@ class ComailWebmailSso
     private const PROTOCOLS = ['imap_access', 'smtp_access'];
 
     /**
+     * Replaces the mailbox's previous app password with the same `$appName`.
+     *
      * @return array{token: string, url: string, expires_in: int}
      */
-    public function issue(MailServer $server, MailcowClient $client, string $address): array
+    public function issue(MailServer $server, MailcowClient $client, string $address, string $appName = self::APP_NAME): array
     {
         $address = strtolower($address);
 
         $stale = [];
         foreach ($client->appPasswords($address) as $row) {
-            if ((string) ($row['name'] ?? '') === self::APP_NAME && is_numeric($row['id'] ?? null)) {
+            if ((string) ($row['name'] ?? '') === $appName && is_numeric($row['id'] ?? null)) {
                 $stale[] = (int) $row['id'];
             }
         }
@@ -42,7 +50,7 @@ class ComailWebmailSso
         }
 
         $password = self::password();
-        $client->addAppPassword($address, self::APP_NAME, $password, self::PROTOCOLS);
+        $client->addAppPassword($address, $appName, $password, self::PROTOCOLS);
 
         $token = bin2hex(random_bytes(32));
         Cache::put(self::cacheKey($token), Crypt::encryptString((string) json_encode([

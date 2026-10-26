@@ -59,6 +59,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('comail-sso', static fn (Request $request): Limit => Limit::perMinute(30)
             ->by('comail-sso:'.$request->ip()));
 
+        // Ops "Webmail'e gir": 10/min per signed-in user.
+        RateLimiter::for('comail-webmail-ops', static fn (Request $request): Limit => Limit::perMinute(10)
+            ->by('comail-webmail-ops:'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
+
         ProductionDebugGuard::assert();
 
         View::composer(['layouts.ops', 'layouts.guest'], function ($view): void {

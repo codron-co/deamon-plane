@@ -16,6 +16,7 @@ return [
         'mail' => 'Mail',
         'mail_servers' => 'Mail servers',
         'mail_packages' => 'Mail packages',
+        'comail_mailboxes' => 'Mailboxes',
         'platform_mail' => 'Product mail',
         'deskron' => 'DeskRon support',
         'instagram' => 'Instagram',
