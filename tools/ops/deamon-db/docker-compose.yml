@@ -19,6 +19,7 @@ services:
       --performance-schema=OFF --skip-log-bin
       --tmp-table-size=32M --max-heap-table-size=32M
       --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      --table-definition-cache=10000
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       # Read by init/01-plane-admin.sh on the first start only.
@@ -37,8 +38,9 @@ services:
       retries: 3
       start_period: 120s
       start_interval: 5s
-    # 34 sites, ~1.7 GB of data: 2g was reached on the first night (2026-10-25).
-    mem_limit: 4g
+    # 34 sites, ~1.7 GB of data: 2g was reached on the first night (2026-10-25), and 4g
+    # (3.9 GB resident, 1 GB buffer pool) on 2026-10-26 with ~7,200 tables open in turn.
+    mem_limit: 6g
     cpus: "1.5"
     pids_limit: 512
     # Every site depends on this server: it must come back after a host reboot.
