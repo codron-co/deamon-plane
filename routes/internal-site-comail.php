@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Internal\SiteComailBillingController;
 use App\Http\Controllers\Internal\SiteComailController;
 use App\Http\Middleware\EnsureSiteMailSignature;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,7 @@ Route::middleware(['throttle:site-comail', EnsureSiteMailSignature::class])->gro
     Route::delete('/mailboxes/{address}', [SiteComailController::class, 'destroyMailbox']);
     Route::get('/mailboxes/{address}/autoreply', [SiteComailController::class, 'autoreply']);
     Route::put('/mailboxes/{address}/autoreply', [SiteComailController::class, 'updateAutoreply']);
+    Route::post('/mailboxes/{address}/webmail-login', [SiteComailController::class, 'webmailLogin']);
 
     Route::get('/aliases', [SiteComailController::class, 'aliases']);
     Route::post('/aliases', [SiteComailController::class, 'storeAlias']);
@@ -31,4 +33,10 @@ Route::middleware(['throttle:site-comail', EnsureSiteMailSignature::class])->gro
     Route::get('/migrations', [SiteComailController::class, 'migrations']);
     Route::post('/migrations', [SiteComailController::class, 'storeMigration']);
     Route::delete('/migrations/{id}', [SiteComailController::class, 'destroyMigration']);
+
+    // v2: package purchase (CONTRACT-v2).
+    Route::get('/billing', [SiteComailBillingController::class, 'show']);
+    Route::post('/billing/orders', [SiteComailBillingController::class, 'store']);
+    Route::post('/billing/orders/{id}/transfer-reported', [SiteComailBillingController::class, 'transferReported']);
+    Route::post('/billing/orders/{id}/cancel', [SiteComailBillingController::class, 'cancel']);
 });

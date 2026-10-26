@@ -31,6 +31,12 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::prefix('internal/site/v1/comail')
                 ->group(base_path('routes/internal-site-comail.php'));
 
+            Route::prefix('internal/comail/v1')
+                ->group(base_path('routes/internal-comail.php'));
+
+            // CoMail hosted checkout: no session, CSRF or ops IP allowlist (providers post here).
+            Route::group([], base_path('routes/pay.php'));
+
             Route::get('internal/ops/v1/watch-list', WatchListController::class)
                 ->middleware('throttle:30,1')
                 ->name('internal.watch-list');
