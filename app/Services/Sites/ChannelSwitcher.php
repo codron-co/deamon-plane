@@ -143,14 +143,15 @@ class ChannelSwitcher
         $images = app(BuiltImageCommits::class);
         $builtSha = $images->appliesToChannel($target) ? $images->latest($target, $coolify) : null;
 
-        $patch = $builtSha !== null
-            ? ['git_branch' => $target->value] + BuiltImageCommits::pinBody($builtSha)
-            : [
+        // A Docker Image app has no branch: its image tag is the whole pin.
+        if ($builtSha !== null) {
+            $images->pinApp($coolify, $appUuid, $builtSha, composeExtra: ['git_branch' => $target->value]);
+        } else {
+            $coolify->patchApplication($appUuid, [
                 'git_branch' => $target->value,
                 'git_commit_sha' => CoolifyApplication::HEAD_REF,
-            ];
-
-        $coolify->patchApplication($appUuid, $patch);
+            ]);
+        }
         if ($builtSha !== null) {
             CoolifyDeploySettings::rememberPin($site, $builtSha);
         }

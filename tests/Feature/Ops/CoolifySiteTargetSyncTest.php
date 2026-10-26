@@ -219,6 +219,44 @@ class CoolifySiteTargetSyncTest extends TestCase
         $this->assertSame('z8ocg8k04ww8osssccc088c0', $site->coolify_project_uuid);
     }
 
+    public function test_docker_image_app_keeps_channel_and_repo_and_mirrors_its_image_tag(): void
+    {
+        $sha = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        $connection = $this->connection();
+        $site = Site::factory()->create([
+            'status' => SiteStatus::Active,
+            'channel' => Channel::Alpha,
+            'channel_needs_review' => false,
+            'coolify_app_uuid' => self::APP,
+            'coolify_connection_id' => $connection->id,
+            'git_repository' => 'https://github.com/codron-co/deamon.git',
+        ]);
+
+        // Coolify fills placeholder git fields on a Docker Image app.
+        Http::fake($this->inventoryFake([
+            'https://coolify.example/api/v1/applications/'.self::APP => Http::response([
+                'build_pack' => 'dockerimage',
+                'git_repository' => 'coollabsio/coolify',
+                'git_commit_sha' => 'HEAD',
+                'docker_registry_image_name' => '127.0.0.1:5000/deamon-cms',
+                'docker_registry_image_tag' => $sha,
+                'is_auto_deploy_enabled' => false,
+                'settings' => ['is_auto_deploy_enabled' => false],
+            ] + $this->applicationPayload('main'), 200),
+        ]));
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.coolify.sync', $connection))
+            ->assertRedirect();
+
+        $site->refresh();
+        $this->assertSame(Channel::Alpha, $site->channel);
+        $this->assertFalse($site->channel_needs_review);
+        $this->assertSame('https://github.com/codron-co/deamon.git', $site->git_repository);
+        $this->assertSame('z8ocg8k04ww8osssccc088c0', $site->coolify_project_uuid);
+        $this->assertSame($sha, $site->coolify_pinned_sha);
+    }
+
     /**
      * @param  array<string, mixed>  $extra
      * @return array<string, mixed>

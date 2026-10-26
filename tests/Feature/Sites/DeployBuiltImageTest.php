@@ -44,6 +44,12 @@ class DeployBuiltImageTest extends TestCase
     /** Commit the fake Coolify app is pinned to (`HEAD` = follows the branch). */
     private string $appSha = 'HEAD';
 
+    /** `dockercompose` (git pin) or `dockerimage` (image tag pin, rolling deploy). */
+    private string $buildPack = 'dockercompose';
+
+    /** Image tag of a Docker Image app. */
+    private string $imageTag = 'latest';
+
     /** @var list<array<string, mixed>> */
     private array $betaBuilds = [];
 
@@ -322,19 +328,171 @@ class DeployBuiltImageTest extends TestCase
         $this->assertSame(SiteStatus::Active, $site->fresh()->status);
     }
 
+    public function test_docker_image_redeploy_keeps_a_built_tag_and_patches_only_the_tag(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $this->imageTag = self::OLDER;
+        $site = $this->site();
+
+        app(CoolifyDeploySettings::class)->redeploy($site, $this->operator());
+
+        $this->assertImagePinnedBeforeDeploy(self::OLDER);
+        $this->assertSame(self::OLDER, $site->fresh()->coolify_pinned_sha);
+        $this->assertFalse($site->fresh()->coolify_auto_deploy);
+    }
+
+    public function test_docker_image_redeploy_moves_a_tag_without_a_build_to_the_newest_build(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $this->imageTag = self::UNBUILT;
+        $site = $this->site();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.deploy', $site))
+            ->assertSessionHas('status');
+
+        $this->assertImagePinnedBeforeDeploy(self::LATEST);
+        $this->assertSame(self::LATEST, $this->imageTag);
+    }
+
+    public function test_docker_image_pin_and_update_head_set_the_image_tag(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $site = $this->site();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.pin', $site), ['ref' => substr(self::OLDER, 0, 7)])
+            ->assertSessionHas('status');
+        $this->assertImagePinnedBeforeDeploy(self::OLDER);
+        $this->assertSame(self::OLDER, $site->fresh()->coolify_pinned_sha);
+        $this->assertTrue($site->fresh()->coolify_pin_held);
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.update-head', $site))
+            ->assertSessionHas('status', __('site_ops.release.latest_done', ['name' => $site->name]));
+        $this->assertImagePinnedBeforeDeploy(self::LATEST);
+        $this->assertSame(self::LATEST, $site->fresh()->coolify_pinned_sha);
+        $this->assertFalse($site->fresh()->coolify_pin_held);
+    }
+
+    public function test_docker_image_pin_to_a_commit_without_a_build_changes_nothing(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $this->imageTag = self::OLDER;
+        $site = $this->site();
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.sites.pin', $site), ['ref' => self::UNBUILT])
+            ->assertSessionHas('error', __('site_ops.image.not_built', ['sha' => substr(self::UNBUILT, 0, 8), 'channel' => 'beta']));
+
+        $this->assertNothingChangedOnTheSiteApp();
+        $this->assertSame(self::OLDER, $this->imageTag);
+    }
+
+    public function test_docker_image_ci_rollout_tags_the_green_commit(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $site = $this->site();
+
+        app(CoolifyDeploySettings::class)->deployForRollout($site, $this->rollout(self::OLDER));
+
+        $this->assertImagePinnedBeforeDeploy(self::OLDER);
+    }
+
+    public function test_docker_image_channel_switch_tags_the_target_channels_newest_build_without_a_branch(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $site = $this->site();
+        $site->forceFill(['status' => SiteStatus::Deploying, 'desired_channel' => Channel::Alpha])->save();
+
+        app(ChannelSwitcher::class)->switchOnCoolify($site);
+
+        Http::assertSent(fn (Request $r): bool => $r->method() === 'PATCH'
+            && str_ends_with($r->url(), '/applications/'.self::APP)
+            && ($r->data()['docker_registry_image_tag'] ?? null) === self::ALPHA_LATEST
+            && ($r->data()['is_auto_deploy_enabled'] ?? null) === false);
+        $this->assertNoGitPinOnTheImageApp();
+        $this->assertSame(self::ALPHA_LATEST, $site->fresh()->coolify_pinned_sha);
+        Http::assertSent(fn (Request $r): bool => str_contains($r->url(), '/deploy?'));
+    }
+
+    public function test_docker_image_activate_tags_a_built_image_before_coolify_starts_it(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $this->imageTag = self::OLDER;
+        $site = $this->site();
+        $site->forceFill(['status' => SiteStatus::Stopped])->save();
+
+        app(SiteLifecycle::class)->activate($site, $this->operator(), null);
+
+        $pin = $this->firstIndex(fn (Request $r): bool => $r->method() === 'PATCH'
+            && ($r->data()['docker_registry_image_tag'] ?? null) === self::OLDER);
+        $start = $this->firstIndex(fn (Request $r): bool => $r->method() === 'POST' && str_ends_with($r->url(), '/applications/'.self::APP.'/start'));
+        $this->assertNotNull($pin);
+        $this->assertNotNull($start);
+        $this->assertLessThan($start, $pin);
+        $this->assertNoGitPinOnTheImageApp();
+    }
+
+    public function test_docker_image_snapshot_reads_the_pinned_commit_from_the_image_tag(): void
+    {
+        $this->buildPack = 'dockerimage';
+        $this->imageTag = self::OLDER;
+        $site = $this->site();
+
+        $snapshot = app(CoolifyDeploySettings::class)->snapshot($site);
+
+        $this->assertSame('dockerimage', $snapshot['build_pack']);
+        $this->assertSame(self::OLDER, $snapshot['git_commit_sha']);
+        $this->assertSame(self::OLDER, $site->fresh()->coolify_pinned_sha);
+
+        $this->actingAs($this->operator())
+            ->get(route('ops.sites.coolify-ops.panel', $site))
+            ->assertOk()
+            ->assertSee(__('site_ops.release.status_behind', ['sha' => substr(self::OLDER, 0, 7), 'latest' => substr(self::LATEST, 0, 7), 'count' => 1]));
+    }
+
     private function assertPinnedBeforeDeploy(string $sha): void
     {
         $pin = $this->firstIndex(fn (Request $r): bool => $r->method() === 'PATCH'
             && str_ends_with($r->url(), '/applications/'.self::APP)
             && ($r->data()['git_commit_sha'] ?? null) === $sha
             && ($r->data()['is_auto_deploy_enabled'] ?? null) === false
-            && ($r->data()['include_source_commit_in_build'] ?? null) === true);
+            && ($r->data()['include_source_commit_in_build'] ?? null) === true
+            && ! array_key_exists('docker_registry_image_tag', $r->data()));
         $deploy = $this->firstIndex(fn (Request $r): bool => $r->method() === 'POST'
             && str_contains($r->url(), '/deploy?')
             && str_contains($r->url(), 'uuid='.self::APP), after: $pin ?? -1);
 
         $this->assertNotNull($pin, 'PATCH pinning '.$sha);
         $this->assertNotNull($deploy, 'deploy after the pin');
+    }
+
+    /**
+     * A Docker Image app is pinned by its image tag only: no git ref, the image
+     * name untouched, auto-deploy off; then the deploy.
+     */
+    private function assertImagePinnedBeforeDeploy(string $sha): void
+    {
+        $pin = $this->firstIndex(fn (Request $r): bool => $r->method() === 'PATCH'
+            && str_ends_with($r->url(), '/applications/'.self::APP)
+            && ($r->data()['docker_registry_image_tag'] ?? null) === $sha
+            && ($r->data()['is_auto_deploy_enabled'] ?? null) === false);
+        $deploy = $this->firstIndex(fn (Request $r): bool => $r->method() === 'POST'
+            && str_contains($r->url(), '/deploy?')
+            && str_contains($r->url(), 'uuid='.self::APP), after: $pin ?? -1);
+
+        $this->assertNotNull($pin, 'PATCH tagging '.$sha);
+        $this->assertNotNull($deploy, 'deploy after the tag pin');
+        $this->assertNoGitPinOnTheImageApp();
+    }
+
+    private function assertNoGitPinOnTheImageApp(): void
+    {
+        Http::assertNotSent(fn (Request $r): bool => $r->method() === 'PATCH'
+            && (array_key_exists('git_commit_sha', $r->data())
+                || array_key_exists('git_branch', $r->data())
+                || array_key_exists('docker_registry_image_name', $r->data())));
     }
 
     private function assertNothingChangedOnTheSiteApp(): void
@@ -381,6 +539,9 @@ class DeployBuiltImageTest extends TestCase
                 if (array_key_exists('git_commit_sha', $body)) {
                     $this->appSha = (string) $body['git_commit_sha'];
                 }
+                if (array_key_exists('docker_registry_image_tag', $body)) {
+                    $this->imageTag = (string) $body['docker_registry_image_tag'];
+                }
 
                 return Http::response($this->app(autoDeploy: (bool) ($body['is_auto_deploy_enabled'] ?? false)), 200);
             }
@@ -400,6 +561,22 @@ class DeployBuiltImageTest extends TestCase
      */
     private function app(bool $autoDeploy = false): array
     {
+        if ($this->buildPack === 'dockerimage') {
+            // Coolify keeps placeholder git fields on a Docker Image app.
+            return [
+                'uuid' => self::APP,
+                'build_pack' => 'dockerimage',
+                'git_repository' => 'coollabsio/coolify',
+                'git_branch' => 'main',
+                'git_commit_sha' => 'HEAD',
+                'docker_registry_image_name' => '127.0.0.1:5000/deamon-cms',
+                'docker_registry_image_tag' => $this->imageTag,
+                'is_auto_deploy_enabled' => $autoDeploy,
+                'settings' => ['is_auto_deploy_enabled' => $autoDeploy],
+                'fqdn' => 'https://built.example.test',
+            ];
+        }
+
         return [
             'uuid' => self::APP,
             'build_pack' => 'dockercompose',

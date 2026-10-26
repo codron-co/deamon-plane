@@ -159,6 +159,29 @@ final class CoolifyApplication
         return self::nullableString($this->raw['git_commit_sha'] ?? null);
     }
 
+    /**
+     * A Coolify "Docker Image" application runs `docker_registry_image_name:tag`
+     * and has no git ref of its own (deamon-test runs `127.0.0.1:5000/deamon-cms:<commit>`).
+     */
+    public function isDockerImagePack(): bool
+    {
+        return strtolower((string) $this->buildPack) === 'dockerimage';
+    }
+
+    public function dockerImageTag(): ?string
+    {
+        return self::nullableString($this->raw['docker_registry_image_tag'] ?? null);
+    }
+
+    /**
+     * The commit the app is pinned to: the image tag of a Docker Image app (a built
+     * commit sha), else `git_commit_sha` (a sha or `HEAD`).
+     */
+    public function pinnedCommit(): ?string
+    {
+        return $this->isDockerImagePack() ? $this->dockerImageTag() : $this->gitCommitSha();
+    }
+
     public static function isHeadRef(?string $sha): bool
     {
         return is_string($sha) && strcasecmp(trim($sha), self::HEAD_REF) === 0;

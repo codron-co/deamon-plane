@@ -42,5 +42,6 @@
         <!-- Build-once image pinning reads the builder app on every deploy; tests opt in per case. -->
         <env name="DEAMON_IMAGE_BUILDER_ALPHA" value=""/>
         <env name="DEAMON_IMAGE_BUILDER_BETA" value=""/>
+        <env name="DEAMON_IMAGE_REGISTRY_URL" value=""/>
     </php>
 </phpunit>
