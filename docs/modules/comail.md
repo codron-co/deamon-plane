@@ -2,7 +2,7 @@
 
 CoMail is the customer-facing name ("E-posta" in Turkish UI) of the shared mailcow server on main.codron (`https://mail.codron.co`). Customers never see "mailcow". Plane holds the mailcow API key, enforces package limits, writes DNS and proxies every mailbox operation for the CMS `comail` module. The CMS never sees the key.
 
-Contract (shared with the CMS repo): `C:\www\tek-seferlik-isler\comail\CONTRACT.md` (v1, 2026-10-26). Hostinger mail ([mail-servers.md](mail-servers.md)) keeps working unchanged next to it.
+Contract (shared with the CMS repo): `C:\www\tek-seferlik-isler\comail\CONTRACT.md` (v1, 2026-10-26) and `CONTRACT-v2.md` (billing + webmail SSO, see [v2](#v2-billing-and-webmail-sso)). Hostinger mail ([mail-servers.md](mail-servers.md)) keeps working unchanged next to it.
 
 ## Data
 
@@ -110,6 +110,64 @@ For sites still bound to Hostinger mail (`mailServer` is a ready Hostinger serve
 - Audit: `mail_package.*`, `mail_server.*`, `comail.package_changed`, `comail.domain_added|removed|enrolled`, `comail.dns_applied`, `comail.mx_activated`, `comail.configure_requeued`, `comail.mailbox_*`, `comail.alias_*`, `comail.autoreply_updated`, `comail.migration_*`, `comail.hposta_migrated`, `comail.access_denied`. Never a password or key.
 - MCP (`RouteToolCatalog::comail()`): `set_site_mail_package`, `add_comail_domain`, `apply_comail_dns`, `check_comail_dns`, `activate_comail_mx`, `resend_comail_configure`, `create_mail_package`, `update_mail_package`, `delete_mail_package`.
 
+## v2: billing and webmail SSO
+
+Contract: `C:\www\tek-seferlik-isler\comail\CONTRACT-v2.md`. Scope is the e-mail package only; card (iyzico and/or PayTR, ops picks) and EFT; monthly and yearly.
+
+### Data (migration `2026_10_27_100000_create_comail_billing_tables`)
+
+| Table / column | Meaning |
+|---|---|
+| `mail_packages.price_yearly` | Nullable. A period without a price cannot be ordered (`price_missing`). |
+| `mail_subscriptions` | One per site (`site_id` unique): package, `period` (monthly/yearly), `status` active → grace → expired (canceled unused in v2), `current_period_start/end`, `auto_renew` (always false, no stored cards). No row = default package. `sites.mail_package_id` stays the effective package. |
+| `mail_orders` | `reference` `CM-XXXXXX` (PayTR `merchant_oid` = the reference without the dash), `kind` new/renewal/change, `amount`, `method` iyzico/paytr/eft, `status` pending / awaiting_transfer / transfer_reported / paid / failed / canceled / expired, `billing` json, `provider_token` (iyzico CF token or PayTR iframe token), `provider_payment_id`, `provider_payload` (whitelisted, never card data), `return_url`, `paid_at`, `confirmed_by`, `notes`, `transfer_reported_at`, `expires_at` (card 30 min, EFT 7 days). |
+| `billing_settings` | Singleton `BillingSetting::current()`: iyzico (enabled, sandbox, key/secret encrypted), PayTR (enabled, test mode, merchant id, key/salt encrypted), EFT (enabled, bank, holder, IBAN, note), `vat_included`, `grace_days` (7), `distance_sales_url`. Secrets: encrypted cast + `$hidden`, never rendered back; a blank form field keeps the stored value. |
+| `mail_servers.sso_secret` | Encrypted, 48 random chars generated when a mailcow server is saved. `php artisan ops:comail-sso-secret [--rotate]` prints it for the webmail configuration. |
+
+### Behaviour (`app/Services/Billing`)
+
+- `MailBilling::createOrder`: active package by slug, method must be in `BillingSetting::methods()` (`method_disabled`), price for the period (`price_missing`). Kind: renewal when the live (active/grace) subscription has the same package, change when another, else new. `return_url` is kept only when https and on one of the site's own hosts (domains, primary, temporary, agent host, with or without www); otherwise Plane's result page is used.
+- `markPaid` (verified card result or ops EFT confirm): transaction with a row lock; an already paid order returns false (callbacks repeat). Renewal of the live same package extends from `current_period_end`; new/change starts now. Sets `sites.mail_package_id`, dispatches `ApplyComailPackageJob`, audits `comail.order_paid`. A late card payment for an expired/canceled order still activates (the money moved).
+- `ExpireMailSubscriptionsJob` daily 03:55: active past end → grace; grace past end + grace_days → expired, `sites.mail_package_id = null` (only while it is still the subscription's package), limits re-applied. Pending card orders and awaiting EFT orders past `expires_at` → expired (`transfer_reported` waits for ops).
+- Downgrade safety: `ComailLimits::safeDomainAttributes` sets every mailcow domain ceiling to max(current usage, package limit), so `edit/domain` never fails and nothing is deleted. `overLimit()` → `over_limit` in `GET /overview` and `GET /billing`; new mailboxes/aliases/domains are refused with the v1 `limit_*` errors; shrinking a mailbox quota is always allowed.
+
+### Hosted checkout (public, no session/CSRF/IP allowlist: `routes/pay.php`)
+
+| Route | Purpose |
+|---|---|
+| `GET /pay/{order}/{token}` (`pay.show`) | Token = HMAC(app key, order id + expiry), 48 hex. Order summary + iyzico CF `paymentPageUrl` iframe or PayTR iframe (`/odeme/guvenli/{token}`); EFT orders show the bank card. An open checkout is reused for 25 min on reload. |
+| `POST /pay/callback/iyzico` | iyzico posts `token`; Plane retrieves the CF result server-to-server, checks the response HMAC, `basketId` = reference, paid price and currency, then pays or fails the order and sends the top window to `return_url?comail_order=<id>&status=paid|failed`. |
+| `POST /pay/callback/paytr` | PayTR notification (set it as **Bildirim URL** in the PayTR panel): hash check (400 `bad hash`), amount check, answers plain `OK`. |
+| `GET/POST /pay/{order}/{token}/done/{ok,fail}` | PayTR `merchant_ok_url` / `merchant_fail_url`: waits up to ~10 s for the notification, then hands over (`status=paid`, `failed`, or `pending` when the notification is late). |
+| `GET /pay/{order}/{token}/result` | Plane's own result page (no valid return_url). |
+
+Request/signature code is ported from the CMS gateways (`IyzicoSignatureBuilder`, `PaytrTokenBuilder`); iyzico requests send exactly the signed JSON bytes. Sandbox: `iyzico_sandbox` → `sandbox-api.iyzipay.com`; PayTR `test_mode=1`. nginx sends no `X-Frame-Options` under `/pay/` (the providers load the result pages inside their frame); Laravel sets `frame-ancestors 'self'` on the checkout page and `'self' https://www.paytr.com https://*.iyzipay.com` on the pages loaded inside the provider frame.
+
+### Site API additions (same auth)
+
+| Method | Path | Response |
+|---|---|---|
+| GET | `/billing` | `current{package{…limits, description}, period, status, period_start, period_end, grace_ends_at, auto_renew, over_limit, usage}`, `packages[{slug,name,description,mailbox_limit,storage_mb,mailbox_max_quota_mb,alias_limit,domain_limit,price_monthly,price_yearly,currency,is_default,is_current}]`, `methods[]`, `vat_included`, `bank{bank_name,account_holder,iban,note}` or null, `distance_sales_url`, `orders[]` (last 20). No subscription: `period/status/period_end` null. |
+| POST | `/billing/orders` | `{package, period, method, billing{name, company?, tckn_or_vkn (10–11 digits), tax_office?, address, city, district?, phone, email}, return_url?}` → 201 card `{order, checkout_url}` / EFT `{order, bank, reference, amount, currency, expires_at}` |
+| POST | `/billing/orders/{id}/transfer-reported` | `{note?}` → order (flat and under `order`) |
+| POST | `/billing/orders/{id}/cancel` | pending / awaiting_transfer only (`order_not_cancellable`) |
+| POST | `/mailboxes/{address}/webmail-login` | `{url, expires_in: 120}` |
+
+Order row: `{id, reference, package{slug,name}, package_slug, package_name, period, kind, amount (number), currency, method, status, created_at, paid_at, expires_at}`. `GET /overview` also carries `over_limit` and `subscription{status, period, period_end, grace_ends_at}` or null.
+
+### Webmail SSO
+
+`webmail-login` deletes the mailbox's previous `CoMail tek tık giriş` app passwords, creates a new one (32 chars, imap + smtp), stores `{address, password}` encrypted in the cache under a random 64-hex token for 120 s, audits `comail.webmail_login` (address only) and returns `{base_url}/webmail/?_task=login&_comail_sso={token}`.
+
+`POST /internal/comail/v1/sso/redeem` (webmail server only, `throttle:comail-sso` 30/min/IP): body `{token}`, headers `X-CoMail-Timestamp` + `X-CoMail-Signature` = hex HMAC-SHA256 of `{timestamp}.{rawBody}` with `sso_secret`, ±60 s → `{username, password}` once (`Cache::pull`), then 404 `not_found`; bad signature 401 `unauthorized`.
+
+### Ops
+
+- Posta → **Posta siparişleri** (`/billing/orders`, filters status/method/site; row → detail with billing details, notes, history). Confirm EFT = `ops.danger`; cancel / mark failed = `ops.write`. Audits: `comail.order_created|paid|failed|canceled|expired`, `comail.transfer_reported`, `comail.subscription_grace|expired`.
+- Posta → **Ödeme ayarları** (`/billing/settings`, edit = `ops.danger`, audit `billing.settings_updated` with `has_*` flags only). Shows the iyzico callback and the PayTR notification URL.
+- Package form: yearly price. A package with orders/subscriptions cannot be deleted. Site CoMail card: subscription status, period end, grace end, link to the site's orders.
+- MCP: `list_mail_orders` (read), `confirm_mail_order` (danger, `confirmed`), `cancel_mail_order` (write).
+
 ## Deploy
 
 1. Deploy Plane; `php artisan migrate --force` (creates the tables and seeds the three packages).
@@ -117,7 +175,8 @@ For sites still bound to Hostinger mail (`mailServer` is a ready Hostinger serve
 3. Cloudflare: keep `mail_template_enabled` on (the CoMail check already skips the Hostinger rows while CoMail exists) or turn it off on accounts that should never get template mail rows.
 4. New sites enroll by themselves. Existing ones: `php artisan ops:comail-enroll --all --dry-run`, then per site or `--all` (try deamon-test first).
 5. The CMS needs the `comail` module (CMS PR) before the configure push succeeds; until then the hourly reconcile keeps retrying.
+6. v2 billing: Posta → Ödeme ayarları (iyzico keys, PayTR merchant id/key/salt, IBAN; start in sandbox/test mode), PayTR panel Bildirim URL = `https://<plane>/pay/callback/paytr`, package yearly prices; webmail SSO secret via `php artisan ops:comail-sso-secret` into the webmail plugin config.
 
 ## Tests
 
-`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`.
+`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta, billing API, checkout, expiry, billing ops, webmail SSO) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`, `Support/FakeIyzico`, `Support/FakePaytr`.
