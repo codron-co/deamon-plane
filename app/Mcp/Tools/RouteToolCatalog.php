@@ -835,7 +835,7 @@ final class RouteToolCatalog
                 name: 'activate_comail_mx',
                 description: 'Switch a domain\'s mail to CoMail: replaces its MX and SPF and points autodiscover/autoconfig to CoMail. Mail at the old provider stops arriving. Only on the user\'s explicit request.',
                 route: 'ops.sites.comail.activate',
-                ability: McpToken::ABILITY_WRITE,
+                ability: McpToken::ABILITY_DANGER,
                 properties: $site + $domain + ['confirmed' => self::CONFIRMED],
                 required: ['site', 'domain', 'confirmed'],
                 params: ['site' => 'site', 'comailDomain' => 'comail_domain'],
