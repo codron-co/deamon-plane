@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 
 class MailServer extends Model
 {
@@ -34,7 +35,18 @@ class MailServer extends Model
      */
     protected $hidden = [
         'api_token',
+        'sso_secret',
     ];
+
+    protected static function booted(): void
+    {
+        // The webmail server signs SSO redeem calls with this; generated once per CoMail server.
+        static::saving(static function (self $server): void {
+            if ($server->provider === MailProvider::Mailcow && blank($server->getAttribute('sso_secret'))) {
+                $server->setAttribute('sso_secret', Str::random(48));
+            }
+        });
+    }
 
     /**
      * @return array<string, string>
@@ -44,6 +56,7 @@ class MailServer extends Model
         return [
             'provider' => MailProvider::class,
             'api_token' => 'encrypted',
+            'sso_secret' => 'encrypted',
             'is_enabled' => 'boolean',
             'last_probe_at' => 'datetime',
             'last_probe_payload' => 'array',

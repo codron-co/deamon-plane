@@ -29,6 +29,7 @@ class MailPackage extends Model
         'alias_limit',
         'domain_limit',
         'price_monthly',
+        'price_yearly',
         'currency',
         'is_default',
         'is_active',
@@ -47,6 +48,7 @@ class MailPackage extends Model
             'alias_limit' => 'integer',
             'domain_limit' => 'integer',
             'price_monthly' => 'decimal:2',
+            'price_yearly' => 'decimal:2',
             'is_default' => 'boolean',
             'is_active' => 'boolean',
             'sort' => 'integer',
@@ -56,6 +58,26 @@ class MailPackage extends Model
     public function sites(): HasMany
     {
         return $this->hasMany(Site::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(MailSubscription::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(MailOrder::class);
+    }
+
+    /**
+     * Price for a billing period (`monthly` / `yearly`); null when the package has none.
+     */
+    public function priceFor(string $period): ?string
+    {
+        $price = $period === MailOrder::PERIOD_YEARLY ? $this->price_yearly : $this->price_monthly;
+
+        return $price === null ? null : (string) $price;
     }
 
     public function auditLogs(): MorphMany

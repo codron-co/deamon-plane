@@ -295,6 +295,24 @@ class Site extends Model
     }
 
     /**
+     * Paid CoMail period (none = default package).
+     *
+     * @return HasOne<MailSubscription, $this>
+     */
+    public function mailSubscription(): HasOne
+    {
+        return $this->hasOne(MailSubscription::class);
+    }
+
+    /**
+     * @return HasMany<MailOrder, $this>
+     */
+    public function mailOrders(): HasMany
+    {
+        return $this->hasMany(MailOrder::class);
+    }
+
+    /**
      * Mail domains on the shared CoMail (mailcow) server, primary first.
      *
      * @return HasMany<SiteComailDomain, $this>

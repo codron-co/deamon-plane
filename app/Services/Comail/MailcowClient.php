@@ -276,6 +276,41 @@ class MailcowClient
         return $this->write('/delete/filter', [(string) $id]);
     }
 
+    // ── App passwords (webmail SSO) ─────────────────────────────────────
+
+    /**
+     * @return list<array<string, mixed>> {id, name, mailbox, active, created, ...}
+     */
+    public function appPasswords(string $mailbox): array
+    {
+        return $this->rows($this->get('/get/app-passwd/all/'.rawurlencode($mailbox)));
+    }
+
+    /**
+     * @param  list<string>  $protocols
+     * @return list<array<string, mixed>>
+     */
+    public function addAppPassword(string $mailbox, string $name, string $password, array $protocols): array
+    {
+        return $this->write('/add/app-passwd', [
+            'username' => $mailbox,
+            'app_name' => $name,
+            'app_passwd' => $password,
+            'app_passwd2' => $password,
+            'active' => 1,
+            'protocols' => $protocols,
+        ]);
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<array<string, mixed>>
+     */
+    public function deleteAppPasswords(array $ids): array
+    {
+        return $this->write('/delete/app-passwd', array_map('strval', $ids));
+    }
+
     // ── Transport ───────────────────────────────────────────────────────
 
     /**
