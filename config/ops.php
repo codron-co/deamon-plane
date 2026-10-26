@@ -54,6 +54,64 @@ return [
             'repository' => env('DEAMON_IMAGE_REGISTRY_REPOSITORY', 'deamon-cms'),
             'timeout' => (int) env('DEAMON_IMAGE_REGISTRY_TIMEOUT', 3),
         ],
+
+        /*
+        | How a new site's Coolify app is created (SiteProvisioner). `dockerimage`: a Coolify
+        | "Docker Image" app running `docker_image.name:<built commit>` with rolling
+        | (zero-downtime) deploys, set up like tools/ops/deamon-image/to-dockerimage.sh does.
+        | `dockercompose`: the git + compose app of before. A channel without an image
+        | builder always gets a compose app (there is no image to run).
+        */
+        'provision_pack' => env('DEAMON_PROVISION_PACK', 'dockerimage'),
+
+        'docker_image' => [
+            'name' => env('DEAMON_DOCKER_IMAGE_NAME', '127.0.0.1:5000/deamon-cms'),
+            'port' => 8080,
+            // The destination's network; the shared MySQL / Redis are on it too.
+            'ingress_network' => env('DEAMON_DOCKER_IMAGE_NETWORK', 'deamon-db'),
+            // The CMS compose app's limits (cpus 1.5, mem_limit 768m); the migrated apps kept them.
+            'limits_cpus' => env('DEAMON_DOCKER_IMAGE_CPUS', '1.5'),
+            'limits_memory' => env('DEAMON_DOCKER_IMAGE_MEMORY', '768m'),
+            'run_options' => '--pids-limit 256',
+            'health_check' => [
+                'path' => '/up',
+                'interval' => 5,
+                'timeout' => 5,
+                'retries' => 36,
+                'start_period' => 5,
+            ],
+            // Persistent volumes: name => mount path in the container.
+            'storages' => [
+                'deamon-storage' => '/var/www/html/storage/app/public',
+                'deamon-private' => '/var/www/html/storage/app/private',
+                'deamon-themes' => '/var/www/html/themes',
+            ],
+            // What the CMS compose file sets as constants. A Docker Image app has no
+            // compose file, so these are Coolify env rows (APP_URL / DEAMON_SITE_HOST
+            // follow the bound domains, see CoolifyApplicationService::setDomains).
+            'env' => [
+                'APP_NAME' => 'Deamon',
+                'APP_ENV' => 'production',
+                'APP_DEBUG' => 'false',
+                'APP_TIMEZONE' => 'Europe/Istanbul',
+                'LOG_CHANNEL' => 'stderr',
+                'DB_CONNECTION' => 'mysql',
+                'REDIS_CLIENT' => 'phpredis',
+                'QUEUE_CONNECTION' => 'redis',
+                'CACHE_STORE' => 'redis',
+                'SESSION_DRIVER' => 'redis',
+                'SESSION_SECURE_COOKIE' => 'true',
+                'TRUSTED_PROXIES' => '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16',
+                'FILESYSTEM_DISK' => 'public',
+                'MAIL_MAILER' => 'log',
+                'WAIT_FOR_DB' => 'true',
+                'WAIT_FOR_REDIS' => 'true',
+                'RUN_DEPLOY_TASKS' => 'true',
+                'CREATIVE_RENDER_URL' => '',
+                'HOST' => '0.0.0.0',
+                'NGINX_PORT' => '8080',
+            ],
+        ],
     ],
 
     'themes' => [
@@ -234,6 +292,9 @@ return [
         // Coolify refuses a create without one once the server has several destinations.
         // Default: srv2's standalone docker destination on the `coolify` network.
         'default_destination_uuid' => env('COOLIFY_DEFAULT_DESTINATION_UUID', 'gokgcs84s8s88gggwoows4ks'),
+        // Destination for new Docker Image site apps: srv2's "deamon" standalone docker
+        // (network deamon-db, where the shared MySQL / Redis run).
+        'image_destination_uuid' => env('COOLIFY_IMAGE_DESTINATION_UUID', '31gww8sy8nazbukhozgzlbzw'),
         'webhook_secret' => env('COOLIFY_WEBHOOK_SECRET'),
         'timeout' => (int) env('COOLIFY_HTTP_TIMEOUT', 30),
         'auto_rebind_domains' => filter_var(env('COOLIFY_AUTO_REBIND_DOMAINS', true), FILTER_VALIDATE_BOOLEAN),
