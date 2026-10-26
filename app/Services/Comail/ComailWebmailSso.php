@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Crypt;
  * mailbox (replacing the previous one-click password), keeps
  * `{address, password}` encrypted in the cache under a random 64-hex token for
  * 120 s, and the webmail server redeems it exactly once over a signed call.
- * The mailbox password itself is never known to Plane.
+ * The mailbox password itself is never known to Plane. The URL uses the
+ * mailbox domain's own `https://mail.<domain>` when it is usable
+ * (ComailWebmailHost), else the server's base_url: same Roundcube, same token.
  */
 class ComailWebmailSso
 {
@@ -29,6 +31,8 @@ class ComailWebmailSso
     public const SKEW_SECONDS = 60;
 
     private const PROTOCOLS = ['imap_access', 'smtp_access'];
+
+    public function __construct(private readonly ComailWebmailHost $host) {}
 
     /**
      * Replaces the mailbox's previous app password with the same `$appName`.
@@ -60,7 +64,7 @@ class ComailWebmailSso
 
         return [
             'token' => $token,
-            'url' => $server->comailBaseUrl().'/webmail/?'.http_build_query(['_task' => 'login', '_comail_sso' => $token]),
+            'url' => $this->host->forAddress($server, $address).'/webmail/?'.http_build_query(['_task' => 'login', '_comail_sso' => $token]),
             'expires_in' => self::TTL_SECONDS,
         ];
     }

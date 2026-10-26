@@ -76,7 +76,7 @@ Success bodies carry `"ok": true`. A single object (mailbox, alias, migration) i
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| GET | `/overview` | – | `package{name,slug,mailbox_limit,storage_mb,mailbox_max_quota_mb,alias_limit,domain_limit}`, `usage{mailboxes,aliases,domains,storage_allocated_mb,storage_used_bytes}`, `webmail_url` (`{base}`: Roundcube at the web root), `panel_url` (`{base}/?panel=1`: mail user panel — spam filter, app passwords, 2FA), `client{imap,pop3,smtp,smtp_alt,managesieve}`, `domains[{domain,is_primary,status,mx_active,dns_managed,webmail_url}]` (`https://mail.D` once MX is on CoMail, unless the last DNS check saw the `mail.D` CNAME missing or different; else null), `available_domains[]` |
+| GET | `/overview` | – | `package{name,slug,mailbox_limit,storage_mb,mailbox_max_quota_mb,alias_limit,domain_limit}`, `usage{mailboxes,aliases,domains,storage_allocated_mb,storage_used_bytes}`, `webmail_url` (Roundcube at the web root: the primary (else first) active CoMail domain's own `https://mail.D` when `ComailWebmailHost` finds it usable, else `{base}`), `panel_url` (`{base}/?panel=1`: mail user panel — spam filter, app passwords, 2FA), `client{imap,pop3,smtp,smtp_alt,managesieve}`, `domains[{domain,is_primary,status,mx_active,dns_managed,webmail_url}]` (`https://mail.D` once MX is on CoMail, unless the last DNS check saw the `mail.D` CNAME missing or different; else null), `available_domains[]` |
 | POST | `/domains` | `{domain}` | domain row, 201 (`domain_not_owned`, `limit_domains`; an already active own domain answers 200) |
 | DELETE | `/domains/{domain}` | – | `{ok:true}` (primary → `validation_failed`; mailboxes → `domain_has_mailboxes`) |
 | GET | `/domains/{domain}/dns` | – | `{domain,dns_managed,mx_active,records[{key,type,name,value,priority?,status,current?}]}` (fresh check) |
@@ -187,7 +187,9 @@ Order row: `{id, reference, package{slug,name}, package_slug, package_name, peri
 
 ### Webmail SSO
 
-`webmail-login` deletes the mailbox's previous `CoMail tek tık giriş` app passwords, creates a new one (32 chars, imap + smtp), stores `{address, password}` encrypted in the cache under a random 64-hex token for 120 s, audits `comail.webmail_login` (address only) and returns `{base_url}/webmail/?_task=login&_comail_sso={token}`.
+`webmail-login` deletes the mailbox's previous `CoMail tek tık giriş` app passwords, creates a new one (32 chars, imap + smtp), stores `{address, password}` encrypted in the cache under a random 64-hex token for 120 s, audits `comail.webmail_login` (address only) and returns `{host}/webmail/?_task=login&_comail_sso={token}`.
+
+`{host}` comes from `ComailWebmailHost`: the mailbox domain's own `https://mail.<domain>` when it is usable, else the server's `base_url`. Every `mail.<domain>` pointing at mailcow serves the same Roundcube (Traefik TLS passthrough), so the token works on either. Usable = every A record of `mail.<domain>` (CNAME chain followed by the resolver, `DnsResolver`) is one of the IPs the `base_url` host resolves to (never hard-coded) **and** `GET https://mail.<domain>/webmail/` with certificate verification answers 200 or 302 within 4 s (connect and total timeout, redirects not followed). The answer is cached per server + domain: usable 30 min, not usable 10 min (`comail-webmail-host:*`). Any lookup/probe/cache error means "not usable" and never throws. Failed HTTPS probes log `comail.webmail_host_probe_failed` (info).
 
 `POST /internal/comail/v1/sso/redeem` (webmail server only, `throttle:comail-sso` 30/min/IP): body `{token}`, headers `X-CoMail-Timestamp` + `X-CoMail-Signature` = hex HMAC-SHA256 of `{timestamp}.{rawBody}` with `sso_secret`, ±60 s → `{username, password}` once (`Cache::pull`), then 404 `not_found`; bad signature 401 `unauthorized`.
 
@@ -211,4 +213,4 @@ Order row: `{id, reference, package{slug,name}, package_slug, package_name, peri
 
 ## Tests
 
-`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta, billing API, checkout, expiry, billing ops, webmail SSO) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`, `Support/FakeIyzico`, `Support/FakePaytr`.
+`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta, billing API, checkout, expiry, billing ops, webmail SSO, webmail host) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`, `Support/FakeIyzico`, `Support/FakePaytr`.
