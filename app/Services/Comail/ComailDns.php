@@ -393,6 +393,11 @@ class ComailDns
         }
 
         try {
+            // Any record at or under D makes D an existing name: a parent wildcard
+            // (*.example.com) stops answering for it and a site served by that wildcard
+            // goes offline (demo.basutsilo.com, 2026-10-26). Pin the wildcard first.
+            $this->pinWildcardAddress($client, $zoneId, $plan['mx']['name']);
+
             $apex = $this->rowsAt($client, $zoneId, $plan['mx']['name']);
             $mx = array_values(array_filter($apex, static fn (array $r): bool => strtoupper((string) ($r['type'] ?? '')) === 'MX'));
             $spf = array_values(array_filter($apex, static fn (array $r): bool => strtoupper((string) ($r['type'] ?? '')) === 'TXT'
@@ -472,6 +477,39 @@ class ComailDns
             $client->listDnsRecords($zoneId, ['name' => $fqdn, 'per_page' => 100]),
             static fn (array $row): bool => strcasecmp(rtrim((string) ($row['name'] ?? ''), '.'), $fqdn) === 0,
         ));
+    }
+
+    /**
+     * When $fqdn has no address record of its own but a parent wildcard answers for it,
+     * copy the wildcard's A/AAAA/CNAME records onto $fqdn (same content and proxy flag).
+     */
+    private function pinWildcardAddress(CloudflareClient $client, string $zoneId, string $fqdn): void
+    {
+        $dot = strpos($fqdn, '.');
+        if ($dot === false) {
+            return;
+        }
+
+        $address = static fn (array $r): bool => in_array(strtoupper((string) ($r['type'] ?? '')), ['A', 'AAAA', 'CNAME'], true);
+        if (array_filter($this->rowsAt($client, $zoneId, $fqdn), $address) !== []) {
+            return;
+        }
+
+        $wildcard = array_values(array_filter($this->rowsAt($client, $zoneId, '*.'.substr($fqdn, $dot + 1)), $address));
+        foreach ($wildcard as $row) {
+            $client->createDnsRecord($zoneId, [
+                'type' => strtoupper((string) $row['type']),
+                'name' => $fqdn,
+                'content' => (string) $row['content'],
+                'proxied' => (bool) ($row['proxied'] ?? false),
+                'ttl' => 1,
+                'comment' => 'CoMail: explicit copy of the wildcard',
+            ]);
+        }
+
+        if ($wildcard !== []) {
+            Log::info('comail.wildcard_pinned', ['name' => $fqdn, 'records' => count($wildcard)]);
+        }
     }
 
     /**
