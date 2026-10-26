@@ -670,6 +670,9 @@ return [
     ],
     'provision_errors' => [
         'not_provisionable' => 'Yalnız taslak veya başarısız siteler provision edilebilir.',
+        'no_default_database_server' => 'Varsayılan paylaşılan MySQL sunucusu yok. Veritabanları sayfasında bir sunucuyu varsayılan yapın: yeni sitelerin kendi MySQL’i yok.',
+        'no_default_redis_server' => 'Varsayılan paylaşılan Redis sunucusu yok. `php artisan ops:redis-server … --default` ile bir sunucu kaydedin: yeni sitelerin kendi Redis’i yok.',
+        'ran_on_local_services' => 'Bu site daha önce kendi MySQL’i veya Redis’iyle çalıştı. Önce verisini paylaşılan sunuculara taşıyın (tools/ops/move-site-db.sh, move-site-redis.sh), sonra yeniden provision edin.',
     ],
     'theme_flash' => [
         'reinstall_queued' => 'Tema siteye yeniden gönderiliyor. Bitince durum “aktif” olur.',

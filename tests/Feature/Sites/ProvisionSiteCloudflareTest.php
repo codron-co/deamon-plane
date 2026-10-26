@@ -31,6 +31,7 @@ class ProvisionSiteCloudflareTest extends TestCase
 
         $this->seed(RoleSeeder::class);
         Http::preventStrayRequests();
+        $this->fakeSharedPlacement();
 
         CoolifySetting::factory()->create([
             'base_url' => 'https://coolify.test',

@@ -4,12 +4,14 @@ namespace Tests;
 
 use App\Enums\Channel;
 use App\Services\Coolify\EnvCatalog\CoolifyEnvCatalogSync;
+use App\Services\Sites\NewSitePlacement;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Mockery\MockInterface;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -73,6 +75,24 @@ abstract class TestCase extends BaseTestCase
         }
 
         return $value;
+    }
+
+    /**
+     * Provisioning puts every new site on the shared MySQL and Redis (NewSitePlacement).
+     * Tests about other parts of the flow stub that step; ProvisionSharedServicesTest runs it.
+     */
+    protected function fakeSharedPlacement(): void
+    {
+        $this->mock(NewSitePlacement::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('targets')->andReturn([]);
+            $mock->shouldReceive('place')->andReturn([
+                'database_server' => 'Deamon MySQL',
+                'database' => 'site_test',
+                'redis_server' => 'Deamon Redis',
+                'redis_db' => 2,
+                'redis_prefix' => 'site_test:',
+            ]);
+        });
     }
 
     /**

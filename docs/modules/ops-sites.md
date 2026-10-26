@@ -152,6 +152,7 @@ Coolify UUIDs are **not** free-text on site create. Super Admin may open a colla
 - Preflight before create POST (Turkish): selected server in live `listServers`; Git source in live sources list. 422 `errors` are shown on the provision flash and in the audit error field.
 - Success → `coolify_app_uuid` + status `active`. Agent health is a separate poll (does not gate provision). Failure → `error` + audit.
 - Retry reuses an existing Coolify app uuid (does not DELETE the app).
+- Before the first deploy the site is placed on the default shared MySQL and Redis (DB_* / REDIS_* in Coolify, no restart); no default server fails the provision. See [database-servers.md](database-servers.md#new-sites-provision).
 
 ## Channel switch
 

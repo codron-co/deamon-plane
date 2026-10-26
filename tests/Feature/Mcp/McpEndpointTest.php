@@ -10,6 +10,7 @@ use App\Mcp\Tools\RouteToolCatalog;
 use App\Models\AuditLog;
 use App\Models\Deployment;
 use App\Models\McpToken;
+use App\Models\RedisServer;
 use App\Models\Site;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
@@ -118,6 +119,25 @@ class McpEndpointTest extends TestCase
         $this->assertFalse($detail['isError']);
         $this->assertSame((string) $site->id, $detail['structuredContent']['id']);
         $this->assertArrayNotHasKey('agent_secret_encrypted', $detail['structuredContent']);
+        $this->assertSame(['server' => null, 'db' => null, 'prefix' => null], $detail['structuredContent']['redis']);
+    }
+
+    public function test_get_site_shows_the_shared_redis_without_the_password(): void
+    {
+        $server = RedisServer::factory()->create(['name' => 'Deamon Redis']);
+        Site::factory()->create(['slug' => 'nova'])->forceFill([
+            'redis_server_id' => $server->id,
+            'redis_db' => 4,
+            'redis_username' => 'site_nova',
+            'redis_password_encrypted' => 'site-redis-password-never-shown-000001',
+            'redis_shared' => true,
+        ])->save();
+        [, $plain] = McpToken::issue($this->user(OpsRole::Viewer), 'agent', ['read']);
+
+        $detail = $this->tool('get_site', ['site' => 'nova'], $plain);
+
+        $this->assertSame(['server' => 'Deamon Redis', 'db' => 4, 'prefix' => 'site_nova:'], $detail['structuredContent']['redis']);
+        $this->assertStringNotContainsString('site-redis-password-never-shown', (string) json_encode($detail));
     }
 
     public function test_create_site_runs_the_panel_store_route_with_its_validation_and_audit(): void

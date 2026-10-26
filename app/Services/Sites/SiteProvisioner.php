@@ -44,6 +44,7 @@ class SiteProvisioner
         private readonly SiteAgentSecretInjector $agentSecrets,
         private readonly CloudflareZoneService $cloudflare,
         private readonly SiteLanding $landing,
+        private readonly NewSitePlacement $placement,
     ) {}
 
     public function canStart(Site $site): bool
@@ -59,6 +60,7 @@ class SiteProvisioner
 
         $this->assertCloudflareReady($this->cloudflareSettingsFor($site));
         $this->assertCoolifyReady($site);
+        $this->placement->targets($site);
 
         $connection = $this->connectionFor($site);
         if ($connection instanceof CoolifyConnection && blank($site->coolify_app_uuid)) {
@@ -95,6 +97,10 @@ class SiteProvisioner
 
     public function provision(Site $site, ?int $actorUserId = null, ?string $ip = null): Deployment
     {
+        // Checked again here (start() did too): a default server removed meanwhile must
+        // fail the job before Cloudflare or Coolify is touched.
+        $this->placement->targets($site);
+
         $this->provisionOnCloudflare($site, $actorUserId, $ip);
 
         return $this->provisionOnCoolify($site, $actorUserId, $ip);
@@ -173,6 +179,17 @@ class SiteProvisioner
         } catch (SiteProvisionException) {
             // Provision continues; operator can use Generate & inject on the site.
         }
+
+        // The CMS compose has no `mysql` / `redis` of its own any more: the first build
+        // must already find the shared DB_* / REDIS_* env. Failing here fails the provision
+        // (no deploy); a re-provision repeats the idempotent steps.
+        $placed = $this->placement->place($site, $coolify);
+        $site->auditLogs()->create([
+            'actor_user_id' => $actorUserId,
+            'action' => 'site.shared_services_placed',
+            'after' => ['slug' => $site->slug] + $placed,
+            'ip' => $ip,
+        ]);
 
         // The first build waits in the Plane line when the host's build cap is
         // full; the site stays `provisioning` until the dispatcher starts it.

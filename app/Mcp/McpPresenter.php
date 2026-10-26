@@ -8,11 +8,13 @@ use App\Models\DatabaseServer;
 use App\Models\Deployment;
 use App\Models\MailServer;
 use App\Models\OpsBackgroundJob;
+use App\Models\RedisServer;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
 use App\Models\User;
+use App\Services\Databases\SiteRedisPlacement;
 use BackedEnum;
 use DateTimeInterface;
 
@@ -106,6 +108,12 @@ final class McpPresenter
             'database' => [
                 'server' => DatabaseServer::query()->find($site->database_server_id)?->name,
                 'database' => $site->db_database,
+            ],
+            // Where the site runs now; a pair kept reserved after a move back is not shown.
+            'redis' => [
+                'server' => $site->usesSharedRedis() ? RedisServer::query()->find($site->redis_server_id)?->name : null,
+                'db' => $site->usesSharedRedis() ? $site->redis_db : null,
+                'prefix' => $site->usesSharedRedis() ? SiteRedisPlacement::prefixFor($site) : null,
             ],
             'turnstile' => $site->turnstile === null ? null : [
                 'enabled' => (bool) $site->turnstile->enabled,

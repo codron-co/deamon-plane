@@ -490,7 +490,10 @@ class CoolifyAppEnvSync
         return trim((string) $value) === '';
     }
 
-    private function isPlaceholder(?string $value): bool
+    /**
+     * Blank or an example placeholder (`change-me…`): not a real secret yet.
+     */
+    public static function isPlaceholder(?string $value): bool
     {
         $trim = strtolower(trim((string) $value));
         if ($trim === '') {

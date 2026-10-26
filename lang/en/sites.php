@@ -669,6 +669,9 @@ return [
     ],
     'provision_errors' => [
         'not_provisionable' => 'Only draft or failed sites can be provisioned.',
+        'no_default_database_server' => 'No default shared MySQL server. Mark one as default on the Databases page: new sites have no MySQL of their own.',
+        'no_default_redis_server' => 'No default shared Redis server. Register one with `php artisan ops:redis-server … --default`: new sites have no Redis of their own.',
+        'ran_on_local_services' => 'This site already ran on its own MySQL or Redis. Move its data to the shared servers first (tools/ops/move-site-db.sh, move-site-redis.sh), then provision again.',
     ],
     'theme_flash' => [
         'reinstall_queued' => 'The theme is being sent to the site again. Status turns active when done.',

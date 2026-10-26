@@ -25,6 +25,23 @@ For a site on a shared server, `CoolifyAppEnvSync::sync()` writes all four on ev
 they are in `BOOTSTRAP_KEYS`, so prune never removes them; a deleted or edited value cannot
 send a moved site back to its stale local database.
 
+## New sites (provision)
+
+Provisioning puts every new site on the **default** shared MySQL and the **default** shared
+Redis before its first build (`NewSitePlacement`, called from
+`SiteProvisioner::provisionOnCoolify` after the Coolify app exists and the agent secret is
+written, before the deploy is requested). The CMS compose is losing its own `mysql` / `redis`
+services, so a site left on the compose defaults would not boot. Steps are the ones the
+commands run, with no data to copy and no restart: Plane keeps (or generates) the site's
+`DB_PASSWORD` and writes it to Coolify, then `SiteDatabaseMover::prepare` + `switchTo(restart:
+false)`, then `SiteRedisMover::prepare` + `switchTo(restart: false)`; audit
+`site.shared_services_placed`. A re-provision reuses the server, schema, DB pair and passwords
+the site already has (every step is idempotent). No default server → `start()` refuses with
+`sites.provision_errors.no_default_*`, and the job fails the same way (`site.provision_failed`,
+no Cloudflare/Coolify call, no deploy); there is no fallback to local. A site with a finished
+build that still runs on its own MySQL or Redis is refused (`ran_on_local_services`): move its
+data with `move-site-db.sh` / `move-site-redis.sh` first.
+
 ## Moving a site
 
 `php artisan ops:site-db <action> <site>` (slug, id, primary domain or Coolify app uuid):
