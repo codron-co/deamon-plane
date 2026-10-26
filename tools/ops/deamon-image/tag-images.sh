@@ -17,6 +17,11 @@ while read -r branch uuid; do
   done
 done < "$DIR/builders"
 
+# Safety net: a Deamon site must never auto-deploy (a push would start an image that is not
+# built yet) and needs SOURCE_COMMIT for its image tag. Covers sites Plane creates later.
+changed=$(docker exec coolify-db psql -U coolify -d coolify -At -c "UPDATE application_settings s SET is_auto_deploy_enabled = false, include_source_commit_in_build = true FROM applications a WHERE s.application_id = a.id AND a.git_repository ILIKE '%codron-co/deamon%' AND a.git_repository NOT ILIKE '%plane%' AND a.name NOT LIKE 'deamon-image-%' AND (s.is_auto_deploy_enabled OR NOT s.include_source_commit_in_build) RETURNING a.name" 2>/dev/null | grep -v '^UPDATE' | paste -sd' ')
+[ -n "$changed" ] && log "enforced auto-deploy off + source commit on: $changed"
+
 used=$(docker ps -a --format '{{.Image}}' | sort -u)
 prune() { # repository: drop all but the newest KEEP tags no container uses
   docker images --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' "$1" | sort -r | tail -n +$((KEEP + 1)) | cut -d'|' -f2 |
