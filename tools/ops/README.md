@@ -126,8 +126,10 @@ Coolify auto-deploy is off and `include_source_commit_in_build` is on (Coolify l
 - `deamon-image/release.sh <alpha|beta> [list]`: takes the builder's newest finished commit,
   requires its image, then per site (CPU < 80 %, queue empty) pins the Coolify app to that
   commit, deploys, and requires finished + `deamon-cms:<sha>` + healthy + `/up` 200. Stops at the
-  first bad site with a WhatsApp alert. ~1 min per site, ~2 s of downtime (deamon-test probe).
-  Log `release.log`.
+  first bad site with a WhatsApp alert (running ones finish). Up to `PARALLEL` (3) sites at once;
+  Coolify `concurrent_builds` on this host is 3. A site already healthy on the target image is
+  skipped, so a stopped release can be run again. ~1 min per site, ~2-3 s of downtime
+  (deamon-test probe). Log `release.log`.
 - `deamon-image/run-after-build.sh <builder-deployment-uuid> <branch>`: waits for that builder
   deployment, then runs `release.sh` (start with `setsid -f`).
 - Never deploy a site to a commit whose image does not exist: the site cannot start.

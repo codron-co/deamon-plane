@@ -27,14 +27,12 @@ n=$(wc -w <<< "$uuids"); log "=== start: ${sha:0:8} to $n sites"
 
 cpu_busy() { local a b; a=($(awk '/^cpu /{print $2+$3+$4+$6+$7+$8+$9, $5}' /proc/stat)); sleep 5
   b=($(awk '/^cpu /{print $2+$3+$4+$6+$7+$8+$9, $5}' /proc/stat)); echo $(( 100 * (b[0]-a[0]) / ((b[0]-a[0]) + (b[1]-a[1]) + 1) )); }
-done_n=0
-for u in $uuids; do
+PARALLEL=${PARALLEL:-3}
+RES=$(mktemp -d); trap 'rm -rf "$RES"' EXIT
+
+deploy_site() { # <uuid>: deploy one site to $sha and verify; result file $RES/<uuid>.ok|.fail
+  local u=$1 name c s img h up out since try i
   name=$(q "SELECT name FROM applications WHERE uuid = '$u'")
-  c=$(docker ps --format '{{.Names}}' | grep "^app-$u" | head -1)
-  if [ -n "$c" ] && [ "$(docker inspect "$c" --format '{{.Config.Image}}' 2>/dev/null)" = "deamon-cms:$sha" ]      && [ "$(docker inspect "$c" --format '{{.State.Health.Status}}' 2>/dev/null)" = healthy ]; then
-    done_n=$((done_n + 1)); log "skip $name ($u): already on ${sha:0:8}"; continue
-  fi
-  for i in $(seq 1 120); do [ "$(cpu_busy)" -lt "$MAX_CPU" ] && [ "$(q "SELECT COUNT(*) FROM application_deployment_queues WHERE status IN ('queued','in_progress')")" = 0 ] && break; sleep 25; done
   # Coolify leaves SOURCE_COMMIT empty unless this is on; the compose image tag needs it.
   q "UPDATE application_settings SET include_source_commit_in_build = true WHERE application_id = (SELECT id FROM applications WHERE uuid = '$u')" >/dev/null
   since=$(date -u '+%F %T')
@@ -45,7 +43,7 @@ for u in $uuids; do
     grep -q 'deployment queued' <<< "$out" && break
     log "deploy call for $name did not queue (try $try): ${out:0:160}"; sleep 30
   done
-  s=""; for i in $(seq 1 60); do
+  s=""; for i in $(seq 1 90); do
     s=$(q "SELECT q.status FROM application_deployment_queues q JOIN applications a ON a.id::text = q.application_id::text WHERE a.uuid = '$u' AND q.created_at >= '$since'::timestamp - interval '10 seconds' ORDER BY q.id DESC LIMIT 1")
     case "$s" in finished|failed|cancelled*) break;; esac; sleep 5; done
   sleep 15
@@ -55,10 +53,31 @@ for u in $uuids; do
   for i in $(seq 1 12); do [ "$h" = healthy ] && [ "$up" = 200 ] && break; sleep 10
     h=$(docker inspect "$c" --format '{{.State.Health.Status}}' 2>/dev/null); up=$(docker exec "$c" curl -s -o /dev/null -m 10 -w '%{http_code}' http://127.0.0.1:8080/up 2>/dev/null); done
   if [ "$s" = finished ] && [ "$img" = "deamon-cms:$sha" ] && [ "$h" = healthy ] && [ "$up" = 200 ]; then
-    done_n=$((done_n + 1)); log "ok $name ($u)"
+    touch "$RES/$u.ok"; log "ok $name ($u)"
   else
-    alert "$name sorunlu (deploy=$s image=$img health=$h up=$up); $done_n/$n site yayında, sıra durdu"; exit 1
+    echo "$name (deploy=$s image=$img health=$h up=$up)" > "$RES/$u.fail"; log "FAIL $name ($u): deploy=$s image=$img health=$h up=$up"
   fi
+}
+
+# Up to PARALLEL sites at once (Coolify runs 3 deployments on this host). After the first
+# failure no new site starts; the running ones finish, then the run stops with an alert.
+for u in $uuids; do
+  ls "$RES"/*.fail >/dev/null 2>&1 && break
+  c=$(docker ps --format '{{.Names}}' | grep "^app-$u" | head -1)
+  if [ -n "$c" ] && [ "$(docker inspect "$c" --format '{{.Config.Image}}' 2>/dev/null)" = "deamon-cms:$sha" ]      && [ "$(docker inspect "$c" --format '{{.State.Health.Status}}' 2>/dev/null)" = healthy ]; then
+    touch "$RES/$u.skip"; log "skip $(q "SELECT name FROM applications WHERE uuid = '$u'") ($u): already on ${sha:0:8}"; continue
+  fi
+  while [ "$(jobs -rp | wc -l)" -ge "$PARALLEL" ]; do wait -n; done
+  for i in $(seq 1 120); do
+    [ "$(cpu_busy)" -lt "$MAX_CPU" ] && [ "$(q "SELECT COUNT(*) FROM application_deployment_queues WHERE status IN ('queued','in_progress')")" -lt "$PARALLEL" ] && break; sleep 20
+  done
+  deploy_site "$u" &
+  sleep 3
 done
+wait
+done_n=$(( $(ls "$RES"/*.ok 2>/dev/null | wc -l) + $(ls "$RES"/*.skip 2>/dev/null | wc -l) ))
+if ls "$RES"/*.fail >/dev/null 2>&1; then
+  alert "$(cat "$RES"/*.fail | paste -sd';') sorunlu; $done_n/$n site yayında, sıra durdu"; exit 1
+fi
 log "=== done: $done_n/$n sites on deamon-cms:${sha:0:8}"
 /usr/local/bin/wa-alert.sh "Deamon yayın ($BRANCH) bitti: $done_n site ${sha:0:8} sürümünde." >/dev/null 2>&1 || true
