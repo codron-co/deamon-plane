@@ -46,6 +46,24 @@ class FakeMailcow
 
     public bool $dkimWithDomain = true;
 
+    /** @var array<string, string> mailbox => "low,high" (none = the server default) */
+    public array $spamScores = [];
+
+    /** @var array<int, array{prefid: int, object: string, list: string, value: string}> */
+    public array $policies = [];
+
+    /** @var array<int, array<string, mixed>> quarantine rows by id */
+    public array $quarantine = [];
+
+    /** @var array<string, array{value: string, frame: string}> */
+    public array $rateLimits = [];
+
+    /** @var array<string, array<string, mixed>> MTA-STS policies by domain */
+    public array $mtaSts = [];
+
+    /** @var list<int> released quarantine ids */
+    public array $released = [];
+
     /** Answer every call with this HTTP status (a broken upstream). */
     public ?int $httpStatus = null;
 
@@ -105,6 +123,22 @@ class FakeMailcow
         $this->nextId++;
     }
 
+    public function quarantineItem(int $id, string $rcpt, array $attributes = []): void
+    {
+        $this->quarantine[$id] = $attributes + [
+            'id' => $id,
+            'qid' => 'Q'.$id,
+            'subject' => 'Fatura '.$id,
+            'virus_flag' => 0,
+            'score' => 16.5,
+            'rcpt' => $rcpt,
+            'sender' => 'spam@spam.test',
+            'action' => 'reject',
+            'created' => 1793000000 + $id,
+            'notified' => 0,
+        ];
+    }
+
     /**
      * @return list<string>
      */
@@ -123,6 +157,29 @@ class FakeMailcow
     {
         if ($path === '/get/status/version') {
             return ['version' => '2026-09'];
+        }
+        if (preg_match('~^/get/rl-domain/(.+)$~', $path, $m)) {
+            return $this->rateLimits[urldecode($m[1])] ?? [];
+        }
+        if (preg_match('~^/get/spam-score/(.+)$~', $path, $m)) {
+            // Live shape (2026-10-26): {"score": "8,15"}, the server default without a custom pair.
+            return ['score' => $this->spamScores[urldecode($m[1])] ?? '8,15'];
+        }
+        if (preg_match('~^/get/policy_(wl|bl)_mailbox/(.+)$~', $path, $m)) {
+            $address = urldecode($m[2]);
+            $domain = substr((string) strrchr($address, '@'), 1);
+            $rows = [];
+            foreach ($this->policies as $row) {
+                // mailcow lists the mailbox's own entries and the domain-wide ones.
+                if ($row['list'] === $m[1] && ($row['object'] === $address || $row['object'] === $domain)) {
+                    $rows[] = ['object' => $row['object'], 'value' => $row['value'], 'prefid' => $row['prefid']];
+                }
+            }
+
+            return $rows;
+        }
+        if ($path === '/get/quarantine/all') {
+            return array_values($this->quarantine);
         }
         if (preg_match('~^/get/domain/(.+)$~', $path, $m)) {
             return $this->domains[urldecode($m[1])] ?? [];
@@ -192,6 +249,52 @@ class FakeMailcow
                 $this->dkim[$domain] = $this->dkimRow();
 
                 return [$this->success('dkim_added', $domain)];
+            case '/add/mta-sts':
+                $domain = (string) $body['domain'];
+                if (isset($this->mtaSts[$domain])) {
+                    // The real server answers the database error text (primary key = domain).
+                    return [['type' => 'danger', 'log' => [], 'msg' => "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '".$domain."' for key 'PRIMARY'"]];
+                }
+                $this->mtaSts[$domain] = $body;
+
+                return [$this->success('mta_sts_added', $domain)];
+            case '/edit/spam-score':
+                foreach ($body['items'] as $address) {
+                    $this->spamScores[$address] = (string) $body['attr']['spam_score'];
+                }
+
+                return [$this->success('mailbox_modified', $body['items'][0])];
+            case '/add/mailbox-policy':
+                foreach ($this->policies as $row) {
+                    if ($row['object'] === $body['username'] && $row['value'] === $body['object_from']) {
+                        return [$this->danger('policy_list_from_exists', (string) $body['username'])];
+                    }
+                }
+                $id = $this->nextId++;
+                $this->policies[$id] = ['prefid' => $id, 'object' => (string) $body['username'], 'list' => (string) $body['object_list'], 'value' => (string) $body['object_from']];
+
+                return [$this->success('mailbox_modified', (string) $body['username'])];
+            case '/delete/mailbox-policy':
+                foreach ($body as $id) {
+                    unset($this->policies[(int) $id]);
+                }
+
+                return [$this->success('item_deleted', (string) $body[0])];
+            case '/edit/qitem':
+                foreach ($body['items'] as $id) {
+                    if ($body['attr']['action'] === 'release') {
+                        $this->released[] = (int) $id;
+                        unset($this->quarantine[(int) $id]);
+                    }
+                }
+
+                return [$this->success('item_released', (string) $body['items'][0])];
+            case '/delete/qitem':
+                foreach ($body as $id) {
+                    unset($this->quarantine[(int) $id]);
+                }
+
+                return [$this->success('item_deleted', (string) $body[0])];
             case '/add/mailbox':
                 $address = $body['local_part'].'@'.$body['domain'];
                 if (isset($this->mailboxes[$address])) {

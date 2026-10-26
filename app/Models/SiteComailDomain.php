@@ -19,6 +19,9 @@ class SiteComailDomain extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    /** DMARC policies a site may pick, loosest first. */
+    public const DMARC_POLICIES = ['none', 'quarantine', 'reject'];
+
     /**
      * @var list<string>
      */
@@ -30,6 +33,9 @@ class SiteComailDomain extends Model
         'mailcow_synced_at',
         'dkim_selector',
         'dkim_txt',
+        'dmarc_policy',
+        'mta_sts_id',
+        'report_auth_at',
         'mx_active_at',
         'dns_checked_at',
         'dns_check',
@@ -45,6 +51,7 @@ class SiteComailDomain extends Model
             'is_primary' => 'boolean',
             'mailcow_synced_at' => 'datetime',
             'mx_active_at' => 'datetime',
+            'report_auth_at' => 'datetime',
             'dns_checked_at' => 'datetime',
             'dns_check' => 'array',
         ];
@@ -63,6 +70,11 @@ class SiteComailDomain extends Model
     public function mxActive(): bool
     {
         return $this->mx_active_at !== null;
+    }
+
+    public function dmarcPolicy(): string
+    {
+        return in_array($this->dmarc_policy, self::DMARC_POLICIES, true) ? (string) $this->dmarc_policy : 'none';
     }
 
     /**

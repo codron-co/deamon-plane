@@ -1,12 +1,26 @@
 <?php
 
 use App\Http\Controllers\Internal\SiteComailController;
+use App\Http\Controllers\Internal\SiteComailSecurityController;
 use App\Http\Middleware\EnsureSiteMailSignature;
 use Illuminate\Support\Facades\Route;
 
 // CMS → Plane CoMail API, prefix internal/site/v1/comail (docs/modules/comail.md).
 Route::middleware(['throttle:site-comail', EnsureSiteMailSignature::class])->group(function (): void {
     Route::get('/overview', [SiteComailController::class, 'overview']);
+
+    // v3: mail security, spam filter and quarantine (CONTRACT-v3-security).
+    Route::get('/security', [SiteComailSecurityController::class, 'show']);
+    Route::post('/domains/{domain}/dmarc', [SiteComailSecurityController::class, 'dmarc']);
+    Route::get('/mailboxes/{address}/spam', [SiteComailSecurityController::class, 'spam']);
+    Route::put('/mailboxes/{address}/spam', [SiteComailSecurityController::class, 'updateSpam']);
+    Route::post('/mailboxes/{address}/spam/{list}', [SiteComailSecurityController::class, 'storeSpamEntry'])
+        ->whereIn('list', ['allow', 'block']);
+    Route::delete('/mailboxes/{address}/spam/{list}/{id}', [SiteComailSecurityController::class, 'destroySpamEntry'])
+        ->whereIn('list', ['allow', 'block']);
+    Route::get('/quarantine', [SiteComailSecurityController::class, 'quarantine']);
+    Route::post('/quarantine/{id}/release', [SiteComailSecurityController::class, 'releaseQuarantine']);
+    Route::delete('/quarantine/{id}', [SiteComailSecurityController::class, 'destroyQuarantine']);
 
     Route::post('/domains', [SiteComailController::class, 'storeDomain']);
     Route::delete('/domains/{domain}', [SiteComailController::class, 'destroyDomain']);

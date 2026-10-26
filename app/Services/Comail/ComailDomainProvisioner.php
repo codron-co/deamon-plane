@@ -113,11 +113,12 @@ class ComailDomainProvisioner
             if ($client->domain($domain) === null) {
                 // add/domain also creates the DKIM key (selector dkim, 2048) and
                 // answers with two success elements (dkim_added, domain_added).
+                // Outbound limit per hour from the package (300); edits never touch it.
                 $client->addDomain($domain, $attributes + [
                     'description' => mb_substr('Deamon '.$site->slug, 0, 255),
                     'active' => 1,
-                    'rl_value' => '',
-                    'rl_frame' => 's',
+                    'rl_value' => (string) $this->limits->package($site)->rateLimitPerHour(),
+                    'rl_frame' => 'h',
                     'restart_sogo' => 1,
                 ] + self::routingAttributes($relay));
             } else {
@@ -241,6 +242,9 @@ class ComailDomainProvisioner
             $client->deleteDomain($row->domain);
         }
 
+        // mailcow drops the domain's MTA-STS policy with it; the DMARC report
+        // authorization lives in Plane's zone.
+        app(ComailSecurity::class)->removeReportAuthorization($row);
         $row->delete();
     }
 

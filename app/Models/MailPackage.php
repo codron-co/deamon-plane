@@ -33,6 +33,7 @@ class MailPackage extends Model
         'is_default',
         'is_active',
         'sort',
+        'rate_limit_per_hour',
     ];
 
     /**
@@ -50,6 +51,7 @@ class MailPackage extends Model
             'is_default' => 'boolean',
             'is_active' => 'boolean',
             'sort' => 'integer',
+            'rate_limit_per_hour' => 'integer',
         ];
     }
 
@@ -113,6 +115,14 @@ class MailPackage extends Model
             self::query()->whereKeyNot($this->getKey())->update(['is_default' => false]);
             $this->forceFill(['is_default' => true, 'is_active' => true])->save();
         });
+    }
+
+    /**
+     * Outbound messages per hour for each mailcow domain of the package (default 300).
+     */
+    public function rateLimitPerHour(): int
+    {
+        return max(1, (int) ($this->rate_limit_per_hour ?? 300));
     }
 
     public function defaultMailboxQuotaMb(): int

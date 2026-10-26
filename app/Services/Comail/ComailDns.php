@@ -22,6 +22,10 @@ use Illuminate\Support\Facades\Log;
  *  TXT _dmarc.D (only when none) · CNAME mail./autodiscover./autoconfig.D →
  *  mail host · SRV _autodiscover._tcp.D 0 1 443 mail host.
  *
+ * Once CoMail receives D's mail (local mode) the plan also carries the v3 mail
+ * security records (ComailSecurityRecords: DMARC with reports, MTA-STS, TLS-RPT),
+ * written by ComailSecurity. Relay-mode domains keep exactly the v1 set.
+ *
  * Apply never touches a customer's mail routing: MX and SPF are only written
  * when D has no MX at all. Activate is the explicit switch. Zones outside
  * Plane's Cloudflare are never written; the plan is returned for manual entry.
@@ -63,11 +67,21 @@ class ComailDns
         if (filled($row->dkim_txt)) {
             $records[] = ['key' => 'dkim', 'type' => 'TXT', 'name' => $selector.'._domainkey.'.$domain, 'value' => trim((string) $row->dkim_txt)];
         }
-        $records[] = ['key' => 'dmarc', 'type' => 'TXT', 'name' => '_dmarc.'.$domain, 'value' => 'v=DMARC1; p=none'];
+        $local = $row->mx_active_at !== null;
+        $records[] = [
+            'key' => 'dmarc',
+            'type' => 'TXT',
+            'name' => '_dmarc.'.$domain,
+            'value' => $local ? ComailSecurityRecords::dmarcValue($row->dmarcPolicy()) : 'v=DMARC1; p=none',
+        ];
         $records[] = ['key' => 'cname_mail', 'type' => 'CNAME', 'name' => 'mail.'.$domain, 'value' => $host];
         $records[] = ['key' => 'cname_autodiscover', 'type' => 'CNAME', 'name' => 'autodiscover.'.$domain, 'value' => $host];
         $records[] = ['key' => 'cname_autoconfig', 'type' => 'CNAME', 'name' => 'autoconfig.'.$domain, 'value' => $host];
         $records[] = ['key' => 'srv_autodiscover', 'type' => 'SRV', 'name' => '_autodiscover._tcp.'.$domain, 'value' => '0 1 443 '.$host];
+
+        if ($local) {
+            array_push($records, ...ComailSecurityRecords::records($row));
+        }
 
         return $records;
     }
@@ -80,6 +94,17 @@ class ComailDns
     public function zoneFor(SiteComailDomain $row): ?array
     {
         $site = $row->site;
+
+        return $this->zoneForName($row->domain, $site instanceof Site ? $site : null);
+    }
+
+    /**
+     * Cloudflare zone covering any name (the site's account first, then every enabled one).
+     *
+     * @return array{account: CloudflareSetting, zone_id: string, zone_name: string}|null
+     */
+    public function zoneForName(string $name, ?Site $site = null): ?array
+    {
         $accounts = [];
         if ($site instanceof Site && $site->cloudflareAccount instanceof CloudflareSetting && $site->cloudflareAccount->is_enabled) {
             $accounts[] = $site->cloudflareAccount;
@@ -97,7 +122,7 @@ class ComailDns
 
             try {
                 $client = CloudflareClient::fromSettings($account);
-                foreach (CloudflareHostname::zoneCandidates($row->domain) as $candidate) {
+                foreach (CloudflareHostname::zoneCandidates($name) as $candidate) {
                     foreach ($client->listZones((string) $account->account_id, $candidate, 5) as $zone) {
                         if (strcasecmp((string) ($zone['name'] ?? ''), $candidate) === 0 && filled($zone['id'] ?? null)) {
                             return ['account' => $account, 'zone_id' => (string) $zone['id'], 'zone_name' => strtolower($candidate)];
@@ -105,7 +130,7 @@ class ComailDns
                     }
                 }
             } catch (CloudflareApiException $exception) {
-                Log::notice('comail.zone_lookup_failed', ['domain' => $row->domain, 'status' => $exception->status]);
+                Log::notice('comail.zone_lookup_failed', ['domain' => $name, 'status' => $exception->status]);
             }
         }
 
@@ -162,6 +187,14 @@ class ComailDns
 
         if ($wasActive !== ($mxActiveAt !== null)) {
             app(ComailDomainProvisioner::class)->syncRouting($row, $mxActiveAt !== null);
+        }
+
+        // A fresh check also refreshes the security page; once CoMail receives the mail,
+        // the server-side parts (mailcow MTA-STS policy, report authorization) follow
+        // even on zones Plane does not manage.
+        ComailSecurity::forget($row);
+        if ($mxActiveAt !== null) {
+            app(ComailSecurity::class)->ensureServerSide($row);
         }
 
         return $this->shape($row, $managed ?? $this->isManaged($row), $records);
@@ -294,10 +327,17 @@ class ComailDns
 
         $values = array_map(static fn (array $answer): string => trim((string) ($answer['value'] ?? '')), $answers);
 
+        if ($record['type'] === 'A') {
+            return ComailSecurityRecords::verifyAddress(array_map(static fn (array $answer): string => (string) ($answer['ip'] ?? ''), $answers));
+        }
+
         return match ($key) {
             'spf' => $this->verifySpf($values, $host, $mxStatus),
             'dkim' => $this->verifyDkim($values, $record['value']),
-            'dmarc' => $this->verifyPrefixed($values, 'v=dmarc1'),
+            'dmarc' => str_contains($record['value'], 'rua=')
+                ? ComailSecurityRecords::verifyDmarc($values, (string) (ComailSecurityRecords::tags($record['value'])['p'] ?? 'none'))
+                : $this->verifyPrefixed($values, 'v=dmarc1'),
+            'mta_sts_txt', 'tls_rpt' => ComailSecurityRecords::verifyTxt($key, $values),
             default => ['missing', null],
         };
     }
@@ -441,12 +481,17 @@ class ComailDns
                 }
             }
 
-            $dmarc = array_filter(
-                $this->rowsAt($client, $zoneId, $plan['dmarc']['name']),
-                static fn (array $r): bool => strtoupper((string) ($r['type'] ?? '')) === 'TXT',
-            );
-            if ($dmarc === []) {
-                $client->createDnsRecord($zoneId, $this->payload($plan['dmarc']));
+            if ($comailReceives) {
+                // DMARC with reports, MTA-STS, TLS-RPT and the mailcow policy (v3).
+                app(ComailSecurity::class)->writeRecords($row, $client, $zone);
+            } else {
+                $dmarc = array_filter(
+                    $this->rowsAt($client, $zoneId, $plan['dmarc']['name']),
+                    static fn (array $r): bool => strtoupper((string) ($r['type'] ?? '')) === 'TXT',
+                );
+                if ($dmarc === []) {
+                    $client->createDnsRecord($zoneId, $this->payload($plan['dmarc']));
+                }
             }
 
             if ($comailReceives && $this->rowsAt($client, $zoneId, $plan['srv_autodiscover']['name']) === []) {
@@ -471,7 +516,7 @@ class ComailDns
     /**
      * @return list<array<string, mixed>>
      */
-    private function rowsAt(CloudflareClient $client, string $zoneId, string $fqdn): array
+    public function rowsAt(CloudflareClient $client, string $zoneId, string $fqdn): array
     {
         return array_values(array_filter(
             $client->listDnsRecords($zoneId, ['name' => $fqdn, 'per_page' => 100]),
@@ -483,7 +528,7 @@ class ComailDns
      * When $fqdn has no address record of its own but a parent wildcard answers for it,
      * copy the wildcard's A/AAAA/CNAME records onto $fqdn (same content and proxy flag).
      */
-    private function pinWildcardAddress(CloudflareClient $client, string $zoneId, string $fqdn): void
+    public function pinWildcardAddress(CloudflareClient $client, string $zoneId, string $fqdn): void
     {
         $dot = strpos($fqdn, '.');
         if ($dot === false) {
