@@ -111,3 +111,31 @@ By hand: `php artisan ops:site-db status|prepare|switch|local <site>` in the Pla
 
 After all sites are moved and have run a few days, the `mysql` service can be removed from
 the CMS compose (one release) and the old `deamon_mysql` volumes deleted.
+
+## Build once, run many (`/opt/deamon-image`, 2026-10-26, CMS 1.2.85)
+
+Sites no longer build. The Coolify apps `deamon-image-alpha` / `deamon-image-beta` (compose
+`docker-compose.image.yml` in the CMS repo, no domain, auto-deploy on their branch) build the
+image once per commit. Sites run `deamon-cms:${SOURCE_COMMIT}` (`pull_policy: never`); their
+Coolify auto-deploy is off and `include_source_commit_in_build` is on (Coolify leaves
+`SOURCE_COMMIT` empty otherwise). The image never leaves the host.
+
+- `deamon-image/tag-images.sh` (cron every minute): retags `<builder>_image:<sha>` as
+  `deamon-cms:<sha>`; keeps the newest 8 plus anything a container uses. Builders are listed in
+  `/opt/deamon-image/builders` (`<branch> <coolify-uuid>`, see `builders.example`).
+- `deamon-image/release.sh <alpha|beta> [list]`: takes the builder's newest finished commit,
+  requires its image, then per site (CPU < 80 %, queue empty) pins the Coolify app to that
+  commit, deploys, and requires finished + `deamon-cms:<sha>` + healthy + `/up` 200. Stops at the
+  first bad site with a WhatsApp alert. ~1 min per site, ~2 s of downtime (deamon-test probe).
+  Log `release.log`.
+- `deamon-image/run-after-build.sh <builder-deployment-uuid> <branch>`: waits for that builder
+  deployment, then runs `release.sh` (start with `setsid -f`).
+- Never deploy a site to a commit whose image does not exist: the site cannot start.
+
+## Retire a site (`retire-site.sh`)
+
+`/opt/deamon-db/retire-site.sh <slug> --yes`: backup (shared-MySQL dump, the app's volumes,
+Coolify compose/.env) to `/root/retired-sites/<slug>-<date>/` and verify it; Plane status
+`archived`; delete the Coolify app with its volumes; drop the schema and user on the shared
+MySQL; unlink the site's keys and ACL user on the shared Redis. DNS and CoMail stay with their
+owners. Never for `test`. First use: demo.basutsilo.com (2026-10-26).
