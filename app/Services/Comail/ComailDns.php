@@ -425,7 +425,12 @@ class ComailDns
                 $this->upsertDkim($client, $zoneId, $plan['dkim']);
             }
 
-            foreach (['cname_mail', 'cname_autodiscover', 'cname_autoconfig'] as $key) {
+            // Client auto-setup records only once CoMail actually receives the mail: while
+            // the MX is still at another provider they would send Outlook / phones to CoMail
+            // with a password that only works at the old provider.
+            $comailReceives = $activate || $mx === [] || $mxIsOurs;
+            $discovery = $comailReceives ? ['cname_mail', 'cname_autodiscover', 'cname_autoconfig'] : ['cname_mail'];
+            foreach ($discovery as $key) {
                 if ($this->rowsAt($client, $zoneId, $plan[$key]['name']) === []) {
                     $client->createDnsRecord($zoneId, $this->payload($plan[$key]));
                 }
@@ -439,7 +444,7 @@ class ComailDns
                 $client->createDnsRecord($zoneId, $this->payload($plan['dmarc']));
             }
 
-            if ($this->rowsAt($client, $zoneId, $plan['srv_autodiscover']['name']) === []) {
+            if ($comailReceives && $this->rowsAt($client, $zoneId, $plan['srv_autodiscover']['name']) === []) {
                 $client->createDnsRecord($zoneId, $this->payload($plan['srv_autodiscover']));
             }
         } catch (CloudflareApiException $exception) {

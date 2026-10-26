@@ -288,4 +288,28 @@ class ComailEnrollmentTest extends TestCase
         $this->assertSame(0, $this->mailcow->domains['acme.test']['backupmx']);
         $this->assertSame(0, $this->mailcow->domains['acme.test']['relay_unknown_only']);
     }
+
+    public function test_relay_domain_gets_no_client_autosetup_records_until_activation(): void
+    {
+        $this->cloudflareAccount();
+        $this->cloudflare->zone('acme.test');
+        $this->cloudflare->record('acme.test', 'MX', 'acme.test', 'mx1.hostinger.com', 5);
+        $this->resolver->set('MX', 'acme.test', [['target' => 'mx1.hostinger.com', 'priority' => 5]]);
+        $site = $this->comailSite();
+
+        EnsureComailDomainJob::dispatchSync((string) $site->id, 'acme.test', true);
+
+        $this->assertNotSame([], $this->cloudflare->at('dkim._domainkey.acme.test', 'TXT'));
+        $this->assertNotSame([], $this->cloudflare->at('mail.acme.test', 'CNAME'));
+        $this->assertSame([], $this->cloudflare->at('autodiscover.acme.test'));
+        $this->assertSame([], $this->cloudflare->at('autoconfig.acme.test'));
+        $this->assertSame([], $this->cloudflare->at('_autodiscover._tcp.acme.test'));
+
+        $row = SiteComailDomain::query()->where('domain', 'acme.test')->firstOrFail();
+        app(ComailDns::class)->activate($row);
+
+        $this->assertSame(['mail.example.test'], array_column($this->cloudflare->at('autodiscover.acme.test', 'CNAME'), 'content'));
+        $this->assertSame(['mail.example.test'], array_column($this->cloudflare->at('autoconfig.acme.test', 'CNAME'), 'content'));
+        $this->assertNotSame([], $this->cloudflare->at('_autodiscover._tcp.acme.test', 'SRV'));
+    }
 }
