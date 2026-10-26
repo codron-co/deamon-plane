@@ -29,10 +29,10 @@ class ChannelEnvironmentMapTest extends TestCase
         $this->assertSame('alpha', ChannelEnvironmentMap::canonicalizeEnvironmentName('alpha'));
     }
 
-    public function test_laravel_app_env_stays_on_framework_names(): void
+    public function test_laravel_app_env_is_production_on_every_channel(): void
     {
         $this->assertSame('production', ChannelEnvironmentMap::appEnv(Channel::Main));
-        $this->assertSame('staging', ChannelEnvironmentMap::appEnv(Channel::Beta));
-        $this->assertSame('local', ChannelEnvironmentMap::appEnv(Channel::Alpha));
+        $this->assertSame('production', ChannelEnvironmentMap::appEnv(Channel::Beta));
+        $this->assertSame('production', ChannelEnvironmentMap::appEnv(Channel::Alpha));
     }
 }

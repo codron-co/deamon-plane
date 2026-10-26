@@ -24,8 +24,11 @@ use App\Services\Coolify\CoolifyApiException;
 use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\CoolifyCredentials;
 use App\Services\Coolify\CoolifyProvisionPreflight;
+use App\Services\Coolify\DockerImageLabels;
+use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Coolify\Dto\CoolifyDeployment;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use App\Services\Coolify\Dto\CreateDockerImageAppRequest;
 use App\Services\Mail\DeployFailedNotifier;
 use App\Services\Mail\SiteMailConfigurer;
 use App\Services\Mail\SiteMailOrderBinder;
@@ -163,8 +166,9 @@ class SiteProvisioner
         // its first deploy needs a commit the channel builder already finished. Asked
         // before the app exists: no built image fails the provision with nothing created.
         $images = app(BuiltImageCommits::class);
+        $wantsImage = blank($appUuid) && self::provisionsDockerImage();
         $builtSha = $images->appliesTo($site)
-            ? $images->latest(BuiltImageCommits::channelOf($site), $coolify)
+            ? $images->latest(BuiltImageCommits::channelOf($site), $coolify, registry: $wantsImage)
             : null;
 
         if (blank($appUuid)) {
@@ -172,15 +176,26 @@ class SiteProvisioner
                 $this->preflight->assert($site, $connection);
             }
 
-            $created = $coolify->createComposeApp($this->createRequest($site, $connection));
+            // A Docker Image app runs a built image: a channel without a builder gets compose.
+            $created = $wantsImage && $builtSha !== null
+                ? $coolify->createDockerImageApp($this->createImageRequest($site, $connection, $builtSha))
+                : $coolify->createComposeApp($this->createRequest($site, $connection));
             $appUuid = $created->uuid;
             $site->coolify_app_uuid = $appUuid;
             $site->save();
         }
 
-        // Coolify refuses docker_compose_domains until a deploy has loaded
+        // Read once: the pin and the Docker Image setup both depend on the build pack.
+        $app = $builtSha !== null ? $coolify->getApp((string) $appUuid) : null;
+
+        // Compose: Coolify refuses docker_compose_domains until a deploy has loaded
         // docker_compose_raw from git. Bind domains only after deploy finishes
-        // (see markSucceeded). Do not setDomains here.
+        // (see markSucceeded). Do not setDomains here. A Docker Image app has no
+        // compose file: its env constants, volumes, domains and labels go in now
+        // (again on a re-provision, every step is idempotent).
+        if ($app?->isDockerImagePack()) {
+            $this->prepareDockerImageApp($site, $coolify, $app);
+        }
 
         try {
             $this->agentSecrets->inject($site);
@@ -201,9 +216,9 @@ class SiteProvisioner
 
         // Pin before the first deploy: auto-deploy off (a push must not start a commit
         // with no image), SOURCE_COMMIT filled (the compose image tag), the built commit.
-        // The same PATCH again on a re-provision.
+        // A Docker Image app is pinned by its image tag. The same PATCH again on a re-provision.
         if ($builtSha !== null) {
-            $images->pinApp($coolify, (string) $appUuid, $builtSha);
+            $images->pinApp($coolify, (string) $appUuid, $builtSha, $app);
             CoolifyDeploySettings::rememberPin($site, $builtSha);
             $site->auditLogs()->create([
                 'actor_user_id' => $actorUserId,
@@ -648,6 +663,97 @@ class SiteProvisioner
             dockerComposeLocation: CreateComposeAppRequest::DEFAULT_COMPOSE_LOCATION,
             destinationUuid: CoolifyConnection::newAppDestinationUuid($connection),
         );
+    }
+
+    /**
+     * New sites get a Docker Image app (ops.deamon.provision_pack), compose only on request.
+     */
+    public static function provisionsDockerImage(): bool
+    {
+        return strtolower(trim((string) config('ops.deamon.provision_pack', 'dockerimage'))) === 'dockerimage';
+    }
+
+    /**
+     * The env rows a Docker Image site app needs on top of the catalog: what the CMS
+     * compose file sets as constants (a Docker Image app has no compose file).
+     *
+     * @return array<string, string>
+     */
+    public static function dockerImageEnv(): array
+    {
+        return array_map('strval', (array) config('ops.deamon.docker_image.env', []));
+    }
+
+    /**
+     * Same app as tools/ops/deamon-image/to-dockerimage.sh creates, on the built commit.
+     */
+    private function createImageRequest(Site $site, ?CoolifyConnection $connection, string $builtSha): CreateDockerImageAppRequest
+    {
+        [$project, $server] = $this->resolveTargets($site, $connection);
+
+        $environmentUuid = trim((string) $site->coolify_environment_uuid);
+        if ($environmentUuid === '' && $connection instanceof CoolifyConnection) {
+            $environmentUuid = trim((string) $connection->default_environment_uuid);
+        }
+
+        $environmentName = ChannelEnvironmentMap::canonicalizeEnvironmentName(
+            $connection?->default_environment_name
+                ?: (string) config('ops.provision.environment_name', 'main'),
+        );
+        $image = (array) config('ops.deamon.docker_image', []);
+        $health = (array) ($image['health_check'] ?? []);
+
+        return new CreateDockerImageAppRequest(
+            projectUuid: $project,
+            serverUuid: $server,
+            imageName: (string) ($image['name'] ?? '127.0.0.1:5000/deamon-cms'),
+            imageTag: $builtSha,
+            domains: DockerImageLabels::hosts($site->coolifyDomainBinding()),
+            environmentName: $environmentUuid === '' ? $environmentName : null,
+            environmentUuid: $environmentUuid !== '' ? $environmentUuid : null,
+            destinationUuid: CoolifyConnection::newImageAppDestinationUuid(),
+            name: 'deamon-'.$site->slug,
+            description: 'Deamon site (docker image, zero-downtime)',
+            port: (int) ($image['port'] ?? 8080),
+            limitsCpus: (string) ($image['limits_cpus'] ?? '1.5'),
+            limitsMemory: (string) ($image['limits_memory'] ?? '768m'),
+            runOptions: (string) ($image['run_options'] ?? '--pids-limit 256'),
+            healthCheckPath: (string) ($health['path'] ?? '/up'),
+            healthCheckInterval: (int) ($health['interval'] ?? 5),
+            healthCheckTimeout: (int) ($health['timeout'] ?? 5),
+            healthCheckRetries: (int) ($health['retries'] ?? 36),
+            healthCheckStartPeriod: (int) ($health['start_period'] ?? 5),
+        );
+    }
+
+    /**
+     * What a Docker Image site app needs besides its image: the compose constants as
+     * env, the three persistent volumes, and the hosts with their labels (Coolify does
+     * not write labels for these apps, DockerImageLabels) plus APP_URL / DEAMON_SITE_HOST.
+     * Volumes already mounted (a re-provision) are not added twice.
+     */
+    private function prepareDockerImageApp(Site $site, CoolifyApplicationService $coolify, CoolifyApplication $app): void
+    {
+        $uuid = (string) $site->coolify_app_uuid;
+
+        $coolify->updateEnvs($uuid, self::dockerImageEnv());
+
+        $mounted = [];
+        foreach ($coolify->listStorages($uuid)->persistentStorages as $storage) {
+            if (is_array($storage)) {
+                $mounted[(string) ($storage['mount_path'] ?? '')] = true;
+            }
+        }
+        foreach ((array) config('ops.deamon.docker_image.storages', []) as $name => $mountPath) {
+            if (! isset($mounted[(string) $mountPath])) {
+                $coolify->addPersistentStorage($uuid, (string) $name, (string) $mountPath);
+            }
+        }
+
+        $binding = $site->coolifyDomainBinding();
+        if ($binding !== '') {
+            $coolify->setDomains($uuid, $binding, true, $app);
+        }
     }
 
     /**

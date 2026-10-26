@@ -213,6 +213,17 @@ class CoolifyConnection extends Model
         return $uuid !== '' ? $uuid : null;
     }
 
+    /**
+     * Destination for a new Docker Image site app. Config only: the app must sit on the
+     * network of the shared MySQL / Redis (deamon-db), not the connection's default one.
+     */
+    public static function newImageAppDestinationUuid(): ?string
+    {
+        $uuid = trim((string) config('ops.coolify.image_destination_uuid'));
+
+        return $uuid !== '' ? $uuid : null;
+    }
+
     public static function default(): ?self
     {
         return static::query()

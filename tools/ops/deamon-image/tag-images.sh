@@ -32,6 +32,24 @@ done
 changed=$(docker exec coolify-db psql -U coolify -d coolify -At -c "UPDATE application_settings s SET is_auto_deploy_enabled = false, include_source_commit_in_build = true FROM applications a WHERE s.application_id = a.id AND a.git_repository ILIKE '%codron-co/deamon%' AND a.git_repository NOT ILIKE '%plane%' AND a.name NOT LIKE 'deamon-image-%' AND (s.is_auto_deploy_enabled OR NOT s.include_source_commit_in_build) RETURNING a.name" 2>/dev/null | grep -v '^UPDATE' | paste -sd' ')
 [ -n "$changed" ] && log "enforced auto-deploy off + source commit on: $changed"
 
+# Safety net for Docker Image sites: their labels carry the Traefik retry + 1 s dial timeout
+# (proxy/deamon-retry.yaml), so Coolify must not regenerate them (read-only labels off) and a
+# label set without them (a new site, a Coolify UI save) gets them back. Applies on next deploy.
+q() { docker exec coolify-db psql -U coolify -d coolify -At -c "$1" 2>/dev/null; }
+ro=$(q "UPDATE application_settings s SET is_container_label_readonly_enabled = false FROM applications a WHERE s.application_id = a.id AND a.build_pack = 'dockerimage' AND a.docker_registry_image_name LIKE '%deamon-cms' AND a.deleted_at IS NULL AND s.is_container_label_readonly_enabled RETURNING a.name" | grep -v '^UPDATE' | paste -sd' ')
+[ -n "$ro" ] && log "enforced read-only labels off: $ro"
+q "SELECT id || ' ' || uuid FROM applications WHERE build_pack = 'dockerimage' AND docker_registry_image_name LIKE '%deamon-cms' AND deleted_at IS NULL" | while read -r id u; do
+  raw=$(q "SELECT custom_labels FROM applications WHERE id = $id"); [ -n "$raw" ] || continue
+  # Coolify stores plain text on API create and base64 after a UI/PATCH save.
+  if grep -q '^traefik\.' <<< "$raw"; then plain=$raw; else plain=$(base64 -d <<< "$raw" 2>/dev/null) || continue; fi
+  grep -q 'deamon-retry@file' <<< "$plain" && grep -q 'deamon-fast@file' <<< "$plain" && continue
+  fixed=$(printf '%s\n' "$plain" | grep -v 'serverstransport=deamon-fast@file' \
+    | sed -E "s#^(traefik\.http\.routers\.https-[0-9]+-$u\.middlewares)=gzip-sse\$#\1=deamon-retry@file,gzip-sse#" \
+    | sed -E "s#^(traefik\.http\.services\.(https?-[0-9]+-$u)\.loadbalancer\.server\.port=[0-9]+)\$#\1\ntraefik.http.services.\2.loadbalancer.serverstransport=deamon-fast@file#")
+  grep -q 'deamon-retry@file' <<< "$fixed" && grep -q 'deamon-fast@file' <<< "$fixed" || { log "labels: could not patch $u"; continue; }
+  q "UPDATE applications SET custom_labels = '$(base64 -w0 <<< "$fixed")' WHERE id = $id" >/dev/null && log "labels: retry + fast dial added to $u"
+done
+
 used=$(docker ps -a --format '{{.Image}}' | sort -u)
 prune() { # repository: drop all but the newest KEEP tags no container uses
   docker images --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' "$1" | sort -r | tail -n +$((KEEP + 1)) | cut -d'|' -f2 |

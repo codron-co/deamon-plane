@@ -43,5 +43,7 @@
         <env name="DEAMON_IMAGE_BUILDER_ALPHA" value=""/>
         <env name="DEAMON_IMAGE_BUILDER_BETA" value=""/>
         <env name="DEAMON_IMAGE_REGISTRY_URL" value=""/>
+        <!-- New sites are Docker Image apps in production; provision tests opt in per case. -->
+        <env name="DEAMON_PROVISION_PACK" value="dockercompose"/>
     </php>
 </phpunit>

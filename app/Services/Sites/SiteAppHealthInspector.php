@@ -44,7 +44,8 @@ class SiteAppHealthInspector
                 $composeLocation = $app->dockerComposeLocation;
                 $issues = $this->mergeIssues($issues, $this->livePackIssues($app, $site));
 
-                if ($app->isComposePack()) {
+                // A Docker Image app runs on the same catalog env (it has no compose file at all).
+                if ($app->isComposePack() || $app->isDockerImagePack()) {
                     $envs = $this->envMap($coolify->listEnvs((string) $site->coolify_app_uuid));
                     $issues = $this->mergeIssues($issues, $this->liveEnvIssues($site, $envs));
                 }
@@ -362,7 +363,12 @@ class SiteAppHealthInspector
     private function liveDomainIssues(Site $site, CoolifyApplication $app): array
     {
         $reconciler = app(SiteDomainReconciler::class);
-        $missing = $reconciler->missingOnCoolify($site, $reconciler->customerHosts($app));
+        $hosts = $reconciler->customerHosts($app);
+        $missing = $reconciler->missingOnCoolify($site, $hosts);
+        // Docker Image: a host in `domains` is served only if the labels route it.
+        if ($missing === []) {
+            $missing = $reconciler->unroutedImageHosts($site, $app);
+        }
         if ($missing === []) {
             return [];
         }

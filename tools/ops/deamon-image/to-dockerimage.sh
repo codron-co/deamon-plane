@@ -5,7 +5,8 @@
 # cover the moment the old container goes away. The old app is only stopped: delete it later
 # from Coolify with "delete volumes" OFF, the new app mounts the same volumes.
 #   to-dockerimage.sh <old-app-uuid> [--yes]      (without --yes: show the plan only)
-# Needs /tmp/cool.php in the Plane container (raw Coolify API helper with Plane's credentials).
+# Needs /tmp/cool.php in the Plane container (raw Coolify API helper with Plane's credentials);
+# it is copied in from /opt/deamon-image/cool.php when a Plane deploy dropped it.
 # Pilot: deamon-test 2026-10-26 (6cmmgh5ty9lzv6uiz5kfavue -> ccqqtbr0r0dk91wxyjvxojlc).
 set -euo pipefail
 OLD=${1:?usage: to-dockerimage.sh <old-app-uuid> [--yes]}; YES=${2:-}
@@ -16,7 +17,8 @@ log() { echo "$(date '+%F %T') [$OLD] $*" | tee -a "$LOG"; }
 die() { log "STOP: $*"; exit 1; }
 q() { docker exec coolify-db psql -U coolify -d coolify -At -c "$1"; }
 plane=$(docker ps --format '{{.Names}}' | grep -m1 '^app-d6ovbjzxgpao23faam3vrcve') || die "Plane container not found"
-docker exec "$plane" test -f /tmp/cool.php || die "/tmp/cool.php missing in $plane"
+docker exec "$plane" test -f /tmp/cool.php || docker cp "$DIR/cool.php" "$plane:/tmp/cool.php" >/dev/null \
+  || die "/tmp/cool.php missing in $plane and no $DIR/cool.php"
 tinker() { # <php file>: run it in Plane, print its output
   local f; f=$(basename "$1")
   docker cp "$1" "$plane:/tmp/$f" >/dev/null

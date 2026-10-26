@@ -36,9 +36,10 @@ class SiteLanding
     ) {}
 
     /**
-     * Push the operator hosts to Coolify, then queue a rebuild. Coolify writes the
-     * Traefik labels at deploy time, so a `docker_compose_domains` PATCH alone never
-     * makes a new host answer. Returns one of the BIND_* outcomes for the flash.
+     * Push the operator hosts to Coolify, then queue a rebuild. Coolify applies the
+     * Traefik labels at deploy time, so a domain PATCH alone (`docker_compose_domains`,
+     * or a Docker Image app's domains + labels) never makes a new host answer.
+     * Returns one of the BIND_* outcomes for the flash.
      *
      * @throws SiteProvisionException when the Coolify PATCH itself fails
      */

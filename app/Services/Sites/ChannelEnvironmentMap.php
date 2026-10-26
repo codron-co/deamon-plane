@@ -8,13 +8,14 @@ use App\Models\Site;
 
 class ChannelEnvironmentMap
 {
+    /**
+     * Every channel serves live customer traffic, so APP_ENV is always production. The compose
+     * file pinned it there anyway; a Docker Image app takes it from Coolify env, where the old
+     * staging/local values switched on Laravel's non-production behaviour (mcp-test, 2026-10-27).
+     */
     public static function appEnv(Channel $channel): string
     {
-        return match ($channel) {
-            Channel::Main => 'production',
-            Channel::Beta => 'staging',
-            Channel::Alpha => 'local',
-        };
+        return 'production';
     }
 
     /**
