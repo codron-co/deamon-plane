@@ -13,7 +13,9 @@ use App\Services\Coolify\Dto\CoolifyGitSource;
 use App\Services\Coolify\Dto\CoolifyProject;
 use App\Services\Coolify\Dto\CoolifyProjectEnvironment;
 use App\Services\Coolify\Dto\CoolifyServer;
+use App\Services\Coolify\Dto\CoolifyStorages;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use App\Services\Coolify\Dto\CreateDockerImageAppRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
@@ -155,12 +157,67 @@ class CoolifyApplicationService
         $this->client->deleteEnv($uuid, $envUuid);
     }
 
+    public function createDockerImageApp(CreateDockerImageAppRequest $request): CoolifyApplication
+    {
+        return $this->client->createDockerImageApp($request);
+    }
+
+    public function addPersistentStorage(string $uuid, string $name, string $mountPath): void
+    {
+        $this->client->addPersistentStorage($uuid, $name, $mountPath);
+    }
+
+    public function listStorages(string $uuid): CoolifyStorages
+    {
+        return $this->client->listStorages($uuid);
+    }
+
     /**
+     * Bind hosts the way the app's build pack routes them. Compose: the `app` service's
+     * `docker_compose_domains`. Docker Image: `domains`, the container labels
+     * (DockerImageLabels, Coolify leaves them alone) and APP_URL / DEAMON_SITE_HOST,
+     * which the compose file used to derive from the domains. Either way Coolify applies
+     * it at the next deploy. `$app` is the app when the caller already read it; else
+     * one GET first. An unreadable app gets the compose PATCH, as before (on a Docker
+     * Image app that changes nothing, it never breaks one).
+     *
      * @param  string|array<int|string, mixed>  $fqdn
      */
-    public function setDomains(string $uuid, string|array $fqdn, bool $forceDomainOverride = false): CoolifyApplication
+    public function setDomains(string $uuid, string|array $fqdn, bool $forceDomainOverride = false, ?CoolifyApplication $app = null): CoolifyApplication
     {
-        return $this->client->setDomains($uuid, $fqdn, $forceDomainOverride);
+        if (! $app instanceof CoolifyApplication) {
+            try {
+                $app = $this->client->getApp($uuid);
+            } catch (CoolifyApiException $exception) {
+                Log::warning('coolify.set_domains_pack_unknown', ['app_uuid' => $uuid, 'status' => $exception->status]);
+            }
+        }
+
+        if (! $app?->isDockerImagePack()) {
+            return $this->client->setDomains($uuid, $fqdn, $forceDomainOverride);
+        }
+
+        $hosts = DockerImageLabels::hosts(array_column(CoolifyDomainParser::normalize($fqdn), 'domain'));
+        if ($hosts === []) {
+            throw new CoolifyApiException('At least one domain is required to bind a Docker Image app.', 422);
+        }
+
+        // Always forced: the site's stopped compose app (kept until deleted) still holds the hosts.
+        $patched = $this->client->setImageDomains($uuid, $hosts, DockerImageLabels::encodedForSite($uuid, $hosts));
+        $this->client->updateEnvs($uuid, self::imageUrlEnv($hosts[0]));
+
+        return $patched;
+    }
+
+    /**
+     * The env a Docker Image app needs for its primary host (a compose app gets the
+     * same from SERVICE_URL_APP / SERVICE_FQDN_APP).
+     *
+     * @return array{APP_URL: string, DEAMON_SITE_HOST: string}
+     */
+    public static function imageUrlEnv(string $host): array
+    {
+        return ['APP_URL' => 'https://'.$host, 'DEAMON_SITE_HOST' => $host];
     }
 
     /**

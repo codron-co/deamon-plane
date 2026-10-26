@@ -6,6 +6,7 @@ use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Coolify\CoolifyDomainParser;
+use App\Services\Coolify\DockerImageLabels;
 use App\Services\Coolify\Dto\CoolifyApplication;
 
 class SiteDomainReconciler
@@ -117,12 +118,37 @@ class SiteDomainReconciler
     }
 
     /**
+     * Plane's hosts (www kept, unlike desiredHosts()) that a Docker Image app's container
+     * labels do not route: Coolify does not regenerate these labels, so a host added to
+     * `domains` by hand (or a PATCH that never wrote the labels) stays on the placeholder
+     * page. Empty for other build packs and when the payload carries no labels.
+     *
+     * @return list<string>
+     */
+    public function unroutedImageHosts(Site $site, CoolifyApplication $app): array
+    {
+        $labels = $app->isDockerImagePack() ? $app->customLabels() : null;
+        if ($labels === null) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            DockerImageLabels::hosts($site->coolifyDomainBinding()),
+            static fn (string $host): bool => ! CoolifyDomainParser::isGeneratedWildcardHost($host)
+                && ! str_contains($labels, 'Host(`'.$host.'`)'),
+        ));
+    }
+
+    /**
+     * Hosts Coolify serves for the app. A Docker Image app has no compose service:
+     * its hosts are `fqdn` only (a stale `docker_compose_domains` is ignored).
+     *
      * @return list<string>
      */
     public function customerHosts(CoolifyApplication $app): array
     {
         $urls = [];
-        foreach ($app->composeDomains as $row) {
+        foreach ($app->isDockerImagePack() ? [] : $app->composeDomains as $row) {
             if (($row['name'] ?? '') !== CoolifyDomainParser::COMPOSE_SERVICE) {
                 continue;
             }

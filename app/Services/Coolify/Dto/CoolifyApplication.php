@@ -36,7 +36,9 @@ final class CoolifyApplication
         $uuid = (string) ($payload['uuid'] ?? '');
         $composeDomains = CoolifyDomainParser::normalize($payload['docker_compose_domains'] ?? null);
         $fqdn = $payload['fqdn'] ?? null;
-        $fqdn = is_string($fqdn) && $fqdn !== '' ? $fqdn : CoolifyDomainParser::firstDomain($composeDomains);
+        // A Docker Image app is served on `fqdn` only; no compose fallback for it.
+        $isImage = strtolower((string) ($payload['build_pack'] ?? '')) === 'dockerimage';
+        $fqdn = is_string($fqdn) && $fqdn !== '' ? $fqdn : ($isImage ? null : CoolifyDomainParser::firstDomain($composeDomains));
 
         return new self(
             uuid: $uuid,
@@ -180,6 +182,26 @@ final class CoolifyApplication
     public function pinnedCommit(): ?string
     {
         return $this->isDockerImagePack() ? $this->dockerImageTag() : $this->gitCommitSha();
+    }
+
+    /**
+     * The container label text, or null when the payload has none. Coolify keeps it
+     * as plain text after an API create and as base64 after a PATCH / UI save.
+     */
+    public function customLabels(): ?string
+    {
+        $raw = trim((string) ($this->raw['custom_labels'] ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        if (preg_match('/^(traefik|caddy)[._]/m', $raw) === 1) {
+            return $raw;
+        }
+
+        $decoded = base64_decode($raw, true);
+
+        return is_string($decoded) && $decoded !== '' ? $decoded : null;
     }
 
     public static function isHeadRef(?string $sha): bool

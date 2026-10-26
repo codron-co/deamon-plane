@@ -12,6 +12,7 @@ use App\Services\Coolify\Dto\CoolifyProjectEnvironment;
 use App\Services\Coolify\Dto\CoolifyServer;
 use App\Services\Coolify\Dto\CoolifyStorages;
 use App\Services\Coolify\Dto\CreateComposeAppRequest;
+use App\Services\Coolify\Dto\CreateDockerImageAppRequest;
 use App\Support\RetryAfter;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -137,6 +138,28 @@ class CoolifyClient
     }
 
     /**
+     * POST /applications/dockerimage. Coolify answers with the uuid (and domains) only.
+     */
+    public function createDockerImageApp(CreateDockerImageAppRequest $request): CoolifyApplication
+    {
+        $json = $this->request('POST', $request->endpoint(), [], $request->toPayload());
+
+        return CoolifyApplication::fromArray($this->unwrapResource($json));
+    }
+
+    /**
+     * POST /applications/{uuid}/storages — one named persistent volume.
+     */
+    public function addPersistentStorage(string $uuid, string $name, string $mountPath): void
+    {
+        $this->request('POST', '/applications/'.$this->assertUuid($uuid).'/storages', [], [
+            'type' => 'persistent',
+            'name' => $name,
+            'mount_path' => $mountPath,
+        ]);
+    }
+
+    /**
      * @param  array<string, string>|list<array{key: string, value: string}>  $pairs
      * @return Collection<int, CoolifyEnvironmentVariable>
      */
@@ -256,6 +279,29 @@ class CoolifyClient
         ];
 
         $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid), [], $body);
+
+        return CoolifyApplication::fromArray($this->unwrapResource($json));
+    }
+
+    /**
+     * Domains of a Docker Image app: `domains` (its fqdn) and the container labels
+     * that route them. Such an app has no `docker_compose_domains`, and with read-only
+     * labels off Coolify does not regenerate the labels when the domains change.
+     *
+     * @param  string|list<string>  $domains  hosts or URLs, primary first
+     */
+    public function setImageDomains(string $uuid, string|array $domains, string $encodedLabels, bool $forceDomainOverride = true): CoolifyApplication
+    {
+        $value = DockerImageLabels::domainsValue($domains);
+        if ($value === '') {
+            throw new CoolifyApiException('At least one domain is required to bind a Docker Image app.', 422);
+        }
+
+        $json = $this->request('PATCH', '/applications/'.$this->assertUuid($uuid), [], [
+            'domains' => $value,
+            'force_domain_override' => $forceDomainOverride,
+            'custom_labels' => $encodedLabels,
+        ]);
 
         return CoolifyApplication::fromArray($this->unwrapResource($json));
     }

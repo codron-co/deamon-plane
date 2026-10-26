@@ -8,6 +8,7 @@ use App\Models\CoolifyConnection;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\User;
+use App\Services\Coolify\DockerImageLabels;
 use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Sites\SiteDomainReconciler;
 use Database\Seeders\RoleSeeder;
@@ -130,6 +131,104 @@ class SiteDomainReconcileTest extends TestCase
             $body = $request->data();
 
             return array_key_exists('docker_compose_domains', $body);
+        });
+    }
+
+    public function test_docker_image_app_served_on_fqdn_with_matching_labels_has_no_domain_issue(): void
+    {
+        $site = $this->imageSite();
+        $this->fakeImageApp(DockerImageLabels::encoded(self::APP, ['shop.example.test', 'www.shop.example.test']));
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.sites.app-health', $site))
+            ->assertOk();
+
+        $issues = collect($site->fresh()->appHealth()->issues);
+        $this->assertNotContains('domain_unbound', $issues->map(fn ($i) => $i->code)->all());
+        $this->assertSame([], $issues->filter(fn ($i) => $i->fix === 'bind_domains')->all());
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH');
+    }
+
+    public function test_docker_image_host_missing_from_labels_is_unbound_and_the_fix_rewrites_domains_and_labels(): void
+    {
+        $site = $this->imageSite();
+        // `domains` has both hosts, the labels route only the apex (www added by hand in Coolify).
+        $this->fakeImageApp(DockerImageLabels::encoded(self::APP, ['shop.example.test']));
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.sites.app-health', $site))
+            ->assertOk();
+
+        $unbound = collect($site->fresh()->appHealth()->issues)->firstWhere('code', 'domain_unbound');
+        $this->assertSame('www.shop.example.test', $unbound?->key);
+
+        $this->actingAs($this->operator())
+            ->postJson(route('ops.sites.app-health.fix', $site), ['fix' => 'bind_domains'])
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        Http::assertSent(function (Request $request): bool {
+            if ($request->method() !== 'PATCH' || ! str_ends_with($request->url(), '/applications/'.self::APP)) {
+                return false;
+            }
+            $body = $request->data();
+
+            return ! array_key_exists('docker_compose_domains', $body)
+                && $body['domains'] === 'https://shop.example.test,https://www.shop.example.test'
+                && $body['force_domain_override'] === true
+                && base64_decode((string) $body['custom_labels'], true) === DockerImageLabels::for(self::APP, ['shop.example.test', 'www.shop.example.test']);
+        });
+    }
+
+    private function imageSite(): Site
+    {
+        $connection = CoolifyConnection::factory()->create([
+            'base_url' => 'https://coolify.example',
+            'api_token' => 'domain-token',
+        ]);
+        $site = Site::factory()->withSecrets()->create([
+            'status' => SiteStatus::Active,
+            'primary_domain' => 'shop.example.test',
+            'coolify_app_uuid' => self::APP,
+            'coolify_connection_id' => $connection->id,
+        ]);
+        SiteDomain::factory()->primary()->create(['site_id' => $site->id, 'domain' => 'shop.example.test']);
+        SiteDomain::factory()->create([
+            'site_id' => $site->id,
+            'domain' => 'www.shop.example.test',
+            'is_www' => true,
+            'is_primary' => false,
+        ]);
+
+        return $site;
+    }
+
+    /**
+     * A Docker Image app served on both hosts (`fqdn`), with no compose domains at all.
+     */
+    private function fakeImageApp(string $encodedLabels): void
+    {
+        Http::fake(function (Request $request) use ($encodedLabels) {
+            $url = $request->url();
+            if ($request->method() === 'GET' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response([
+                    'uuid' => self::APP,
+                    'build_pack' => 'dockerimage',
+                    'docker_registry_image_tag' => str_repeat('a', 40),
+                    'fqdn' => 'https://shop.example.test,https://www.shop.example.test',
+                    'docker_compose_domains' => null,
+                    'custom_labels' => $encodedLabels,
+                    'status' => 'running:healthy',
+                ], 200);
+            }
+            if (str_contains($url, '/envs')) {
+                return Http::response([], 200);
+            }
+            if ($request->method() === 'PATCH' && str_ends_with($url, '/applications/'.self::APP)) {
+                return Http::response(['uuid' => self::APP, 'build_pack' => 'dockerimage'], 200);
+            }
+
+            return Http::response(['error' => 'unexpected '.$url], 404);
         });
     }
 
