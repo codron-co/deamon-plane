@@ -115,7 +115,11 @@ class SiteLifecycle
         }
 
         try {
-            CoolifyApplicationService::forSite($site)->startApplication($uuid);
+            $coolify = CoolifyApplicationService::forSite($site);
+            $this->pinBuiltImage($site, $uuid, $coolify);
+            $coolify->startApplication($uuid);
+        } catch (BuiltImageException $exception) {
+            throw new SiteLifecycleException($exception->getMessage(), 0, $exception);
         } catch (CoolifyApiException $exception) {
             if ($exception->isNotFound()) {
                 throw new SiteLifecycleException(__('sites.flash.activate_missing_app'));
@@ -123,6 +127,22 @@ class SiteLifecycle
 
             throw $exception;
         }
+    }
+
+    /**
+     * Coolify `start` queues a deploy of the app's commit. A site that runs built
+     * images keeps its built pin (or moves to the newest build) before that.
+     */
+    private function pinBuiltImage(Site $site, string $uuid, CoolifyApplicationService $coolify): void
+    {
+        $images = app(BuiltImageCommits::class);
+        if (! $images->appliesTo($site)) {
+            return;
+        }
+
+        $sha = $images->currentOrLatest($site, $coolify);
+        $coolify->patchApplication($uuid, BuiltImageCommits::pinBody($sha));
+        CoolifyDeploySettings::rememberPin($site, $sha);
     }
 
     private function stopCoolify(Site $site): void

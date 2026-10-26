@@ -39,5 +39,8 @@
         <env name="OPS_DIAGNOSIS_ENABLED" value="false"/>
         <env name="OPS_DEPLOY_PREFLIGHT_ENABLED" value="false"/>
         <env name="OPS_THEME_SMOKE_ENABLED" value="false"/>
+        <!-- Build-once image pinning reads the builder app on every deploy; tests opt in per case. -->
+        <env name="DEAMON_IMAGE_BUILDER_ALPHA" value=""/>
+        <env name="DEAMON_IMAGE_BUILDER_BETA" value=""/>
     </php>
 </phpunit>

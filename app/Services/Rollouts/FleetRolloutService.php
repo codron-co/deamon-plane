@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Services\GitHub\CiBranchHeads;
 use App\Services\Ops\PacedFanout;
+use App\Services\Sites\BuiltImageException;
 use App\Services\Sites\CoolifyDeploySettings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
@@ -497,6 +498,9 @@ class FleetRolloutService
             } catch (Throwable $exception) {
                 if ($this->fanout->isDeployBusy($exception)) {
                     return; // host busy: stays pending for the next tick
+                }
+                if ($exception instanceof BuiltImageException && $exception->pending) {
+                    return; // the channel builder has not finished this commit yet: next tick
                 }
                 if ($this->fanout->isTransient($exception)) {
                     throw $exception; // PacedFanout waits out the Coolify throttle

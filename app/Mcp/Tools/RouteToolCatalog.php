@@ -179,7 +179,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'update_site_to_head',
-                description: 'Deploy the newest commit of the site\'s channel branch (CMS update) without changing the auto-deploy setting.',
+                description: 'Deploy the newest commit of the site\'s channel branch (CMS update) without changing the auto-deploy setting. Built-image channels: the newest commit the channel image builder finished.',
                 route: 'ops.sites.update-head',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site,
@@ -188,7 +188,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'follow_branch_head',
-                description: 'Unpin: track the branch HEAD, turn Coolify auto-deploy on (off on the CI gate) and deploy.',
+                description: 'Unpin: track the branch HEAD, turn Coolify auto-deploy on (off on the CI gate) and deploy. Built-image channels: deploys the newest built commit, auto-deploy stays off.',
                 route: 'ops.sites.follow-head',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site,
@@ -197,7 +197,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'pin_site_commit',
-                description: 'Pin the site to a commit/tag, turn auto-deploy off and deploy it (rollback or hold a version).',
+                description: 'Pin the site to a commit/tag, turn auto-deploy off and deploy it (rollback or hold a version). Built-image channels: only a commit the channel image builder finished.',
                 route: 'ops.sites.pin',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site + ['ref' => ['type' => 'string', 'description' => 'Commit SHA or tag.']],
@@ -206,7 +206,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'set_auto_deploy',
-                description: 'Turn Coolify auto-deploy on push on or off for a site.',
+                description: 'Turn Coolify auto-deploy on push on or off for a site. Turning it on is refused for sites that run built images.',
                 route: 'ops.sites.auto-deploy',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site + ['enabled' => ['type' => 'boolean']],

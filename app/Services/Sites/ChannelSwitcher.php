@@ -136,12 +136,24 @@ class ChannelSwitcher
             : Channel::from((string) $site->desired_channel);
 
         $coolify = CoolifyApplicationService::forSite($site);
-        $patch = [
-            'git_branch' => $target->value,
-            'git_commit_sha' => CoolifyApplication::HEAD_REF,
-        ];
+
+        // Build once, run many: the target branch HEAD may have no image yet, so a
+        // site on a builder channel goes to the newest commit that builder finished.
+        // Asked first: no built image fails the switch before the app is touched.
+        $images = app(BuiltImageCommits::class);
+        $builtSha = $images->appliesToChannel($target) ? $images->latest($target, $coolify) : null;
+
+        $patch = $builtSha !== null
+            ? ['git_branch' => $target->value] + BuiltImageCommits::pinBody($builtSha)
+            : [
+                'git_branch' => $target->value,
+                'git_commit_sha' => CoolifyApplication::HEAD_REF,
+            ];
 
         $coolify->patchApplication($appUuid, $patch);
+        if ($builtSha !== null) {
+            CoolifyDeploySettings::rememberPin($site, $builtSha);
+        }
         $coolify->updateEnvs($appUuid, [
             'APP_ENV' => ChannelEnvironmentMap::appEnv($target),
             'DEAMON_CHANNEL' => $target->value,
@@ -319,7 +331,7 @@ class ChannelSwitcher
 
     public function safeFailureMessage(Site $site, Throwable $exception): string
     {
-        $fallback = $exception instanceof CoolifyApiException
+        $fallback = $exception instanceof CoolifyApiException || $exception instanceof BuiltImageException
             ? $exception->getMessage()
             : 'Channel switch failed.';
 

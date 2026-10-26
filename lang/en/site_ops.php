@@ -149,4 +149,13 @@ return [
         'already_deployed' => 'A successful deploy of the same target finished after this one was queued; it was not built again.',
         'start_failed' => 'The queued deploy could not start: :error',
     ],
+    'image' => [
+        'no_builder' => 'The :channel channel has no image builder configured (ops.deamon.image_builders).',
+        'no_build' => 'The :channel image builder has no finished build yet. Nothing was deployed; deploy again once the build finishes.',
+        'tagging' => 'The newest :channel image (:sha) finished moments ago and is still being tagged on the host. Nothing was deployed; try again in a minute.',
+        'not_built' => 'Commit :sha has no built image on the :channel channel. Only commits the channel builder finished can be deployed.',
+        'not_a_commit' => '":ref" is not a commit sha. Deamon sites deploy built images only: pin a commit the channel builder finished.',
+        'lookup_failed' => 'Could not read the :channel image builder from Coolify: :error',
+        'auto_deploy_blocked' => ':name runs built images: Coolify auto-deploy stays off (a push would start a commit with no image). Deploy it from Plane instead.',
+    ],
 ];

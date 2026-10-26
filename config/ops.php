@@ -30,6 +30,23 @@ return [
     'deamon' => [
         'repository' => env('DEAMON_GIT_REPOSITORY', 'https://github.com/codron-co/deamon.git'),
         'compose_file' => env('DEAMON_COMPOSE_FILE', '/docker-compose.coolify.yml'),
+
+        /*
+        | Build once, run many (CMS 1.2.85, docs/modules/ops-sites.md). These Coolify
+        | apps build `deamon-cms:<sha>` once per commit of their branch; a site never
+        | builds. Every Plane deploy of a site pins it to a commit its channel's builder
+        | finished (auto-deploy off, include_source_commit_in_build on) or is refused.
+        | `main` uses the beta builder unless a `main` key is added. An empty uuid turns
+        | this off for the channel (the site builds its branch, as before).
+        */
+        'image_builders' => [
+            'alpha' => env('DEAMON_IMAGE_BUILDER_ALPHA', 'uaqsfytiydzar9avwditfvj5'),
+            'beta' => env('DEAMON_IMAGE_BUILDER_BETA', '0kcnqeunu6eov0elu3zx385n'),
+        ],
+        // The host cron retags a finished build every minute; a younger build is not used yet.
+        'image_tag_grace_seconds' => (int) env('DEAMON_IMAGE_TAG_GRACE_SECONDS', 90),
+        // A bulk sweep reads the builder's deployments once inside this window.
+        'image_builds_cache_seconds' => (int) env('DEAMON_IMAGE_BUILDS_CACHE_SECONDS', 20),
     ],
 
     'themes' => [

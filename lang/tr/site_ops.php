@@ -149,4 +149,13 @@ return [
         'already_deployed' => 'Sıraya girdikten sonra aynı hedefle başarılı bir deploy bitti; ayrıca derlenmedi.',
         'start_failed' => 'Sıradaki deploy başlatılamadı: :error',
     ],
+    'image' => [
+        'no_builder' => ':channel kanalı için imaj üreticisi tanımlı değil (ops.deamon.image_builders).',
+        'no_build' => ':channel imaj üreticisinin bitmiş bir build’i yok. Deploy yapılmadı; build bitince tekrar deploy edin.',
+        'tagging' => 'En yeni :channel imajı (:sha) az önce bitti, sunucuda hâlâ etiketleniyor. Deploy yapılmadı; bir dakika sonra tekrar deneyin.',
+        'not_built' => ':sha commitinin :channel kanalında derlenmiş imajı yok. Yalnız kanal üreticisinin bitirdiği commitler deploy edilebilir.',
+        'not_a_commit' => '":ref" bir commit sha değil. Deamon siteleri yalnız derlenmiş imajla deploy edilir: kanal üreticisinin bitirdiği bir commiti pinleyin.',
+        'lookup_failed' => ':channel imaj üreticisi Coolify’dan okunamadı: :error',
+        'auto_deploy_blocked' => ':name derlenmiş imajla çalışır: Coolify oto-deploy kapalı kalır (push, imajı olmayan bir commiti başlatır). Deploy’u Plane’den yapın.',
+    ],
 ];

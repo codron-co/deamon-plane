@@ -58,6 +58,12 @@ class CoolifyDeploySettings
     public function setAutoDeploy(Site $site, bool $enabled, ?User $actor = null, ?string $ip = null): CoolifyApplication
     {
         $uuid = $this->requireApp($site);
+        $runsImages = $this->runsBuiltImages($site);
+
+        // A push would start a commit whose image does not exist yet.
+        if ($enabled && $runsImages) {
+            throw new BuiltImageException(__('site_ops.image.auto_deploy_blocked', ['name' => $site->name]));
+        }
 
         // A CI-gated site must not build every push again behind Plane's back:
         // turning auto-deploy on goes through the gate switch, never around it.
@@ -65,7 +71,7 @@ class CoolifyDeploySettings
             throw new ComposePackException(__('rollouts.gate.auto_deploy_blocked', ['name' => $site->name]));
         }
 
-        $app = $this->patchAutoDeploy($site, $uuid, $enabled);
+        $app = $this->patchAutoDeploy($site, $uuid, $enabled, $runsImages ? ['include_source_commit_in_build' => true] : []);
 
         $this->remember($site, $enabled, $app->gitCommitSha());
 
@@ -80,13 +86,22 @@ class CoolifyDeploySettings
      * `coolify`: Coolify auto-deploys every push (auto-deploy on).
      * `ci`: auto-deploy off and the app follows the branch HEAD; Plane deploys it
      * after a green CI run. Neither direction starts a deploy.
+     * A site that runs built images keeps its pin and can never go to `coolify`.
      */
     public function setDeployGate(Site $site, DeployGate $gate, ?User $actor = null, ?string $ip = null): CoolifyApplication
     {
         $uuid = $this->requireApp($site);
         $before = $site->usesCiGate() ? DeployGate::Ci : DeployGate::Coolify;
+        $runsImages = $this->runsBuiltImages($site);
 
-        if ($gate === DeployGate::Ci) {
+        if ($gate === DeployGate::Coolify && $runsImages) {
+            throw new BuiltImageException(__('site_ops.image.auto_deploy_blocked', ['name' => $site->name]));
+        }
+
+        if ($gate === DeployGate::Ci && $runsImages) {
+            $app = $this->patchAutoDeploy($site, $uuid, false, ['include_source_commit_in_build' => true]);
+            $this->remember($site, false, $app->gitCommitSha());
+        } elseif ($gate === DeployGate::Ci) {
             $app = $this->patchAutoDeploy($site, $uuid, false, [
                 'git_commit_sha' => CoolifyApplication::HEAD_REF,
             ]);
@@ -106,7 +121,7 @@ class CoolifyDeploySettings
             'after' => [
                 'deploy_gate' => $gate->value,
                 'is_auto_deploy' => $gate === DeployGate::Coolify,
-                'git_commit_sha' => $gate === DeployGate::Ci ? CoolifyApplication::HEAD_REF : null,
+                'git_commit_sha' => $gate === DeployGate::Ci && ! $runsImages ? CoolifyApplication::HEAD_REF : null,
             ],
             'ip' => $ip,
         ]);
@@ -149,11 +164,14 @@ class CoolifyDeploySettings
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
-        $this->preflight($site, $actor, $ip);
         $coolify = CoolifyApplicationService::forSite($site);
+        // An image site may only be pinned to a commit its channel builder finished.
+        $built = $this->builtCommit($site, fn (BuiltImageCommits $images): string => $images->resolve(BuiltImageCommits::channelOf($site), $ref, $coolify));
+        $ref = $built ?? $ref;
+        $this->preflight($site, $actor, $ip);
 
         try {
-            $app = $coolify->patchApplication($uuid, [
+            $app = $coolify->patchApplication($uuid, $built !== null ? BuiltImageCommits::pinBody($built) : [
                 'git_commit_sha' => $ref,
                 'is_auto_deploy_enabled' => false,
             ]);
@@ -176,6 +194,10 @@ class CoolifyDeploySettings
 
     public function followHead(Site $site, ?User $actor = null, ?string $ip = null, ?Deployment $into = null): CoolifyApplication
     {
+        if ($this->runsBuiltImages($site)) {
+            return $this->deployLatestBuilt($site, 'site.git_follow_head', $actor, $ip, $into);
+        }
+
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
         $this->preflight($site, $actor, $ip);
@@ -213,6 +235,10 @@ class CoolifyDeploySettings
      */
     public function updateToHead(Site $site, ?User $actor = null, ?string $ip = null, ?Deployment $into = null): CoolifyApplication
     {
+        if ($this->runsBuiltImages($site)) {
+            return $this->deployLatestBuilt($site, 'site.git_update_head', $actor, $ip, $into);
+        }
+
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
         $this->preflight($site, $actor, $ip);
@@ -241,8 +267,42 @@ class CoolifyDeploySettings
     }
 
     /**
+     * "HEAD'de deploy" / "HEAD'e güncelle" of a site that runs built images: the
+     * branch HEAD may have no image yet, so the site moves to the newest commit its
+     * channel builder finished instead. Auto-deploy stays off.
+     */
+    private function deployLatestBuilt(Site $site, string $action, ?User $actor, ?string $ip, ?Deployment $into): CoolifyApplication
+    {
+        $uuid = $this->requireApp($site);
+        $this->assertCanStartDeploy($site);
+        $coolify = CoolifyApplicationService::forSite($site);
+        $sha = (string) $this->builtCommit($site, fn (BuiltImageCommits $images): string => $images->latest(BuiltImageCommits::channelOf($site), $coolify));
+        $this->preflight($site, $actor, $ip);
+
+        try {
+            $app = $coolify->patchApplication($uuid, BuiltImageCommits::pinBody($sha));
+            $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip, $into);
+        } catch (CoolifyDeployBusyException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
+        } catch (CoolifyApiException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
+        }
+
+        $this->remember($site, false, $sha);
+
+        $this->audit($site, $actor, $ip, $action, [
+            'git_commit_sha' => $sha,
+            'is_auto_deploy' => false,
+            'built_image' => true,
+        ]);
+
+        return $app;
+    }
+
+    /**
      * `force=true` is the operator's Tekrar deploy (no build cache); the
-     * domain-bind follow-up passes `false`.
+     * domain-bind follow-up passes `false`. A site that runs built images
+     * redeploys its pinned commit when that one is built, else the newest build.
      */
     public function redeploy(Site $site, ?User $actor = null, ?string $ip = null, bool $force = true, ?Deployment $into = null): Deployment
     {
@@ -267,10 +327,12 @@ class CoolifyDeploySettings
      * The CI rollout build: `force=false`, so Coolify reuses its build cache and
      * a fleet sweep costs the host far less than a manual Redeploy. The app
      * follows the branch HEAD, which the rollout checked is the green commit.
+     * A site that runs built images is pinned to the rollout commit instead; a
+     * commit the builder has not finished yet throws BuiltImageException.
      */
     public function deployForRollout(Site $site, FleetRollout $rollout): Deployment
     {
-        $deployment = $this->startDeploy($site, false, DeploymentTrigger::CiRollout, null, null);
+        $deployment = $this->startDeploy($site, false, DeploymentTrigger::CiRollout, null, null, ref: $rollout->sha);
         $this->audit($site, null, null, 'site.ci_rollout_deployed', [
             'rollout_id' => $rollout->id,
             'channel' => $rollout->channel->value,
@@ -291,21 +353,62 @@ class CoolifyDeploySettings
         app(DeployPreflight::class)->run($site, $actor, $ip);
     }
 
-    private function startDeploy(Site $site, bool $force, DeploymentTrigger $trigger, ?User $actor, ?string $ip, ?Deployment $into = null): Deployment
+    /**
+     * `$ref` is the commit an image site must run (a rollout); without it an image
+     * site keeps its built pin or moves to the newest build. Other sites build
+     * whatever their Coolify app points at.
+     */
+    private function startDeploy(Site $site, bool $force, DeploymentTrigger $trigger, ?User $actor, ?string $ip, ?Deployment $into = null, ?string $ref = null): Deployment
     {
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
+        $coolify = CoolifyApplicationService::forSite($site);
+        $built = $this->builtCommit($site, fn (BuiltImageCommits $images): string => $ref !== null
+            ? $images->resolve(BuiltImageCommits::channelOf($site), $ref, $coolify)
+            : $images->currentOrLatest($site, $coolify));
         $this->preflight($site, $actor, $ip);
 
         try {
-            $result = CoolifyApplicationService::forSite($site)->deploy($uuid, $force);
+            if ($built !== null) {
+                $coolify->patchApplication($uuid, BuiltImageCommits::pinBody($built));
+            }
+            $result = $coolify->deploy($uuid, $force);
         } catch (CoolifyDeployBusyException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
+        if ($built !== null) {
+            $this->remember($site, false, $built);
+        }
+
         return $this->recordDeployment($site, $result, $trigger, $actor, $ip, $into);
+    }
+
+    private function runsBuiltImages(Site $site): bool
+    {
+        return app(BuiltImageCommits::class)->appliesTo($site);
+    }
+
+    /**
+     * The built commit an image site's deploy targets, resolved before Plane
+     * touches the app; null for a site whose channel still builds its branch.
+     *
+     * @param  callable(BuiltImageCommits): string  $pick
+     */
+    private function builtCommit(Site $site, callable $pick): ?string
+    {
+        $images = app(BuiltImageCommits::class);
+        if (! $images->appliesTo($site)) {
+            return null;
+        }
+
+        try {
+            return $pick($images);
+        } catch (CoolifyApiException $exception) {
+            throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
+        }
     }
 
     /**
@@ -454,6 +557,14 @@ class CoolifyDeploySettings
     public static function mirrorFromApplication(Site $site, CoolifyApplication $app): void
     {
         self::mirrorOntoSite($site, $app->autoDeployState(), $app->gitCommitSha());
+    }
+
+    /**
+     * Mirror a built-image pin Plane wrote outside this class (provision, channel switch).
+     */
+    public static function rememberPin(Site $site, string $sha): void
+    {
+        self::mirrorOntoSite($site, false, $sha);
     }
 
     private static function mirrorOntoSite(Site $site, ?bool $autoDeploy, ?string $sha): void

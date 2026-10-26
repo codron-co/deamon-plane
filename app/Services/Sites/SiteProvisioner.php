@@ -159,6 +159,14 @@ class SiteProvisioner
 
         $appUuid = $site->coolify_app_uuid;
 
+        // Build once, run many: the site runs `deamon-cms:<sha>` and never builds, so
+        // its first deploy needs a commit the channel builder already finished. Asked
+        // before the app exists: no built image fails the provision with nothing created.
+        $images = app(BuiltImageCommits::class);
+        $builtSha = $images->appliesTo($site)
+            ? $images->latest(BuiltImageCommits::channelOf($site), $coolify)
+            : null;
+
         if (blank($appUuid)) {
             if ($connection instanceof CoolifyConnection) {
                 $this->preflight->assert($site, $connection);
@@ -190,6 +198,24 @@ class SiteProvisioner
             'after' => ['slug' => $site->slug] + $placed,
             'ip' => $ip,
         ]);
+
+        // Pin before the first deploy: auto-deploy off (a push must not start a commit
+        // with no image), SOURCE_COMMIT filled (the compose image tag), the built commit.
+        // The same PATCH again on a re-provision.
+        if ($builtSha !== null) {
+            $coolify->patchApplication((string) $appUuid, BuiltImageCommits::pinBody($builtSha));
+            CoolifyDeploySettings::rememberPin($site, $builtSha);
+            $site->auditLogs()->create([
+                'actor_user_id' => $actorUserId,
+                'action' => 'site.built_image_pinned',
+                'after' => [
+                    'slug' => $site->slug,
+                    'channel' => BuiltImageCommits::channelOf($site)->value,
+                    'git_commit_sha' => $builtSha,
+                ],
+                'ip' => $ip,
+            ]);
+        }
 
         // The first build waits in the Plane line when the host's build cap is
         // full; the site stays `provisioning` until the dispatcher starts it.
@@ -495,7 +521,8 @@ class SiteProvisioner
 
         if (! ($exception instanceof CoolifyApiException
             || $exception instanceof CloudflareApiException
-            || $exception instanceof SiteProvisionException)) {
+            || $exception instanceof SiteProvisionException
+            || $exception instanceof BuiltImageException)) {
             $message = class_basename($exception).': '.$message;
         }
 
