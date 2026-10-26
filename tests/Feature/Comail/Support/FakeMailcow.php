@@ -38,6 +38,9 @@ class FakeMailcow
     /** @var array<int, array<string, mixed>> */
     public array $filters = [];
 
+    /** @var array<int, array<string, mixed>> app passwords by id (password kept in `app_passwd` for assertions) */
+    public array $appPasswords = [];
+
     /** @var list<array{method: string, path: string, body: mixed}> */
     public array $calls = [];
 
@@ -143,6 +146,14 @@ class FakeMailcow
         }
         if ($path === '/get/syncjobs/all/no_log') {
             return array_values($this->syncjobs);
+        }
+        if (preg_match('~^/get/app-passwd/all/(.+)$~', $path, $m)) {
+            $mailbox = urldecode($m[1]);
+
+            return array_values(array_map(
+                static fn (array $row): array => array_diff_key($row, ['app_passwd' => true]),
+                array_filter($this->appPasswords, static fn (array $row): bool => $row['mailbox'] === $mailbox),
+            ));
         }
         if ($path === '/get/filters/all') {
             return array_values($this->filters);
@@ -272,6 +283,32 @@ class FakeMailcow
                 }
 
                 return [$this->success('deleted_syncjob', $body[0])];
+            case '/add/app-passwd':
+                $mailbox = (string) $body['username'];
+                if (! isset($this->mailboxes[$mailbox])) {
+                    return [$this->danger('access_denied', $mailbox)];
+                }
+                if (($body['app_passwd'] ?? null) !== ($body['app_passwd2'] ?? null)) {
+                    return [$this->danger('password_mismatch', $mailbox)];
+                }
+                $id = $this->nextId++;
+                $this->appPasswords[$id] = [
+                    'id' => $id,
+                    'name' => (string) $body['app_name'],
+                    'mailbox' => $mailbox,
+                    'domain' => substr((string) strrchr($mailbox, '@'), 1),
+                    'active' => (int) ($body['active'] ?? 1),
+                    'protocols' => $body['protocols'] ?? [],
+                    'app_passwd' => (string) $body['app_passwd'],
+                ];
+
+                return [$this->success('app_passwd_added', $mailbox)];
+            case '/delete/app-passwd':
+                foreach ($body as $id) {
+                    unset($this->appPasswords[(int) $id]);
+                }
+
+                return [$this->success('app_passwd_removed', (string) ($body[0] ?? ''))];
             case '/add/filter':
                 $id = $this->nextId++;
                 $this->filters[$id] = ['id' => $id] + $body;

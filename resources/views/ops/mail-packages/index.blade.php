@@ -22,6 +22,7 @@
                     <th>{{ __('comail.packages.columns.aliases') }}</th>
                     <th>{{ __('comail.packages.columns.domains') }}</th>
                     <th>{{ __('comail.packages.columns.price') }}</th>
+                    <th>{{ __('comail.packages.columns.price_yearly') }}</th>
                     <th>{{ __('comail.packages.columns.sites') }}</th>
                 </tr>
             </thead>
@@ -43,6 +44,7 @@
                         <td>{{ $package->alias_limit }}</td>
                         <td>{{ $package->domain_limit ?? __('comail.packages.domain_any') }}</td>
                         <td class="muted">{{ $package->price_monthly !== null ? number_format((float) $package->price_monthly, 2, ',', '.').' '.$package->currency : __('ops.none') }}</td>
+                        <td class="muted">{{ $package->price_yearly !== null ? number_format((float) $package->price_yearly, 2, ',', '.').' '.$package->currency : __('ops.none') }}</td>
                         <td class="muted">{{ $package->sites_count + ($package->is_default ? $defaultSites : 0) }}</td>
                     </tr>
                 @endforeach

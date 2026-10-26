@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Models\SiteComailDomain;
+use App\Services\Billing\MailBilling;
 use App\Services\Comail\ComailAutoreply;
 use App\Services\Comail\ComailDirectory;
 use App\Services\Comail\ComailDns;
@@ -14,6 +15,7 @@ use App\Services\Comail\ComailDomainProvisioner;
 use App\Services\Comail\ComailException;
 use App\Services\Comail\ComailLimits;
 use App\Services\Comail\ComailSiteConfigurer;
+use App\Services\Comail\ComailWebmailSso;
 use App\Services\Comail\MailcowClient;
 use App\Services\Comail\MailcowException;
 use App\Services\Hostinger\HostingerMailClient;
@@ -44,6 +46,8 @@ class SiteComailController extends Controller
         private readonly ComailDns $dns,
         private readonly ComailDomainProvisioner $provisioner,
         private readonly ComailSiteConfigurer $configurer,
+        private readonly ComailWebmailSso $sso,
+        private readonly MailBilling $billing,
     ) {}
 
     // ── Overview ────────────────────────────────────────────────────────
@@ -55,9 +59,21 @@ class SiteComailController extends Controller
             $base = $server->comailBaseUrl();
             $taken = $site->comailDomains()->pluck('domain')->all();
 
+            $package = $this->limits->package($site);
+            $usage = $this->limits->usage($directory);
+            $subscription = $this->billing->subscriptionState($site);
+
             return $this->ok([
-                'package' => $this->limits->package($site)->toLimitsArray(),
-                'usage' => $this->limits->usage($directory),
+                'package' => $package->toLimitsArray(),
+                'usage' => $usage,
+                // v2: more than the package allows (downgrade/expiry); new objects are refused.
+                'over_limit' => $this->limits->overLimit($package, $usage),
+                'subscription' => $subscription['status'] === null ? null : [
+                    'status' => $subscription['status'],
+                    'period' => $subscription['period'],
+                    'period_end' => $subscription['period_end'],
+                    'grace_ends_at' => $subscription['grace_ends_at'],
+                ],
                 // The web root opens Roundcube (the inbox); /?panel=1 is the mail
                 // user panel (spam filter, app passwords, 2FA).
                 'webmail_url' => $base,
@@ -334,6 +350,21 @@ class SiteComailController extends Controller
             $this->audit($site, $request, 'comail.autoreply_updated', ['address' => $username, 'enabled' => $enabled]);
 
             return $this->ok($this->autoreplyState($client, $username));
+        });
+    }
+
+    // ── Webmail one-click login (v2) ────────────────────────────────────
+
+    public function webmailLogin(Request $request, string $address): JsonResponse
+    {
+        return $this->run($request, function (Site $site, ComailDirectory $directory, MailServer $server) use ($request, $address): JsonResponse {
+            $mailbox = $this->ownedMailbox($directory, $address);
+            $username = (string) $mailbox['username'];
+
+            $login = $this->sso->issue($server, $directory->client, $username);
+            $this->audit($site, $request, 'comail.webmail_login', ['address' => strtolower($username)]);
+
+            return $this->ok(['url' => $login['url'], 'expires_in' => $login['expires_in']]);
         });
     }
 

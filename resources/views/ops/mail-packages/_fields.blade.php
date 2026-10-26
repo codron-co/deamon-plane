@@ -53,6 +53,13 @@
 </div>
 
 <div class="field">
+    <label class="field-label" for="pkg-price-yearly">{{ __('comail.packages.fields.price_yearly') }}</label>
+    <p class="field-hint">{{ __('comail.packages.fields.price_yearly_hint') }}</p>
+    <input id="pkg-price-yearly" class="field-input" type="number" step="0.01" min="0" name="price_yearly" value="{{ old('price_yearly', $package->price_yearly) }}" @disabled(! $canWrite)>
+    @error('price_yearly') <p class="field-error" role="alert">{{ $message }}</p> @enderror
+</div>
+
+<div class="field">
     <label class="field-label" for="pkg-currency">{{ __('comail.packages.fields.currency') }}</label>
     <input id="pkg-currency" class="field-input" type="text" name="currency" value="{{ old('currency', $package->currency ?? 'TRY') }}" maxlength="3" required @disabled(! $canWrite)>
     @error('currency') <p class="field-error" role="alert">{{ $message }}</p> @enderror

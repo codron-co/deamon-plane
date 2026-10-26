@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\DispatchSiteHealthChecksJob;
+use App\Jobs\ExpireMailSubscriptionsJob;
 use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileComailPushJob;
 use App\Jobs\ReconcileDeskronPushJob;
@@ -66,6 +67,12 @@ Schedule::job(new ReconcileSiteTurnstileJob)
 Schedule::job(new ReconcileComailPushJob)
     ->hourlyAt(35)
     ->name('ops-comail-push-reconcile')
+    ->withoutOverlapping();
+
+// CoMail billing: ended periods -> grace -> default package; stale checkouts and EFT orders expire.
+Schedule::job(new ExpireMailSubscriptionsJob)
+    ->dailyAt('03:55')
+    ->name('ops-comail-billing-expiry')
     ->withoutOverlapping();
 
 // Work left mid-way (killed worker, lost webhook, timeout) is closed or re-read

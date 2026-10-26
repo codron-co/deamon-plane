@@ -5,6 +5,7 @@ namespace App\Mcp;
 use App\Models\CloudflareSetting;
 use App\Models\Deployment;
 use App\Models\FleetRollout;
+use App\Models\MailOrder;
 use App\Models\MailPackage;
 use App\Models\Site;
 use App\Models\SiteComailDomain;
@@ -155,6 +156,23 @@ final class McpModels
         }
 
         return $package;
+    }
+
+    /**
+     * A CoMail order by id or reference (CM-XXXXXX).
+     */
+    public static function mailOrder(mixed $ref): MailOrder
+    {
+        $ref = trim((string) $ref);
+        $order = $ref === '' ? null : MailOrder::query()
+            ->where(fn ($query) => $query->where('reference', strtoupper($ref))->orWhere('id', $ref))
+            ->first();
+
+        if (! $order instanceof MailOrder) {
+            throw new McpException("No mail order `{$ref}`. Use list_mail_orders.", 'not_found');
+        }
+
+        return $order;
     }
 
     public static function rollout(mixed $id): FleetRollout

@@ -36,6 +36,77 @@ class ComailLimits
     }
 
     /**
+     * mailcow attributes for one existing domain that never go below what the
+     * domain already holds. mailcow refuses an edit/domain whose ceilings are
+     * under the current mailbox count, allocated quota, largest mailbox or alias
+     * count; after a downgrade (package expiry) nothing may be deleted, so each
+     * ceiling is max(current usage, package limit). Plane still refuses new
+     * objects with limit_* errors because it checks the package itself.
+     *
+     * @param  list<array<string, mixed>>|null  $aliases  every alias on the server (one read for many domains)
+     * @return array{mailboxes: int, quota: int, maxquota: int, defquota: int, aliases: int}
+     */
+    public function safeDomainAttributes(MailPackage $package, MailcowClient $client, string $domain, ?array $aliases = null): array
+    {
+        $attributes = $this->domainAttributes($package);
+        $domain = strtolower($domain);
+
+        try {
+            $mailboxes = $client->mailboxes($domain);
+            $aliases ??= $client->aliases();
+        } catch (MailcowException) {
+            return $attributes;
+        }
+
+        $usernames = [];
+        $allocated = 0;
+        $largest = 0;
+        foreach ($mailboxes as $mailbox) {
+            $username = strtolower((string) ($mailbox['username'] ?? ''));
+            if ($username === '' || ComailDirectory::domainOf($username) !== $domain) {
+                continue;
+            }
+            $usernames[] = $username;
+            $quota = ComailDirectory::bytesToMb($mailbox['quota'] ?? 0);
+            $allocated += $quota;
+            $largest = max($largest, $quota);
+        }
+
+        $aliasCount = 0;
+        foreach ($aliases as $alias) {
+            $address = strtolower(trim((string) ($alias['address'] ?? '')));
+            $aliasDomain = strtolower((string) ($alias['domain'] ?? ComailDirectory::domainOf($address)));
+            if ($address !== '' && $aliasDomain === $domain && ! in_array($address, $usernames, true)) {
+                $aliasCount++;
+            }
+        }
+
+        $maxquota = max($attributes['maxquota'], $largest);
+
+        return [
+            'mailboxes' => max($attributes['mailboxes'], count($usernames)),
+            'quota' => max($attributes['quota'], $allocated, $maxquota),
+            'maxquota' => $maxquota,
+            'defquota' => min($attributes['defquota'], $maxquota),
+            'aliases' => max($attributes['aliases'], $aliasCount),
+        ];
+    }
+
+    /**
+     * The site holds more than its package allows (after a downgrade or expiry).
+     * Nothing is deleted; new mailboxes, aliases and domains are refused until it fits.
+     *
+     * @param  array{mailboxes: int, aliases: int, domains: int, storage_allocated_mb: int, storage_used_bytes: int}  $usage
+     */
+    public function overLimit(MailPackage $package, array $usage): bool
+    {
+        return $usage['mailboxes'] > (int) $package->mailbox_limit
+            || $usage['storage_allocated_mb'] > (int) $package->storage_mb
+            || $usage['aliases'] > (int) $package->alias_limit
+            || ($package->domain_limit !== null && $usage['domains'] > (int) $package->domain_limit);
+    }
+
+    /**
      * @return array{mailboxes: int, aliases: int, domains: int, storage_allocated_mb: int, storage_used_bytes: int}
      */
     public function usage(ComailDirectory $directory): array
@@ -93,6 +164,11 @@ class ComailLimits
         $usage = $this->usage($directory);
         $current = ComailDirectory::bytesToMb($mailbox['quota'] ?? 0);
         $remaining = $package->storage_mb - ($usage['storage_allocated_mb'] - $current);
+
+        // Shrinking a box is always allowed: it is how an over-limit site gets back under its package.
+        if ($newQuotaMb >= 1 && $newQuotaMb <= $current) {
+            return;
+        }
 
         $this->assertQuotaFits($package, $newQuotaMb, $remaining);
     }

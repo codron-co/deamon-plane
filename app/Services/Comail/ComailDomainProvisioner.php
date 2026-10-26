@@ -121,7 +121,8 @@ class ComailDomainProvisioner
                     'restart_sogo' => 1,
                 ] + self::routingAttributes($relay));
             } else {
-                $client->editDomain($domain, $attributes + ['active' => 1] + self::routingAttributes($relay));
+                $safe = $this->limits->safeDomainAttributes($this->limits->package($site), $client, $domain);
+                $client->editDomain($domain, $safe + ['active' => 1] + self::routingAttributes($relay));
             }
 
             $dkim = $this->ensureDkim($client, $domain);
@@ -216,11 +217,22 @@ class ComailDomainProvisioner
         }
 
         $client = MailcowClient::forServer($server);
-        $attributes = $this->limits->domainAttributes($this->limits->package($site));
+        $package = $this->limits->package($site);
+        $rows = $site->comailDomains()->where('status', SiteComailDomain::STATUS_ACTIVE)->get();
+        if ($rows->isEmpty()) {
+            return;
+        }
 
-        foreach ($site->comailDomains()->where('status', SiteComailDomain::STATUS_ACTIVE)->get() as $row) {
+        try {
+            $aliases = $client->aliases();
+        } catch (MailcowException) {
+            $aliases = null;
+        }
+
+        foreach ($rows as $row) {
             try {
-                $client->editDomain($row->domain, $attributes);
+                // max(usage, limit) per ceiling: a smaller package never fails nor deletes anything.
+                $client->editDomain($row->domain, $this->limits->safeDomainAttributes($package, $client, $row->domain, $aliases));
             } catch (MailcowException $exception) {
                 Log::warning('comail.domain_limits_failed', [
                     'site_id' => $site->id,

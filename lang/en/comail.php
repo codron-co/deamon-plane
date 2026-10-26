@@ -26,6 +26,7 @@ return [
             'aliases' => 'Aliases',
             'domains' => 'Domains',
             'price' => 'Monthly price',
+            'price_yearly' => 'Yearly price',
             'sites' => 'Sites',
         ],
         'fields' => [
@@ -43,6 +44,8 @@ return [
             'domain_limit_hint' => 'Empty = any of the site\'s own domains.',
             'price_monthly' => 'Monthly price',
             'price_hint' => 'Empty = no price (free or quoted).',
+            'price_yearly' => 'Yearly price',
+            'price_yearly_hint' => 'Blank = not sold yearly.',
             'currency' => 'Currency',
             'sort' => 'Order',
             'is_active' => 'For sale (assignable)',
@@ -52,6 +55,7 @@ return [
         'errors' => [
             'default' => 'The default package cannot be deleted. Make another package the default first.',
             'in_use' => 'Sites use this package. Change their package first.',
+            'has_orders' => 'Orders or subscriptions use this package; it cannot be deleted. Deactivate it instead.',
         ],
         'flash' => [
             'saved' => 'Package saved.',
