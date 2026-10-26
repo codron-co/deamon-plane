@@ -17,6 +17,10 @@ class RestrictOpsByIp
             'instagram.oauth.connect',
             'instagram.oauth.callback',
             'instagram.data-deletion',
+            'instagram.data-deletion.status',
+            // Meta App Review and app users read these from anywhere.
+            'instagram.privacy',
+            'instagram.terms',
         ])) {
             return $next($request);
         }

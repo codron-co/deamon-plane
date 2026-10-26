@@ -63,6 +63,11 @@ final class ControlPlaneAgentContract
 
     public const INSTAGRAM_MIN_VERSION = '1.2.76';
 
+    /** CMS 1.2.89+: Meta deauthorize / data deletion → the site drops the token and every imported post and image. */
+    public const INSTAGRAM_DISCONNECT_PATH = '/internal/control/v1/instagram/disconnect';
+
+    public const INSTAGRAM_DISCONNECT_MIN_VERSION = '1.2.89';
+
     /** Cloudflare Turnstile keys, mode and protected forms (GET/POST); CMS support shows as `turnstile` in health. */
     public const TURNSTILE_PATH = '/internal/control/v1/turnstile';
 
@@ -211,6 +216,11 @@ final class ControlPlaneAgentContract
     public static function instagramConnectPath(): string
     {
         return self::configuredPath('ops.agent.instagram_connect_path', self::INSTAGRAM_CONNECT_PATH);
+    }
+
+    public static function instagramDisconnectPath(): string
+    {
+        return self::configuredPath('ops.agent.instagram_disconnect_path', self::INSTAGRAM_DISCONNECT_PATH);
     }
 
     public static function searchIntegrationsPath(): string

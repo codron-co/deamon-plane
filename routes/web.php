@@ -29,6 +29,14 @@ Route::get('/instagram/callback', [InstagramOAuthController::class, 'callback'])
     ->name('instagram.oauth.callback');
 Route::get('/instagram/veri-silme', [InstagramOAuthController::class, 'dataDeletion'])
     ->name('instagram.data-deletion');
+Route::get('/instagram/veri-silme/durum/{code}', [InstagramOAuthController::class, 'deletionStatus'])
+    ->where('code', '[A-Z0-9]{12}')
+    ->middleware('throttle:30,1')
+    ->name('instagram.data-deletion.status');
+Route::get('/instagram/gizlilik', [InstagramOAuthController::class, 'privacy'])
+    ->name('instagram.privacy');
+Route::get('/instagram/kosullar', [InstagramOAuthController::class, 'terms'])
+    ->name('instagram.terms');
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [FleetController::class, 'index'])->name('ops.fleet');

@@ -1,9 +1,10 @@
 @extends('layouts.guest')
 
 @section('title', __('instagram.public.deletion_title'))
+@section('shell_class', 'guest-shell--doc')
 
 @section('content')
-    <section class="guest-card" aria-labelledby="instagram-deletion-heading">
+    <section class="guest-card guest-doc" aria-labelledby="instagram-deletion-heading">
         <div class="guest-brand">
             <span class="ops-mark" aria-hidden="true"></span>
             <div>
@@ -18,5 +19,6 @@
             <li>{{ __('instagram.public.deletion_step_2') }}</li>
             <li>{{ __('instagram.public.deletion_step_3') }}</li>
         </ol>
+        @include('instagram.partials.legal-links')
     </section>
 @endsection

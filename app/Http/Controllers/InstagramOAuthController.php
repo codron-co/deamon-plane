@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\InstagramAccount;
+use App\Models\InstagramDeletionRequest;
 use App\Models\InstagramSetting;
 use App\Models\Site;
 use App\Services\Instagram\InstagramAgentClient;
@@ -94,6 +96,10 @@ class InstagramOAuthController extends Controller
             'ip' => $request->ip(),
         ]);
 
+        if ($result['ok'] && $token['user_id'] !== '') {
+            InstagramAccount::recordConnection($site, $token['user_id'], $result['username'] ?? null);
+        }
+
         if (! $result['ok']) {
             $reason = match ($result['error'] ?? '') {
                 'module_disabled' => 'Instagram Akışı modülü bu sitede etkin değil.',
@@ -110,6 +116,26 @@ class InstagramOAuthController extends Controller
     public function dataDeletion(): View
     {
         return view('instagram.data-deletion');
+    }
+
+    public function deletionStatus(string $code): View
+    {
+        $deletion = InstagramDeletionRequest::query()->where('confirmation_code', $code)->firstOrFail();
+
+        return view('instagram.deletion-status', ['deletion' => $deletion]);
+    }
+
+    /**
+     * Privacy policy and terms the Meta app links to (App settings → Basic); App Review needs both.
+     */
+    public function privacy(): View
+    {
+        return view('instagram.legal', ['page' => 'privacy']);
+    }
+
+    public function terms(): View
+    {
+        return view('instagram.legal', ['page' => 'terms']);
     }
 
     /**

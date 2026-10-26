@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ops;
 use App\Http\Controllers\Controller;
 use App\Jobs\DispatchInstagramPushJob;
 use App\Models\AuditLog;
+use App\Models\InstagramDeletionRequest;
 use App\Models\InstagramSetting;
 use App\Models\Site;
 use App\Services\Instagram\InstagramAgentClient;
@@ -26,6 +27,11 @@ class InstagramSettingsController extends Controller
             'canEdit' => $request->user()?->can('ops.danger') ?? false,
             'redirectUri' => InstagramOAuthService::redirectUri(),
             'dataDeletionUrl' => PublicAppUrl::forAgents().'/instagram/veri-silme',
+            'privacyUrl' => PublicAppUrl::forAgents().'/instagram/gizlilik',
+            'termsUrl' => PublicAppUrl::forAgents().'/instagram/kosullar',
+            'deauthorizeUrl' => PublicAppUrl::forAgents().'/webhooks/instagram/deauthorize',
+            'deletionRequestUrl' => PublicAppUrl::forAgents().'/webhooks/instagram/data-deletion',
+            'deletionRequests' => InstagramDeletionRequest::query()->latest()->limit(10)->get(),
             'supportedCount' => $sites->filter(fn (Site $site): bool => $agent->supports($site))->count(),
             'connectedSites' => $sites->filter(fn (Site $site): bool => (bool) data_get($site->last_health_payload, 'instagram.connected', false)),
         ]);
