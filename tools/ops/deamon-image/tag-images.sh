@@ -17,6 +17,16 @@ while read -r branch uuid; do
   done
 done < "$DIR/builders"
 
+# Docker Image (zero-downtime) sites pull from the local registry (127.0.0.1:5000, deamon-registry):
+# push every deamon-cms:<commit> there once. The local REG tag marks "pushed".
+REG=127.0.0.1:5000/deamon-cms
+docker images --format '{{.Tag}}' deamon-cms | while read -r tag; do
+  [[ "$tag" =~ ^[0-9a-f]{40}$ ]] || continue
+  docker image inspect "$REG:$tag" >/dev/null 2>&1 && continue
+  if docker tag "deamon-cms:$tag" "$REG:$tag" && docker push -q "$REG:$tag" >/dev/null 2>&1; then log "pushed $REG:$tag"
+  else docker rmi "$REG:$tag" >/dev/null 2>&1; log "push failed $REG:$tag"; fi
+done
+
 # Safety net: a Deamon site must never auto-deploy (a push would start an image that is not
 # built yet) and needs SOURCE_COMMIT for its image tag. Covers sites Plane creates later.
 changed=$(docker exec coolify-db psql -U coolify -d coolify -At -c "UPDATE application_settings s SET is_auto_deploy_enabled = false, include_source_commit_in_build = true FROM applications a WHERE s.application_id = a.id AND a.git_repository ILIKE '%codron-co/deamon%' AND a.git_repository NOT ILIKE '%plane%' AND a.name NOT LIKE 'deamon-image-%' AND (s.is_auto_deploy_enabled OR NOT s.include_source_commit_in_build) RETURNING a.name" 2>/dev/null | grep -v '^UPDATE' | paste -sd' ')
@@ -28,4 +38,13 @@ prune() { # repository: drop all but the newest KEEP tags no container uses
     while read -r img; do echo "$used" | grep -qxF "$img" || { docker rmi "$img" >/dev/null 2>&1 && log "pruned $img"; }; done
 }
 prune deamon-cms
+prune "$REG"
+# Registry side: drop the commits no longer tagged locally (blobs go in the weekly
+# garbage-collect cron: docker exec deamon-registry registry garbage-collect ...).
+ACCEPT='application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json'
+curl -sf http://127.0.0.1:5000/v2/deamon-cms/tags/list | grep -oE '[0-9a-f]{40}' | while read -r tag; do
+  docker image inspect "$REG:$tag" >/dev/null 2>&1 && continue
+  digest=$(curl -sfI -H "Accept: $ACCEPT" "http://127.0.0.1:5000/v2/deamon-cms/manifests/$tag" | tr -d '\r' | awk -F': ' 'tolower($1) == "docker-content-digest" {print $2}')
+  [ -n "$digest" ] && curl -sf -X DELETE "http://127.0.0.1:5000/v2/deamon-cms/manifests/$digest" >/dev/null && log "registry: deleted $tag"
+done
 while read -r branch uuid; do [ -n "${uuid:-}" ] && prune "${uuid}_image"; done < "$DIR/builders"
