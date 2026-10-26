@@ -312,4 +312,32 @@ class ComailEnrollmentTest extends TestCase
         $this->assertSame(['mail.example.test'], array_column($this->cloudflare->at('autoconfig.acme.test', 'CNAME'), 'content'));
         $this->assertNotSame([], $this->cloudflare->at('_autodiscover._tcp.acme.test', 'SRV'));
     }
+
+    public function test_subdomain_served_by_a_wildcard_keeps_its_address(): void
+    {
+        $this->cloudflareAccount();
+        $this->cloudflare->zone('acme.test');
+        $this->cloudflare->record('acme.test', 'A', 'acme.test', '203.0.113.10');
+        $this->cloudflare->record('acme.test', 'A', '*.acme.test', '203.0.113.10');
+        $site = $this->comailSite('demo.acme.test');
+
+        EnsureComailDomainJob::dispatchSync((string) $site->id, 'demo.acme.test', true);
+
+        // Without the pin, MX/TXT at demo.acme.test would hide the wildcard answer.
+        $this->assertSame(['203.0.113.10'], array_column($this->cloudflare->at('demo.acme.test', 'A'), 'content'));
+        $this->assertSame(['mail.example.test'], array_column($this->cloudflare->at('demo.acme.test', 'MX'), 'content'));
+    }
+
+    public function test_subdomain_with_its_own_address_is_not_pinned_again(): void
+    {
+        $this->cloudflareAccount();
+        $this->cloudflare->zone('acme.test');
+        $this->cloudflare->record('acme.test', 'A', '*.acme.test', '203.0.113.10');
+        $this->cloudflare->record('acme.test', 'A', 'v1.acme.test', '203.0.113.20');
+        $site = $this->comailSite('v1.acme.test');
+
+        EnsureComailDomainJob::dispatchSync((string) $site->id, 'v1.acme.test', true);
+
+        $this->assertSame(['203.0.113.20'], array_column($this->cloudflare->at('v1.acme.test', 'A'), 'content'));
+    }
 }
