@@ -6,6 +6,7 @@ use App\Enums\OpsRole;
 use App\Enums\SiteStatus;
 use App\Jobs\PushInstagramOAuthConfigJob;
 use App\Jobs\ReconcileInstagramPushJob;
+use App\Models\InstagramAccount;
 use App\Models\InstagramSetting;
 use App\Models\Site;
 use App\Models\User;
@@ -141,6 +142,11 @@ class InstagramOAuthTest extends TestCase
         Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.instagram.com/oauth/access_token'
             && $request['client_secret'] === 'abc123secret'
             && $request['code'] === 'AQDcode123');
+
+        $account = InstagramAccount::query()->where('site_id', $site->id)->sole();
+        $this->assertSame('42', $account->ig_user_id);
+        $this->assertSame('musteri', $account->username);
+        $this->assertNull($account->disconnected_at);
     }
 
     public function test_callback_denied_and_bad_state(): void
@@ -209,7 +215,28 @@ class InstagramOAuthTest extends TestCase
         config(['ops.access.ip_allowlist' => '10.9.9.9']);
 
         $this->get('/instagram/veri-silme')->assertOk();
+        $this->get('/instagram/gizlilik')->assertOk();
+        $this->get('/instagram/kosullar')->assertOk();
         $this->get('/instagram/callback?state=x')->assertStatus(400);
+    }
+
+    public function test_legal_pages_describe_the_single_permission_and_link_each_other(): void
+    {
+        $this->get('/instagram/gizlilik')
+            ->assertOk()
+            ->assertSee('instagram_business_basic')
+            ->assertSee('info@codron.co')
+            ->assertSee(route('instagram.terms'), false)
+            ->assertSee(route('instagram.data-deletion'), false);
+
+        $this->get('/instagram/kosullar')
+            ->assertOk()
+            ->assertSee(__('instagram.terms.title'))
+            ->assertSee(route('instagram.privacy'), false);
+
+        $this->get('/instagram/veri-silme')
+            ->assertOk()
+            ->assertSee(route('instagram.privacy'), false);
     }
 
     private function startFlow(Site $site): string

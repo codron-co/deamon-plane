@@ -63,6 +63,22 @@
                 <label class="field-label" for="instagram-data-deletion">{{ __('instagram.meta.data_deletion') }}</label>
                 <input id="instagram-data-deletion" class="field-input" type="text" value="{{ $dataDeletionUrl }}" readonly>
             </div>
+            <div class="field">
+                <label class="field-label" for="instagram-privacy">{{ __('instagram.meta.privacy') }}</label>
+                <input id="instagram-privacy" class="field-input" type="text" value="{{ $privacyUrl }}" readonly>
+            </div>
+            <div class="field">
+                <label class="field-label" for="instagram-terms">{{ __('instagram.meta.terms') }}</label>
+                <input id="instagram-terms" class="field-input" type="text" value="{{ $termsUrl }}" readonly>
+            </div>
+            <div class="field">
+                <label class="field-label" for="instagram-deauthorize">{{ __('instagram.meta.deauthorize') }}</label>
+                <input id="instagram-deauthorize" class="field-input" type="text" value="{{ $deauthorizeUrl }}" readonly>
+            </div>
+            <div class="field">
+                <label class="field-label" for="instagram-deletion-request">{{ __('instagram.meta.deletion_request') }}</label>
+                <input id="instagram-deletion-request" class="field-input" type="text" value="{{ $deletionRequestUrl }}" readonly>
+            </div>
             <p class="site-note">{{ __('instagram.meta.scope') }}</p>
         </article>
 
@@ -79,6 +95,26 @@
                 <ul class="ops-alert-list">
                     @foreach ($connectedSites as $connectedSite)
                         <li><a href="{{ route('ops.sites.show', $connectedSite) }}">{{ $connectedSite->name }}</a> <span class="muted">{{ '@'.data_get($connectedSite->last_health_payload, 'instagram.username') }}</span></li>
+                    @endforeach
+                </ul>
+            @endif
+        </article>
+
+        <article class="site-card">
+            <h2>{{ __('instagram.requests.title') }}</h2>
+            <p class="field-hint">{{ __('instagram.requests.hint') }}</p>
+            @if ($deletionRequests->isEmpty())
+                <p class="site-note">{{ __('instagram.requests.none') }}</p>
+            @else
+                <ul class="ops-alert-list">
+                    @foreach ($deletionRequests as $deletionRequest)
+                        <li>
+                            {{ $deletionRequest->created_at->format('Y-m-d H:i') }} · {{ __('instagram.requests.type.'.$deletionRequest->type) }} · {{ $deletionRequest->confirmation_code }}
+                            · <strong>{{ __('instagram.requests.status.'.$deletionRequest->status) }}</strong>
+                            @if ($deletionRequest->note)
+                                <span class="muted">{{ $deletionRequest->note }}</span>
+                            @endif
+                        </li>
                     @endforeach
                 </ul>
             @endif

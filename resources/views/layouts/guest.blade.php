@@ -25,7 +25,7 @@
     <link rel="stylesheet" href="{{ asset('css/ops-ui.css') }}">
 </head>
 <body class="ops-guest">
-    <main class="guest-shell">
+    <main class="guest-shell @yield('shell_class')">
         @yield('content')
     </main>
 </body>

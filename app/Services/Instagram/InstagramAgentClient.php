@@ -81,6 +81,32 @@ final class InstagramAgentClient
     }
 
     /**
+     * Meta deauthorize / data deletion: the site deletes the token and every imported post and image.
+     *
+     * @return array{ok: bool, error?: string}
+     */
+    public function disconnect(Site $site): array
+    {
+        $version = $site->reportedDeamonVersion();
+        if (! $site->hasAgentSecret() || $version === null
+            || version_compare(ltrim($version, 'vV'), ControlPlaneAgentContract::INSTAGRAM_DISCONNECT_MIN_VERSION, '<')) {
+            return ['ok' => false, 'error' => 'cms_too_old'];
+        }
+
+        $response = $this->post($site, ControlPlaneAgentContract::instagramDisconnectPath(), []);
+
+        if (! $response instanceof Response) {
+            return ['ok' => false, 'error' => 'site_unreachable'];
+        }
+
+        if ($response->successful() && $response->json('ok') === true) {
+            return ['ok' => true];
+        }
+
+        return ['ok' => false, 'error' => (string) ($response->json('error') ?: 'http_'.$response->status())];
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     private function post(Site $site, string $path, array $payload): ?Response
