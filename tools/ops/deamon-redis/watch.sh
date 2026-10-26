@@ -35,7 +35,11 @@ acl=$(cli acl log 1 | tr -d '\r' | awk 'NR%2{k=$0; next} {v[k]=$0} END{if ("entr
 acl_sig=${acl%%|*}; acl_sig=${acl_sig:-none}
 if [ -n "$prev_acl" ] && [ "$acl_sig" != none ] && [ "$acl_sig" != "$prev_acl" ]; then
   IFS='|' read -r _ acl_user acl_reason acl_object <<< "$acl"
-  alert "ACL reddi: $acl_user ($acl_reason: $acl_object). Sitenin kodu izin verilmeyen bir komut ya da anahtar kullanıyor; ayrıntı: ACL LOG."
+  if [ "$acl_reason" = auth ]; then
+    alert "Redis'e hatalı giriş: $acl_user (yanlış şifre ya da kapalı kullanıcı). Bir betik ya da site eski şifreyle bağlanıyor olabilir; ayrıntı: ACL LOG."
+  else
+    alert "ACL reddi: $acl_user ($acl_reason: $acl_object). Sitenin kodu izin verilmeyen bir komut ya da anahtar kullanıyor; ayrıntı: ACL LOG."
+  fi
 fi
 
 echo "0 $mem_alarm ${evicted:-0} $acl_sig" > "$STATE"
