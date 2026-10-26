@@ -55,7 +55,7 @@ if [ -z "$BACK" ]; then
   artisan ops:site-redis prepare "$SITE" > /dev/null || die "prepare failed"
   # The site is not on the shared Redis yet, so whatever its pair holds is stale (a copy left
   # behind by --back or by a failed run); redis-copy.php refuses a non-empty target.
-  artisan ops:site-redis flush "$SITE" > /dev/null || die "could not clear stale keys in the shared DB pair"
+  artisan ops:site-redis flush "$SITE" --all > /dev/null || die "could not clear stale keys in the shared DB pair"
 fi
 target=$(artisan ops:site-redis status "$SITE")
 tdb=$(kv TARGET_DB "$target"); tprefix=$(kv PREFIX "$target")

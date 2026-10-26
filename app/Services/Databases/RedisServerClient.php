@@ -155,16 +155,19 @@ class RedisServerClient
     }
 
     /**
-     * Delete every key under the site's prefix in its two DBs: what `cache:clear` would
-     * do on a private Redis, without FLUSHDB. Returns the number of keys deleted.
+     * Delete the keys under the site's prefix in its cache DB (pair + 1): what `cache:clear`
+     * does on a private Redis (FLUSHDB of the cache DB), without FLUSHDB. Sessions and queued
+     * jobs live in the other DB and stay. With $bothDbs the whole pair is emptied, which only
+     * suits a site that is not on the shared server (stale copy before a move).
+     * Returns the number of keys deleted.
      */
-    public function flushSite(Site $site): int
+    public function flushSite(Site $site, bool $bothDbs = false): int
     {
         [$server, $db, $match] = $this->siteTarget($site);
 
-        return $this->withAdmin($server, function (Redis $redis) use ($db, $match): int {
+        return $this->withAdmin($server, function (Redis $redis) use ($db, $match, $bothDbs): int {
             $deleted = 0;
-            foreach ([$db, $db + 1] as $number) {
+            foreach ($bothDbs ? [$db, $db + 1] : [$db + 1] as $number) {
                 $this->scanEach($redis, $number, $match, function (array $keys) use ($redis, &$deleted): void {
                     $deleted += (int) $redis->unlink($keys);
                 });
