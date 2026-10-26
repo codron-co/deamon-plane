@@ -78,6 +78,51 @@ class DatabaseServerClient
     }
 
     /**
+     * The server's slow query log (mysql.slow_log, filled when log_output includes TABLE),
+     * newest first, optionally for one schema. SQL text is cut to 2,000 characters; it can
+     * hold site data, so callers show it only to users who may open site databases.
+     *
+     * @return array{enabled: bool, threshold_seconds: float, to_table: bool, rows: list<array{at: string, database: string, user: string, seconds: float, lock_seconds: float, rows_sent: int, rows_examined: int, sql: string}>}
+     */
+    public function slowQueries(DatabaseServer $server, ?string $schema = null, int $limit = 100): array
+    {
+        $limit = max(1, min($limit, self::MAX_ROWS));
+
+        return $this->withConnection($this->adminConfig($server), function (Connection $db) use ($schema, $limit): array {
+            $settings = $db->selectOne('SELECT @@GLOBAL.slow_query_log AS enabled, @@GLOBAL.long_query_time AS threshold, @@GLOBAL.log_output AS output');
+            $toTable = str_contains(strtoupper((string) $settings->output), 'TABLE');
+
+            $rows = ! $toTable ? [] : $db->select(
+                'SELECT start_time AS at, db AS database_name, user_host,
+                        TIME_TO_SEC(query_time) + MICROSECOND(query_time) / 1000000 AS seconds,
+                        TIME_TO_SEC(lock_time) + MICROSECOND(lock_time) / 1000000 AS lock_seconds,
+                        rows_sent, rows_examined, LEFT(CONVERT(sql_text USING utf8mb4), 2000) AS sql_text
+                   FROM mysql.slow_log'.($schema !== null ? ' WHERE db = ?' : '').'
+               ORDER BY start_time DESC
+                  LIMIT '.$limit,
+                $schema !== null ? [$schema] : [],
+            );
+
+            return [
+                'enabled' => (bool) $settings->enabled,
+                'threshold_seconds' => (float) $settings->threshold,
+                'to_table' => $toTable,
+                'rows' => array_map(fn (object $row): array => [
+                    'at' => (string) $row->at,
+                    'database' => (string) $row->database_name,
+                    // user_host looks like "site_izyem[site_izyem] @  [172.18.0.5]"
+                    'user' => trim(strstr((string) $row->user_host, '[', true) ?: (string) $row->user_host),
+                    'seconds' => round((float) $row->seconds, 3),
+                    'lock_seconds' => round((float) $row->lock_seconds, 3),
+                    'rows_sent' => (int) $row->rows_sent,
+                    'rows_examined' => (int) $row->rows_examined,
+                    'sql' => (string) $row->sql_text,
+                ], $rows),
+            ];
+        });
+    }
+
+    /**
      * Create (or align) the site's schema and user; the password is the site's DB_PASSWORD.
      * Idempotent: re-running only re-applies the password and grants.
      *

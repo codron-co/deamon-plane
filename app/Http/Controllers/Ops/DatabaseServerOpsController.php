@@ -67,21 +67,39 @@ class DatabaseServerOpsController extends Controller
         return $this->probeAndRedirect($server, $client, __('databases.flash.saved'));
     }
 
-    public function show(Request $request, DatabaseServer $databaseServer): View
+    public function show(Request $request, DatabaseServer $databaseServer, DatabaseServerClient $client): View
     {
         $sites = $databaseServer->sites()->orderBy('name')->get();
         $bySchema = $sites->keyBy('db_database');
+        $canWrite = $request->user()?->can('ops.write') ?? false;
 
         $databases = [];
         foreach ($databaseServer->probedDatabases() as $schema => $row) {
             $databases[] = $row + ['name' => $schema, 'site' => $bySchema->get($schema)];
         }
 
+        // Slow query SQL can carry site data: same permission as opening a site database.
+        $slowSchema = $request->query('slow_db');
+        $slowSchema = is_string($slowSchema) && in_array($slowSchema, array_column($databases, 'name'), true) ? $slowSchema : null;
+        $slow = null;
+        $slowError = null;
+        if ($canWrite) {
+            try {
+                $slow = $client->slowQueries($databaseServer, $slowSchema);
+            } catch (DatabaseServerException $e) {
+                $slowError = $e->getMessage();
+            }
+        }
+
         return view('ops.databases.show', [
             'server' => $databaseServer,
             'databases' => $databases,
             'sites' => $sites,
-            'canWrite' => $request->user()?->can('ops.write') ?? false,
+            'bySchema' => $bySchema,
+            'slow' => $slow,
+            'slowError' => $slowError,
+            'slowSchema' => $slowSchema,
+            'canWrite' => $canWrite,
             'canDanger' => $request->user()?->can('ops.danger') ?? false,
         ]);
     }
