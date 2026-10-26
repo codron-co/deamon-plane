@@ -131,16 +131,40 @@ class SiteRedisCommandTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/restart'));
     }
 
-    public function test_flush_deletes_only_through_the_client_and_is_audited(): void
+    public function test_flush_clears_only_the_cache_db_and_is_audited(): void
     {
         $site = $this->sharedSite();
         $this->mock(RedisServerClient::class)->shouldReceive('flushSite')->once()
-            ->withArgs(fn (Site $target): bool => $target->is($site))->andReturn(57);
+            ->withArgs(fn (Site $target, bool $bothDbs): bool => $target->is($site) && $bothDbs === false)->andReturn(57);
 
         $out = $this->ops('flush');
 
         $this->assertStringContainsString("DELETED=57\n", $out);
-        $this->assertSame(57, $site->auditLogs()->where('action', 'site.redis_flushed')->sole()->after['deleted']);
+        $audit = $site->auditLogs()->where('action', 'site.redis_flushed')->sole()->after;
+        $this->assertSame(57, $audit['deleted']);
+        $this->assertSame('cache', $audit['scope']);
+    }
+
+    public function test_flush_all_is_refused_while_the_site_uses_the_shared_redis(): void
+    {
+        $this->sharedSite();
+        $this->mock(RedisServerClient::class)->shouldNotReceive('flushSite');
+
+        $this->assertSame(1, Artisan::call('ops:site-redis', ['action' => 'flush', 'site' => 'izyem', '--all' => true]));
+        $this->assertStringContainsString('sessions and queued jobs', Artisan::output());
+    }
+
+    public function test_flush_all_empties_the_pair_of_a_site_not_yet_on_it(): void
+    {
+        $site = $this->sharedSite();
+        $site->forceFill(['redis_shared' => false])->save();
+        $this->mock(RedisServerClient::class)->shouldReceive('flushSite')->once()
+            ->withArgs(fn (Site $target, bool $bothDbs): bool => $target->is($site) && $bothDbs === true)->andReturn(9);
+
+        $out = $this->ops('flush', ['--all' => true]);
+
+        $this->assertStringContainsString("DELETED=9\n", $out);
+        $this->assertSame('all', $site->auditLogs()->where('action', 'site.redis_flushed')->sole()->after['scope']);
     }
 
     public function test_unknown_action_and_site_are_rejected(): void

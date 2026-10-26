@@ -119,15 +119,19 @@ also removes `CONFIG`, `DEBUG`, `MONITOR`, `INFO`, `RESTORE`, `MIGRATE`, `SORT`,
 **Why FLUSHDB is denied.** Redis ACLs restrict keys, not DB numbers: a site user could
 `SELECT` another DB, and `FLUSHDB`/`FLUSHALL` ignore key patterns, so one site's
 `cache:clear` would wipe every site. On a shared server `php artisan cache:clear` therefore
-fails for the site user. Its replacement is `ops:site-redis flush <site>`: as admin,
-`SCAN MATCH site_<slug>:* COUNT 500` in DB N and N+1 and `UNLINK` in batches — only that
-site's keys go.
+fails for the site user (`NOPERM ... 'flushdb'`, and `watch.sh` sends an ACL alert). Its
+replacement is `ops:site-redis flush <site>` (or `/opt/deamon-redis/clear-site-cache.sh <site>`
+on the server): as admin, `SCAN MATCH site_<slug>:* COUNT 500` in the cache DB (N+1) and
+`UNLINK` in batches — only that site's cache keys go, like `cache:clear`. Sessions and queued
+jobs in DB N stay. `--all` also empties DB N; it is refused while the site uses the shared
+server (it would log everyone out and drop queued jobs) and is meant for the stale copy that
+`move-site-redis.sh` clears before a move.
 
 ### Commands
 
 - `ops:redis-server {name} {host} {--port=6379} {--user=plane_admin} {--default}`: register
   or update a server; admin password on STDIN; probes after save.
-- `ops:site-redis {status|prepare|switch|local|flush} {site} {--server=} {--no-restart} {--show-secret} {--keys}`
+- `ops:site-redis {status|prepare|switch|local|flush} {site} {--server=} {--no-restart} {--show-secret} {--keys} {--all}`
   (`KEY=value` lines, like `ops:site-db`):
 
 | Action | Effect |
@@ -136,7 +140,7 @@ site's keys go.
 | `prepare` | Reserve the DB pair, store the user name, create/align the ACL user; the site keeps running on its own Redis (`site.redis_prepared` audit row) |
 | `switch` | Requires `prepare`; mark shared, write REDIS_* to Coolify, restart (`--no-restart` to skip) (`site.redis_switched`, password masked) |
 | `local` | Back to the stack's own Redis (env only; pair and user stay reserved) |
-| `flush` | Delete the site's keys on the shared server (`DELETED=n`, `site.redis_flushed`) |
+| `flush` | Delete the site's cache keys (DB N+1) on the shared server, the `cache:clear` replacement (`DELETED=n`, `site.redis_flushed` with `scope`). `--all` empties both DBs; refused while the site is on the shared server |
 
 Redis errors pass through `RedisServerException` (`SecretRedactor` with the admin and site
 passwords in play). Connections: phpredis, 5 s connect timeout, 10 s read timeout.

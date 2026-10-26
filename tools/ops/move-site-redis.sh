@@ -2,7 +2,8 @@
 # Move one Deamon site from its own Redis to the shared deamon-redis, or back with --back.
 # Run on the coolify VPS as root:   move-site-redis.sh <site> [--yes] [--back]
 #
-#   1. Plane: `ops:site-redis prepare` creates the site's ACL user and DB pair (site keeps running).
+#   1. Plane: `ops:site-redis prepare` creates the site's ACL user and DB pair (site keeps running)
+#      and `flush` drops keys left in that pair by an earlier move or a failed copy.
 #   2. Site goes into maintenance (503 + retry; queue worker and scheduler pause); waits until
 #      no queued job is reserved.
 #   3. redis-copy.php, run in the site's app container, copies every key with its TTL and the
@@ -50,7 +51,12 @@ docker inspect "$app" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k
 busy=$(coolify_q "SELECT COUNT(*) FROM application_deployment_queues q JOIN applications a ON a.id::text = q.application_id::text WHERE a.uuid = '$uuid' AND q.status IN ('queued','in_progress')")
 [ "$busy" = 0 ] || die "a Coolify deployment of this app is queued or running"
 
-if [ -z "$BACK" ]; then artisan ops:site-redis prepare "$SITE" > /dev/null || die "prepare failed"; fi
+if [ -z "$BACK" ]; then
+  artisan ops:site-redis prepare "$SITE" > /dev/null || die "prepare failed"
+  # The site is not on the shared Redis yet, so whatever its pair holds is stale (a copy left
+  # behind by --back or by a failed run); redis-copy.php refuses a non-empty target.
+  artisan ops:site-redis flush "$SITE" --all > /dev/null || die "could not clear stale keys in the shared DB pair"
+fi
 target=$(artisan ops:site-redis status "$SITE")
 tdb=$(kv TARGET_DB "$target"); tprefix=$(kv PREFIX "$target")
 [ -n "$tdb" ] && [ -n "$tprefix" ] || die "Plane gave no target DB/prefix"
@@ -103,7 +109,7 @@ docker cp /opt/deamon-redis/redis-copy.php "$app:/tmp/redis-copy.php" >/dev/null
 copy=$(printf '%s' "$payload" | docker exec -i "$app" php /tmp/redis-copy.php 2>&1) || true
 docker exec "$app" rm -f /tmp/redis-copy.php
 log "copy: $(tr '\n' ' ' <<< "$copy")"
-grep -q '^OK$' <<< "$copy" || { restore_up; die "copy failed; nothing switched (clear target keys before retrying)"; }
+grep -q '^OK$' <<< "$copy" || { restore_up; die "copy failed; nothing switched"; }
 untouched || { restore_up; die "a deploy of this app started during the maintenance window; not switching"; }
 
 if [ -n "$BACK" ]; then

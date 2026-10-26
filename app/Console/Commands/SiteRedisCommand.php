@@ -18,7 +18,8 @@ use Throwable;
  *   prepare  reserve the DB pair and create the ACL user on the shared server (site keeps running)
  *   switch   point the site at the shared server and restart it
  *   local    point the site back at its own compose Redis and restart it (pair stays reserved)
- *   flush    delete the site's keys on the shared server (replaces cache:clear, FLUSHDB is denied)
+ *   flush    delete the site's cache keys on the shared server (replaces cache:clear, FLUSHDB is
+ *            denied); --all also empties the sessions/queue DB, refused while the site uses it
  *
  * Output lines are KEY=value so the shell script can read them. REDIS_PASSWORD is
  * printed as *** unless --show-secret is given.
@@ -33,7 +34,8 @@ class SiteRedisCommand extends Command
         {--server= : Redis server name or id (default: the default server)}
         {--no-restart : write env only; restart later}
         {--show-secret : print REDIS_PASSWORD / TARGET_PASSWORD instead of ***}
-        {--keys : status also counts the site\'s keys on the shared server (SCAN)}';
+        {--keys : status also counts the site\'s keys on the shared server (SCAN)}
+        {--all : flush also empties the sessions/queue DB (only while the site is not on the shared server)}';
 
     protected $description = 'Prepare, switch, revert or flush a site\'s Redis placement (shared Redis)';
 
@@ -94,12 +96,19 @@ class SiteRedisCommand extends Command
 
     private function flush(Site $site, RedisServerClient $client): int
     {
-        $deleted = $client->flushSite($site);
+        $all = (bool) $this->option('all');
+        if ($all && $site->usesSharedRedis()) {
+            $this->error('The site runs on the shared Redis: --all would drop its sessions and queued jobs. Flush the cache only.');
+
+            return self::FAILURE;
+        }
+
+        $deleted = $client->flushSite($site, $all);
         $site->auditLogs()->create([
             'actor_user_id' => null,
             'action' => 'site.redis_flushed',
             'before' => null,
-            'after' => ['server' => $site->redisServer?->name, 'db' => $site->redis_db, 'deleted' => $deleted],
+            'after' => ['server' => $site->redisServer?->name, 'db' => $site->redis_db, 'scope' => $all ? 'all' : 'cache', 'deleted' => $deleted],
             'ip' => null,
         ]);
 

@@ -1,6 +1,6 @@
 # Tek Redis'e geçiş planı (Deamon siteleri)
 
-Durum: **uygulanıyor** (2026-10-25'te başladı). Hedef: 200 site (1 ay). Paylaşılan MySQL geçişi (`docs/modules/database-servers.md`, `tools/ops/README.md`) ile aynı yöntem ve aynı derslerle.
+Durum: **uygulandı** (2026-10-25'te başladı, 2026-10-26'da 35 site taşındı). Hedef: 200 site (1 ay). Paylaşılan MySQL geçişi (`docs/modules/database-servers.md`, `tools/ops/README.md`) ile aynı yöntem ve aynı derslerle.
 
 ## İlerleme
 
@@ -8,11 +8,11 @@ Durum: **uygulanıyor** (2026-10-25'te başladı). Hedef: 200 site (1 ay). Payla
 |---|---|
 | 0 Envanter | ✅ Bütün siteler yalnız DB 0/1; ilk 2.000 anahtarda süresiz anahtar yok; en büyük anahtar ~300 B; Plane'de phpredis 6.3.0 |
 | 1 Sunucu | ✅ `deamon-redis` (7.4.11): `redis` adı çözülmüyor, şifresiz komut `NOAUTH`, yeniden başlatmada veri kalıyor, izleme ve yedek cron'u çalışıyor |
-| 2 Plane | ⏳ kod yazılıyor (`feat/shared-redis`); `tools/ops/move-site-redis.sh` ve `redis-copy.php` hazır |
-| 3 CMS | ⏳ codron-co/deamon #50, 1.2.82 turunda (önce alpha + deamon-test, sonra beta) |
-| 4 Prova | ✅ kısmen (sunucuda): deamon-test anahtarları TTL ve önek değişimiyle test DB'sine kopyalandı, sayılar tuttu. ACL: başka önek (başka DB'de de) `NOPERM`; `FLUSHALL`/`FLUSHDB`/`KEYS`/`CONFIG` `NOPERM`; kendi anahtarlarıyla Lua çalışıyor, Lua içinden başka anahtar `NOPERM`. Kalan: Plane komutlarıyla uçtan uca prova |
-| 5 deamon-test | bekliyor |
-| 6 Bütün siteler | bekliyor |
+| 2 Plane | ✅ canlıda (alpha `1f458a1`, migration batch 45). `Deamon Redis` kayıtlı ve varsayılan (`ops:redis-server`) |
+| 3 CMS | ✅ codron-co/deamon #50, 1.2.82: beta = main = alpha = `338f4d36` (2026-10-26 02:16 TR); 36 sitenin hepsi bu imajda |
+| 4 Prova | ✅ deamon-test anahtarları TTL ve önek değişimiyle test DB'sine kopyalandı, sayılar tuttu. ACL: başka önek (başka DB'de de) `NOPERM`; `FLUSHALL`/`FLUSHDB`/`KEYS`/`CONFIG` `NOPERM`; kendi anahtarlarıyla Lua çalışıyor, Lua içinden başka anahtar `NOPERM`. `ops:site-redis prepare test` → DB 2/3, `site_test` ACL dosyasına yazıldı |
+| 5 deamon-test | ✅ 2026-10-26 01:14'te paylaşılan Redis'te. 24 saat gözlem yerine (kullanıcı kararı) Chrome + terminal testi: site/admin 78 sayfa 200, oturum ve CSRF Redis'te, admin girişi, site sağlığı taraması (kuyruk), iletişim formu, yorum aç/kapa, zamanlayıcı; 15 dk MONITOR: 12 bin komut, hepsi izinli, hepsi `site_test:` öneki; failed job, ACL reddi, hata kaydı 0. İleri 9 sn, `--back` 6 sn, yeniden ileri 8 sn; site ve admin 200; kuyruk işi işlendi, `queue:work`/`schedule:work` ayakta; Coolify'da 7 REDIS_* kayıtlı (deploy'da kalır). Provada bulunan: `--back` sonrası paylaşılan çiftte eski kopya kalıyordu ve yeniden ileri kopya reddediliyordu; ileri taşıma artık `prepare` sonrası `flush` yapıyor. `watch.sh` ACL reddini de bildiriyor |
+| 6 Bütün siteler | ✅ 2026-10-26 02:18–06:28 TR, `fleet-db-rollout.sh` (MOVE_SCRIPT=move-site-redis.sh, CPU < %80): 22 site deploy, 34 site taşındı (site başına 8–20 sn bakım). 35 site paylaşılan Redis'te, yalnız nova yerelde (Nova oturumunun isteği). İlk denemede deamon-zorlu geri alındı: açılışta paylaşılan MySQL'den `1615 Prepared statement needs to be re-prepared` (table_definition_cache 2000 < 7.181 tablo) → 10000 yapıldı, MySQL bellek sınırı 4→6 GB; ardından taşındı. Son durum: 36/36 healthy, 200, paylaşılan Redis 11 MB, evicted 0, ACL reddi 0. Kalan: eski site Redis container'ları geri dönüş için duruyor; compose'tan kaldırma (MySQL faz 3 ile birlikte) ayrı onayla |
 
 ## Neden
 
