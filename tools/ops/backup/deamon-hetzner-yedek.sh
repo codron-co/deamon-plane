@@ -2,7 +2,7 @@
 # Deamon off-site backup -> Hetzner Storage Box (u701755, Helsinki), nightly after the local dumps.
 #   - shared MySQL dumps   /opt/deamon-db/backups     -> hz:deamon/mysql   (local copies kept 7 days)
 #   - shared Redis dumps   /opt/deamon-redis/backups  -> hz:deamon/redis
-#   - site files: every <app>_deamon-{storage,private,themes} volume -> hz:deamon/volumes/<volume>
+#   - site files: every <app>{_,-}deamon-{storage,private,themes} volume (compose-era _, Plane-created -) -> hz:deamon/volumes/<volume>
 #   - Coolify's own backups /data/coolify/backups      -> hz:deamon/coolify
 # copy, never sync: a file deleted on the server stays in the box; the box's snapshots keep history.
 # Dumps older than KEEP_DAYS are removed from the box. Secret: /root/.ssh/hetzner-sbox (port 23).
@@ -21,7 +21,7 @@ kod=0; fail=""
 rc copy /opt/deamon-db/backups hz:deamon/mysql || { kod=$?; fail="$fail mysql"; }
 rc copy /opt/deamon-redis/backups hz:deamon/redis || { kod=$?; fail="$fail redis"; }
 [ -d /data/coolify/backups ] && { rc copy /data/coolify/backups hz:deamon/coolify || { kod=$?; fail="$fail coolify"; }; }
-for v in /var/lib/docker/volumes/*_deamon-storage /var/lib/docker/volumes/*_deamon-private /var/lib/docker/volumes/*_deamon-themes; do
+for v in /var/lib/docker/volumes/*[_-]deamon-storage /var/lib/docker/volumes/*[_-]deamon-private /var/lib/docker/volumes/*[_-]deamon-themes; do
   [ -d "$v/_data" ] || continue
   rc copy "$v/_data" "hz:deamon/volumes/$(basename "$v")" --exclude "framework/**" || { kod=$?; fail="$fail $(basename "$v")"; }
 done
