@@ -12,8 +12,8 @@ use App\Models\Site;
 use App\Models\User;
 use App\Services\Cloudflare\CloudflareHostname;
 use App\Services\Comail\ComailException;
-use Illuminate\Database\Eloquent\Collection;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**

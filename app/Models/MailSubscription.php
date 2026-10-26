@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\CarbonInterface;
 
 /**
  * A site's paid CoMail package period. No row = the default (free) package.
