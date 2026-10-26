@@ -18,6 +18,7 @@ class ComailDomainProvisioner
 {
     public function __construct(
         private readonly ComailLimits $limits,
+        private readonly DnsResolver $resolver,
     ) {}
 
     /**
@@ -108,6 +109,7 @@ class ComailDomainProvisioner
 
         try {
             $attributes = $this->limits->domainAttributes($this->limits->package($site));
+            $relay = $this->relayFor($row);
             if ($client->domain($domain) === null) {
                 // add/domain also creates the DKIM key (selector dkim, 2048) and
                 // answers with two success elements (dkim_added, domain_added).
@@ -116,12 +118,10 @@ class ComailDomainProvisioner
                     'active' => 1,
                     'rl_value' => '',
                     'rl_frame' => 's',
-                    'backupmx' => 0,
-                    'relay_all_recipients' => 0,
                     'restart_sogo' => 1,
-                ]);
+                ] + self::routingAttributes($relay));
             } else {
-                $client->editDomain($domain, $attributes + ['active' => 1]);
+                $client->editDomain($domain, $attributes + ['active' => 1] + self::routingAttributes($relay));
             }
 
             $dkim = $this->ensureDkim($client, $domain);
@@ -145,6 +145,64 @@ class ComailDomainProvisioner
         ])->save();
 
         return $row;
+    }
+
+    /**
+     * Point the mailcow domain at local delivery (MX on CoMail) or relay mode.
+     *
+     * While the domain's MX is still at another provider, mailcow must not treat the
+     * domain as purely local: mail from CoMail users to addresses that only exist at the
+     * old provider would bounce with "user unknown". Relay mode delivers existing CoMail
+     * mailboxes locally and hands every other recipient to the domain's real MX.
+     */
+    public function syncRouting(SiteComailDomain $row, ?bool $mxOnComail = null): void
+    {
+        $server = MailServer::comail();
+        if (! $server instanceof MailServer || $row->mailcow_synced_at === null) {
+            return;
+        }
+
+        $relay = $mxOnComail === null ? $this->relayFor($row) : ! $mxOnComail;
+
+        try {
+            MailcowClient::forServer($server)->editDomain($row->domain, self::routingAttributes($relay));
+        } catch (MailcowException $exception) {
+            Log::warning('comail.routing_sync_failed', ['domain' => $row->domain, 'error' => $exception->getMessage()]);
+        }
+    }
+
+    /**
+     * Relay while the domain has MX records and none of them points at CoMail.
+     * No MX at all means nothing to relay to: CoMail is (or becomes) the destination.
+     */
+    public function relayFor(SiteComailDomain $row): bool
+    {
+        if ($row->mx_active_at !== null) {
+            return false;
+        }
+
+        $targets = array_values(array_filter(array_map(
+            static fn (array $answer): string => strtolower(rtrim((string) ($answer['target'] ?? ''), '.')),
+            $this->resolver->lookup($row->domain, 'MX'),
+        )));
+        if ($targets === []) {
+            return false;
+        }
+
+        return ! in_array(ComailDns::mailHost(), $targets, true);
+    }
+
+    /**
+     * @return array{backupmx: int, relay_all_recipients: int, relay_unknown_only: int}
+     */
+    public static function routingAttributes(bool $relay): array
+    {
+        return [
+            'backupmx' => $relay ? 1 : 0,
+            // mailcow stores relay_all_recipients = 1 whenever relay_unknown_only is on.
+            'relay_all_recipients' => $relay ? 1 : 0,
+            'relay_unknown_only' => $relay ? 1 : 0,
+        ];
     }
 
     /**

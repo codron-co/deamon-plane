@@ -237,4 +237,55 @@ class ComailEnrollmentTest extends TestCase
 
         $this->assertFalse(EnsureComailDomainJob::dispatchForPrimary($other));
     }
+
+    public function test_domain_with_mx_at_another_provider_is_added_in_relay_mode(): void
+    {
+        $this->cloudflareAccount();
+        $this->cloudflare->zone('acme.test');
+        $this->cloudflare->record('acme.test', 'MX', 'acme.test', 'mx1.hostinger.com', 5);
+        $this->resolver->set('MX', 'acme.test', [['target' => 'mx1.hostinger.com', 'priority' => 5]]);
+        $site = $this->comailSite();
+
+        EnsureComailDomainJob::dispatchSync((string) $site->id, 'acme.test', true);
+
+        $domain = $this->mailcow->domains['acme.test'];
+        $this->assertSame(1, $domain['backupmx']);
+        $this->assertSame(1, $domain['relay_unknown_only']);
+        $this->assertSame(1, $domain['relay_all_recipients']);
+        // The existing MX stays untouched.
+        $this->assertSame(['mx1.hostinger.com'], array_column($this->cloudflare->at('acme.test', 'MX'), 'content'));
+    }
+
+    public function test_domain_without_mx_is_added_for_local_delivery(): void
+    {
+        $this->cloudflareAccount();
+        $this->cloudflare->zone('acme.test');
+        $site = $this->comailSite();
+
+        EnsureComailDomainJob::dispatchSync((string) $site->id, 'acme.test', true);
+
+        $domain = $this->mailcow->domains['acme.test'];
+        $this->assertSame(0, $domain['backupmx']);
+        $this->assertSame(0, $domain['relay_unknown_only']);
+    }
+
+    public function test_activating_the_mx_switches_the_domain_to_local_delivery(): void
+    {
+        $this->cloudflareAccount();
+        $this->cloudflare->zone('acme.test');
+        $this->cloudflare->record('acme.test', 'MX', 'acme.test', 'mx1.hostinger.com', 5);
+        $this->resolver->set('MX', 'acme.test', [['target' => 'mx1.hostinger.com', 'priority' => 5]]);
+        $site = $this->comailSite();
+        EnsureComailDomainJob::dispatchSync((string) $site->id, 'acme.test', true);
+        $this->assertSame(1, $this->mailcow->domains['acme.test']['backupmx']);
+
+        $row = SiteComailDomain::query()->where('domain', 'acme.test')->firstOrFail();
+        app(ComailDns::class)->activate($row);
+
+        // Public DNS still answers the old MX (TTL): activation must stick anyway.
+        $this->assertNotNull($row->fresh()->mx_active_at);
+        $this->assertSame(['mail.example.test'], array_column($this->cloudflare->at('acme.test', 'MX'), 'content'));
+        $this->assertSame(0, $this->mailcow->domains['acme.test']['backupmx']);
+        $this->assertSame(0, $this->mailcow->domains['acme.test']['relay_unknown_only']);
+    }
 }

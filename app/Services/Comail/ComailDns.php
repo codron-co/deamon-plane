@@ -130,7 +130,7 @@ class ComailDns
      *
      * @return array{domain: string, dns_managed: bool, mx_active: bool, records: list<array<string, mixed>>}
      */
-    public function check(SiteComailDomain $row, ?bool $managed = null): array
+    public function check(SiteComailDomain $row, ?bool $managed = null, bool $keepActive = false): array
     {
         $host = self::mailHost();
         $records = [];
@@ -145,10 +145,12 @@ class ComailDns
             $records[] = self::publicRecord($record, $status, $current);
         }
 
+        $wasActive = $row->mx_active_at !== null;
         $mxActiveAt = $row->mx_active_at;
         if ($mxStatus === 'ok') {
             $mxActiveAt ??= now();
-        } elseif ($mxStatus === 'different') {
+        } elseif ($mxStatus === 'different' && ! $keepActive) {
+            // Right after activate() public DNS may still show the old MX for the TTL.
             $mxActiveAt = null;
         }
 
@@ -157,6 +159,10 @@ class ComailDns
             'dns_check' => ['records' => $records],
             'mx_active_at' => $mxActiveAt,
         ])->save();
+
+        if ($wasActive !== ($mxActiveAt !== null)) {
+            app(ComailDomainProvisioner::class)->syncRouting($row, $mxActiveAt !== null);
+        }
 
         return $this->shape($row, $managed ?? $this->isManaged($row), $records);
     }
@@ -185,8 +191,9 @@ class ComailDns
         $this->write($row, $zone, activate: true);
 
         $row->forceFill(['mx_active_at' => now()])->save();
+        app(ComailDomainProvisioner::class)->syncRouting($row, true);
 
-        return $this->check($row, true);
+        return $this->check($row, true, keepActive: true);
     }
 
     /**
