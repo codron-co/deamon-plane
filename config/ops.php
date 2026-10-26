@@ -174,6 +174,13 @@ return [
         'webmail_url' => env('HOSTINGER_WEBMAIL_URL', 'https://mail.hostinger.com'),
     ],
 
+    // CoMail (shared mailcow). Server URL + API key live on the mail_servers row.
+    'comail' => [
+        'timeout_seconds' => (int) env('COMAIL_HTTP_TIMEOUT', 15),
+        'dkim_selector' => 'dkim',
+        'dkim_key_size' => 2048,
+    ],
+
     'cloudflare' => [
         'api_base' => env('CLOUDFLARE_API_BASE', 'https://api.cloudflare.com/client/v4'),
         'timeout' => (int) env('CLOUDFLARE_HTTP_TIMEOUT', 20),

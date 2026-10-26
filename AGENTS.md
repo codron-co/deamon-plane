@@ -47,6 +47,6 @@ Customer site env = bootstrap only (`APP_KEY`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWO
 ## Hard limits
 
 - Multi-tenant SaaS / marketplace / customer theme ZIP upload: out of scope
-- Mailcow and other related-infra items: see [docs/related-infra.md](docs/related-infra.md) (plane v1 out of scope unless a task says otherwise)
+- Mailcow: the Plane side is CoMail ([docs/modules/comail.md](docs/modules/comail.md)); the mailcow server itself and other related-infra items: see [docs/related-infra.md](docs/related-infra.md)
 - Never invent CMS modules, theme stacks, or admin Blade/Inertia work here
 - Do not copy CMS `AGENTS.md` or CMS `.agents/skills/**` into this repo

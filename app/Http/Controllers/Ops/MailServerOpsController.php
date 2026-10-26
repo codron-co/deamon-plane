@@ -5,6 +5,11 @@ namespace App\Http\Controllers\Ops;
 use App\Enums\MailProvider;
 use App\Http\Controllers\Controller;
 use App\Models\MailServer;
+use App\Models\Site;
+use App\Models\SiteComailDomain;
+use App\Services\Comail\ComailSiteConfigurer;
+use App\Services\Comail\MailcowClient;
+use App\Services\Comail\MailcowException;
 use App\Services\Hostinger\HostingerMailException;
 use App\Services\Mail\PlatformMailState;
 use App\Services\Mail\SiteMailConfigurer;
@@ -110,6 +115,10 @@ class MailServerOpsController extends Controller
         $this->authorize('ops.write');
 
         $validated = $this->validated($request, requireToken: true);
+        if ($validated['provider'] === MailProvider::Mailcow->value) {
+            // The CoMail key administers every customer mailbox.
+            $this->authorize('ops.danger');
+        }
         $server = new MailServer;
         $this->fillServer($server, $validated);
         $server->save();
@@ -131,6 +140,10 @@ class MailServerOpsController extends Controller
             'canDanger' => request()->user()?->can('ops.danger') ?? false,
             'hasToken' => $mailServer->hasToken(),
             'sites' => $mailServer->sites()->with('mailBindings')->orderBy('name')->get(),
+            'isComail' => $mailServer->provider === MailProvider::Mailcow,
+            'comailDomains' => $mailServer->provider === MailProvider::Mailcow
+                ? SiteComailDomain::query()->with('site:id,name,slug')->orderBy('domain')->get()
+                : collect(),
         ]);
     }
 
@@ -140,10 +153,17 @@ class MailServerOpsController extends Controller
         $this->authorize('ops.danger');
 
         $before = $this->auditSnapshot($mailServer);
-        $validated = $this->validated($request, requireToken: false);
+        $validated = $this->validated($request, requireToken: false, server: $mailServer);
         $this->fillServer($mailServer, $validated);
         $mailServer->save();
         $this->audit($mailServer, $request, 'mail_server.updated', $before, $this->auditSnapshot($mailServer));
+
+        if ($mailServer->provider === MailProvider::Mailcow) {
+            // Enabling, disabling or moving CoMail changes what every enrolled CMS shows.
+            $this->requeueComailSites();
+
+            return back()->with('status', __('mail.flash.saved'));
+        }
 
         $configurer->syncAssignedSites($mailServer);
 
@@ -166,8 +186,12 @@ class MailServerOpsController extends Controller
         }
 
         $this->audit($mailServer, $request, 'mail_server.deleted', $before, null);
+        $isComail = $mailServer->provider === MailProvider::Mailcow;
         $mailServer->delete();
         $configurer->disableSites($sites);
+        if ($isComail) {
+            $this->requeueComailSites();
+        }
 
         return redirect()
             ->route('ops.mail-servers.index')
@@ -180,6 +204,10 @@ class MailServerOpsController extends Controller
 
         if (! $mailServer->hasToken()) {
             return back()->with('error', __('mail.errors.not_configured'));
+        }
+
+        if ($mailServer->provider === MailProvider::Mailcow) {
+            return $this->testComail($request, $mailServer);
         }
 
         try {
@@ -199,18 +227,63 @@ class MailServerOpsController extends Controller
     }
 
     /**
+     * CoMail test = mailcow version call (the key is allowlisted to Plane's IP).
+     */
+    private function testComail(Request $request, MailServer $mailServer): RedirectResponse
+    {
+        try {
+            $version = MailcowClient::forServer($mailServer)->version();
+        } catch (MailcowException) {
+            return back()->with('error', __('mail.errors.comail_test_failed'));
+        }
+
+        $version = mb_substr($version, 0, 40);
+        $mailServer->forceFill([
+            'last_probe_at' => now(),
+            'last_probe_payload' => ['version' => $version],
+        ])->save();
+
+        $this->audit($mailServer, $request, 'mail_server.tested', null, ['version' => $version]);
+
+        return back()->with('status', __('mail.flash.comail_tested', ['version' => $version !== '' ? $version : '?']));
+    }
+
+    private function requeueComailSites(): void
+    {
+        $configurer = app(ComailSiteConfigurer::class);
+        Site::query()->whereHas('comailDomains')->orderBy('id')->each(function (Site $site) use ($configurer): void {
+            if ($site->hasAgentSecret()) {
+                $configurer->queue($site);
+            }
+        });
+    }
+
+    /**
      * @return array<string, mixed>
      */
-    private function validated(Request $request, bool $requireToken): array
+    private function validated(Request $request, bool $requireToken, ?MailServer $server = null): array
     {
+        $provider = $server?->exists
+            ? $server->provider->value
+            : (string) $request->input('provider', MailProvider::Hostinger->value);
+        $isComail = $provider === MailProvider::Mailcow->value;
         $tokenRules = [$requireToken ? 'required' : 'nullable', 'string', 'max:2000'];
 
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'provider' => ['required', 'string', Rule::in([MailProvider::Hostinger->value])],
+            // A saved server keeps its provider: its sites depend on it.
+            'provider' => [$server?->exists ? 'sometimes' : 'required', 'string', Rule::in(array_map(
+                static fn (MailProvider $case): string => $case->value,
+                MailProvider::cases(),
+            ))],
             'api_token' => $tokenRules,
+            'base_url' => [$isComail ? 'required' : 'nullable', 'string', 'max:255', 'url:https'],
+            'mail_hostname' => ['nullable', 'string', 'max:255', 'regex:/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\z/i'],
             'is_enabled' => ['sometimes', 'boolean'],
         ]);
+        $validated['provider'] = $provider;
+
+        return $validated;
     }
 
     /**
@@ -219,10 +292,18 @@ class MailServerOpsController extends Controller
     private function fillServer(MailServer $server, array $validated): void
     {
         $server->name = $validated['name'];
-        $server->provider = MailProvider::Hostinger;
+        $provider = MailProvider::from((string) $validated['provider']);
+        $server->provider = $provider;
         $server->is_enabled = $validated['is_enabled'] ?? $server->is_enabled ?? true;
         if (filled($validated['api_token'] ?? null)) {
             $server->api_token = $validated['api_token'];
+        }
+
+        if ($provider === MailProvider::Mailcow) {
+            $server->base_url = rtrim(trim((string) $validated['base_url']), '/');
+            $server->mail_hostname = filled($validated['mail_hostname'] ?? null)
+                ? strtolower(trim((string) $validated['mail_hostname']))
+                : null;
         }
     }
 
@@ -234,6 +315,8 @@ class MailServerOpsController extends Controller
         return [
             'name' => $server->name,
             'provider' => $server->provider instanceof MailProvider ? $server->provider->value : $server->provider,
+            'base_url' => $server->base_url,
+            'mail_hostname' => $server->mail_hostname,
             'is_enabled' => $server->is_enabled,
             'has_token' => $server->hasToken(),
         ];

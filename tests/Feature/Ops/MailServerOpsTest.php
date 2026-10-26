@@ -73,12 +73,21 @@ class MailServerOpsTest extends TestCase
             ->assertDontSee(self::TOKEN, false);
     }
 
-    public function test_mailcow_cannot_be_stored(): void
+    public function test_mailcow_needs_a_base_url_and_an_unknown_provider_is_refused(): void
     {
+        // CoMail (mailcow) is implemented now; see tests/Feature/Comail/ComailOpsTest.
         $this->actingAs($this->operator())
             ->post(route('ops.mail-servers.store'), [
                 'name' => 'Mailcow',
                 'provider' => MailProvider::Mailcow->value,
+                'api_token' => self::TOKEN,
+            ])
+            ->assertSessionHasErrors('base_url');
+
+        $this->actingAs($this->operator())
+            ->post(route('ops.mail-servers.store'), [
+                'name' => 'Other',
+                'provider' => 'zoho',
                 'api_token' => self::TOKEN,
             ])
             ->assertSessionHasErrors('provider');

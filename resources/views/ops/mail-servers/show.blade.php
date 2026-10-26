@@ -19,6 +19,12 @@
         <dl class="site-fact-list">
             <div><dt>{{ __('mail.fields.provider') }}</dt><dd>{{ $server->provider?->label() }}</dd></div>
             <div><dt>{{ __('ops.enabled') }}</dt><dd>{{ $server->is_enabled ? __('ops.yes') : __('ops.no') }}</dd></div>
+            @if ($isComail)
+                <div><dt>{{ __('mail.fields.base_url') }}</dt><dd><code>{{ $server->comailBaseUrl() ?: __('ops.none') }}</code></dd></div>
+                <div><dt>{{ __('mail.fields.mail_hostname') }}</dt><dd><code>{{ $server->comailHostname() ?: __('ops.none') }}</code></dd></div>
+                <div><dt>{{ __('mail.comail.version') }}</dt><dd>{{ $server->last_probe_payload['version'] ?? __('ops.none') }}</dd></div>
+                <div><dt>{{ __('mail.comail.active_label') }}</dt><dd>{{ $server->isComailReady() && \App\Models\MailServer::comail()?->is($server) ? __('ops.yes') : __('ops.no') }}</dd></div>
+            @endif
         </dl>
     </section>
 
@@ -42,6 +48,38 @@
         </form>
     @endif
 
+    @if ($isComail)
+        <section class="ops-panel" aria-labelledby="comail-sites-heading">
+            <h2 id="comail-sites-heading">{{ __('mail.comail.sites_title') }}</h2>
+            <p>{{ __('mail.comail.sites_lede') }}</p>
+            @if ($comailDomains->isEmpty())
+                <p class="muted">{{ __('mail.comail.sites_empty') }}</p>
+            @else
+                <div class="sites-table-wrap">
+                    <table class="ops-table">
+                        <thead>
+                            <tr>
+                                <th>{{ __('mail.sites.site') }}</th>
+                                <th>{{ __('mail.comail.domain') }}</th>
+                                <th>{{ __('mail.columns.status') }}</th>
+                                <th>{{ __('mail.comail.mx') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($comailDomains as $row)
+                                <tr>
+                                    <td>@if ($row->site)<a href="{{ route('ops.sites.show', $row->site) }}#site-comail">{{ $row->site->name }}</a>@endif</td>
+                                    <td>{{ $row->domain }}</td>
+                                    <td><span class="status-chip">{{ __('mail.comail.statuses.'.$row->status) }}</span></td>
+                                    <td><span class="status-chip">{{ $row->mxActive() ? __('mail.comail.mx_active') : __('mail.comail.mx_waiting') }}</span></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </section>
+    @else
     <section class="ops-panel" aria-labelledby="mail-orders-heading">
         <h2 id="mail-orders-heading">{{ __('mail.orders.title') }}</h2>
         <p>{{ __('mail.orders.lede') }}</p>
@@ -105,6 +143,8 @@
             </div>
         @endif
     </section>
+
+    @endif
 
     @if ($canDanger ?? false)
         <form method="POST" action="{{ route('ops.mail-servers.destroy', $server) }}" data-confirm="{{ __('mail.danger.confirm', ['name' => $server->name]) }}" data-confirm-title="{{ __('mail.danger.confirm_title') }}" data-confirm-label="{{ __('mail.danger.label') }}" data-confirm-danger="true">

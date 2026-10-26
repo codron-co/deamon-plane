@@ -1,12 +1,12 @@
 # Mail servers (Hostinger)
 
-Plane holds Hostinger Mail API tokens and proxies mailbox operations for Deamon CMS. CMS never receives the token. Mailcow is a disabled “Coming soon” option and cannot be stored.
+Plane holds Hostinger Mail API tokens and proxies mailbox operations for Deamon CMS. CMS never receives the token. The other provider, **CoMail (mailcow)**, is the shared mail server and has its own page: [comail.md](comail.md). A CoMail server is never assigned to a site through `sites.mail_server_id` (the site selects and validation only accept Hostinger servers); this page and its flow are unchanged for the Hostinger sites.
 
 Vendor endpoint map (CMS repo): `codron-co/deamon` `docs/modules/hostinger-mail-api.md`. Official: https://developers.hostinger.com/#tag-group/mail
 
 ## Model
 
-`mail_servers`: name, `provider` (`hostinger` only for now), encrypted `api_token`, `is_enabled`, allowlisted `last_probe_payload` (order id/domain/seats — no token). A mail server is **account credentials**, not a shared mail order.
+`mail_servers`: name, `provider` (`hostinger`, or `mailcow` for CoMail with `base_url` + `mail_hostname`), encrypted `api_token`, `is_enabled`, allowlisted `last_probe_payload` (order id/domain/seats — no token). A mail server is **account credentials**, not a shared mail order.
 
 `sites.mail_server_id` nullable FK (`nullOnDelete`). Each site stores one or more mailbox domains in `site_mail_bindings` (`hostinger_order_id` + `mail_domain`). `sites.hostinger_order_id` / `mail_domain` stay the first binding for older callers.
 

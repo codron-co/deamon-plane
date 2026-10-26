@@ -11,6 +11,8 @@ use App\Policies\CoolifyConnectionPolicy;
 use App\Policies\SitePolicy;
 use App\Policies\ThemeGitConnectionPolicy;
 use App\Policies\ThemePolicy;
+use App\Services\Comail\DnsResolver;
+use App\Services\Comail\NativeDnsResolver;
 use App\Services\Coolify\CoolifyDeployGate;
 use App\Services\Coolify\CoolifyRateGuard;
 use App\Support\OpsAppearance;
@@ -31,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
         // Same reason: the gate has to recognise the sweep that opened it, and
         // the deploy paths resolve it from the container one site at a time.
         $this->app->singleton(CoolifyDeployGate::class);
+        // CoMail DNS check; tests bind a fake resolver.
+        $this->app->bind(DnsResolver::class, NativeDnsResolver::class);
     }
 
     public function boot(): void
@@ -45,6 +49,11 @@ class AppServiceProvider extends ServiceProvider
         // Keyed by the bearer token (hashed), so one runaway agent cannot starve another.
         RateLimiter::for('mcp', static fn (Request $request): Limit => Limit::perMinute((int) config('ops.mcp.rate_limit_per_minute', 240))
             ->by('mcp:'.hash('sha256', (string) ($request->bearerToken() ?? $request->ip()))));
+
+        // CoMail site API: 60/min per site. Every CMS calls from the same Coolify host IP,
+        // so an IP key would let one busy admin panel starve the rest.
+        RateLimiter::for('site-comail', static fn (Request $request): Limit => Limit::perMinute(60)
+            ->by('site-comail:'.substr((string) $request->header('X-Deamon-Site', $request->ip()), 0, 64)));
 
         ProductionDebugGuard::assert();
 

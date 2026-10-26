@@ -48,6 +48,9 @@ final class ControlPlaneAgentContract
 
     public const MAIL_CONFIGURE_PATH = '/internal/control/v1/mail/configure';
 
+    /** CoMail (shared mailcow): enables the CMS `comail` module and tells it where Plane's site API is. */
+    public const COMAIL_CONFIGURE_PATH = '/internal/control/v1/comail/configure';
+
     public const PLATFORM_MAIL_CONFIGURE_PATH = '/internal/control/v1/platform-mail/configure';
 
     /** CMS 1.2.22+: stores the DeskRon application the admin Support page uses. */
@@ -183,6 +186,11 @@ final class ControlPlaneAgentContract
     public static function mailConfigurePath(): string
     {
         return self::configuredPath('ops.agent.mail_configure_path', self::MAIL_CONFIGURE_PATH);
+    }
+
+    public static function comailConfigurePath(): string
+    {
+        return self::configuredPath('ops.agent.comail_configure_path', self::COMAIL_CONFIGURE_PATH);
     }
 
     public static function platformMailConfigurePath(): string

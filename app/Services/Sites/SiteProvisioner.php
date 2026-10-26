@@ -8,6 +8,7 @@ use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\SiteStatus;
 use App\Enums\WaitingDeployAction;
+use App\Jobs\EnsureComailDomainJob;
 use App\Jobs\PollDeploymentJob;
 use App\Jobs\ProvisionSiteJob;
 use App\Models\CloudflareSetting;
@@ -333,6 +334,17 @@ class SiteProvisioner
                     'error' => $this->redactSecrets($site, $exception->getMessage()),
                 ],
                 'ip' => $ip,
+            ]);
+        }
+
+        // CoMail: enroll the primary domain (mailcow domain + DKIM + DNS + CMS push).
+        // Idempotent and queued; a mail failure never fails the provision.
+        try {
+            EnsureComailDomainJob::dispatchForPrimary($site);
+        } catch (Throwable $exception) {
+            Log::warning('comail.enroll_dispatch_failed', [
+                'site_id' => $site->id,
+                'error' => $this->redactSecrets($site, $exception->getMessage()),
             ]);
         }
 

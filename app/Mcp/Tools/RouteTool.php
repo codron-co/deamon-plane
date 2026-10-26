@@ -35,6 +35,8 @@ final class RouteTool implements McpTool
         'record' => ['record_id'],
         'admin' => ['admin_id'],
         'rollout' => ['rollout_id'],
+        'comail_domain' => ['domain'],
+        'mail_package' => ['package'],
     ];
 
     /**
@@ -152,7 +154,7 @@ final class RouteTool implements McpTool
     private function resolve(string $resolver, array $arguments, array $resolved): mixed
     {
         $site = collect($resolved)->first(fn ($value): bool => $value instanceof Site);
-        $needsSite = in_array($resolver, ['installation', 'site_domain', 'deployment'], true);
+        $needsSite = in_array($resolver, ['installation', 'site_domain', 'deployment', 'comail_domain'], true);
         if ($needsSite && ! $site instanceof Site) {
             throw new \LogicException("Resolver [{$resolver}] needs a site parameter first.");
         }
@@ -169,6 +171,8 @@ final class RouteTool implements McpTool
             'record' => trim((string) ($arguments['record_id'] ?? '')),
             'admin' => (int) ($arguments['admin_id'] ?? 0),
             'rollout' => McpModels::rollout($arguments['rollout_id'] ?? 0),
+            'comail_domain' => McpModels::comailDomain($site, $arguments['domain'] ?? ''),
+            'mail_package' => McpModels::mailPackage($arguments['package'] ?? ''),
             default => throw new \LogicException("Unknown resolver [{$resolver}]."),
         };
     }

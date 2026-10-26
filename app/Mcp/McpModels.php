@@ -5,7 +5,9 @@ namespace App\Mcp;
 use App\Models\CloudflareSetting;
 use App\Models\Deployment;
 use App\Models\FleetRollout;
+use App\Models\MailPackage;
 use App\Models\Site;
+use App\Models\SiteComailDomain;
 use App\Models\SiteDomain;
 use App\Models\SiteThemeInstallation;
 use App\Models\Theme;
@@ -121,6 +123,38 @@ final class McpModels
         }
 
         return $account;
+    }
+
+    public static function comailDomain(Site $site, mixed $host): SiteComailDomain
+    {
+        $host = self::host((string) $host);
+        $row = $site->comailDomains()->where('domain', $host)->first();
+
+        if (! $row instanceof SiteComailDomain) {
+            $known = $site->comailDomains()->pluck('domain')->implode(', ');
+
+            throw new McpException(
+                "`{$host}` is not a CoMail domain of {$site->slug}.".($known !== '' ? " CoMail domains: {$known}." : ' Add it with add_comail_domain.'),
+                'not_found',
+            );
+        }
+
+        return $row;
+    }
+
+    /**
+     * A package id or slug.
+     */
+    public static function mailPackage(mixed $ref): MailPackage
+    {
+        $ref = trim((string) $ref);
+        $package = MailPackage::query()->where('slug', $ref)->orWhere('id', $ref)->first();
+
+        if (! $package instanceof MailPackage) {
+            throw new McpException("No mail package `{$ref}`. Packages: ".MailPackage::query()->orderBy('sort')->pluck('slug')->implode(', ').'.', 'not_found');
+        }
+
+        return $package;
     }
 
     public static function rollout(mixed $id): FleetRollout

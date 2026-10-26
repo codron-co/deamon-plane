@@ -39,6 +39,7 @@ final class RouteToolCatalog
             ...self::themes(),
             ...self::siteSettings(),
             ...self::admins(),
+            ...self::comail(),
         ];
     }
 
@@ -763,6 +764,121 @@ final class RouteToolCatalog
                 properties: $admin,
                 required: ['site', 'admin_id'],
                 params: ['site' => 'site', 'remoteAdmin' => 'admin'],
+            ),
+        ];
+    }
+
+    /**
+     * CoMail (shared mailcow): packages and per-site mail domains.
+     *
+     * @return list<RouteTool>
+     */
+    private static function comail(): array
+    {
+        $site = ['site' => self::SITE];
+        $domain = ['domain' => ['type' => 'string', 'description' => 'CoMail domain of the site (get_site lists them).']];
+        $limits = [
+            'name' => ['type' => 'string'],
+            'slug' => ['type' => 'string', 'description' => 'Lowercase letters, digits, dashes.'],
+            'description' => ['type' => 'string'],
+            'mailbox_limit' => ['type' => 'integer', 'minimum' => 0],
+            'storage_mb' => ['type' => 'integer', 'minimum' => 1, 'description' => 'Total for the site across its domains.'],
+            'mailbox_max_quota_mb' => ['type' => 'integer', 'minimum' => 1, 'description' => '<= storage_mb.'],
+            'alias_limit' => ['type' => 'integer', 'minimum' => 0],
+            'domain_limit' => ['type' => ['integer', 'null'], 'description' => 'null = any of the site\'s own domains.'],
+            'price_monthly' => ['type' => ['number', 'null']],
+            'currency' => ['type' => 'string', 'default' => 'TRY'],
+            'is_active' => ['type' => 'boolean'],
+            'is_default' => ['type' => 'boolean', 'description' => 'Exactly one default; setting it moves the default here.'],
+            'sort' => ['type' => 'integer'],
+        ];
+        $package = ['package' => ['type' => 'string', 'description' => 'Package slug or id.']];
+
+        return [
+            new RouteTool(
+                name: 'set_site_mail_package',
+                description: 'Set the CoMail package of a site (limits are re-applied to its mailcow domains). Omit mail_package_id for the default package.',
+                route: 'ops.sites.comail.package',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $site + ['mail_package_id' => ['type' => 'string', 'description' => 'Package id (list via the panel /mail-packages).']],
+                required: ['site'],
+                params: ['site' => 'site'],
+            ),
+            new RouteTool(
+                name: 'add_comail_domain',
+                description: 'Add one of the site\'s own domains to CoMail (mailcow domain + DKIM + DNS on Plane-managed zones; existing MX is never replaced).',
+                route: 'ops.sites.comail.domains.store',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $site + ['domain' => ['type' => 'string']],
+                required: ['site', 'domain'],
+                params: ['site' => 'site'],
+            ),
+            new RouteTool(
+                name: 'apply_comail_dns',
+                description: 'Write the missing CoMail DNS records (DKIM, CNAMEs, DMARC, SRV; MX+SPF only when the domain has no MX). Cloudflare zones on Plane only.',
+                route: 'ops.sites.comail.dns.apply',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $site + $domain,
+                required: ['site', 'domain'],
+                params: ['site' => 'site', 'comailDomain' => 'comail_domain'],
+            ),
+            new RouteTool(
+                name: 'check_comail_dns',
+                description: 'Resolve the expected CoMail DNS records and store ok/missing/different per record.',
+                route: 'ops.sites.comail.dns.check',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $site + $domain,
+                required: ['site', 'domain'],
+                params: ['site' => 'site', 'comailDomain' => 'comail_domain'],
+            ),
+            new RouteTool(
+                name: 'activate_comail_mx',
+                description: 'Switch a domain\'s mail to CoMail: replaces its MX and SPF and points autodiscover/autoconfig to CoMail. Mail at the old provider stops arriving. Only on the user\'s explicit request.',
+                route: 'ops.sites.comail.activate',
+                ability: McpToken::ABILITY_DANGER,
+                properties: $site + $domain + ['confirmed' => self::CONFIRMED],
+                required: ['site', 'domain', 'confirmed'],
+                params: ['site' => 'site', 'comailDomain' => 'comail_domain'],
+            ),
+            new RouteTool(
+                name: 'resend_comail_configure',
+                description: 'Push the CoMail configure (enable the E-posta module) to the CMS again.',
+                route: 'ops.sites.comail.configure',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $site,
+                required: ['site'],
+                params: ['site' => 'site'],
+            ),
+            new RouteTool(
+                name: 'create_mail_package',
+                description: 'Create a CoMail package (limits per site).',
+                route: 'ops.mail-packages.store',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $limits,
+                required: ['name', 'slug', 'mailbox_limit', 'storage_mb', 'mailbox_max_quota_mb', 'alias_limit'],
+                prepare: static fn (array $body): array => $body + ['currency' => 'TRY'],
+            ),
+            new RouteTool(
+                name: 'update_mail_package',
+                description: 'Change a CoMail package. Only the fields you pass change; sites using it get the new limits.',
+                route: 'ops.mail-packages.update',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $package + $limits,
+                required: ['package'],
+                params: ['mailPackage' => 'mail_package'],
+                prepare: static fn (array $body, array $resolved): array => $body + $resolved['mailPackage']->only([
+                    'name', 'slug', 'description', 'mailbox_limit', 'storage_mb', 'mailbox_max_quota_mb', 'alias_limit',
+                    'domain_limit', 'price_monthly', 'currency', 'is_active', 'is_default', 'sort',
+                ]),
+            ),
+            new RouteTool(
+                name: 'delete_mail_package',
+                description: 'Delete a CoMail package that no site uses (never the default). Ask the user first.',
+                route: 'ops.mail-packages.destroy',
+                ability: McpToken::ABILITY_DANGER,
+                properties: $package,
+                required: ['package'],
+                params: ['mailPackage' => 'mail_package'],
             ),
         ];
     }
