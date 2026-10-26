@@ -140,8 +140,9 @@ class SiteLifecycle
             return;
         }
 
-        $sha = $images->currentOrLatest($site, $coolify);
-        $coolify->patchApplication($uuid, BuiltImageCommits::pinBody($sha));
+        $app = $coolify->getApp($uuid);
+        $sha = $images->currentOrLatest($site, $coolify, $app);
+        $images->pinApp($coolify, $uuid, $sha, $app);
         CoolifyDeploySettings::rememberPin($site, $sha);
     }
 

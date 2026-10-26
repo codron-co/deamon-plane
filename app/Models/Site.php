@@ -56,6 +56,7 @@ class Site extends Model
         'coolify_git_source_kind',
         'coolify_auto_deploy',
         'coolify_pinned_sha',
+        'coolify_pin_held',
         'coolify_deploy_settings_at',
         'deploy_gate',
         'deploy_canary',
@@ -132,6 +133,7 @@ class Site extends Model
             'coolify_git_source_kind' => CoolifyGitSourceKind::class,
             'channel_needs_review' => 'boolean',
             'coolify_auto_deploy' => 'boolean',
+            'coolify_pin_held' => 'boolean',
             'coolify_deploy_settings_at' => 'datetime',
             'deploy_gate' => DeployGate::class,
             'deploy_canary' => 'boolean',
@@ -735,6 +737,15 @@ class Site extends Model
     public function hasPinnedCommit(): bool
     {
         return trim((string) $this->coolify_pinned_sha) !== '';
+    }
+
+    /**
+     * The pin is an operator's choice (Commite geç, rollback to the last good
+     * commit), not a release pin: CI rollouts leave the site alone.
+     */
+    public function holdsPinnedCommit(): bool
+    {
+        return $this->hasPinnedCommit() && (bool) $this->coolify_pin_held;
     }
 
     public function hasAgentSecret(): bool

@@ -69,6 +69,18 @@ class DeploymentFailureClassifierTest extends TestCase
         $this->assertSame(['restart_app'], $diagnosis->fixes);
     }
 
+    public function test_docker_image_app_container_without_the_app_prefix_is_the_app(): void
+    {
+        $diagnosis = (new DeploymentFailureClassifier)->classify(
+            null,
+            'container 6cmmgh5ty9lzv6uiz5kfavue-094151856125 is unhealthy',
+        );
+
+        $this->assertSame('app_exited', $diagnosis->code);
+        $this->assertSame('6cmmgh5ty9lzv6uiz5kfavue-094151856125', $diagnosis->container);
+        $this->assertSame(['restart_app', 'redeploy'], $diagnosis->fixes);
+    }
+
     public function test_disk_full_wins_over_build_failure(): void
     {
         $diagnosis = (new DeploymentFailureClassifier)->classify(

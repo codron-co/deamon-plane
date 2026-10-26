@@ -11,13 +11,15 @@ use Illuminate\Console\Command;
 /**
  * One pass over the fleet that stores Plane's copy of each site's MySQL passwords,
  * so a Coolify env that later comes back blank is restored instead of regenerated.
- * Existing copies are never overwritten; values are never printed.
+ * Existing copies are never overwritten; values are never printed. Only DB_PASSWORD
+ * is required: MYSQL_ROOT_PASSWORD (the site's own MySQL before CMS 1.2.86) is
+ * copied while Coolify still has it, and its absence is not reported.
  */
 class CaptureDbSecretsCommand extends Command
 {
     protected $signature = 'ops:capture-db-secrets';
 
-    protected $description = 'Store Plane copies of each site\'s DB_PASSWORD / MYSQL_ROOT_PASSWORD from Coolify';
+    protected $description = 'Store Plane copies of each site\'s DB_PASSWORD (and a legacy MYSQL_ROOT_PASSWORD) from Coolify';
 
     public function handle(CoolifyAppEnvSync $sync): int
     {
@@ -40,12 +42,14 @@ class CaptureDbSecretsCommand extends Command
                     return;
                 }
 
-                $after = $this->copies($site->refresh());
-                if ($after > $before) {
+                $site->refresh();
+                if ($this->copies($site) > $before) {
                     $captured++;
                 }
-                if ($after < count(CoolifyAppEnvSync::DB_SECRET_COLUMNS)) {
-                    $this->warn('  '.$site->slug.': '.$after.'/'.count(CoolifyAppEnvSync::DB_SECRET_COLUMNS).' DB secret(s) stored');
+                foreach (CoolifyAppEnvSync::REQUIRED_DB_SECRETS as $key) {
+                    if (blank($site->getAttribute(CoolifyAppEnvSync::DB_SECRET_COLUMNS[$key]))) {
+                        $this->warn('  '.$site->slug.': no '.$key.' copy stored');
+                    }
                 }
             });
 

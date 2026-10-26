@@ -47,6 +47,13 @@ return [
         'image_tag_grace_seconds' => (int) env('DEAMON_IMAGE_TAG_GRACE_SECONDS', 90),
         // A bulk sweep reads the builder's deployments once inside this window.
         'image_builds_cache_seconds' => (int) env('DEAMON_IMAGE_BUILDS_CACHE_SECONDS', 20),
+        // Docker Image apps (deamon-test) run `<registry>/deamon-cms:<commit>`; a tag
+        // already in this registry counts as built. Empty url = builder check only.
+        'image_registry' => [
+            'url' => env('DEAMON_IMAGE_REGISTRY_URL', 'http://127.0.0.1:5000'),
+            'repository' => env('DEAMON_IMAGE_REGISTRY_REPOSITORY', 'deamon-cms'),
+            'timeout' => (int) env('DEAMON_IMAGE_REGISTRY_TIMEOUT', 3),
+        ],
     ],
 
     'themes' => [

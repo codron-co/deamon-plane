@@ -41,12 +41,13 @@ deploy_site() { # <uuid>: deploy one site to $sha and verify; result file $RES/<
     want="$REG:$sha"; pin="'docker_registry_image_tag' => '$sha'"
   else want="deamon-cms:$sha"; pin="'git_commit_sha' => '$sha'"; fi
   # Coolify leaves SOURCE_COMMIT empty unless this is on; the compose image tag needs it.
+  # rememberPin mirrors the release pin onto the Plane site row (sites list, CI rollouts).
   q "UPDATE application_settings SET include_source_commit_in_build = true WHERE application_id = (SELECT id FROM applications WHERE uuid = '$u')" >/dev/null
   since=$(date -u '+%F %T')
   # Plane may be restarting (its own deploy); find the container again and retry.
   for try in 1 2 3; do
     plane=$(docker ps --format '{{.Names}}' | grep '^app-d6ovbjzxgpao23faam3vrcve' | head -1)
-    out=$(tinker "\$s = App\Models\Site::where('coolify_app_uuid', '$u')->firstOrFail(); \$c = App\Services\Coolify\CoolifyApplicationService::forSite(\$s); \$c->patchApplication('$u', [$pin, 'is_auto_deploy_enabled' => false]); echo json_encode(\$c->deploy('$u'));")
+    out=$(tinker "\$s = App\Models\Site::where('coolify_app_uuid', '$u')->firstOrFail(); \$c = App\Services\Coolify\CoolifyApplicationService::forSite(\$s); \$c->patchApplication('$u', [$pin, 'is_auto_deploy_enabled' => false]); App\Services\Sites\CoolifyDeploySettings::rememberPin(\$s, '$sha'); echo json_encode(\$c->deploy('$u'));")
     grep -q 'deployment queued' <<< "$out" && break
     log "deploy call for $name did not queue (try $try): ${out:0:160}"; sleep 30
   done

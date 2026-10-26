@@ -64,7 +64,7 @@ return [
     'errors' => [
         'key_format' => 'Anahtar büyük harfle başlamalı ve yalnızca A–Z, 0–9 ve _ içermeli.',
         'protected' => ':key Coolify tarafından yönetilir; Plane’den değiştirilemez.',
-        'bootstrap' => ':key sitenin bootstrap anahtarıdır ve elle değiştirilemez. DB_PASSWORD / MYSQL_ROOT_PASSWORD mevcut MySQL volume’u kurulurken kullanılan şifrelerdir: env’de değişirse site veritabanına bağlanamaz ve düşer (cukurovaprofil.com bu yüzden düştü). APP_KEY ve ajan anahtarı da Plane’deki kayıtla eşleşmek zorundadır.',
+        'bootstrap' => ':key sitenin bootstrap anahtarıdır ve elle değiştirilemez. DB_PASSWORD sitenin veritabanı kullanıcısının şifresidir (paylaşılan MySQL’de de): env’de değişirse site veritabanına bağlanamaz ve düşer (cukurovaprofil.com bu yüzden düştü). APP_KEY ve ajan anahtarı da Plane’deki kayıtla eşleşmek zorundadır.',
         'no_app' => 'Bu site bir Coolify uygulamasına bağlı değil.',
         'load_failed' => 'Coolify env okunamadı. Coolify bağlantısını kontrol edip tekrar deneyin.',
         'write_failed' => 'Coolify env yazılamadı: :error',

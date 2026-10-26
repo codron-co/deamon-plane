@@ -65,7 +65,10 @@ class SiteEnvEditorTest extends TestCase
         $this->assertTrue($rows['LEGACY_FLAG']['deletable']);
         $this->assertSame('protected', $rows['SERVICE_URL_APP']['status']);
         $this->assertFalse($rows['SERVICE_URL_APP']['editable']);
-        $this->assertSame('bootstrap', $rows['MYSQL_ROOT_PASSWORD']['status']);
+        // CMS 1.2.86 has no site MySQL: a catalog without MYSQL_ROOT_PASSWORD makes it a leftover.
+        $this->assertSame('extra', $rows['MYSQL_ROOT_PASSWORD']['status']);
+        $this->assertFalse($rows['MYSQL_ROOT_PASSWORD']['bootstrap']);
+        $this->assertTrue($rows['MYSQL_ROOT_PASSWORD']['deletable']);
         $this->assertNull($rows['MYSQL_ROOT_PASSWORD']['value']);
         $this->assertTrue($rows['SMTP_TOKEN']['secret']);
         $this->assertNull($rows['SMTP_TOKEN']['value']);
@@ -134,8 +137,12 @@ class SiteEnvEditorTest extends TestCase
         });
         Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
             && str_contains($request->url(), '/envs/env-legacy'));
+        // Not in the catalog and no longer a bootstrap key: pruned (its value was copied first).
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-root'));
         Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE'
-            && (str_contains($request->url(), '/envs/env-db') || str_contains($request->url(), '/envs/env-root')));
+            && str_contains($request->url(), '/envs/env-db'));
+        $this->assertSame('root-password-hidden', $site->refresh()->mysql_root_password_encrypted);
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'site.env_fixed']);
     }
@@ -146,7 +153,7 @@ class SiteEnvEditorTest extends TestCase
         $this->fakeEnvs($this->liveEnvs());
         $operator = $this->operator();
 
-        foreach (['DB_PASSWORD', 'MYSQL_ROOT_PASSWORD', 'APP_KEY', 'CONTROL_PLANE_AGENT_SECRET', 'SERVICE_URL_APP', 'COOLIFY_FQDN'] as $key) {
+        foreach (['DB_PASSWORD', 'APP_KEY', 'CONTROL_PLANE_AGENT_SECRET', 'SERVICE_URL_APP', 'COOLIFY_FQDN'] as $key) {
             $this->actingAs($operator)
                 ->post(route('ops.sites.env.set', $site), ['key' => $key, 'value' => 'x'])
                 ->assertSessionHasErrors('env');

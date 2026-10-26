@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Services\Sites\BuiltImageCommits;
+
 /**
  * What a `waiting` deployment row replays once the per-host build cap has room.
  * Every side effect of the action (pin / unpin, auto-deploy toggle, branch
@@ -13,10 +15,10 @@ enum WaitingDeployAction: string
     /** Tekrar deploy. Payload `force` (default true; the domain-bind redeploy uses false). */
     case Redeploy = 'redeploy';
 
-    /** HEAD'e güncelle: unpin, keep auto-deploy as it is. */
+    /** HEAD'e güncelle: unpin, keep auto-deploy as it is (built images: the newest build). */
     case UpdateHead = 'update_head';
 
-    /** HEAD'de deploy: unpin and turn auto-deploy on (off for a CI-gated site). */
+    /** HEAD'de deploy: unpin and turn auto-deploy on (off for a CI-gated site; built images: the newest build). */
     case FollowHead = 'follow_head';
 
     /** Commite geç. Payload `ref`. */
@@ -49,6 +51,12 @@ enum WaitingDeployAction: string
 
     public function label(): string
     {
+        // Built images: follow HEAD and update HEAD both deploy the newest image.
+        if (in_array($this, [self::UpdateHead, self::FollowHead], true)
+            && app(BuiltImageCommits::class)->coversFleet()) {
+            return __('site_ops.release.deploy_latest');
+        }
+
         return __('site_ops.queue.actions.'.$this->value);
     }
 }

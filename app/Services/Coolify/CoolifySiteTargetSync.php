@@ -88,19 +88,23 @@ class CoolifySiteTargetSync
             $site->coolify_environment_uuid = $environment;
         }
 
-        $gitUuid = $app->gitSourceUuid();
-        $gitKind = $app->gitSourceKind();
-        if ($gitUuid !== null && $gitKind instanceof CoolifyGitSourceKind) {
-            $site->coolify_git_source_uuid = $gitUuid;
-            $site->coolify_git_source_kind = $gitKind;
-        }
+        // A Docker Image app (deamon-test) runs a built tag; its git fields are
+        // Coolify placeholders, not the site's repo or channel.
+        if (! $app->isDockerImagePack()) {
+            $gitUuid = $app->gitSourceUuid();
+            $gitKind = $app->gitSourceKind();
+            if ($gitUuid !== null && $gitKind instanceof CoolifyGitSourceKind) {
+                $site->coolify_git_source_uuid = $gitUuid;
+                $site->coolify_git_source_kind = $gitKind;
+            }
 
-        if (filled($app->gitRepository)) {
-            $site->git_repository = $app->gitRepository;
-        }
+            if (filled($app->gitRepository)) {
+                $site->git_repository = $app->gitRepository;
+            }
 
-        if (! $busy) {
-            $this->applyChannel($site, $app->gitBranch);
+            if (! $busy) {
+                $this->applyChannel($site, $app->gitBranch);
+            }
         }
 
         // The GET application already carries the auto-deploy switch and pinned

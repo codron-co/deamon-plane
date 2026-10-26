@@ -91,6 +91,46 @@ class SiteAppHealthTest extends TestCase
         $this->assertNotContains('wrong_env|DB_HOST', $codes);
     }
 
+    /**
+     * CMS 1.2.86: no site MySQL container, the catalog drops MYSQL_ROOT_PASSWORD and the
+     * env sync prunes it. Its absence is no app health issue (also without a catalog).
+     */
+    public function test_a_missing_mysql_root_password_is_no_issue_once_the_catalog_drops_it(): void
+    {
+        $site = $this->composeSite();
+        Http::fake(function (Request $request) {
+            if ($request->method() === 'GET' && str_ends_with($request->url(), '/applications/'.self::APP)) {
+                return Http::response([
+                    'uuid' => self::APP,
+                    'build_pack' => 'dockercompose',
+                    'docker_compose_location' => '/docker-compose.coolify.yml',
+                ], 200);
+            }
+            if ($request->method() === 'GET' && str_contains($request->url(), '/envs')) {
+                return Http::response([
+                    ['key' => 'DB_PASSWORD', 'value' => 'already-set'],
+                    ['key' => 'APP_KEY', 'value' => 'base64:keep'],
+                    ['key' => 'CONTROL_PLANE_AGENT_SECRET', 'value' => 'plane-agent-secret'],
+                ], 200);
+            }
+
+            return Http::response(['error' => 'unexpected'], 404);
+        });
+
+        $codes = function () use ($site): array {
+            app(SiteAppHealthInspector::class)->inspect($site->fresh());
+
+            return collect($site->fresh()->appHealth()->issues)->map(fn ($issue) => $issue->code.'|'.($issue->key ?? ''))->all();
+        };
+
+        CoolifyEnvDefault::query()->where('key', 'MYSQL_ROOT_PASSWORD')->delete();
+        $this->assertNotContains('missing_env|MYSQL_ROOT_PASSWORD', $codes());
+
+        // No catalog synced at all: the fallback list does not ask for it either.
+        CoolifyEnvDefault::query()->delete();
+        $this->assertNotContains('missing_env|MYSQL_ROOT_PASSWORD', $codes());
+    }
+
     public function test_sync_env_fix_writes_compose_catalog_without_page_redirect(): void
     {
         $site = $this->composeSite();

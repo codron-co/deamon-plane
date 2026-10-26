@@ -203,7 +203,7 @@ class SiteProvisioner
         // with no image), SOURCE_COMMIT filled (the compose image tag), the built commit.
         // The same PATCH again on a re-provision.
         if ($builtSha !== null) {
-            $coolify->patchApplication((string) $appUuid, BuiltImageCommits::pinBody($builtSha));
+            $images->pinApp($coolify, (string) $appUuid, $builtSha);
             CoolifyDeploySettings::rememberPin($site, $builtSha);
             $site->auditLogs()->create([
                 'actor_user_id' => $actorUserId,

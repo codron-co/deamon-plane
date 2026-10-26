@@ -5,6 +5,7 @@ namespace Tests\Feature\Sites;
 use App\Enums\Channel;
 use App\Models\CoolifyConnection;
 use App\Services\Coolify\CoolifyApplicationService;
+use App\Services\Coolify\Dto\CoolifyApplication;
 use App\Services\Sites\BuiltImageCommits;
 use App\Services\Sites\BuiltImageException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -145,6 +146,77 @@ class BuiltImageCommitsTest extends TestCase
             'is_auto_deploy_enabled' => false,
             'include_source_commit_in_build' => true,
         ], BuiltImageCommits::pinBody(self::NEW));
+    }
+
+    public function test_pin_body_follows_the_build_pack(): void
+    {
+        $compose = CoolifyApplication::fromArray(['uuid' => 'a', 'build_pack' => 'dockercompose', 'git_commit_sha' => self::OLD]);
+        $image = CoolifyApplication::fromArray([
+            'uuid' => 'b',
+            'build_pack' => 'dockerimage',
+            'git_commit_sha' => 'HEAD',
+            'docker_registry_image_name' => '127.0.0.1:5000/deamon-cms',
+            'docker_registry_image_tag' => self::OLD,
+        ]);
+
+        $this->assertSame(BuiltImageCommits::pinBody(self::NEW), BuiltImageCommits::pinBodyFor($compose, self::NEW));
+        $this->assertSame([
+            'docker_registry_image_tag' => self::NEW,
+            'is_auto_deploy_enabled' => false,
+        ], BuiltImageCommits::pinBodyFor($image, self::NEW));
+
+        $this->assertSame(self::OLD, $compose->pinnedCommit());
+        $this->assertSame(self::OLD, $image->pinnedCommit());
+        $this->assertTrue($image->isDockerImagePack());
+        $this->assertFalse($compose->isDockerImagePack());
+    }
+
+    public function test_registry_lookup_is_off_without_a_registry_url(): void
+    {
+        config(['ops.deamon.image_registry.url' => '']);
+
+        $this->assertFalse($this->images()->registryHas(self::NEW));
+        Http::assertNothingSent();
+    }
+
+    public function test_registry_lookup_asks_the_manifest_of_the_commit_tag(): void
+    {
+        config(['ops.deamon.image_registry.url' => 'http://registry.test:5000/']);
+        Http::fake([
+            'http://registry.test:5000/v2/deamon-cms/manifests/'.self::NEW => Http::response('', 200),
+            'http://registry.test:5000/*' => Http::response('', 404),
+        ]);
+
+        $this->assertTrue($this->images()->registryHas(self::NEW));
+        $this->assertFalse($this->images()->registryHas(self::OLD));
+        $this->assertFalse($this->images()->registryHas('latest'));
+
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'HEAD'
+            && $request->url() === 'http://registry.test:5000/v2/deamon-cms/manifests/'.self::NEW
+            && str_contains($request->header('Accept')[0] ?? '', 'application/vnd.docker.distribution.manifest.v2+json'));
+        Http::assertSentCount(2);
+    }
+
+    public function test_a_docker_image_site_also_accepts_a_commit_already_in_the_registry(): void
+    {
+        config(['ops.deamon.image_registry.url' => 'http://registry.test:5000']);
+        $this->fakeBuilder('builder-beta', [
+            $this->row(11, self::NEW, 'finished', minutesAgo: 0),
+            $this->row(10, self::OLD, 'finished', minutesAgo: 30),
+        ]);
+        Http::fake([
+            'http://registry.test:5000/v2/deamon-cms/manifests/'.self::NEW => Http::response('', 200),
+            'http://registry.test:5000/v2/deamon-cms/manifests/'.self::FAILED => Http::response('', 200),
+        ]);
+
+        // Compose site: the tag grace still holds the newest build back.
+        $this->assertSame(self::OLD, $this->images()->latest(Channel::Beta, $this->coolify()));
+        // Docker Image site: its tag is in the registry already.
+        $this->assertSame(self::NEW, $this->images()->latest(Channel::Beta, $this->coolify(), registry: true));
+        $this->assertSame(self::FAILED, $this->images()->resolve(Channel::Beta, self::FAILED, $this->coolify(), registry: true));
+
+        $this->expectException(BuiltImageException::class);
+        $this->images()->resolve(Channel::Beta, self::FAILED, $this->coolify());
     }
 
     private function images(): BuiltImageCommits

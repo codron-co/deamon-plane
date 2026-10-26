@@ -45,12 +45,13 @@ class CoolifyDeploySettings
             return $empty;
         }
 
-        $this->remember($site, $app->autoDeployState(), $app->gitCommitSha());
+        $this->remember($site, $app->autoDeployState(), $app->pinnedCommit());
 
+        // `git_commit_sha` is the pinned commit: a Docker Image app's image tag.
         return [
             'build_pack' => $app->buildPack,
             'is_auto_deploy' => $app->autoDeployState(),
-            'git_commit_sha' => $app->gitCommitSha(),
+            'git_commit_sha' => $app->pinnedCommit(),
             'error' => null,
         ];
     }
@@ -73,7 +74,7 @@ class CoolifyDeploySettings
 
         $app = $this->patchAutoDeploy($site, $uuid, $enabled, $runsImages ? ['include_source_commit_in_build' => true] : []);
 
-        $this->remember($site, $enabled, $app->gitCommitSha());
+        $this->remember($site, $enabled, $app->pinnedCommit());
 
         $this->audit($site, $actor, $ip, 'site.auto_deploy_updated', [
             'is_auto_deploy' => $enabled,
@@ -86,7 +87,9 @@ class CoolifyDeploySettings
      * `coolify`: Coolify auto-deploys every push (auto-deploy on).
      * `ci`: auto-deploy off and the app follows the branch HEAD; Plane deploys it
      * after a green CI run. Neither direction starts a deploy.
-     * A site that runs built images keeps its pin and can never go to `coolify`.
+     * A site that runs built images keeps its pin and auto-deploy stays off either
+     * way: its `coolify` gate is a manual release (release.sh or a Plane deploy),
+     * i.e. the site only leaves the CI rollouts.
      */
     public function setDeployGate(Site $site, DeployGate $gate, ?User $actor = null, ?string $ip = null): CoolifyApplication
     {
@@ -94,13 +97,9 @@ class CoolifyDeploySettings
         $before = $site->usesCiGate() ? DeployGate::Ci : DeployGate::Coolify;
         $runsImages = $this->runsBuiltImages($site);
 
-        if ($gate === DeployGate::Coolify && $runsImages) {
-            throw new BuiltImageException(__('site_ops.image.auto_deploy_blocked', ['name' => $site->name]));
-        }
-
-        if ($gate === DeployGate::Ci && $runsImages) {
+        if ($runsImages) {
             $app = $this->patchAutoDeploy($site, $uuid, false, ['include_source_commit_in_build' => true]);
-            $this->remember($site, false, $app->gitCommitSha());
+            $this->remember($site, false, $app->pinnedCommit());
         } elseif ($gate === DeployGate::Ci) {
             $app = $this->patchAutoDeploy($site, $uuid, false, [
                 'git_commit_sha' => CoolifyApplication::HEAD_REF,
@@ -108,7 +107,7 @@ class CoolifyDeploySettings
             $this->remember($site, false, CoolifyApplication::HEAD_REF);
         } else {
             $app = $this->patchAutoDeploy($site, $uuid, true);
-            $this->remember($site, true, $app->gitCommitSha());
+            $this->remember($site, true, $app->pinnedCommit());
         }
 
         Site::query()->toBase()->where('id', $site->getKey())->update(['deploy_gate' => $gate->value]);
@@ -120,7 +119,7 @@ class CoolifyDeploySettings
             'before' => ['deploy_gate' => $before->value],
             'after' => [
                 'deploy_gate' => $gate->value,
-                'is_auto_deploy' => $gate === DeployGate::Coolify,
+                'is_auto_deploy' => $gate === DeployGate::Coolify && ! $runsImages,
                 'git_commit_sha' => $gate === DeployGate::Ci && ! $runsImages ? CoolifyApplication::HEAD_REF : null,
             ],
             'ip' => $ip,
@@ -166,15 +165,19 @@ class CoolifyDeploySettings
         $this->assertCanStartDeploy($site);
         $coolify = CoolifyApplicationService::forSite($site);
         // An image site may only be pinned to a commit its channel builder finished.
-        $built = $this->builtCommit($site, fn (BuiltImageCommits $images): string => $images->resolve(BuiltImageCommits::channelOf($site), $ref, $coolify));
-        $ref = $built ?? $ref;
+        $built = $this->builtCommit($site, $coolify, fn (BuiltImageCommits $images, CoolifyApplication $app): string => $images->resolve(
+            BuiltImageCommits::channelOf($site), $ref, $coolify, $app->isDockerImagePack(),
+        ));
+        $ref = $built[0] ?? $ref;
         $this->preflight($site, $actor, $ip);
 
         try {
-            $app = $coolify->patchApplication($uuid, $built !== null ? BuiltImageCommits::pinBody($built) : [
-                'git_commit_sha' => $ref,
-                'is_auto_deploy_enabled' => false,
-            ]);
+            $app = $built !== null
+                ? app(BuiltImageCommits::class)->pinApp($coolify, $uuid, $built[0], $built[1])
+                : $coolify->patchApplication($uuid, [
+                    'git_commit_sha' => $ref,
+                    'is_auto_deploy_enabled' => false,
+                ]);
             $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip, $into);
         } catch (CoolifyDeployBusyException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
@@ -182,7 +185,8 @@ class CoolifyDeploySettings
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
-        $this->remember($site, false, $ref);
+        // An operator pin holds the version: CI rollouts skip the site until it is released.
+        $this->remember($site, false, $ref, held: true);
 
         $this->audit($site, $actor, $ip, 'site.git_pinned', [
             'git_commit_sha' => $ref,
@@ -276,11 +280,13 @@ class CoolifyDeploySettings
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
         $coolify = CoolifyApplicationService::forSite($site);
-        $sha = (string) $this->builtCommit($site, fn (BuiltImageCommits $images): string => $images->latest(BuiltImageCommits::channelOf($site), $coolify));
+        [$sha, $current] = $this->builtCommit($site, $coolify, fn (BuiltImageCommits $images, CoolifyApplication $app): string => $images->latest(
+            BuiltImageCommits::channelOf($site), $coolify, $app->isDockerImagePack(),
+        )) ?? throw new BuiltImageException(__('site_ops.image.no_builder', ['channel' => BuiltImageCommits::channelOf($site)->value]));
         $this->preflight($site, $actor, $ip);
 
         try {
-            $app = $coolify->patchApplication($uuid, BuiltImageCommits::pinBody($sha));
+            $app = app(BuiltImageCommits::class)->pinApp($coolify, $uuid, $sha, $current);
             $this->recordDeployment($site, $coolify->deploy($uuid), DeploymentTrigger::Manual, $actor, $ip, $into);
         } catch (CoolifyDeployBusyException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->getCode(), $exception);
@@ -288,7 +294,8 @@ class CoolifyDeploySettings
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
 
-        $this->remember($site, false, $sha);
+        // The newest build is a release pin, never an operator hold.
+        $this->remember($site, false, $sha, held: false);
 
         $this->audit($site, $actor, $ip, $action, [
             'git_commit_sha' => $sha,
@@ -363,14 +370,14 @@ class CoolifyDeploySettings
         $uuid = $this->requireApp($site);
         $this->assertCanStartDeploy($site);
         $coolify = CoolifyApplicationService::forSite($site);
-        $built = $this->builtCommit($site, fn (BuiltImageCommits $images): string => $ref !== null
-            ? $images->resolve(BuiltImageCommits::channelOf($site), $ref, $coolify)
-            : $images->currentOrLatest($site, $coolify));
+        $built = $this->builtCommit($site, $coolify, fn (BuiltImageCommits $images, CoolifyApplication $app): string => $ref !== null
+            ? $images->resolve(BuiltImageCommits::channelOf($site), $ref, $coolify, $app->isDockerImagePack())
+            : $images->currentOrLatest($site, $coolify, $app));
         $this->preflight($site, $actor, $ip);
 
         try {
             if ($built !== null) {
-                $coolify->patchApplication($uuid, BuiltImageCommits::pinBody($built));
+                app(BuiltImageCommits::class)->pinApp($coolify, $uuid, $built[0], $built[1]);
             }
             $result = $coolify->deploy($uuid, $force);
         } catch (CoolifyDeployBusyException $exception) {
@@ -380,7 +387,7 @@ class CoolifyDeploySettings
         }
 
         if ($built !== null) {
-            $this->remember($site, false, $built);
+            $this->remember($site, false, $built[0]);
         }
 
         return $this->recordDeployment($site, $result, $trigger, $actor, $ip, $into);
@@ -392,12 +399,14 @@ class CoolifyDeploySettings
     }
 
     /**
-     * The built commit an image site's deploy targets, resolved before Plane
-     * touches the app; null for a site whose channel still builds its branch.
+     * The built commit an image site's deploy targets and the site's Coolify app
+     * (its build pack decides the pin field), resolved before Plane touches the
+     * app; null for a site whose channel still builds its branch.
      *
-     * @param  callable(BuiltImageCommits): string  $pick
+     * @param  callable(BuiltImageCommits, CoolifyApplication): string  $pick
+     * @return array{0: string, 1: CoolifyApplication}|null
      */
-    private function builtCommit(Site $site, callable $pick): ?string
+    private function builtCommit(Site $site, CoolifyApplicationService $coolify, callable $pick): ?array
     {
         $images = app(BuiltImageCommits::class);
         if (! $images->appliesTo($site)) {
@@ -405,7 +414,9 @@ class CoolifyDeploySettings
         }
 
         try {
-            return $pick($images);
+            $app = $coolify->getApp((string) $site->coolify_app_uuid);
+
+            return [$pick($images, $app), $app];
         } catch (CoolifyApiException $exception) {
             throw new ComposePackException($exception->getMessage(), $exception->status, $exception);
         }
@@ -543,11 +554,14 @@ class CoolifyDeploySettings
      * Mirrors the switch and the pinned commit onto the site row, so the Sites
      * list can show them without one Coolify call per row. Written without
      * touching `updated_at`: learning a setting is not an edit to the site.
-     * A response without `git_commit_sha` keeps the last known pin.
+     * A response without a pinned commit (`git_commit_sha`, or a Docker Image
+     * app's `docker_registry_image_tag`) keeps the last known pin.
+     * `$held`: true for an operator pin, false for a release pin, null keeps the
+     * hold while the commit stays the same (see mirrorOntoSite).
      */
-    private function remember(Site $site, ?bool $autoDeploy, ?string $sha): void
+    private function remember(Site $site, ?bool $autoDeploy, ?string $sha, ?bool $held = null): void
     {
-        self::mirrorOntoSite($site, $autoDeploy, $sha);
+        self::mirrorOntoSite($site, $autoDeploy, $sha, $held);
     }
 
     /**
@@ -556,18 +570,26 @@ class CoolifyDeploySettings
      */
     public static function mirrorFromApplication(Site $site, CoolifyApplication $app): void
     {
-        self::mirrorOntoSite($site, $app->autoDeployState(), $app->gitCommitSha());
+        self::mirrorOntoSite($site, $app->autoDeployState(), $app->pinnedCommit());
     }
 
     /**
-     * Mirror a built-image pin Plane wrote outside this class (provision, channel switch).
+     * Mirror a built-image pin written outside this class (provision, channel switch,
+     * activate, the host's release.sh). A new commit is a release pin; the same
+     * commit keeps an operator hold.
      */
     public static function rememberPin(Site $site, string $sha): void
     {
         self::mirrorOntoSite($site, false, $sha);
     }
 
-    private static function mirrorOntoSite(Site $site, ?bool $autoDeploy, ?string $sha): void
+    /**
+     * `coolify_pin_held`: an explicit `$held` wins; otherwise a pin keeps its hold
+     * only while it stays on the same commit. Plane's Commite geç is the one path
+     * that sets it; a pin that moved elsewhere (release.sh, Coolify UI, a release)
+     * is not an operator hold any more. No pin, no hold.
+     */
+    private static function mirrorOntoSite(Site $site, ?bool $autoDeploy, ?string $sha, ?bool $held = null): void
     {
         if ($autoDeploy === null || ! $site->exists) {
             return;
@@ -579,13 +601,33 @@ class CoolifyDeploySettings
         ];
         if ($sha !== null) {
             $sha = trim($sha);
-            $values['coolify_pinned_sha'] = $sha === '' || CoolifyApplication::isHeadRef($sha)
+            $pin = $sha === '' || CoolifyApplication::isHeadRef($sha)
                 ? null
                 : mb_substr($sha, 0, 64);
+            $values['coolify_pinned_sha'] = $pin;
+            if ($pin !== null && $held === null) {
+                // Read the stored pin, not the model: a sync loop may hold a stale copy.
+                $stored = Site::query()->toBase()->where('id', $site->getKey())->first(['coolify_pinned_sha', 'coolify_pin_held']);
+                $held = $stored !== null
+                    && (bool) $stored->coolify_pin_held
+                    && self::sameCommit((string) $stored->coolify_pinned_sha, $pin);
+            }
+            $values['coolify_pin_held'] = $pin !== null && (bool) $held;
         }
 
         Site::query()->toBase()->where('id', $site->getKey())->update($values);
         $site->forceFill($values)->syncOriginalAttributes(array_keys($values));
+    }
+
+    /**
+     * Full or abbreviated shas of the same commit.
+     */
+    private static function sameCommit(string $a, string $b): bool
+    {
+        $a = strtolower(trim($a));
+        $b = strtolower(trim($b));
+
+        return $a !== '' && $b !== '' && (str_starts_with($a, $b) || str_starts_with($b, $a));
     }
 
     /**

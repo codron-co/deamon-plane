@@ -171,7 +171,7 @@ final class RouteToolCatalog
         return [
             new RouteTool(
                 name: 'deploy_site',
-                description: 'Rebuild and redeploy the site\'s current commit on Coolify (pin untouched). Waits in Plane\'s deploy line when the host is at its build cap. Follow with get_deployment.',
+                description: 'Redeploy the site\'s current commit on Coolify (pin untouched). Built-image sites (every Deamon channel with an image builder) build nothing: they restart on the image of their pinned commit, or move to the newest build when that commit has no image. Waits in Plane\'s deploy line when the host is at its build cap. Follow with get_deployment.',
                 route: 'ops.sites.deploy',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site,
@@ -180,7 +180,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'update_site_to_head',
-                description: 'Deploy the newest commit of the site\'s channel branch (CMS update) without changing the auto-deploy setting. Built-image channels: the newest commit the channel image builder finished.',
+                description: 'CMS update. Built-image sites: pin and deploy the newest commit the channel image builder finished (auto-deploy stays off; an operator hold is released). Other sites: deploy the channel branch HEAD without changing the auto-deploy setting.',
                 route: 'ops.sites.update-head',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site,
@@ -189,7 +189,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'follow_branch_head',
-                description: 'Unpin: track the branch HEAD, turn Coolify auto-deploy on (off on the CI gate) and deploy. Built-image channels: deploys the newest built commit, auto-deploy stays off.',
+                description: 'Built-image sites: same as update_site_to_head (newest built commit, auto-deploy stays off). Other sites: unpin, track the branch HEAD, turn Coolify auto-deploy on (off on the CI gate) and deploy.',
                 route: 'ops.sites.follow-head',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site,
@@ -198,7 +198,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'pin_site_commit',
-                description: 'Pin the site to a commit/tag, turn auto-deploy off and deploy it (rollback or hold a version). Built-image channels: only a commit the channel image builder finished.',
+                description: 'Pin the site to a commit, turn auto-deploy off and deploy it (rollback or hold a version). Built-image sites: only a commit the channel image builder finished (full or short sha, no tags); the pin is an operator hold that CI rollouts skip until update_site_to_head releases it.',
                 route: 'ops.sites.pin',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site + ['ref' => ['type' => 'string', 'description' => 'Commit SHA or tag.']],
@@ -207,7 +207,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'set_auto_deploy',
-                description: 'Turn Coolify auto-deploy on push on or off for a site. Turning it on is refused for sites that run built images.',
+                description: 'Turn Coolify auto-deploy on push on or off for a site. Built-image sites keep it off: turning it on is refused (a push would start a commit with no image).',
                 route: 'ops.sites.auto-deploy',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site + ['enabled' => ['type' => 'boolean']],
@@ -216,7 +216,7 @@ final class RouteToolCatalog
             ),
             new RouteTool(
                 name: 'set_deploy_gate',
-                description: '`coolify`: Coolify builds on push. `ci`: Plane deploys only green CI commits (fleet rollout). Never deploys by itself.',
+                description: '`ci`: Plane deploys only green CI commits (fleet rollout, canary first). `coolify`: Coolify builds on push; for built-image sites it means manual release (release.sh or a Plane deploy) and auto-deploy stays off. Never deploys by itself.',
                 route: 'ops.sites.deploy-gate',
                 ability: McpToken::ABILITY_WRITE,
                 properties: $site + ['gate' => ['type' => 'string', 'enum' => DeployGate::values()]],

@@ -31,7 +31,7 @@ return [
             ],
             'pause' => [
                 'name' => 'CI off: pause automatic updates',
-                'hint' => 'Nothing updates on its own (even on a green CI). Pushes are recorded; sites update with “Deploy HEAD”, themes from the site page. Halt an open rollout on the CI rollouts page.',
+                'hint' => 'Nothing updates on its own (even on a green CI). Pushes are recorded; sites update through release.sh or “Deploy newest image”, themes from the site page. Halt an open rollout on the CI rollouts page.',
             ],
         ],
         'rollouts_banner' => 'CI gate: :mode.',

@@ -219,6 +219,8 @@ final class DeploymentFailureClassifier
             'patterns' => [
                 '/dependency failed to start: container app-/i',
                 '/container app-[\w-]+ (is unhealthy|exited)/i',
+                // A Docker Image app (rolling deploy) names its container `<uuid>-<time>`, no `app-`.
+                '/container [a-z0-9]{20,}-\d{6,} (is unhealthy|exited)/i',
             ],
             'auto' => null,
             'fixes' => ['restart_app', 'redeploy'],
@@ -335,6 +337,11 @@ final class DeploymentFailureClassifier
     private function containerFromText(string $text): array
     {
         if (preg_match('/container ((?:mysql|redis|app)-[a-z0-9]+-\d+) (?:exited \((\d+)\)|is unhealthy)/i', $text, $m) === 1) {
+            return [$m[1], isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null];
+        }
+
+        // Docker Image app: `<uuid>-<time>`, no service prefix.
+        if (preg_match('/container ([a-z0-9]{20,}-\d{6,}) (?:exited \((\d+)\)|is unhealthy)/i', $text, $m) === 1) {
             return [$m[1], isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null];
         }
 

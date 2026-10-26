@@ -86,6 +86,8 @@ final class McpPresenter
                 'app_uuid' => $site->coolify_app_uuid,
                 'auto_deploy' => $site->coolify_auto_deploy,
                 'pinned_sha' => $site->coolify_pinned_sha,
+                // An operator hold (Commite geç): CI rollouts skip the site. False = release pin or none.
+                'pin_held' => $site->holdsPinnedCommit(),
                 'deploy_gate' => self::value($site->deploy_gate),
                 'deploy_canary' => (bool) $site->deploy_canary,
                 'ui_url' => $site->coolifyUiUrl(),

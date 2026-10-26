@@ -42,17 +42,20 @@ class CoolifyAppEnvSync
 
     /**
      * Site bootstrap env (ADR-12): what the CMS needs before it can reach its
-     * database and trust Plane. Plane writes these but never prunes them. The
-     * database passwords and agent secret have no copy anywhere else once the
-     * MySQL volume is initialized, so a catalog line dropped or renamed in the
-     * CMS must not turn into a fleet-wide deletion.
+     * database and trust Plane. Plane writes these but never prunes them, so a
+     * catalog line dropped or renamed in the CMS must not turn into a fleet-wide
+     * deletion of the database password or the agent secret.
+     *
+     * `MYSQL_ROOT_PASSWORD` is not one any more: since CMS 1.2.86 a site has no
+     * MySQL container of its own (shared deamon-db-mysql), nothing reads it, and a
+     * catalog without the line lets the next sync prune it like any other leftover.
+     * Plane's copy (`sites.mysql_root_password_encrypted`) is captured first and kept.
      *
      * @var list<string>
      */
     public const BOOTSTRAP_KEYS = [
         'APP_KEY',
         'DB_PASSWORD',
-        'MYSQL_ROOT_PASSWORD',
         'CONTROL_PLANE_AGENT_SECRET',
         'CONTROL_PLANE_HOST_ALLOWLIST',
         'DEAMON_CHANNEL',
@@ -75,10 +78,14 @@ class CoolifyAppEnvSync
     ];
 
     /**
-     * MySQL passwords Plane keeps an encrypted copy of on the site row. The site volume
-     * is initialised with them once; a fresh value afterwards locks the app out of its
+     * MySQL passwords Plane keeps an encrypted copy of on the site row. The database is
+     * initialised with them once; a fresh value afterwards locks the app out of its
      * own database (cukurovaprofil.com, 2026-09-15: the env rows were recreated blank,
      * new passwords were generated and the site stayed down).
+     *
+     * `MYSQL_ROOT_PASSWORD` is legacy (the site's own MySQL, CMS < 1.2.86): its copy is
+     * still captured while Coolify has the key and restored only for a catalog that
+     * still lists it. It is never required (REQUIRED_DB_SECRETS).
      *
      * @var array<string, string> env key => sites column
      */
@@ -86,6 +93,14 @@ class CoolifyAppEnvSync
         'DB_PASSWORD' => 'db_password_encrypted',
         'MYSQL_ROOT_PASSWORD' => 'mysql_root_password_encrypted',
     ];
+
+    /**
+     * The database secrets every site needs a Plane copy of (the shared MySQL user
+     * is created with it).
+     *
+     * @var list<string>
+     */
+    public const REQUIRED_DB_SECRETS = ['DB_PASSWORD'];
 
     /**
      * Align Coolify application env with the catalog for this site's git channel

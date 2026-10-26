@@ -12,9 +12,11 @@ use App\Models\Deployment;
 use App\Models\FleetRollout;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Coolify\CoolifyApplicationService;
 use App\Services\Coolify\EnvCatalog\DeamonRepo;
 use App\Services\GitHub\CiBranchHeads;
 use App\Services\Ops\PacedFanout;
+use App\Services\Sites\BuiltImageCommits;
 use App\Services\Sites\BuiltImageException;
 use App\Services\Sites\CoolifyDeploySettings;
 use Illuminate\Database\Eloquent\Builder;
@@ -189,19 +191,20 @@ class FleetRolloutService
     }
 
     /**
-     * `ci`-gated, active, not pinned, with a Coolify app, on the channel.
+     * `ci`-gated, active, with a Coolify app, on the channel, and following the
+     * channel: no pin, or a release pin (see followsChannel()).
      *
      * @return Builder<Site>
      */
     public function eligibleSites(Channel $channel): Builder
     {
-        return Site::query()
-            ->where('channel', $channel->value)
-            ->where('deploy_gate', DeployGate::Ci->value)
-            ->where('status', SiteStatus::Active->value)
-            ->whereNotNull('coolify_app_uuid')
-            ->where('coolify_app_uuid', '!=', '')
-            ->where(fn (Builder $query) => $query->whereNull('coolify_pinned_sha')->orWhere('coolify_pinned_sha', ''));
+        $releasePinned = $this->releasePinnedSiteIds($channel);
+
+        return $this->gatedSites($channel)
+            ->where(fn (Builder $query) => $query
+                ->whereNull('coolify_pinned_sha')
+                ->orWhere('coolify_pinned_sha', '')
+                ->when($releasePinned !== [], fn (Builder $query) => $query->orWhereIn('id', $releasePinned)));
     }
 
     public function qualifies(Site $site, FleetRollout $rollout): bool
@@ -211,7 +214,112 @@ class FleetRolloutService
             && $site->usesCiGate()
             && $site->status === SiteStatus::Active
             && filled($site->coolify_app_uuid)
-            && ! $site->hasPinnedCommit();
+            && $this->followsChannel($site);
+    }
+
+    /**
+     * Whether a CI rollout may move the site. Build once, run many pins every site
+     * that runs built images, so a pin alone no longer means "hold this version":
+     *
+     *   no pin                          → follows the channel (Coolify builds HEAD)
+     *   operator hold (coolify_pin_held) → skipped (Commite geç, rollback last good)
+     *   pin = a commit the channel builder finished → release pin, follows the channel
+     *   any other pin                   → skipped (pinned in Coolify by hand, or a
+     *                                     channel without an image builder)
+     *
+     * The builder cannot be read → its pins count as holds for this tick.
+     */
+    public function followsChannel(Site $site): bool
+    {
+        if (! $site->hasPinnedCommit()) {
+            return true;
+        }
+
+        if ($site->holdsPinnedCommit()) {
+            return false;
+        }
+
+        $images = app(BuiltImageCommits::class);
+        if (! $images->appliesTo($site)) {
+            return false;
+        }
+
+        return self::isBuiltPin((string) $site->coolify_pinned_sha, $this->builtShasFor($site, BuiltImageCommits::channelOf($site)));
+    }
+
+    /**
+     * @return Builder<Site>
+     */
+    private function gatedSites(Channel $channel): Builder
+    {
+        return Site::query()
+            ->where('channel', $channel->value)
+            ->where('deploy_gate', DeployGate::Ci->value)
+            ->where('status', SiteStatus::Active->value)
+            ->whereNotNull('coolify_app_uuid')
+            ->where('coolify_app_uuid', '!=', '');
+    }
+
+    /**
+     * Gated sites of the channel whose pin is a release pin: not held, and a commit
+     * the channel builder finished. One builder read per Coolify connection.
+     *
+     * @return list<string>
+     */
+    private function releasePinnedSiteIds(Channel $channel): array
+    {
+        if (! app(BuiltImageCommits::class)->appliesToChannel($channel)) {
+            return [];
+        }
+
+        $candidates = $this->gatedSites($channel)
+            ->whereNotNull('coolify_pinned_sha')
+            ->where('coolify_pinned_sha', '!=', '')
+            ->where('coolify_pin_held', false)
+            ->get();
+
+        $ids = [];
+        foreach ($candidates->groupBy(fn (Site $site): string => (string) $site->coolify_connection_id) as $group) {
+            $shas = $this->builtShasFor($group->first(), $channel);
+            foreach ($group as $site) {
+                if (self::isBuiltPin((string) $site->coolify_pinned_sha, $shas)) {
+                    $ids[] = (string) $site->id;
+                }
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function builtShasFor(Site $site, Channel $channel): array
+    {
+        try {
+            return app(BuiltImageCommits::class)->builtShas($channel, CoolifyApplicationService::forSite($site));
+        } catch (BuiltImageException) {
+            return [];
+        }
+    }
+
+    /**
+     * @param  list<string>  $builtShas
+     */
+    private static function isBuiltPin(string $pin, array $builtShas): bool
+    {
+        $pin = strtolower(trim($pin));
+        if (preg_match('/^[0-9a-f]{7,40}$/', $pin) !== 1) {
+            return false;
+        }
+
+        foreach ($builtShas as $sha) {
+            if (str_starts_with($sha, $pin)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -31,7 +31,7 @@ return [
             ],
             'pause' => [
                 'name' => 'CI kapalı: otomatik güncellemeyi durdur',
-                'hint' => 'Hiçbir şey kendiliğinden güncellenmez (yeşil CI gelse bile). Push’lar kaydedilir; siteler “Deploy HEAD” ile, temalar site sayfasından elle güncellenir. Açık bir yayın varsa CI yayınları sayfasından durdurun.',
+                'hint' => 'Hiçbir şey kendiliğinden güncellenmez (yeşil CI gelse bile). Push’lar kaydedilir; siteler release.sh ya da “En yeni imajı deploy et” ile, temalar site sayfasından elle güncellenir. Açık bir yayın varsa CI yayınları sayfasından durdurun.',
             ],
         ],
         'rollouts_banner' => 'CI kapısı: :mode.',

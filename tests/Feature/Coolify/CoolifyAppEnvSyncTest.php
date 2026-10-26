@@ -227,6 +227,48 @@ class CoolifyAppEnvSyncTest extends TestCase
         });
     }
 
+    /**
+     * CMS 1.2.86 drops MYSQL_ROOT_PASSWORD from `.env.production.example` (no site
+     * MySQL container any more): nothing is generated or required, the live value is
+     * copied onto the site row first and then pruned like any other leftover.
+     */
+    public function test_a_catalog_without_mysql_root_password_prunes_it_after_keeping_a_copy(): void
+    {
+        $site = $this->site(['last_health_at' => now()]);
+        CoolifyEnvDefault::query()->where('key', 'MYSQL_ROOT_PASSWORD')->delete();
+        $this->fakeEnvs([
+            ['key' => 'DB_PASSWORD', 'value' => 'live-db-password-value-0000000001', 'uuid' => 'env-db'],
+            ['key' => 'MYSQL_ROOT_PASSWORD', 'value' => 'live-root-password-value-00000001', 'uuid' => 'env-root'],
+        ]);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('MYSQL_ROOT_PASSWORD', $keys);
+        $this->assertNotContains('DB_PASSWORD', $keys);
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-root'));
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE'
+            && str_contains($request->url(), '/envs/env-db'));
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH'
+            && array_key_exists('MYSQL_ROOT_PASSWORD', $this->bulkMap($request)));
+        $this->assertSame('live-root-password-value-00000001', $site->refresh()->mysql_root_password_encrypted);
+    }
+
+    public function test_a_catalog_without_mysql_root_password_never_generates_it(): void
+    {
+        $site = $this->site();
+        CoolifyEnvDefault::query()->where('key', 'MYSQL_ROOT_PASSWORD')->delete();
+        $this->fakeEnvs([['key' => 'DB_PASSWORD', 'value' => '']]);
+
+        $keys = app(CoolifyAppEnvSync::class)->sync($site, CoolifyApplicationService::forSite($site));
+
+        $this->assertContains('DB_PASSWORD', $keys);
+        $this->assertNotContains('MYSQL_ROOT_PASSWORD', $keys);
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH'
+            && array_key_exists('MYSQL_ROOT_PASSWORD', $this->bulkMap($request)));
+        $this->assertNull($site->refresh()->mysql_root_password_encrypted);
+    }
+
     public function test_live_db_passwords_are_captured_on_the_site_row(): void
     {
         $site = $this->site();
