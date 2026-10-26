@@ -1,0 +1,14 @@
+# Deamon zero-downtime deploys: when Coolify removes the old container, re-send requests
+# that could not reach it (connection refused / reset before a response) to the new one.
+# deamon-fast: a dial to a removed container IP fails after 1s instead of the 30s default,
+# so the retry can kick in. Same-host dials take well under a millisecond.
+http:
+  middlewares:
+    deamon-retry:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+  serversTransports:
+    deamon-fast:
+      forwardingTimeouts:
+        dialTimeout: 1s

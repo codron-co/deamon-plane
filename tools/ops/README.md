@@ -126,11 +126,48 @@ Coolify auto-deploy is off and `include_source_commit_in_build` is on (Coolify l
 - `deamon-image/release.sh <alpha|beta> [list]`: takes the builder's newest finished commit,
   requires its image, then per site (CPU < 80 %, queue empty) pins the Coolify app to that
   commit, deploys, and requires finished + `deamon-cms:<sha>` + healthy + `/up` 200. Stops at the
-  first bad site with a WhatsApp alert. ~1 min per site, ~2 s of downtime (deamon-test probe).
-  Log `release.log`.
+  first bad site with a WhatsApp alert (running ones finish). Up to `PARALLEL` (3) sites at once;
+  Coolify `concurrent_builds` on this host is 3. A site already healthy on the target image is
+  skipped, so a stopped release can be run again. ~1 min per site, ~2-3 s of downtime
+  (deamon-test probe). Log `release.log`.
 - `deamon-image/run-after-build.sh <builder-deployment-uuid> <branch>`: waits for that builder
   deployment, then runs `release.sh` (start with `setsid -f`).
 - Never deploy a site to a commit whose image does not exist: the site cannot start.
+- `release.sh` waits up to 10 min for the release lock (`.release.lock`); a dockerimage move
+  holds the same lock per site.
+
+## Zero-downtime deploys: Docker Image apps (2026-10-26)
+
+A Coolify "Docker Image" app gets a rolling update (new container healthy, then the old one is
+removed); a compose app is stopped and recreated (~2-3 s down). Pilots: deamon-test
+(`ccqqtbr0r0dk91wxyjvxojlc`, was compose `6cmmgh5ty9lzv6uiz5kfavue`) and Susa
+(`hbg0df5yqezlyjfsr87h86dc`): 1 000+ probe requests per deploy through Traefik, 0 errors.
+
+- Local registry `127.0.0.1:5000` (`/opt/deamon-registry`, `registry:2.8.3`, bound to loopback
+  only, 0.5 CPU). `tag-images.sh` pushes every `deamon-cms:<sha>` there as
+  `127.0.0.1:5000/deamon-cms:<sha>` and deletes the manifests it prunes; blobs go in the weekly
+  `registry garbage-collect` cron (Sun 04:50, log `registry-gc.log`). The image stays on the host.
+- The apps sit on the Coolify destination `deamon` (`31gww8sy8nazbukhozgzlbzw`, network
+  `deamon-db`). Since this second destination exists, every Coolify create call must send
+  `destination_uuid` (the default one is `gokgcs84s8s88gggwoows4ks`, network `coolify`).
+- `proxy/deamon-retry.yaml` -> `/data/coolify/proxy/dynamic/` (file provider, no proxy restart):
+  `deamon-retry` middleware (3 attempts) and `deamon-fast` servers transport (1 s dial timeout).
+  Without them the old container's removal costs ~1 s of 502s and one request that hangs on the
+  vanished IP. The app's labels are not read-only (`is_container_label_readonly_enabled=false`)
+  so the two references stay: a domain change must patch `custom_labels` by hand (regenerate,
+  then re-add `deamon-retry@file,` to the https routers and the `serverstransport` lines).
+- Healthcheck: the image's own `HEALTHCHECK` (`custom_healthcheck_found=true`); Coolify polls it
+  every 5 s, 36 tries. Env: same as the compose app minus `SERVICE_*`/`COOLIFY_*`, plus explicit
+  `APP_URL` and `DEAMON_SITE_HOST` (Coolify injects no `SERVICE_URL_APP` here).
+- Container names have no `app-` prefix: `<uuid>-<timestamp>`. `release.sh` and
+  `cpu-guard.sh` accept both; the old move/fleet scripts only know `app-<uuid>`.
+- `deamon-image/to-dockerimage.sh <compose-uuid> [--yes]`: plan, then create the image app with
+  the same image/env/volumes/domains, patch labels, deploy next to the old app, verify `/up`,
+  stop the old app, point Plane's `coolify_app_uuid` at the new one. Re-running picks up an app
+  an earlier run created. ~40 s per site. Delete the old app later with volumes kept.
+  Needs `/tmp/cool.php` in the Plane container (raw Coolify API helper).
+- `deamon-image/to-dockerimage-fleet.sh <list>`: the same for a list, one site at a time, CPU
+  < 70 %, stops at the first failure with a WhatsApp alert. Log `to-dockerimage.log`.
 
 ## Retire a site (`retire-site.sh`)
 
