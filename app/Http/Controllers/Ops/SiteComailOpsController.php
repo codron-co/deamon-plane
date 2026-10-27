@@ -12,6 +12,7 @@ use App\Services\Comail\ComailDns;
 use App\Services\Comail\ComailDomainProvisioner;
 use App\Services\Comail\ComailException;
 use App\Services\Comail\ComailLimits;
+use App\Services\Comail\ComailShareGroup;
 use App\Services\Comail\ComailSiteConfigurer;
 use App\Services\Comail\MailcowException;
 use Illuminate\Http\RedirectResponse;
@@ -139,6 +140,41 @@ class SiteComailOpsController extends Controller
         $this->audit($site, $request, 'comail.configure_requeued', []);
 
         return $this->back($site)->with('status', __('mail.flash.configure_queued'));
+    }
+
+    /**
+     * Shared CoMail group (Super Admin): `share_with` puts this site in one group
+     * with that site; `leave` takes it out (docs/modules/comail.md).
+     */
+    public function shareGroup(Request $request, Site $site, ComailShareGroup $groups): RedirectResponse
+    {
+        $this->authorize('ops.danger');
+
+        if ($request->boolean('leave')) {
+            $groups->leave($site, $request->user(), 'ops', $request->ip());
+
+            return $this->back($site)->with('status', __('comail.site.share.flash.left'));
+        }
+
+        $validated = $request->validate([
+            'share_with' => ['required', 'string', 'max:255'],
+        ]);
+        $needle = strtolower(trim((string) $validated['share_with']));
+        $other = Site::query()
+            ->where('slug', $needle)
+            ->orWhere('primary_domain', $needle)
+            ->first();
+        if (! $other instanceof Site || (string) $other->id === (string) $site->id) {
+            return $this->back($site)->with('error', __('comail.site.share.errors.not_found', ['site' => $needle]));
+        }
+
+        try {
+            $groups->join([$site, $other], $request->user(), 'ops', $request->ip());
+        } catch (ComailException $exception) {
+            return $this->back($site)->with('error', $exception->getMessage());
+        }
+
+        return $this->back($site)->with('status', __('comail.site.share.flash.joined', ['site' => $other->name]));
     }
 
     private function queueConfigure(Site $site, ComailSiteConfigurer $configurer): void

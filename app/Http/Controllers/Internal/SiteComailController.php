@@ -32,8 +32,10 @@ use Throwable;
 /**
  * CMS → Plane CoMail API (`/internal/site/v1/comail/*`), signed per site like
  * the Hostinger proxy (EnsureSiteMailSignature). The mailcow key never leaves
- * Plane. Every object is checked against the calling site's own CoMail domains
- * and every create/edit against its package. Errors: `{error, message}` with a
+ * Plane. Every object is checked against the calling site's CoMail domains
+ * (its own plus, in a share group, those of the other sites in the group) and
+ * every create/edit against the package of the site that owns the domain.
+ * Domain management (add/remove, DNS, MX, H-Posta) stays with the owner. Errors: `{error, message}` with a
  * Turkish message; passwords are never echoed, logged or audited.
  */
 class SiteComailController extends Controller
@@ -63,7 +65,7 @@ class SiteComailController extends Controller
             $taken = $domains->pluck('domain')->all();
 
             $package = $this->limits->package($site);
-            $usage = $this->limits->usage($directory);
+            $usage = $this->limits->usage($directory->own());
             $subscription = $this->billing->subscriptionState($site);
 
             return $this->ok([
@@ -89,10 +91,11 @@ class SiteComailController extends Controller
                     'smtp_alt' => ['host' => $host, 'port' => 587, 'security' => 'STARTTLS'],
                     'managesieve' => ['host' => $host, 'port' => 4190, 'security' => 'STARTTLS'],
                 ],
-                'domains' => $domains
-                    ->map(fn (SiteComailDomain $row): array => $this->domainRow($row))
-                    ->values()
-                    ->all(),
+                // Own domains, then the share group's (`shared: true`, managed by `owner_site`).
+                'domains' => array_merge(
+                    $domains->map(fn (SiteComailDomain $row): array => $this->domainRow($row))->values()->all(),
+                    $this->sharedDomainRows($site),
+                ),
                 'available_domains' => array_values(array_diff(ComailDomainProvisioner::eligibleHosts($site), $taken)),
             ]);
         });
@@ -107,6 +110,9 @@ class SiteComailController extends Controller
                 'domain' => ['required', 'string', 'max:253'],
             ]);
             $domain = strtolower(trim((string) $data['domain']));
+            if (ComailDirectory::sharedOwnerId($site, $domain) !== null) {
+                throw ComailException::domainNotOwned();
+            }
 
             $existing = $site->comailDomains()->where('domain', $domain)->first();
             if ($existing instanceof SiteComailDomain && $existing->isActive()) {
@@ -218,7 +224,8 @@ class SiteComailController extends Controller
                 throw ComailException::validation('Bu adresle bir posta kutusu zaten var.');
             }
 
-            $quota = $this->limits->quotaForNewMailbox($directory, isset($data['quota_mb']) ? (int) $data['quota_mb'] : null);
+            // Counted on the package of the site that owns the domain.
+            $quota = $this->limits->quotaForNewMailbox($directory->forDomain($data['domain']), isset($data['quota_mb']) ? (int) $data['quota_mb'] : null);
             $name = trim((string) ($data['name'] ?? ''));
 
             $directory->client->addMailbox([
@@ -273,7 +280,8 @@ class SiteComailController extends Controller
                 $changed[] = 'password';
             }
             if (array_key_exists('quota_mb', $data)) {
-                $this->limits->assertQuotaChange($directory, $mailbox, (int) $data['quota_mb']);
+                $owner = $directory->forDomain(ComailDirectory::domainOf((string) $mailbox['username']));
+                $this->limits->assertQuotaChange($owner, $mailbox, (int) $data['quota_mb']);
                 $attributes['quota'] = (int) $data['quota_mb'];
                 $changed[] = 'quota_mb';
             }
@@ -409,7 +417,7 @@ class SiteComailController extends Controller
                     throw ComailException::validation('Bu adres için zaten bir yönlendirme var.');
                 }
             }
-            $this->limits->assertCanAddAlias($directory);
+            $this->limits->assertCanAddAlias($directory->forDomain($domain));
 
             $goto = ComailDirectory::gotoList($data['goto']);
             $directory->client->addAlias($address, implode(',', $goto));
@@ -612,8 +620,9 @@ class SiteComailController extends Controller
             }
 
             // All or nothing on the domain rule: nothing changes when one box cannot move yet.
+            // Only the site's own domains: a shared domain is migrated by its owner.
             foreach ($selected as $box) {
-                if (! $directory->ownsDomain(ComailDirectory::domainOf((string) $box['email']))) {
+                if (! in_array(ComailDirectory::domainOf((string) $box['email']), $directory->ownDomains(), true)) {
                     throw new ComailException(
                         'domain_not_in_comail',
                         ComailDirectory::domainOf((string) $box['email']).' alan adı henüz E-posta’da açık değil; önce alan adını ekleyin.',
@@ -646,7 +655,7 @@ class SiteComailController extends Controller
         try {
             $existing = $directory->mailbox($email);
             // Limits first, so a full package never leaves a changed H-Posta password behind.
-            $quota = $existing === null ? $this->limits->quotaForNewMailbox($directory, null) : null;
+            $quota = $existing === null ? $this->limits->quotaForNewMailbox($directory->forDomain(ComailDirectory::domainOf($email)), null) : null;
 
             $password = self::generatePassword();
             HostingerMailClient::forSite($site, ComailDirectory::domainOf($email))
@@ -829,7 +838,7 @@ class SiteComailController extends Controller
                 throw ComailException::notConfigured();
             }
 
-            return $handler($site, new ComailDirectory($site, MailcowClient::forServer($server)), $server);
+            return $handler($site, new ComailDirectory($site, MailcowClient::forServer($server), shared: true), $server);
         } catch (ComailException $exception) {
             return $this->error($exception->error, $exception->getMessage(), $exception->status);
         } catch (MailcowException $exception) {
@@ -918,6 +927,11 @@ class SiteComailController extends Controller
     {
         $row = $site->comailDomains()->where('domain', strtolower(trim($domain)))->first();
         if (! $row instanceof SiteComailDomain) {
+            // A share-group domain is reachable for mailboxes, managed only by its owner.
+            if (ComailDirectory::sharedOwnerId($site, $domain) !== null) {
+                throw ComailException::domainNotOwned();
+            }
+
             throw ComailException::notFound('Alan adı bulunamadı.');
         }
 
@@ -1016,7 +1030,7 @@ class SiteComailController extends Controller
     }
 
     /**
-     * @return array{domain: string, is_primary: bool, status: string, mx_active: bool, dns_managed: bool, webmail_url: string|null}
+     * @return array{domain: string, is_primary: bool, status: string, mx_active: bool, dns_managed: bool, webmail_url: string|null, shared: bool}
      */
     private function domainRow(SiteComailDomain $row): array
     {
@@ -1027,7 +1041,35 @@ class SiteComailController extends Controller
             'mx_active' => $row->mxActive(),
             'dns_managed' => $this->dns->isManaged($row),
             'webmail_url' => $this->domainWebmailUrl($row),
+            'shared' => false,
         ];
+    }
+
+    /**
+     * Active domains of the other sites in the share group. Mailboxes and
+     * aliases on them are managed here; the domain itself only by `owner_site`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function sharedDomainRows(Site $site): array
+    {
+        $siblings = ComailDirectory::groupSiblings($site)->keyBy(fn (Site $sibling): string => (string) $sibling->id);
+        if ($siblings->isEmpty()) {
+            return [];
+        }
+
+        return SiteComailDomain::query()
+            ->whereIn('site_id', $siblings->keys()->all())
+            ->where('status', SiteComailDomain::STATUS_ACTIVE)
+            ->orderBy('domain')
+            ->get()
+            ->map(fn (SiteComailDomain $row): array => [
+                'is_primary' => false,
+                'shared' => true,
+                'owner_site' => (string) ($siblings->get((string) $row->site_id)?->name ?? ''),
+            ] + $this->domainRow($row))
+            ->values()
+            ->all();
     }
 
     /**
@@ -1186,6 +1228,15 @@ class SiteComailController extends Controller
      */
     private function audit(Site $site, Request $request, string $action, array $after): void
     {
+        // On a share-group mailbox the acting site keeps the record; the owner is noted.
+        $address = $after['address'] ?? $after['mailbox'] ?? null;
+        if (is_string($address)) {
+            $owner = ComailDirectory::sharedOwnerId($site, ComailDirectory::domainOf($address));
+            if ($owner !== null) {
+                $after['owner_site_id'] = $owner;
+            }
+        }
+
         AuditLog::query()->create([
             'actor_user_id' => null,
             'action' => $action,

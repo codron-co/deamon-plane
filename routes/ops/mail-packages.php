@@ -20,6 +20,7 @@ Route::post('/sites/{site}/comail/domains/{comailDomain}/dns', [SiteComailOpsCon
 Route::post('/sites/{site}/comail/domains/{comailDomain}/check', [SiteComailOpsController::class, 'checkDns'])->name('ops.sites.comail.dns.check');
 Route::post('/sites/{site}/comail/domains/{comailDomain}/activate', [SiteComailOpsController::class, 'activate'])->name('ops.sites.comail.activate');
 Route::post('/sites/{site}/comail/configure', [SiteComailOpsController::class, 'configure'])->name('ops.sites.comail.configure');
+Route::post('/sites/{site}/comail/share-group', [SiteComailOpsController::class, 'shareGroup'])->name('ops.sites.comail.share-group');
 
 // CoMail mailboxes: the card's lazy list, the Super Admin search and the
 // one-click webmail login (Super Admin only, checked in the controller).

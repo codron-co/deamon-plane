@@ -37,8 +37,12 @@ class ComailSiteConfigurer
     public function payload(Site $site): array
     {
         $server = MailServer::comail();
+        // Own active domains, or (share group) those of a sibling site.
         $enabled = $server instanceof MailServer
-            && $site->comailDomains()->where('status', SiteComailDomain::STATUS_ACTIVE)->exists();
+            && SiteComailDomain::query()
+                ->whereIn('site_id', [$site->getKey(), ...ComailDirectory::groupSiblings($site)->modelKeys()])
+                ->where('status', SiteComailDomain::STATUS_ACTIVE)
+                ->exists();
 
         return $enabled
             ? [

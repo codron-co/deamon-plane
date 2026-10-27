@@ -185,5 +185,39 @@
                 @endif
             </div>
         @endif
+
+        {{-- Shared CoMail group: sites that manage each other's mailboxes (Super Admin sets it). --}}
+        @php($comailSiblings = \App\Services\Comail\ComailDirectory::groupSiblings($site))
+        @if ($comailSiblings->isNotEmpty())
+            <p class="site-note" data-comail-share-group="{{ $site->comail_share_group }}">
+                {{ __('comail.site.share.members') }}:
+                @foreach ($comailSiblings as $sibling)
+                    <a href="{{ route('ops.sites.show', $sibling) }}">{{ $sibling->name }}</a>@unless ($loop->last), @endunless
+                @endforeach
+            </p>
+        @endif
+        @if ($canEditComail)
+            @can('ops.danger')
+                <div class="site-operation-line" data-comail-share-form>
+                    <form method="POST" action="{{ route('ops.sites.comail.share-group', $site) }}" class="ops-form" data-ops-pending>
+                        @csrf
+                        <div class="site-operation-line">
+                            <div class="field">
+                                <label class="field-label" for="site_comail_share_with">{{ __('comail.site.share.label') }} @include('ops.dashboard._hint', ['text' => __('comail.site.share.hint')])</label>
+                                <input id="site_comail_share_with" class="field-input" type="text" name="share_with" placeholder="{{ __('comail.site.share.placeholder') }}" autocomplete="off">
+                            </div>
+                            <button type="submit" class="btn btn-secondary btn-sm" data-pending-label="{{ __('ops.actions.working') }}">{{ __('comail.site.share.join') }}</button>
+                        </div>
+                    </form>
+                    @if ($comailSiblings->isNotEmpty())
+                        <form method="POST" action="{{ route('ops.sites.comail.share-group', $site) }}" data-ops-pending data-confirm="{{ __('comail.site.share.leave_confirm') }}" data-confirm-title="{{ __('comail.site.share.leave') }}" data-confirm-label="{{ __('comail.site.share.leave') }}" data-confirm-danger="true">
+                            @csrf
+                            <input type="hidden" name="leave" value="1">
+                            <button type="submit" class="btn btn-ghost btn-sm">{{ __('comail.site.share.leave') }}</button>
+                        </form>
+                    @endif
+                </div>
+            @endcan
+        @endif
     @endif
 </article>

@@ -21,8 +21,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * CoMail v3 site API (`/internal/site/v1/comail/*`): mail security overview,
  * DMARC policy, mailbox spam filter and quarantine. Same signature, error
- * shape and ownership rules as SiteComailController: every domain, mailbox,
- * list entry and quarantine item must belong to the calling site.
+ * shape and ownership rules as SiteComailController: every mailbox, list
+ * entry and quarantine item must be on the calling site's CoMail domains
+ * (share group included); DMARC and the domain overview stay with the owner.
  */
 class SiteComailSecurityController extends Controller
 {
@@ -184,7 +185,7 @@ class SiteComailSecurityController extends Controller
                 throw ComailException::notConfigured();
             }
 
-            return $handler($site, new ComailDirectory($site, MailcowClient::forServer($server)), $server);
+            return $handler($site, new ComailDirectory($site, MailcowClient::forServer($server), shared: true), $server);
         } catch (ComailException $exception) {
             return $this->error($exception->error, $exception->getMessage(), $exception->status);
         } catch (MailcowException $exception) {
@@ -204,6 +205,10 @@ class SiteComailSecurityController extends Controller
     {
         $row = $site->comailDomains()->where('domain', strtolower(trim($domain)))->first();
         if (! $row instanceof SiteComailDomain) {
+            // A share-group domain: its mailboxes are reachable, its DMARC is the owner's.
+            if (ComailDirectory::sharedOwnerId($site, $domain) !== null) {
+                throw ComailException::domainNotOwned();
+            }
             $this->denied($site, 'domain', $domain);
 
             throw ComailException::notFound('Alan adı bulunamadı.');
@@ -270,6 +275,15 @@ class SiteComailSecurityController extends Controller
      */
     private function audit(Site $site, Request $request, string $action, array $after): void
     {
+        // On a share-group mailbox the acting site keeps the record; the owner is noted.
+        $address = $after['address'] ?? $after['mailbox'] ?? null;
+        if (is_string($address)) {
+            $owner = ComailDirectory::sharedOwnerId($site, ComailDirectory::domainOf($address));
+            if ($owner !== null) {
+                $after['owner_site_id'] = $owner;
+            }
+        }
+
         AuditLog::query()->create([
             'actor_user_id' => null,
             'action' => $action,

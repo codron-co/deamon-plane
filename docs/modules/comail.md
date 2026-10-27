@@ -19,7 +19,7 @@ Contract (shared with the CMS repo): `C:\www\tek-seferlik-isler\comail\CONTRACT.
 - `MailcowClient`: thin HTTP client (`{base_url}/api/v1`, header `X-API-Key`, 15 s timeout, `ops.comail.timeout_seconds`). mailcow answers writes with HTTP 200 and `[{type, msg}]`; any `danger`/`error` element throws `MailcowException` with mailcow's translation key (`providerKey`), mapped to Turkish by `ComailErrors`. 401/403/5xx and non-JSON throw too. Logs carry method, path (addresses redacted) and status only.
 - `ComailLimits`: package lookup, mailcow domain ceilings (`mailboxes`, `quota` = storage, `maxquota`, `defquota = min(1024, max)`, `aliases`), usage, and the checks (`limit_mailboxes`, `limit_storage`, `limit_aliases`, `limit_domains`). New mailbox quota default = `min(remaining storage, mailbox_max_quota_mb)`.
 - `ComailDomainProvisioner`: `ensure()` creates or re-syncs the mailcow domain with the package limits, then DKIM. **`add/domain` already creates the DKIM key** (selector `dkim`, 2048) and answers two success elements; a later `add/dkim` answers danger (`dkim_domain_or_sel_invalid`), so the provisioner reads `GET /get/dkim/{domain}` first and only adds a key when it is empty. `eligibleHosts()` = the site's non-temporary, non-www hosts that are not preview hosts under the Plane wildcard domain (`codron.co`).
-- `ComailDirectory`: one site's view (domains, mailboxes, aliases). Every address/alias/sync job is checked against the site's own CoMail domains; a mailbox's internal alias row (address = goto) is not listed.
+- `ComailDirectory`: one site's view (domains, mailboxes, aliases). Every address/alias/sync job is checked against the site's own CoMail domains (plus its share group's with `shared: true`, see [Shared mail group](#shared-mail-group-ortak-posta-grubu)); a mailbox's internal alias row (address = goto) is not listed.
 - `ComailDns`: plan / apply / activate / check (below). `DnsResolver` interface (`NativeDnsResolver` wraps `dns_get_record`; tests bind a fake).
 - `ComailSiteConfigurer` + `ConfigureSiteComailJob` + `ReconcileComailPushJob` (hourly, :35).
 - `ComailAutoreply`: builds the sieve prefilter (`script_desc = comail-autoreply`): `require ["vacation","date","relational"]; vacation :days 1 :subject "…" "…";`, optionally inside `if allof(currentdate :value "ge" "date" "Y-m-d", currentdate :value "le" …)`. User text only lands in quoted strings with `\` and `"` escaped and control characters removed; the settings read back come from a base64 JSON comment on line 1.
@@ -202,6 +202,18 @@ Order row: `{id, reference, package{slug,name}, package_slug, package_name, peri
 - Package form: yearly price. A package with orders/subscriptions cannot be deleted. Site CoMail card: subscription status, period end, grace end, link to the site's orders.
 - MCP: `list_mail_orders` (read), `confirm_mail_order` (danger, `confirmed`), `cancel_mail_order` (write).
 
+## Shared mail group (Ortak posta grubu)
+
+Sites of one company (first case: `makermach` + `makermak`) can see and manage each other's mailboxes from either CMS admin, one-click webmail login included.
+
+- Data: `sites.comail_share_group` (nullable, 26 chars, indexed; migration `2026_10_27_300000_add_comail_share_group_to_sites_table`). Sites with the same non-null value share mailboxes.
+- `ComailDirectory(site, client, shared: true)` (used by both site API controllers) covers the site's own active CoMail domains, then the active domains of the other (not deleted) sites in the group. Every mailbox, alias/forward/catch-all, auto-reply, imapsync migration, spam filter, quarantine and `webmail-login` endpoint accepts addresses on those domains, and the listings include them. Unshared callers (billing, ops) keep `shared: false`.
+- Domain management stays with the owning site: add/remove domain, DNS check/apply, MX activate, DMARC policy and H-Posta migration answer `422 domain_not_owned` for a group domain (a domain outside the group stays `404 not_found`). `GET /security` lists only the site's own domains.
+- Limits: a new mailbox/alias and a quota change on a domain are checked against the package of the site that owns the domain, with usage counted over that site's own domains (`ComailDirectory::forDomain()` → owner's unshared directory; `ComailLimits` always counts on `$directory->own()`). A site's overview usage, `over_limit` and billing stay about its own package.
+- `GET /overview` `domains[]`: own rows carry `shared: false`; group rows follow them with `shared: true`, `owner_site` (the owner's name) and `is_primary: false`. The CMS hides the domain-management buttons on shared rows. `available_domains` is unchanged.
+- Audit: actions on a group mailbox are recorded on the acting site with `owner_site_id` added. Group changes: `comail.share_group_changed` (`from`, `to`, `members`, `source`) on every site touched. The CMS module switch (`ComailSiteConfigurer`) also counts group domains, and a group change re-queues the configure push.
+- Ops: `php artisan ops:comail-share makermach makermak` (slug, id or primary domain; joins the group one of them already has, else a new one; sites in two different groups are refused), `php artisan ops:comail-share --clear makermak` (a group left with one site is cleared too), `php artisan ops:comail-share` lists the groups. Site detail → CoMail card shows the group members; Super Admin (`ops.danger`) gets **Ortak posta grubu** (other site's slug or domain → **Gruba ekle**) and **Gruptan çıkar** (`POST /sites/{site}/comail/share-group`). Not exposed over MCP.
+
 ## Deploy
 
 1. Deploy Plane; `php artisan migrate --force` (creates the tables and seeds the three packages).
@@ -209,8 +221,9 @@ Order row: `{id, reference, package{slug,name}, package_slug, package_name, peri
 3. Cloudflare: keep `mail_template_enabled` on (the CoMail check already skips the Hostinger rows while CoMail exists) or turn it off on accounts that should never get template mail rows.
 4. New sites enroll by themselves. Existing ones: `php artisan ops:comail-enroll --all --dry-run`, then per site or `--all` (try deamon-test first).
 5. The CMS needs the `comail` module (CMS PR) before the configure push succeeds; until then the hourly reconcile keeps retrying.
-6. v2 billing: Posta → Ödeme ayarları (iyzico keys, PayTR merchant id/key/salt, IBAN; start in sandbox/test mode), PayTR panel Bildirim URL = `https://<plane>/pay/callback/paytr`, package yearly prices; webmail SSO secret via `php artisan ops:comail-sso-secret` into the webmail plugin config.
+6. Shared mail group (after migrate): `php artisan ops:comail-share <site> <site>` only on the user's instruction.
+7. v2 billing: Posta → Ödeme ayarları (iyzico keys, PayTR merchant id/key/salt, IBAN; start in sandbox/test mode), PayTR panel Bildirim URL = `https://<plane>/pay/callback/paytr`, package yearly prices; webmail SSO secret via `php artisan ops:comail-sso-secret` into the webmail plugin config.
 
 ## Tests
 
-`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta, billing API, checkout, expiry, billing ops, webmail SSO, webmail host) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`, `Support/FakeIyzico`, `Support/FakePaytr`.
+`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta, billing API, checkout, expiry, billing ops, webmail SSO, webmail host, share group) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`, `Support/FakeIyzico`, `Support/FakePaytr`.
