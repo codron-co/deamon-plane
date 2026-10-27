@@ -142,6 +142,10 @@ A Coolify "Docker Image" app gets a rolling update (new container healthy, then 
 removed); a compose app is stopped and recreated (~2-3 s down). Pilots: deamon-test
 (`ccqqtbr0r0dk91wxyjvxojlc`, was compose `6cmmgh5ty9lzv6uiz5kfavue`) and Susa
 (`hbg0df5yqezlyjfsr87h86dc`): 1 000+ probe requests per deploy through Traefik, 0 errors.
+Every Deamon site moved on 2026-10-26 (`to-dockerimage-fleet.sh`); the old compose apps were
+deleted with their volumes kept (the image apps mount the same `<old-uuid>_deamon-*` volumes).
+Since #42 Plane provisions new sites as Docker Image apps (`DEAMON_PROVISION_PACK`), writes their
+domains and labels itself (`DockerImageLabels`), and APP_ENV is `production` on every channel.
 
 - Local registry `127.0.0.1:5000` (`/opt/deamon-registry`, `registry:2.8.3`, bound to loopback
   only, 0.5 CPU). `tag-images.sh` pushes every `deamon-cms:<sha>` there as
@@ -154,8 +158,11 @@ removed); a compose app is stopped and recreated (~2-3 s down). Pilots: deamon-t
   `deamon-retry` middleware (3 attempts) and `deamon-fast` servers transport (1 s dial timeout).
   Without them the old container's removal costs ~1 s of 502s and one request that hangs on the
   vanished IP. The app's labels are not read-only (`is_container_label_readonly_enabled=false`)
-  so the two references stay: a domain change must patch `custom_labels` by hand (regenerate,
-  then re-add `deamon-retry@file,` to the https routers and the `serverstransport` lines).
+  so the two references stay. Plane's domain changes write the full label set; `tag-images.sh`
+  (every minute) turns read-only labels off on every Deamon image app and puts the two
+  references back into a label set that lacks them (Coolify creates API apps read-only, so a new
+  site's first deploy runs without them; the next deploy has them). Coolify's API cannot change
+  the read-only setting.
 - Healthcheck: the image's own `HEALTHCHECK` (`custom_healthcheck_found=true`); Coolify polls it
   every 5 s, 36 tries. Env: same as the compose app minus `SERVICE_*`/`COOLIFY_*`, plus explicit
   `APP_URL` and `DEAMON_SITE_HOST` (Coolify injects no `SERVICE_URL_APP` here).
@@ -165,9 +172,24 @@ removed); a compose app is stopped and recreated (~2-3 s down). Pilots: deamon-t
   the same image/env/volumes/domains, patch labels, deploy next to the old app, verify `/up`,
   stop the old app, point Plane's `coolify_app_uuid` at the new one. Re-running picks up an app
   an earlier run created. ~40 s per site. Delete the old app later with volumes kept.
-  Needs `/tmp/cool.php` in the Plane container (raw Coolify API helper).
+  Needs `/tmp/cool.php` in the Plane container (raw Coolify API helper); a Plane deploy drops
+  it, so the script copies it back from `/opt/deamon-image/cool.php`.
 - `deamon-image/to-dockerimage-fleet.sh <list>`: the same for a list, one site at a time, CPU
   < 70 %, stops at the first failure with a WhatsApp alert. Log `to-dockerimage.log`.
+- Env: Plane's env sync never prunes keys on these apps (#38): the compose constants
+  (`DB_CONNECTION`, `QUEUE_CONNECTION`, `CACHE_STORE`, `SESSION_DRIVER`, ...) live only in their
+  Coolify env. `release.sh` deploys them through the Coolify client, not Plane's `deploy()`.
+- Channel switch: Plane `switch_channel` (image tag + `DEAMON_CHANNEL`). The old
+  `switch-site-channel.sh` is compose-only.
+
+## Off-site backup (`backup/deamon-hetzner-yedek.sh`)
+
+`/usr/local/bin/deamon-hetzner-yedek.sh`, cron 04:10 UTC (after the MySQL dump 03:15 and the
+Redis dump 03:40): `rclone copy` to the Hetzner Storage Box (u701755, Helsinki, key
+`/root/.ssh/hetzner-sbox`, port 23) under `hz:deamon/`: `mysql`, `redis` (dumps older than 30 days
+pruned there), `volumes/<volume>` for every `*_deamon-*` / `*-deamon-*` site volume, and
+`coolify` (Coolify's own backups). copy, never sync; the box's snapshots keep history. Log
+`/var/log/deamon-hetzner-yedek.log`, WhatsApp on failure. First run 2026-10-26: 32 GB.
 
 ## Retire a site (`retire-site.sh`)
 
