@@ -26,7 +26,7 @@ log "start uuid=$uuid db=$db redis=$rdb,$((rdb+1)) prefix=$rprefix"
 
 # 1. backups
 docker exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" deamon-db-mysql mysqldump -uroot --single-transaction --routines --triggers --no-tablespaces "$db" </dev/null | gzip > "$OUT/$db.sql.gz"
-for v in $(docker volume ls --format '{{.Name}}' | grep "^${uuid}_"); do
+for v in $(docker volume ls --format '{{.Name}}' | grep -E "^${uuid}[_-]"); do
   tar czf "$OUT/$v.tar.gz" -C "/var/lib/docker/volumes/$v/_data" .
 done
 cp -p "/data/coolify/applications/$uuid/docker-compose.yaml" "/data/coolify/applications/$uuid/.env" "$OUT/" 2>/dev/null || true
@@ -43,8 +43,8 @@ art tinker --execute "\$s = App\Models\Site::where('slug', '$SLUG')->firstOrFail
 
 # 4. Coolify: delete the application and its volumes
 art tinker --execute "\$s = App\Models\Site::where('slug', '$SLUG')->firstOrFail(); App\Services\Coolify\CoolifyApplicationService::forSite(\$s)->deleteApplication('$uuid', true); echo 'coolify delete requested';" | tail -1
-for i in $(seq 1 40); do docker ps -a --format '{{.Names}}' | grep -q -- "-$uuid-\|^app-$uuid\|^mysql-$uuid\|^redis-$uuid" || break; sleep 5; done
-log "containers left: $(docker ps -a --format '{{.Names}}' | grep -c "$uuid" || true), volumes left: $(docker volume ls --format '{{.Name}}' | grep -c "^${uuid}_" || true)"
+for i in $(seq 1 40); do docker ps -a --format '{{.Names}}' | grep -qE -- "^$uuid-|-$uuid-|^app-$uuid|^mysql-$uuid|^redis-$uuid" || break; sleep 5; done
+log "containers left: $(docker ps -a --format '{{.Names}}' | grep -c "$uuid" || true), volumes left: $(docker volume ls --format '{{.Name}}' | grep -cE "^${uuid}[_-]" || true)"
 
 # 5. shared MySQL + Redis
 docker exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" deamon-db-mysql mysql -uroot -e "DROP DATABASE IF EXISTS \`$db\`; DROP USER IF EXISTS '$dbuser'@'%';" </dev/null
