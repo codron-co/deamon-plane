@@ -18,7 +18,7 @@ final class McpGuide
             You act as {$context->user->email} (role {$role}; token abilities {$abilities}). Every write is audited under that user; the user's role still decides what is allowed.
 
             Rules:
-            - Try every new change on the test site first (slug `test`, https://test.deamon.codron.co): theme updates, settings pushes, bulk actions. Move on to customer sites only when it works there.
+            - Try every new change on the test site first (slug `test`, https://deamon.testdomain.tr): theme updates, settings pushes, bulk actions. Move on to customer sites only when it works there.
             - The sites share one host whose CPU is capped. Batch deploys (bulk_sites) instead of firing many single deploys; never start a new deploy while list_jobs shows the host's builds still running.
             - Ask the user before anything that takes a site offline or deletes (deactivate, archive, purge, DNS delete, admin delete, theme overwrite/rollback). Never pass `confirmed: true` the user did not agree to.
             - Most writes start background work. Read the result: `job.id` -> list_jobs job_id; deploys -> get_deployment; then get_site.
