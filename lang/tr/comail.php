@@ -82,6 +82,22 @@ return [
         'activate_confirm' => ':domain için MX ve SPF kayıtları CoMail ile değiştirilsin mi? Başka sağlayıcıdaki posta bu alan adına gelmez olur.',
         'add_domain' => 'Alan adı ekle',
         'add_domain_button' => 'CoMail’e ekle',
+        'share' => [
+            'label' => 'Ortak posta grubu',
+            'hint' => 'Aynı şirketin siteleri birbirinin posta kutularını görür ve yönetir (Webmail’e gir dahil). Alan adı, DNS, MX, paket ve fatura alan adının sahibi sitede kalır.',
+            'placeholder' => 'Diğer sitenin slug’ı ya da alan adı',
+            'join' => 'Gruba ekle',
+            'members' => 'Ortak posta grubu',
+            'leave' => 'Gruptan çıkar',
+            'leave_confirm' => 'Bu site ortak posta grubundan çıkarılsın mı? Diğer sitelerin posta kutuları bu siteden yönetilemez olur.',
+            'errors' => [
+                'not_found' => ':site adında başka bir site bulunamadı.',
+            ],
+            'flash' => [
+                'joined' => 'Bu site :site ile aynı ortak posta grubunda.',
+                'left' => 'Site ortak posta grubundan çıkarıldı.',
+            ],
+        ],
         'columns' => [
             'domain' => 'Alan adı',
             'status' => 'Durum',

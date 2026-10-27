@@ -8,6 +8,8 @@ use App\Models\Site;
 /**
  * Package limits. Plane enforces them on every create/edit across all of a
  * site's CoMail domains; the mailcow domain limits are only a safety ceiling.
+ * Usage is always counted on the directory's own site (ComailDirectory::own()):
+ * for a mailbox on a shared domain pass the owner's directory (forDomain()).
  */
 class ComailLimits
 {
@@ -111,6 +113,7 @@ class ComailLimits
      */
     public function usage(ComailDirectory $directory): array
     {
+        $directory = $directory->own();
         $allocated = 0;
         $used = 0;
         foreach ($directory->mailboxes() as $mailbox) {
@@ -140,6 +143,7 @@ class ComailLimits
      */
     public function quotaForNewMailbox(ComailDirectory $directory, ?int $requestedMb): int
     {
+        $directory = $directory->own();
         $package = $this->package($directory->site);
         $usage = $this->usage($directory);
 
@@ -160,6 +164,7 @@ class ComailLimits
 
     public function assertQuotaChange(ComailDirectory $directory, array $mailbox, int $newQuotaMb): void
     {
+        $directory = $directory->own();
         $package = $this->package($directory->site);
         $usage = $this->usage($directory);
         $current = ComailDirectory::bytesToMb($mailbox['quota'] ?? 0);
@@ -175,6 +180,7 @@ class ComailLimits
 
     public function assertCanAddAlias(ComailDirectory $directory): void
     {
+        $directory = $directory->own();
         $package = $this->package($directory->site);
         if (count($directory->aliases()) >= $package->alias_limit) {
             throw new ComailException(

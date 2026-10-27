@@ -82,6 +82,22 @@ return [
         'activate_confirm' => 'Replace the MX and SPF records of :domain with CoMail\'s? Mail at the current provider stops arriving for this domain.',
         'add_domain' => 'Add domain',
         'add_domain_button' => 'Add to CoMail',
+        'share' => [
+            'label' => 'Shared mail group',
+            'hint' => 'Sites of one company see and manage each other\'s mailboxes (including the webmail login). Domain, DNS, MX, package and billing stay with the site that owns the domain.',
+            'placeholder' => 'Other site\'s slug or domain',
+            'join' => 'Add to group',
+            'members' => 'Shared mail group',
+            'leave' => 'Leave group',
+            'leave_confirm' => 'Take this site out of the shared mail group? The other sites\' mailboxes can no longer be managed from it.',
+            'errors' => [
+                'not_found' => 'No other site named :site.',
+            ],
+            'flash' => [
+                'joined' => 'This site is now in one shared mail group with :site.',
+                'left' => 'The site left the shared mail group.',
+            ],
+        ],
         'columns' => [
             'domain' => 'Domain',
             'status' => 'Status',

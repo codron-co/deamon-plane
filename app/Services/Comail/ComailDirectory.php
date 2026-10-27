@@ -4,11 +4,18 @@ namespace App\Services\Comail;
 
 use App\Models\Site;
 use App\Models\SiteComailDomain;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * One site's view of the shared mailcow: its domains, mailboxes and aliases.
- * Every object a site may touch is checked against its own CoMail domains, so
- * a site can never reach another site's mailbox, alias or sync job.
+ * Every object a site may touch is checked against its CoMail domains, so a
+ * site can never reach another site's mailbox, alias or sync job.
+ *
+ * With `$shared` (the CMS site API) the view also covers the active domains of
+ * the other sites in the site's CoMail share group (`sites.comail_share_group`):
+ * one company, several sites, every mailbox manageable from each of them.
+ * Domain management, limits and billing stay with the site that owns the
+ * domain: use forDomain() / own() for anything counted against a package.
  */
 class ComailDirectory
 {
@@ -18,29 +25,169 @@ class ComailDirectory
     /** @var list<array<string, mixed>>|null */
     private ?array $aliases = null;
 
+    /** @var array<string, string>|null domain => owning site id */
+    private ?array $owners = null;
+
+    /** @var array<string, self> owning site id => that site's own directory */
+    private array $ownerDirectories = [];
+
     public function __construct(
         public readonly Site $site,
         public readonly MailcowClient $client,
+        public readonly bool $shared = false,
     ) {}
 
     /**
-     * Domains mailboxes may live on (provisioned on mailcow).
+     * Domains mailboxes may live on (provisioned on mailcow): the site's own,
+     * then (shared view) those of the other sites in its share group.
      *
      * @return list<string>
      */
     public function domains(): array
     {
-        return $this->site->comailDomains()
-            ->where('status', SiteComailDomain::STATUS_ACTIVE)
-            ->pluck('domain')
-            ->map(fn (mixed $domain): string => strtolower((string) $domain))
-            ->values()
-            ->all();
+        return array_keys($this->owners());
+    }
+
+    /**
+     * The site's own active CoMail domains, whatever the view.
+     *
+     * @return list<string>
+     */
+    public function ownDomains(): array
+    {
+        return array_keys(array_filter(
+            $this->owners(),
+            fn (string $siteId): bool => $siteId === (string) $this->site->id,
+        ));
     }
 
     public function ownsDomain(string $domain): bool
     {
-        return in_array(strtolower(trim($domain)), $this->domains(), true);
+        return array_key_exists(strtolower(trim($domain)), $this->owners());
+    }
+
+    /**
+     * A domain of another site in the share group (reachable, not managed here).
+     */
+    public function isSharedDomain(string $domain): bool
+    {
+        $owner = $this->owners()[strtolower(trim($domain))] ?? null;
+
+        return $owner !== null && $owner !== (string) $this->site->id;
+    }
+
+    /**
+     * Id of the site that owns this (reachable) domain, else null.
+     */
+    public function ownerSiteId(string $domain): ?string
+    {
+        return $this->owners()[strtolower(trim($domain))] ?? null;
+    }
+
+    /**
+     * The owning site's own (unshared) directory for a reachable domain: the
+     * one its package limits and usage are counted on.
+     */
+    public function forDomain(string $domain): self
+    {
+        $owner = $this->ownerSiteId($domain);
+        if ($owner === null) {
+            throw ComailException::domainNotOwned();
+        }
+
+        if ($owner === (string) $this->site->id) {
+            return $this->own();
+        }
+
+        if (! isset($this->ownerDirectories[$owner])) {
+            $site = Site::query()->find($owner);
+            if (! $site instanceof Site) {
+                throw ComailException::domainNotOwned();
+            }
+            $this->ownerDirectories[$owner] = new self($site, $this->client);
+        }
+
+        return $this->ownerDirectories[$owner];
+    }
+
+    /**
+     * This site's own directory (its domains only): usage, overview, billing.
+     */
+    public function own(): self
+    {
+        if (! $this->shared) {
+            return $this;
+        }
+
+        return $this->ownerDirectories[(string) $this->site->id] ??= new self($this->site, $this->client);
+    }
+
+    /**
+     * Other (not deleted) sites in the site's share group, by name.
+     *
+     * @return Collection<int, Site>
+     */
+    public static function groupSiblings(Site $site): Collection
+    {
+        $group = $site->comail_share_group;
+        if ($group === null || $group === '') {
+            return new Collection;
+        }
+
+        return Site::query()
+            ->where('comail_share_group', $group)
+            ->whereKeyNot($site->getKey())
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Owner of a domain that belongs to another site of the share group, else null.
+     */
+    public static function sharedOwnerId(Site $site, string $domain): ?string
+    {
+        $siblings = self::groupSiblings($site);
+        if ($siblings->isEmpty() || $domain === '') {
+            return null;
+        }
+
+        $owner = SiteComailDomain::query()
+            ->whereIn('site_id', $siblings->modelKeys())
+            ->where('domain', strtolower(trim($domain)))
+            ->value('site_id');
+
+        return $owner === null ? null : (string) $owner;
+    }
+
+    /**
+     * @return array<string, string> domain => owning site id, own domains first
+     */
+    private function owners(): array
+    {
+        if ($this->owners !== null) {
+            return $this->owners;
+        }
+
+        $owners = [];
+        foreach ($this->site->comailDomains()->where('status', SiteComailDomain::STATUS_ACTIVE)->pluck('domain') as $domain) {
+            $owners[strtolower((string) $domain)] = (string) $this->site->id;
+        }
+
+        if ($this->shared) {
+            $siblings = self::groupSiblings($this->site);
+            if ($siblings->isNotEmpty()) {
+                $rows = SiteComailDomain::query()
+                    ->whereIn('site_id', $siblings->modelKeys())
+                    ->where('status', SiteComailDomain::STATUS_ACTIVE)
+                    ->orderBy('domain')
+                    ->get(['domain', 'site_id']);
+                foreach ($rows as $row) {
+                    $owners[strtolower((string) $row->domain)] ??= (string) $row->site_id;
+                }
+            }
+        }
+
+        return $this->owners = $owners;
     }
 
     public static function domainOf(string $address): string
@@ -149,6 +296,9 @@ class ComailDirectory
     {
         $this->mailboxes = null;
         $this->aliases = null;
+        foreach ($this->ownerDirectories as $directory) {
+            $directory->forget();
+        }
     }
 
     /**
