@@ -7,7 +7,7 @@ Internal ops only. Do not paste API tokens, `APP_KEY`, or agent secrets into tic
 1. Coolify connection is saved in Plane **Coolify** menu (base URL + API token). Tests and CI use `Http::fake` — do not point a laptop at production Coolify to “try” provision.
 2. Default **project** UUID is set (Coolify menu or `COOLIFY_DEFAULT_PROJECT_UUID`).
 3. Target **server** UUID is on the draft site or in the Coolify menu (`COOLIFY_DEFAULT_SERVER_UUID`).
-4. Cloudflare account is saved. Nested hosts under an existing zone (`test.deamon.codron.co` on `codron.co`) only write DNS. Unbound customer domains create a **Free** full zone on the site’s selected account (or the default) and store Cloudflare nameservers. Set those NS at the registrar — Plane cannot change registrar NS. Preferred path: site detail → pick account → **Add to Cloudflare (Free)** (AJAX, no reload) → copy NS → then Provision.
+4. Cloudflare account is saved. Nested hosts under an existing zone (`deamon.testdomain.tr` on `testdomain.tr`) only write DNS. Unbound customer domains create a **Free** full zone on the site’s selected account (or the default) and store Cloudflare nameservers. Set those NS at the registrar — Plane cannot change registrar NS. Preferred path: site detail → pick account → **Add to Cloudflare (Free)** (AJAX, no reload) → copy NS → then Provision.
 5. Channel is one of `main` | `beta` | `alpha`.
 6. A **default** shared MySQL server (Databases page) and a **default** shared Redis server (`ops:redis-server … --default`) exist. Provision places the new site on both before its first build and fails without them ([database-servers.md](../modules/database-servers.md#new-sites-provision)).
 

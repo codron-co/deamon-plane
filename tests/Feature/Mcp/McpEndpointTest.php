@@ -66,7 +66,7 @@ class McpEndpointTest extends TestCase
         $this->assertSame('2025-06-18', $result['protocolVersion']);
         $this->assertSame('deamon-plane', $result['serverInfo']['name']);
         $this->assertStringContainsString($user->email, $result['instructions']);
-        $this->assertStringContainsString('test.deamon.codron.co', $result['instructions']);
+        $this->assertStringContainsString('deamon.testdomain.tr', $result['instructions']);
     }
 
     public function test_tool_list_follows_token_abilities(): void
