@@ -54,14 +54,14 @@ Operator: CodRon / Kanat Medya, Türkiye — info@codron.co
 
 Meta wants one video per permission showing the full flow, from login to where the data is used. Record at 1080p, 2–3 minutes, no sound needed. The admin panel is Turkish, so add **English captions** (text overlay) for every step; reviewers reject videos they cannot follow.
 
-Before recording, on deamon-test (`https://test.deamon.codron.co`, CMS 1.2.76+):
+Before recording, on deamon-test (`https://deamon.testdomain.tr`, CMS 1.2.76+):
 - the **Instagram Akışı** module is on and an **Instagram Akışı** block is placed on a public page (e.g. the home page);
 - the Instagram test account is a professional (Business or Creator) account, has the **Instagram Tester** role and has accepted the invite, and has a few posts;
 - the account is not connected yet (disconnect first if needed).
 
 | # | Do | Caption (English) |
 | --- | --- | --- |
-| 1 | Show the browser on `https://test.deamon.codron.co/admin`, already signed in as site admin | "Deamon CMS — the business's website admin panel" |
+| 1 | Show the browser on `https://deamon.testdomain.tr/admin`, already signed in as site admin | "Deamon CMS — the business's website admin panel" |
 | 2 | Open **Entegrasyonlar → Instagram** | "Integrations → Instagram: not connected yet" |
 | 3 | Click **Instagram ile bağlan** | "The site owner clicks Connect with Instagram" |
 | 4 | Instagram login page opens (URL bar shows instagram.com); log in with the test account | "Instagram Business Login" |
@@ -81,7 +81,7 @@ Create a dedicated admin user on deamon-test for Meta (e.g. `meta-review@codron.
 ```text
 The admin panel is in Turkish; English names are in brackets.
 
-1. Open https://test.deamon.codron.co/admin and sign in:
+1. Open https://deamon.testdomain.tr/admin and sign in:
    Email: <reviewer email>
    Password: <reviewer password>
 2. In the left menu open "Entegrasyonlar" (Integrations) → "Instagram".
@@ -90,7 +90,7 @@ The admin panel is in Turkish; English names are in brackets.
    Username: <test instagram username>
    Password: <test instagram password>
 4. Approve the request. You return to the admin page, which now shows the connected username and the account's latest posts (read with instagram_business_basic).
-5. Open https://test.deamon.codron.co/<page with the Instagram block> to see the posts in the "Instagram" section of the public website. Each post links to Instagram.
+5. Open https://deamon.testdomain.tr/<page with the Instagram block> to see the posts in the "Instagram" section of the public website. Each post links to Instagram.
 6. "Bağlantıyı kaldır" (Disconnect) removes the token and deletes the imported posts.
 
 Privacy policy: https://plane.codron.co/instagram/gizlilik
