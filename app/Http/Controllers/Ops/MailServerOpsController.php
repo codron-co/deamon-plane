@@ -46,6 +46,10 @@ class MailServerOpsController extends Controller
         }
 
         $servers = $query->paginate(25)->withQueryString();
+        // CoMail is attached through CoMail domains, never through sites.mail_server_id.
+        $servers->getCollection()
+            ->filter(fn (MailServer $server): bool => $server->provider === MailProvider::Mailcow)
+            ->each(fn (MailServer $server) => $server->sites_count = SiteComailDomain::query()->distinct()->count('site_id'));
         $activeFilters = $this->activeListFilters($search, $status);
 
         return ListFragment::respond($request, 'ops.mail-servers.index', 'ops.mail-servers._region', [

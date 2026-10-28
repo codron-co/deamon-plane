@@ -50,6 +50,21 @@ class ComailOpsTest extends TestCase
         $this->assertSame(1, MailPackage::query()->where('is_default', true)->count());
     }
 
+    public function test_mail_server_list_counts_comail_sites_by_their_comail_domains(): void
+    {
+        $this->comailServer();
+        $first = $this->comailSite('acme.test');
+        $this->comailDomain($first, 'acme.test');
+        $this->comailDomain($first, 'second.test', ['is_primary' => false]);
+        $this->comailDomain($this->comailSite('other.test'), 'other.test');
+
+        // CoMail never sets sites.mail_server_id; the list counts sites with a CoMail domain.
+        $this->actingAs($this->opsUser())->get(route('ops.mail-servers.index'))
+            ->assertOk()
+            ->assertViewHas('servers', fn ($servers) => $servers->getCollection()
+                ->firstWhere('provider', MailProvider::Mailcow)?->sites_count === 2);
+    }
+
     public function test_default_package_is_recreated_when_missing(): void
     {
         DB::table('mail_packages')->delete();
