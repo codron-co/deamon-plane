@@ -121,6 +121,7 @@ class FakeMailcow
             'active_int' => 1,
             'created' => '2026-10-26 10:00:00',
             'last_imap_login' => 0,
+            'attributes' => ['force_pw_update' => '0'],
         ];
         $this->aliases[$this->nextId] = ['id' => $this->nextId, 'address' => $address, 'goto' => $address, 'domain' => $domain, 'active' => 1];
         $this->nextId++;
@@ -189,6 +190,9 @@ class FakeMailcow
         }
         if (preg_match('~^/get/dkim/(.+)$~', $path, $m)) {
             return $this->dkim[urldecode($m[1])] ?? [];
+        }
+        if ($path === '/get/mailbox/all') {
+            return array_values($this->mailboxes);
         }
         if (preg_match('~^/get/mailbox/all/(.+)$~', $path, $m)) {
             $domain = urldecode($m[1]);
@@ -328,6 +332,11 @@ class FakeMailcow
                     }
                     if (isset($attr['active'])) {
                         $attr['active_int'] = $attr['active'];
+                    }
+                    // mailcow answers it inside `attributes`, as a string.
+                    if (isset($attr['force_pw_update'])) {
+                        $attr['attributes'] = ['force_pw_update' => (string) $attr['force_pw_update']] + ($this->mailboxes[$address]['attributes'] ?? []);
+                        unset($attr['force_pw_update']);
                     }
                     $this->mailboxes[$address] = array_merge($this->mailboxes[$address], $attr);
                 }

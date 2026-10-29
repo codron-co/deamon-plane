@@ -31,6 +31,7 @@ Route::middleware(['throttle:site-comail', EnsureSiteMailSignature::class])->gro
 
     Route::get('/mailboxes', [SiteComailController::class, 'mailboxes']);
     Route::post('/mailboxes', [SiteComailController::class, 'storeMailbox']);
+    Route::post('/mailboxes/bulk', [SiteComailController::class, 'bulkMailboxes']);
     Route::patch('/mailboxes/{address}', [SiteComailController::class, 'updateMailbox']);
     Route::delete('/mailboxes/{address}', [SiteComailController::class, 'destroyMailbox']);
     Route::get('/mailboxes/{address}/autoreply', [SiteComailController::class, 'autoreply']);

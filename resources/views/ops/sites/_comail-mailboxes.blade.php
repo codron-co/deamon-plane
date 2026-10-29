@@ -31,6 +31,9 @@
                             <td>@include('ops.comail._usage')</td>
                             <td>
                                 <span class="status-chip {{ $mailbox['active'] ? 'status-active' : '' }}">{{ $mailbox['active'] ? __('comail.mailboxes.active') : __('comail.mailboxes.inactive') }}</span>
+                                @if ($mailbox['must_change_password'])
+                                    <span class="status-chip" title="{{ __('comail.mailboxes.must_change_hint') }}">{{ __('comail.mailboxes.must_change') }}</span>
+                                @endif
                             </td>
                             @if ($canWebmail)
                                 <td>
