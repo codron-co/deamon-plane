@@ -78,7 +78,8 @@
             {{-- Row "Webmail'e gir" buttons post here (forms cannot nest inside the bulk form). --}}
             <form method="POST" id="comail-webmail-form" target="_blank" hidden>@csrf</form>
 
-            <form method="POST" action="{{ route('ops.comail.mailboxes.bulk') }}" class="sites-bulk" id="comail-mailboxes-bulk" data-ops-bulk>
+            {{-- A real page load (data-ops-native): the one-time passwords come back as a session flash. --}}
+            <form method="POST" action="{{ route('ops.comail.mailboxes.bulk') }}" class="sites-bulk" id="comail-mailboxes-bulk" data-ops-bulk data-ops-native>
                 @csrf
                 <div class="sites-table-wrap">
                     <table class="ops-table" data-comail-mailboxes-table>
