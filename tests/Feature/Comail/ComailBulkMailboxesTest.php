@@ -162,6 +162,8 @@ class ComailBulkMailboxesTest extends TestCase
             ->assertSee('info@acme.test')
             ->assertSee('kim@nosite.test')
             ->assertSee('data-comail-no-site', false)
+            // A real submit: ops-async would swallow the one-time passwords in the flash.
+            ->assertSee('data-ops-bulk data-ops-native', false)
             ->assertSee($this->site->name);
 
         $this->actingAs($admin)->get(route('ops.comail.mailboxes', ['site' => 'none']))

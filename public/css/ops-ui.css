@@ -2419,6 +2419,8 @@ a.site-tag:hover {
 
 /* The temporary-password menu holds a small form, not menu items. */
 .comail-password-popover {
+    left: 0;
+    right: auto;
     display: grid;
     gap: 10px;
     width: min(22rem, calc(100vw - 32px));
