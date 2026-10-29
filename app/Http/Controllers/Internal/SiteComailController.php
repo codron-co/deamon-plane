@@ -14,6 +14,7 @@ use App\Services\Comail\ComailDns;
 use App\Services\Comail\ComailDomainProvisioner;
 use App\Services\Comail\ComailException;
 use App\Services\Comail\ComailLimits;
+use App\Services\Comail\ComailMailboxActions;
 use App\Services\Comail\ComailSiteConfigurer;
 use App\Services\Comail\ComailWebmailHost;
 use App\Services\Comail\ComailWebmailSso;
@@ -265,6 +266,7 @@ class SiteComailController extends Controller
                 'password' => ['sometimes', 'string', 'min:8', 'max:128'],
                 'quota_mb' => ['sometimes', 'integer', 'min:1'],
                 'active' => ['sometimes', 'boolean'],
+                'force_password_change' => ['sometimes', 'boolean'],
             ]);
 
             $attributes = [];
@@ -289,6 +291,10 @@ class SiteComailController extends Controller
                 $attributes['active'] = filter_var($data['active'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
                 $changed[] = 'active';
             }
+            if (array_key_exists('force_password_change', $data)) {
+                $attributes['force_pw_update'] = filter_var($data['force_password_change'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+                $changed[] = 'force_password_change';
+            }
 
             $username = (string) $mailbox['username'];
             if ($attributes !== []) {
@@ -312,6 +318,97 @@ class SiteComailController extends Controller
 
             return $this->ok([]);
         });
+    }
+
+    /**
+     * `POST /mailboxes/bulk` (docs: CONTRACT-bulk-mailboxes): activate,
+     * deactivate or delete `addresses`, or set `passwords` (optionally with
+     * `force_password_change`). A bad request changes nothing; after that each
+     * address is done on its own and reported in `results`.
+     */
+    public function bulkMailboxes(Request $request, ComailMailboxActions $actions): JsonResponse
+    {
+        return $this->run($request, function (Site $site, ComailDirectory $directory) use ($request, $actions): JsonResponse {
+            $max = ComailMailboxActions::MAX_ITEMS;
+            $data = $this->validated($request, [
+                'action' => ['required', 'string', 'in:'.implode(',', ComailMailboxActions::ACTIONS)],
+                'addresses' => ['exclude_if:action,password', 'required', 'array', 'min:1', 'max:'.$max],
+                'addresses.*' => ['exclude_if:action,password', 'required', 'string', 'max:320'],
+                'passwords' => ['exclude_unless:action,password', 'required', 'array', 'min:1', 'max:'.$max],
+                'passwords.*.address' => ['exclude_unless:action,password', 'required', 'string', 'max:320'],
+                'passwords.*.password' => ['exclude_unless:action,password', 'required', 'string', 'max:128'],
+                'force_password_change' => ['sometimes', 'boolean'],
+            ]);
+
+            $action = (string) $data['action'];
+            $items = [];
+            if ($action === ComailMailboxActions::PASSWORD) {
+                foreach ($data['passwords'] as $row) {
+                    $problem = ComailMailboxActions::passwordProblem((string) $row['password']);
+                    if ($problem !== null) {
+                        throw ComailException::validation($problem);
+                    }
+                    $items[strtolower(trim((string) $row['address']))] = (string) $row['password'];
+                }
+            } else {
+                foreach ($data['addresses'] as $address) {
+                    $items[strtolower(trim((string) $address))] = null;
+                }
+            }
+            $force = array_key_exists('force_password_change', $data)
+                ? filter_var($data['force_password_change'], FILTER_VALIDATE_BOOLEAN)
+                : null;
+
+            $results = [];
+            foreach ($items as $address => $password) {
+                $mailbox = $directory->mailbox($address);
+                if ($mailbox === null) {
+                    $this->denied($site, 'mailbox', $address);
+                    $results[] = ['address' => $address, 'ok' => false, 'error' => 'not_found', 'message' => 'Posta kutusu bulunamadı.'];
+
+                    continue;
+                }
+
+                $username = (string) $mailbox['username'];
+                try {
+                    $actions->apply($directory->client, $username, $action, $password, $action === ComailMailboxActions::PASSWORD ? $force : null);
+                } catch (MailcowException $exception) {
+                    if ($exception->isUnreachable()) {
+                        throw $exception;
+                    }
+                    $results[] = ['address' => $address, 'ok' => false, 'error' => 'provider_error', 'message' => $exception->turkishMessage()];
+
+                    continue;
+                }
+
+                $this->audit($site, $request, ...self::bulkAudit($username, $action, $force));
+                $results[] = ['address' => $address, 'ok' => true];
+            }
+            $directory->forget();
+
+            return $this->ok(['results' => $results]);
+        });
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private static function bulkAudit(string $username, string $action, ?bool $force): array
+    {
+        return match ($action) {
+            ComailMailboxActions::DELETE => ['comail.mailbox_deleted', ['address' => $username, 'bulk' => true]],
+            ComailMailboxActions::PASSWORD => ['comail.mailbox_updated', [
+                'address' => $username,
+                'changed' => $force === null ? ['password'] : ['password', 'force_password_change'],
+                'bulk' => true,
+            ] + ($force === null ? [] : ['force_password_change' => $force])],
+            default => ['comail.mailbox_updated', [
+                'address' => $username,
+                'changed' => ['active'],
+                'active' => $action === ComailMailboxActions::ACTIVATE,
+                'bulk' => true,
+            ]],
+        };
     }
 
     // ── Auto-reply ──────────────────────────────────────────────────────
@@ -889,6 +986,13 @@ class SiteComailController extends Controller
         'user' => 'Kullanıcı adı',
         'security' => 'Güvenlik',
         'mailbox_ids' => 'Posta kutuları',
+        'action' => 'İşlem',
+        'addresses' => 'Adresler',
+        'addresses.*' => 'Adres',
+        'passwords' => 'Parolalar',
+        'passwords.*.address' => 'Adres',
+        'passwords.*.password' => 'Parola',
+        'force_password_change' => 'İlk girişte şifre değiştirme',
     ];
 
     private const MESSAGES = [
@@ -1135,7 +1239,8 @@ class SiteComailController extends Controller
             'used_bytes' => (int) ($row['quota_used'] ?? 0),
             'percent' => (int) ($row['percent_in_use'] ?? 0),
             'messages' => (int) ($row['messages'] ?? 0),
-            'active' => (int) ($row['active_int'] ?? $row['active'] ?? 0) === 1,
+            'active' => ComailDirectory::isActive($row),
+            'must_change_password' => ComailDirectory::mustChangePassword($row),
             'created_at' => self::isoDate($row['created'] ?? null),
             'last_login_at' => self::isoDate($row['last_imap_login'] ?? null),
         ];

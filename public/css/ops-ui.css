@@ -2414,3 +2414,30 @@ a.site-tag:hover {
 .ops-freshness-flag {
     font-weight: 600;
 }
+
+/* ---------- CoMail mailbox page ---------- */
+
+/* The temporary-password menu holds a small form, not menu items. */
+.comail-password-popover {
+    display: grid;
+    gap: 10px;
+    width: min(22rem, calc(100vw - 32px));
+    padding: 12px;
+}
+
+.comail-password-mode {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.comail-password-popover .field-hint {
+    margin: 0;
+}
+
+.comail-revealed code {
+    font-variant-numeric: tabular-nums;
+    user-select: all;
+}

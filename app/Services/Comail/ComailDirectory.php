@@ -325,4 +325,25 @@ class ComailDirectory
     {
         return (int) round(((int) $bytes) / 1048576);
     }
+
+    /**
+     * mailcow's `force_pw_update`: the webmail makes the user pick a new
+     * password on the next login (IMAP/SMTP apps keep working).
+     *
+     * @param  array<string, mixed>  $row
+     */
+    public static function mustChangePassword(array $row): bool
+    {
+        $attributes = is_array($row['attributes'] ?? null) ? $row['attributes'] : [];
+
+        return (string) ($attributes['force_pw_update'] ?? '0') === '1';
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    public static function isActive(array $row): bool
+    {
+        return (int) ($row['active_int'] ?? $row['active'] ?? 0) === 1;
+    }
 }

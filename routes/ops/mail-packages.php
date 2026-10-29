@@ -22,9 +22,16 @@ Route::post('/sites/{site}/comail/domains/{comailDomain}/activate', [SiteComailO
 Route::post('/sites/{site}/comail/configure', [SiteComailOpsController::class, 'configure'])->name('ops.sites.comail.configure');
 Route::post('/sites/{site}/comail/share-group', [SiteComailOpsController::class, 'shareGroup'])->name('ops.sites.comail.share-group');
 
-// CoMail mailboxes: the card's lazy list, the Super Admin search and the
-// one-click webmail login (Super Admin only, checked in the controller).
+// CoMail mailboxes: the card's lazy list, the Super Admin mailbox page with its
+// bulk actions and the one-click webmail login (Super Admin only, checked in the controller).
 Route::get('/comail/mailboxes', [ComailMailboxOpsController::class, 'search'])->name('ops.comail.mailboxes');
+Route::post('/comail/mailboxes/bulk', [ComailMailboxOpsController::class, 'bulk'])
+    ->middleware('throttle:comail-webmail-ops')
+    ->name('ops.comail.mailboxes.bulk');
+Route::post('/comail/mailboxes/{address}/webmail', [ComailMailboxOpsController::class, 'webmailAny'])
+    ->where('address', '[^/]+')
+    ->middleware('throttle:comail-webmail-ops')
+    ->name('ops.comail.mailboxes.webmail');
 Route::get('/sites/{site}/comail/mailboxes/panel', [ComailMailboxOpsController::class, 'panel'])->name('ops.sites.comail.mailboxes.panel');
 Route::post('/sites/{site}/comail/mailboxes/{address}/webmail', [ComailMailboxOpsController::class, 'webmail'])
     ->where('address', '[^/]+')

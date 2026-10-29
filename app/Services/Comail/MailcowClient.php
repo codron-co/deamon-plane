@@ -238,6 +238,16 @@ class MailcowClient
     }
 
     /**
+     * Every mailbox on the server, sites or not (the Super Admin mailbox page).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function allMailboxes(): array
+    {
+        return $this->rows($this->get('/get/mailbox/all'));
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function mailbox(string $address): ?array
