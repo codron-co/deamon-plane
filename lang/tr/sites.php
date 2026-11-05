@@ -84,6 +84,15 @@ return [
         'important' => 'Önemli',
         'normal' => 'Normal',
     ],
+    'filter_commerce' => 'E-ticaret',
+    'commerce_states' => [
+        'shop' => 'E-ticaret',
+        'catalog' => 'Fiyatsız katalog',
+        'none' => 'Modül kapalı',
+        'unknown' => 'Bilinmiyor',
+    ],
+    'commerce_badge' => 'E-ticaret',
+    'commerce_badge_title' => 'E-Ticaret modülü açık, :count fiyatlı ürün yayında',
     'importance' => [
         'menu' => 'Önem',
         'set_label' => 'Seçili sitelerin önemi',

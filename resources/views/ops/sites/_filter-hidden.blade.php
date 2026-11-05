@@ -17,3 +17,4 @@
 <input type="hidden" name="filter_analytics" value="{{ $analytics ?? '' }}">
 <input type="hidden" name="filter_tag" value="{{ $tag ?? '' }}">
 <input type="hidden" name="filter_importance" value="{{ $importance ?? '' }}">
+<input type="hidden" name="filter_commerce" value="{{ $commerce ?? '' }}">

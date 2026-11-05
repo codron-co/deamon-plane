@@ -28,6 +28,7 @@ class ListSitesTool extends ReadTool
             'theme_id' => ['type' => 'string', 'description' => 'Sites using this catalog theme.'],
             'unhealthy' => ['type' => 'boolean', 'description' => 'Only sites whose agent health check fails.'],
             'failed_deploy' => ['type' => 'boolean', 'description' => 'Only sites whose last deployment failed.'],
+            'commerce' => ['type' => 'string', 'enum' => Site::COMMERCE_FILTERS, 'description' => 'E-commerce state from CMS health: shop (sells priced products), catalog (module on, no prices), none (module off), unknown (CMS does not report it yet).'],
             'archived' => ['type' => 'boolean', 'description' => 'List archived (soft-deleted) sites instead.'],
             'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 50],
         ]);
@@ -45,6 +46,7 @@ class ListSitesTool extends ReadTool
                 deploy: ($arguments['failed_deploy'] ?? false) ? 'failed' : '',
                 health: ($arguments['unhealthy'] ?? false) ? 'unhealthy' : '',
                 themeId: trim((string) ($arguments['theme_id'] ?? '')),
+                commerce: (string) ($arguments['commerce'] ?? ''),
             )
             ->with('latestDeployment')
             ->orderBy('name')

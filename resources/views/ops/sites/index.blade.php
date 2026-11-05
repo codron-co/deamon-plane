@@ -128,6 +128,7 @@
             'server' => $server ?? '',
             'tag' => $tag ?? '',
             'importance' => $importance ?? '',
+            'commerce' => $commerce ?? '',
         ];
         $activeFilterCount = count(array_filter($filterValues, static fn (string $value): bool => $value !== ''));
 
@@ -149,6 +150,7 @@
         $filterGroups = [
             'channel' => [__('sites.filter_branch'), array_combine($channels, $channels), true, false],
             'importance' => [__('sites.filter_importance'), $importanceFilters ?? [], false, false],
+            'commerce' => [__('sites.filter_commerce'), $commerceFilters ?? [], false, false],
             'tag' => [__('sites.filter_tag'), $tagFilters ?? [], false, true],
             'theme' => [__('sites.filter_theme'), $themeFilters ?? [], false, false],
             'theme_id' => [__('sites.filter_theme_id'), $themeIdFilters ?? [], false, true],

@@ -21,6 +21,7 @@ class SiteHealthChecker
         'channel_hint',
         'php',
         'site_name',
+        'commerce',
     ];
 
     public function __construct(
@@ -110,6 +111,7 @@ class SiteHealthChecker
             'host_load',
             'host_cpus',
             'turnstile',
+            'commerce',
             'http_status',
         ];
 

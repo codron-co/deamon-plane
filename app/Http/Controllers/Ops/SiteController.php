@@ -98,6 +98,7 @@ class SiteController extends Controller
         $analytics = $savedViews->filters['analytics'] ?? '';
         $tag = $savedViews->filters['tag'] ?? '';
         $importance = $savedViews->filters['importance'] ?? '';
+        $commerce = $savedViews->filters['commerce'] ?? '';
 
         $allowedChannels = config('ops.channels', []);
         $publishFilters = [...CmsPublishStatus::values(), 'unknown'];
@@ -140,6 +141,10 @@ class SiteController extends Controller
         $importanceFilters = [];
         foreach (Site::IMPORTANCE_FILTERS as $importanceOption) {
             $importanceFilters[$importanceOption] = (string) __('sites.importance_states.'.$importanceOption);
+        }
+        $commerceFilters = [];
+        foreach (Site::COMMERCE_FILTERS as $commerceOption) {
+            $commerceFilters[$commerceOption] = (string) __('sites.commerce_states.'.$commerceOption);
         }
         // The bulk bar inside the region lists every tag, so this is loaded for region responses too.
         $siteTags = SiteTag::query()->orderBy('name')->get();
@@ -207,6 +212,7 @@ class SiteController extends Controller
             'analytics' => $analyticsFilters,
             'tag' => $tagFilters,
             'importance' => $importanceFilters,
+            'commerce' => $commerceFilters,
         ]);
         $bulkPinCommits = $this->bulkPinSuggestions($sites);
 
@@ -254,6 +260,8 @@ class SiteController extends Controller
             'siteTags' => $siteTags,
             'tagFilters' => $tagFilters,
             'importanceFilters' => $importanceFilters,
+            'commerce' => $commerce,
+            'commerceFilters' => $commerceFilters,
             'importantSummary' => $importantSummary,
             'savedViews' => $savedViews,
             'channels' => $allowedChannels,
@@ -320,6 +328,7 @@ class SiteController extends Controller
             'analytics' => __('sites.filter_analytics'),
             'tag' => __('sites.filter_tag'),
             'importance' => __('sites.filter_importance'),
+            'commerce' => __('sites.filter_commerce'),
         ];
 
         $translated = [
