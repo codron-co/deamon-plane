@@ -80,6 +80,9 @@ final class AgentHealthResult
                 'host_cpus' => self::positiveInt($payload['host_cpus'] ?? null),
                 // CMS with Turnstile: state; site keys only (public), never a secret.
                 'turnstile' => self::turnstile($payload['turnstile'] ?? null),
+                // CMS with the commerce health key: module state and the number of
+                // published priced products. Site::isEcommerce() reads it.
+                'commerce' => self::commerce($payload['commerce'] ?? null),
                 'http_status' => $httpStatus,
             ]),
         );
@@ -154,6 +157,24 @@ final class AgentHealthResult
             'source' => self::nullableString($value['source'] ?? null),
             'ready' => ($value['ready'] ?? false) === true,
             'sitekeys' => $sitekeys,
+        ];
+    }
+
+    /**
+     * @return array{module_enabled: bool, checkout_ready: bool, priced_products: int|null}|null
+     */
+    private static function commerce(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $priced = $value['priced_products'] ?? null;
+
+        return [
+            'module_enabled' => ($value['module_enabled'] ?? false) === true,
+            'checkout_ready' => ($value['checkout_ready'] ?? false) === true,
+            'priced_products' => is_int($priced) && $priced >= 0 ? $priced : null,
         ];
     }
 

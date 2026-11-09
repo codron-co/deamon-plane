@@ -389,6 +389,54 @@ class Site extends Model
     }
 
     /**
+     * E-ticaret durumu (CMS'in son health'te bildirdiği `commerce`); eski CMS ya da health yoksa null.
+     *
+     * @return array{module_enabled: bool, checkout_ready: bool, priced_products: int|null}|null
+     */
+    public function reportedCommerce(): ?array
+    {
+        $payload = is_array($this->last_health_payload) ? $this->last_health_payload : [];
+        $commerce = $payload['commerce'] ?? null;
+        if (! is_array($commerce)) {
+            return null;
+        }
+
+        $priced = $commerce['priced_products'] ?? null;
+
+        return [
+            'module_enabled' => ($commerce['module_enabled'] ?? false) === true,
+            'checkout_ready' => ($commerce['checkout_ready'] ?? false) === true,
+            'priced_products' => is_int($priced) ? $priced : null,
+        ];
+    }
+
+    /**
+     * Satış yapan site: E-Ticaret modülü açık ve en az bir yayında, fiyatı gösterilen ürün var.
+     * Modülü açık ama fiyatsız katalog siteleri (teklif iste) e-ticaret sayılmaz.
+     */
+    public function isEcommerce(): bool
+    {
+        $commerce = $this->reportedCommerce();
+
+        return $commerce !== null && $commerce['module_enabled'] && ($commerce['priced_products'] ?? 0) > 0;
+    }
+
+    /**
+     * `shop` | `catalog` (modül açık, fiyatlı ürün yok) | `none` (modül kapalı) | `unknown` (CMS bildirmiyor).
+     */
+    public function commerceState(): string
+    {
+        $commerce = $this->reportedCommerce();
+
+        return match (true) {
+            $commerce === null => 'unknown',
+            $this->isEcommerce() => 'shop',
+            $commerce['module_enabled'] => 'catalog',
+            default => 'none',
+        };
+    }
+
+    /**
      * Coolify UI deep link. Path uses project + environment uuids, never the env/channel name.
      */
     public function coolifyUiUrl(): ?string
@@ -1118,6 +1166,15 @@ class Site extends Model
      */
     public const IMPORTANCE_FILTERS = ['flagged', 'critical', 'important', 'normal'];
 
+    /**
+     * E-ticaret list filters, the values of commerceState(): `shop` sells priced
+     * products, `catalog` has the module on without prices, `none` module off,
+     * `unknown` the CMS does not report it yet.
+     *
+     * @var list<string>
+     */
+    public const COMMERCE_FILTERS = ['shop', 'catalog', 'none', 'unknown'];
+
     public const STALE_HEALTH_HOURS = 24;
 
     /**
@@ -1161,6 +1218,7 @@ class Site extends Model
         string $analytics = '',
         string $tag = '',
         string $importance = '',
+        string $commerce = '',
     ): Builder {
         $allowedChannels = config('ops.channels', []);
         $channel = in_array($channel, $allowedChannels, true) ? $channel : '';
@@ -1180,6 +1238,11 @@ class Site extends Model
         $analytics = in_array($analytics, self::ANALYTICS_FILTERS, true) ? $analytics : '';
         $tag = preg_match(self::TAG_FILTER_PATTERN, $tag) === 1 ? $tag : '';
         $importance = in_array($importance, self::IMPORTANCE_FILTERS, true) ? $importance : '';
+        $commerce = in_array($commerce, self::COMMERCE_FILTERS, true) ? $commerce : '';
+
+        if ($commerce !== '') {
+            $query->whereIn('id', self::idsMatchingCommerceFilter($commerce));
+        }
 
         if ($tag === 'none') {
             $query->whereDoesntHave('tags');
@@ -1330,6 +1393,26 @@ class Site extends Model
         }
 
         return $query;
+    }
+
+    /**
+     * The commerce state lives in the health JSON (booleans and a count), which
+     * SQLite and MySQL compare differently; the fleet is small, so read it in PHP
+     * with commerceState() and the badge and the filter always agree.
+     *
+     * @return list<string>
+     */
+    private static function idsMatchingCommerceFilter(string $commerce): array
+    {
+        $ids = [];
+        // withTrashed: the archived list filters too; the outer query decides what is shown.
+        foreach (self::withTrashed()->get(['id', 'last_health_payload']) as $site) {
+            if ($site->commerceState() === $commerce) {
+                $ids[] = (string) $site->id;
+            }
+        }
+
+        return $ids;
     }
 
     /**

@@ -43,6 +43,8 @@ final class McpPresenter
             'publish_status' => self::value($site->publishStatus()),
             'deamon_version' => $site->reportedDeamonVersion(),
             'active_theme' => $site->reportedActiveThemeId(),
+            // shop | catalog | none | unknown (Site::commerceState()).
+            'commerce' => $site->commerceState(),
             'healthy' => $site->last_health_at !== null ? ! $site->health_unhealthy : null,
             'last_health_at' => self::time($site->last_health_at),
             'live_http_status' => $site->last_live_http_status,

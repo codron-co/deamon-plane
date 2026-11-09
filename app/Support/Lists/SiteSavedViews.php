@@ -20,7 +20,7 @@ final class SiteSavedViews
 
     public const ALL = 'all';
 
-    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app', 'theme', 'theme_id', 'cms', 'auto_deploy', 'server', 'stale', 'analytics', 'tag', 'importance'];
+    public const FILTER_KEYS = ['q', 'channel', 'status', 'publish', 'deploy', 'agent', 'pack', 'health', 'app', 'theme', 'theme_id', 'cms', 'auto_deploy', 'server', 'stale', 'analytics', 'tag', 'importance', 'commerce'];
 
     /**
      * Filter key => Site::scopeMatchingListFilters() argument name, where they differ.
@@ -76,6 +76,7 @@ final class SiteSavedViews
             'analytics' => (string) $request->query('analytics', ''),
             'tag' => (string) $request->query('tag', ''),
             'importance' => (string) $request->query('importance', ''),
+            'commerce' => (string) $request->query('commerce', ''),
         ]);
 
         if ($queryView === self::ALL) {
@@ -266,6 +267,7 @@ final class SiteSavedViews
         $analytics = (string) ($raw['analytics'] ?? '');
         $tag = trim((string) ($raw['tag'] ?? ''));
         $importance = (string) ($raw['importance'] ?? '');
+        $commerce = (string) ($raw['commerce'] ?? '');
 
         $filters = [
             'q' => $q,
@@ -286,6 +288,7 @@ final class SiteSavedViews
             'analytics' => in_array($analytics, Site::ANALYTICS_FILTERS, true) ? $analytics : '',
             'tag' => preg_match(Site::TAG_FILTER_PATTERN, $tag) === 1 ? $tag : '',
             'importance' => in_array($importance, Site::IMPORTANCE_FILTERS, true) ? $importance : '',
+            'commerce' => in_array($commerce, Site::COMMERCE_FILTERS, true) ? $commerce : '',
         ];
 
         return array_filter($filters, static fn (string $value): bool => $value !== '');

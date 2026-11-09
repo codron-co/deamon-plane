@@ -84,6 +84,15 @@ return [
         'important' => 'Important',
         'normal' => 'Normal',
     ],
+    'filter_commerce' => 'E-commerce',
+    'commerce_states' => [
+        'shop' => 'E-commerce',
+        'catalog' => 'Catalogue, no prices',
+        'none' => 'Module off',
+        'unknown' => 'Unknown',
+    ],
+    'commerce_badge' => 'E-commerce',
+    'commerce_badge_title' => 'Commerce module on, :count priced products published',
     'importance' => [
         'menu' => 'Importance',
         'set_label' => 'Importance of the selected sites',

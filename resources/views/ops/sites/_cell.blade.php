@@ -25,6 +25,15 @@
                     <div class="site-name-row">
                         <a class="site-name" href="{{ route('ops.sites.show', $site) }}">{{ $site->name }}</a>
                         @include('ops.sites._importance-badge', ['level' => $site->importanceLevel()])
+                        @if ($site->isEcommerce())
+                            {{-- CMS health `commerce`: the E-Ticaret module is on and priced products are published. --}}
+                            <a
+                                class="site-tag is-green"
+                                href="{{ route('ops.sites', ['commerce' => 'shop']) }}"
+                                title="{{ __('sites.commerce_badge_title', ['count' => $site->reportedCommerce()['priced_products'] ?? 0]) }}"
+                                data-row-action
+                            >{{ __('sites.commerce_badge') }}</a>
+                        @endif
                         @if ($site->hasDockerfileBuildPackWarning())
                             <span class="status-chip status-dockerfile">{{ __('ops.dockerfile_chip') }}</span>
                         @endif
