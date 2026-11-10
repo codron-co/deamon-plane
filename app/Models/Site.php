@@ -1044,7 +1044,10 @@ class Site extends Model
         $installation = $this->activeThemeInstallation;
         $latest = (string) ($installation?->theme?->latest_sha ?? '');
 
-        return $latest !== '' && $latest !== (string) $installation?->pinned_sha;
+        // latest_sha is the default branch's head; a branch/tag/commit install is not behind it.
+        return $latest !== ''
+            && $installation?->tracksDefaultRef() === true
+            && $latest !== (string) $installation->pinned_sha;
     }
 
     public function healthReportedThemeId(): ?string

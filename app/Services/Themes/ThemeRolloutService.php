@@ -14,6 +14,7 @@ use App\Services\Agent\ControlPlaneAgentContract;
 use App\Services\Agent\SiteAgentClient;
 use App\Services\Agent\SiteHealthChecker;
 use App\Services\Agent\ThemeAgentResult;
+use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubAppClient;
 use App\Services\GitHub\GitHubCredentialsException;
 use Illuminate\Support\Facades\DB;
@@ -58,9 +59,21 @@ class ThemeRolloutService
             );
         }
 
-        $ref = trim((string) ($options['ref'] ?? $theme->default_ref ?? 'main'));
+        $ref = trim((string) ($options['ref'] ?? ''));
         if ($ref === '') {
-            $ref = 'main';
+            $ref = ThemeRef::defaultRef($theme);
+        }
+
+        // The CMS fetches a commit by its full SHA only.
+        if (ThemeRef::isShortCommit($ref)) {
+            $full = $this->refHead($theme, $ref);
+            if ($full === null || ! ThemeRef::isCommit($full) || ! str_starts_with(strtolower($full), strtolower($ref))) {
+                throw new ThemeRolloutException(__('sites.theme_flash.short_sha_unresolved', ['ref' => $ref]));
+            }
+            $ref = $full;
+        }
+        if (ThemeRef::isCommit($ref)) {
+            $ref = strtolower($ref);
         }
 
         $installation = DB::transaction(function () use ($site, $theme, $ref, $actor, $ip): SiteThemeInstallation {
@@ -68,6 +81,13 @@ class ThemeRolloutService
                 'site_id' => $site->id,
                 'theme_id' => $theme->id,
             ]);
+
+            // A new ref is a new source: the old pin belongs to the previous ref and
+            // would otherwise be installed again (the pin wins in themePayload).
+            if ($installation->exists && (string) $installation->ref !== $ref && $installation->pinned_sha !== null) {
+                $installation->previous_pinned_sha = $installation->pinned_sha;
+                $installation->pinned_sha = null;
+            }
 
             $installation->ref = $ref;
             $installation->status = ThemeInstallationStatus::Pending;
@@ -456,7 +476,7 @@ class ThemeRolloutService
             return;
         }
 
-        $installedSha = $result->sha ?? ($theme->latest_sha ?: null);
+        $installedSha = $result->sha ?? (is_string($payload['sha'] ?? null) ? $payload['sha'] : null);
 
         if ($installedSha !== null && $installedSha !== $installation->pinned_sha) {
             $installation->previous_pinned_sha = $installation->pinned_sha;
@@ -647,6 +667,10 @@ class ThemeRolloutService
      * Update moves the site forward, so the catalog's latest SHA wins; the pin
      * is only a fallback while the catalog has not seen a push yet.
      *
+     * `latest_sha` is the head of the catalog's default branch only: an install on
+     * another branch or tag follows that ref's own head, and a commit ref is fixed
+     * (cloned from the default branch, then checked out).
+     *
      * @return array<string, mixed>
      */
     private function themePayload(
@@ -655,9 +679,20 @@ class ThemeRolloutService
         bool $preferLatest = false,
         ?string $sha = null,
     ): array {
-        $sha ??= $preferLatest
-            ? ($theme->latest_sha ?: $installation->pinned_sha)
-            : ($installation->pinned_sha ?: $theme->latest_sha);
+        $ref = trim((string) $installation->ref) ?: ThemeRef::defaultRef($theme);
+
+        if (ThemeRef::isCommit($ref)) {
+            $sha ??= $ref;
+        } elseif (ThemeRef::tracksDefault($theme, $ref)) {
+            $sha ??= $preferLatest
+                ? ($theme->latest_sha ?: $installation->pinned_sha)
+                : ($installation->pinned_sha ?: $theme->latest_sha);
+        } else {
+            $sha ??= $preferLatest
+                ? ($this->refHead($theme, $ref) ?? $installation->pinned_sha)
+                : ($installation->pinned_sha ?: $this->refHead($theme, $ref));
+        }
+
         $cloneToken = null;
 
         try {
@@ -670,10 +705,34 @@ class ThemeRolloutService
         return ControlPlaneAgentContract::installBody(
             $theme->theme_id,
             $theme->repo_full_name,
-            $installation->ref ?: $theme->default_ref ?: 'main',
+            ThemeRef::cloneRef($theme, $ref),
             is_string($sha) && $sha !== '' ? $sha : null,
             is_string($cloneToken) && $cloneToken !== '' ? $cloneToken : null,
         );
+    }
+
+    /**
+     * Head commit of a branch or tag (or the full SHA of an abbreviated commit),
+     * read with the theme's own Git connection. Null when GitHub cannot be asked:
+     * the CMS then installs the ref's head as cloned.
+     */
+    private function refHead(Theme $theme, string $ref): ?string
+    {
+        if ((string) $theme->repo_full_name === '') {
+            return null;
+        }
+
+        try {
+            $theme->loadMissing('gitConnection');
+            $client = $theme->gitConnection !== null
+                ? GitHubAppClient::fromConnection($theme->gitConnection)
+                : $this->github;
+            $sha = $client->latestCommitSha((string) $theme->repo_full_name, $ref);
+        } catch (GitHubApiException|GitHubCredentialsException) {
+            return null;
+        }
+
+        return is_string($sha) && ThemeRef::isCommit($sha) ? strtolower($sha) : null;
     }
 
     private function assertMutableTheme(Theme $theme): void
