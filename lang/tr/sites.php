@@ -705,7 +705,7 @@ return [
         'auto_update_on' => 'Bu kurulum için otomatik güncelleme açıldı. GitHub push agent güncellemesi tetikler.',
         'auto_update_off' => 'Otomatik güncelleme kapatıldı (v1 varsayılanı).',
         'cms_too_old' => 'Bu tema CMS :minimum veya üstünü istiyor; site :reported bildiriyor. Önce siteyi güncelleyin.',
-        'short_sha_unresolved' => ':ref commit'i tema reposunda bulunamadı. 40 karakterlik tam SHA, bir dal ya da etiket verin.',
+        'short_sha_unresolved' => ':ref commit’i tema reposunda bulunamadı. 40 karakterlik tam SHA, bir dal ya da etiket verin.',
         'smoke_failed' => 'Tema kuruldu ama vitrin hata veriyor (:pages). Dönülecek önceki sürüm yok; site loglarına bakın.',
         'smoke_rolled_back_files' => 'Güncellemeden sonra vitrin hata verdi (:pages); tema dosyaları önceki commit’e geri alındı.',
         'smoke_rolled_back_sync' => 'Senkrondan sonra vitrin hata verdi (:pages); senkronun değiştirdiği kayıtlar geri yüklendi.',
