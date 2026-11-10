@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ThemeInstallationStatus;
+use App\Services\Themes\ThemeRef;
 use Database\Factories\SiteThemeInstallationFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -67,7 +68,9 @@ class SiteThemeInstallation extends Model
 
     /**
      * Active installs whose pinned commit trails the catalog head (or was never
-     * pinned) — the same rule as the Sites `theme=outdated` filter.
+     * pinned) — the same rule as the Sites `theme=outdated` filter. Only installs
+     * on the catalog's default ref: `latest_sha` is that branch's head, so a site
+     * deliberately on another branch, tag or commit is never "behind" it.
      *
      * @param  Builder<SiteThemeInstallation>  $query
      * @return Builder<SiteThemeInstallation>
@@ -78,10 +81,22 @@ class SiteThemeInstallation extends Model
             ->where('site_theme_installations.is_active', true)
             ->whereHas('theme', static function (Builder $themes): void {
                 $themes->whereNotNull('themes.latest_sha')
+                    ->where(static function (Builder $tracks): void {
+                        $tracks->where('site_theme_installations.ref', '')
+                            ->orWhereRaw("site_theme_installations.ref = COALESCE(NULLIF(themes.default_ref, ''), 'main')");
+                    })
                     ->where(static function (Builder $behind): void {
                         $behind->whereNull('site_theme_installations.pinned_sha')
                             ->orWhereColumn('themes.latest_sha', '!=', 'site_theme_installations.pinned_sha');
                     });
             });
+    }
+
+    /** True when this install follows the catalog's default branch (and so `latest_sha`). */
+    public function tracksDefaultRef(): bool
+    {
+        $theme = $this->theme;
+
+        return $theme instanceof Theme && ThemeRef::tracksDefault($theme, $this->ref);
     }
 }
