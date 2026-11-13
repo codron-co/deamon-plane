@@ -406,6 +406,10 @@ class SiteProvisioner
             ]);
         }
 
+        // The CMS answers now: platform SMTP (password reset, invites, reports,
+        // bulletins) and the site's own SMTP go out once, only if not accepted yet.
+        app(SiteSettingsAfterDeploy::class)->dispatch($site);
+
         $site->auditLogs()->create([
             'actor_user_id' => $actorUserId,
             'action' => 'site.provision_succeeded',

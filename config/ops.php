@@ -367,6 +367,9 @@ return [
         // times before the deployment row is allowed to record a failure.
         'poll_transient_max_attempts' => (int) env('COOLIFY_DEPLOY_POLL_TRANSIENT_ATTEMPTS', 8),
         'log_excerpt_bytes' => (int) env('COOLIFY_DEPLOY_LOG_EXCERPT_BYTES', 16000),
+        // After a successful provision deploy: wait this long before pushing the
+        // platform / site SMTP, so the new container is serving (SiteSettingsAfterDeploy).
+        'settings_push_delay_seconds' => (int) env('OPS_PROVISION_SETTINGS_PUSH_DELAY', 60),
     ],
 
     /*
