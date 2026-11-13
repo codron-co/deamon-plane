@@ -50,6 +50,8 @@ never a response body, so nothing leaks into the panel.
 - **Save** (`PUT`) persists `PlatformMailSetting`, writes an audit log, and flashes success immediately (`platform_mail.flash.saved_push_queued`). Validation errors stay on the form; no success flash on failed validation.
 - **Push to sites** does not block the redirect: both save and manual **Push to sites** dispatch `DispatchPlatformMailPushJob`, which queues one `PushPlatformMailJob` per site that has an agent secret. Failures are handled in the per-site jobs (log/audit); the operator always gets the queued flash, not a synchronous per-site count.
 - Manual push uses the same job and flashes `platform_mail.flash.pushed_queued`.
+- **New sites** get it without a manual push: when the provision deploy finishes, `SiteProvisioner::markSucceeded` calls `SiteSettingsAfterDeploy`, which queues `PushPlatformMailJob` (and `ConfigureSiteMailJob` when the site has a mail server) after `ops.provision.settings_push_delay_seconds` (60 s). Only sites that have not accepted the push yet (never pushed, or last push failed) are queued, so later deploys push nothing. Before 2026-11-13 nothing pushed at provision: the four sites created on 2026-10-27 could not send password resets, invites, weekly reports or bulletins until "push to all sites" was pressed.
+- **Hourly retry:** `ReconcileMailPushJob` (`:45`, `ops-mail-push-reconcile`) pushes inline to active sites still missing the platform SMTP (or their own SMTP) — CMS down at provision, older code, a failed push. Configured sites are left alone.
 
 ### Test mail
 
@@ -89,5 +91,6 @@ CMS-sent platform mail uses the customer site unsubscribe host (companion CMS pl
 
 - `tests/Feature/Ops/PlatformMailSettingsTest.php` — save flash, validation, push job dispatch, test mail
 - `tests/Feature/Ops/PlatformMailStateTest.php` — nav reachability from any page, the four chip states, per-site push outcome recording
+- `tests/Feature/Ops/ProvisionMailPushTest.php` — push queued after a provision deploy, skipped once accepted, hourly reconcile
 - `tests/Feature/Ops/PlatformMailUnsubscribeTest.php` — signed unsubscribe, opt-out storage, mail headers
 - CMS: `ControlPlanePlatformMailConfigureTest`

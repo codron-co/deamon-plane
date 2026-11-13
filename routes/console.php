@@ -6,6 +6,7 @@ use App\Jobs\KickStalledFleetRolloutsJob;
 use App\Jobs\ReconcileComailPushJob;
 use App\Jobs\ReconcileDeskronPushJob;
 use App\Jobs\ReconcileInstagramPushJob;
+use App\Jobs\ReconcileMailPushJob;
 use App\Jobs\ReconcileSiteSearchIntegrationsJob;
 use App\Jobs\ReconcileSiteTurnstileJob;
 use App\Jobs\StartWaitingDeploysJob;
@@ -67,6 +68,14 @@ Schedule::job(new ReconcileSiteTurnstileJob)
 Schedule::job(new ReconcileComailPushJob)
     ->hourlyAt(35)
     ->name('ops-comail-push-reconcile')
+    ->withoutOverlapping();
+
+// Platform SMTP (password reset, invites, reports, bulletins) and the site's own
+// SMTP: re-push to active sites that never accepted them (CMS not up yet at
+// provision, older code, container down) or whose last push failed.
+Schedule::job(new ReconcileMailPushJob)
+    ->hourlyAt(45)
+    ->name('ops-mail-push-reconcile')
     ->withoutOverlapping();
 
 // CoMail billing: ended periods -> grace -> default package; stale checkouts and EFT orders expire.

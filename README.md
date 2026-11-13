@@ -67,4 +67,4 @@ Roles: `super_admin`, `operator`, `viewer` (viewer is read-only).
 
 1. Starter: [.cursor/prompts/000_START-Plane-Orkestrasyon.md](.cursor/prompts/000_START-Plane-Orkestrasyon.md)
 2. SoT: [docs/plans/2026-08-13-deamon-plane.md](docs/plans/2026-08-13-deamon-plane.md)
-3. Tests: `php artisan test` · JS helpers: `node --test tests/js/*.js` (ADR-11; no Playwright)
+3. Tests: `php artisan test` · JS helpers: `node --test tests/js/*.js` (ADR-11; no Playwright). On the Windows dev PC use `tools/test-docker.sh` (production PHP 8.2.35 in Docker): the local WAMP PHP 8.2.26 ZTS segfaults on HTTP fakes that fail the connection, so `ComailWebmailHostTest` and the rest of a run die silently.

@@ -291,10 +291,11 @@ return [
         // Destination (Docker network) for new apps; the connection's setting wins.
         // Coolify refuses a create without one once the server has several destinations.
         // Default: srv2's standalone docker destination on the `coolify` network.
-        'default_destination_uuid' => env('COOLIFY_DEFAULT_DESTINATION_UUID', 'gokgcs84s8s88gggwoows4ks'),
+        // An empty line in .env (as in .env.example) must not drop the default: `?:`, not env()'s default.
+        'default_destination_uuid' => env('COOLIFY_DEFAULT_DESTINATION_UUID') ?: 'gokgcs84s8s88gggwoows4ks',
         // Destination for new Docker Image site apps: srv2's "deamon" standalone docker
         // (network deamon-db, where the shared MySQL / Redis run).
-        'image_destination_uuid' => env('COOLIFY_IMAGE_DESTINATION_UUID', '31gww8sy8nazbukhozgzlbzw'),
+        'image_destination_uuid' => env('COOLIFY_IMAGE_DESTINATION_UUID') ?: '31gww8sy8nazbukhozgzlbzw',
         'webhook_secret' => env('COOLIFY_WEBHOOK_SECRET'),
         'timeout' => (int) env('COOLIFY_HTTP_TIMEOUT', 30),
         'auto_rebind_domains' => filter_var(env('COOLIFY_AUTO_REBIND_DOMAINS', true), FILTER_VALIDATE_BOOLEAN),
@@ -367,6 +368,9 @@ return [
         // times before the deployment row is allowed to record a failure.
         'poll_transient_max_attempts' => (int) env('COOLIFY_DEPLOY_POLL_TRANSIENT_ATTEMPTS', 8),
         'log_excerpt_bytes' => (int) env('COOLIFY_DEPLOY_LOG_EXCERPT_BYTES', 16000),
+        // After a successful provision deploy: wait this long before pushing the
+        // platform / site SMTP, so the new container is serving (SiteSettingsAfterDeploy).
+        'settings_push_delay_seconds' => (int) env('OPS_PROVISION_SETTINGS_PUSH_DELAY', 60),
     ],
 
     /*
