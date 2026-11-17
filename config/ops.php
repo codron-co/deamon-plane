@@ -252,6 +252,30 @@ return [
         'nonce_ttl_seconds' => (int) env('CONTROL_PLANE_AGENT_NONCE_TTL', 120),
     ],
 
+    /*
+    | Fleet security (Güvenlik): pulls each CMS's security-alerts summary over the
+    | signed agent (`/internal/control/security/*`, docs/modules/security-fleet.md).
+    | The shared host's CPU is capped, so sites are polled one at a time, spaced
+    | `spacing_seconds` apart, and a failing site is skipped, never retried in a burst.
+    */
+    'security' => [
+        'poll_minutes' => (int) env('OPS_SECURITY_POLL_MINUTES', 10),
+        'max_sites_per_run' => (int) env('OPS_SECURITY_MAX_SITES_PER_RUN', 60),
+        'spacing_seconds' => (int) env('OPS_SECURITY_SPACING_SECONDS', 4),
+        'timeout_seconds' => (int) env('OPS_SECURITY_TIMEOUT', 8),
+        // Pages (200 events each) one site may deliver in one run.
+        'max_pages_per_run' => 3,
+        // A CMS without the endpoint (404) is asked again only this often.
+        'unsupported_retry_hours' => 24,
+        // After this many failures in a row the site is polled hourly instead.
+        'backoff_after_failures' => 3,
+        'retention_days' => (int) env('OPS_SECURITY_RETENTION_DAYS', 90),
+        // Alert e-mail to super admins: one mail per rule + IP per window.
+        'alert_window_minutes' => 30,
+        'cross_site_window_minutes' => 360,
+        'cross_site_min_sites' => 2,
+    ],
+
     'hostinger' => [
         'api_base' => env('HOSTINGER_API_BASE', 'https://developers.hostinger.com'),
         'timeout' => (int) env('HOSTINGER_HTTP_TIMEOUT', 15),

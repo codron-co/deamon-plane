@@ -2,17 +2,24 @@
 
 namespace App\Mcp;
 
+use App\Mcp\Tools\AddFleetAllowlistTool;
+use App\Mcp\Tools\BlockIpFleetTool;
 use App\Mcp\Tools\BulkSitesTool;
 use App\Mcp\Tools\GetDeploymentTool;
+use App\Mcp\Tools\GetFleetSecuritySummaryTool;
 use App\Mcp\Tools\GetSetupOptionsTool;
+use App\Mcp\Tools\GetSiteSecurityTool;
 use App\Mcp\Tools\GetSiteTool;
 use App\Mcp\Tools\ListDnsRecordsTool;
+use App\Mcp\Tools\ListFleetAllowlistTool;
 use App\Mcp\Tools\ListJobsTool;
+use App\Mcp\Tools\ListSecurityEventsTool;
 use App\Mcp\Tools\ListSiteActivityTool;
 use App\Mcp\Tools\ListSiteAdminsTool;
 use App\Mcp\Tools\ListSitesTool;
 use App\Mcp\Tools\ListThemesTool;
 use App\Mcp\Tools\RouteToolCatalog;
+use App\Mcp\Tools\UnblockIpFleetTool;
 use App\Mcp\Tools\UpdateThemeFleetTool;
 use App\Mcp\Tools\WhoamiTool;
 use App\Models\McpToken;
@@ -45,6 +52,13 @@ class McpToolRegistry
             ...RouteToolCatalog::tools(),
             new BulkSitesTool,
             new UpdateThemeFleetTool,
+            new ListSecurityEventsTool,
+            new GetSiteSecurityTool,
+            new GetFleetSecuritySummaryTool,
+            new ListFleetAllowlistTool,
+            new BlockIpFleetTool,
+            new UnblockIpFleetTool,
+            new AddFleetAllowlistTool,
         ];
 
         $this->tools = [];

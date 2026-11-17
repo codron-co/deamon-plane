@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/ops/themes.php';
     require __DIR__.'/ops/rollouts.php';
     require __DIR__.'/ops/databases.php';
+    require __DIR__.'/ops/security.php';
 
     Route::get('/account', [AccountController::class, 'show'])->name('ops.account.show');
     Route::put('/account', [AccountController::class, 'update'])->name('ops.account.update');

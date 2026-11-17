@@ -7,6 +7,7 @@ return [
         'primary' => 'Primary',
         'fleet' => 'Fleet',
         'activity' => 'Activity',
+        'security' => 'Security',
         'rollouts' => 'CI rollouts',
         'sites' => 'Sites',
         'domains' => 'Domains',

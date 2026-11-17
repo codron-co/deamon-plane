@@ -29,6 +29,8 @@ final class PlatformNotificationCatalog
 
     public const DEPLOY_FAILED = 'deploy_failed';
 
+    public const SECURITY_ALERT = 'security_alert';
+
     /**
      * @return array<string, array{label: string, description: string, default: bool, scope: string}>
      */
@@ -98,6 +100,12 @@ final class PlatformNotificationCatalog
             self::DEPLOY_FAILED => [
                 'label' => 'Deploy failed',
                 'description' => 'Coolify deployment failed.',
+                'default' => true,
+                'scope' => 'plane',
+            ],
+            self::SECURITY_ALERT => [
+                'label' => 'Security alert',
+                'description' => 'Critical security event on a site, or one IP probing several sites (fleet security).',
                 'default' => true,
                 'scope' => 'plane',
             ],

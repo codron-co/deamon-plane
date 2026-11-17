@@ -22,6 +22,7 @@ class SiteHealthChecker
         'php',
         'site_name',
         'commerce',
+        'security',
     ];
 
     public function __construct(
@@ -112,6 +113,7 @@ class SiteHealthChecker
             'host_cpus',
             'turnstile',
             'commerce',
+            'security',
             'http_status',
         ];
 

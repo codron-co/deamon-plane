@@ -6,6 +6,8 @@ use App\Enums\Channel;
 use App\Enums\CmsPublishStatus;
 use App\Enums\DeployGate;
 use App\Models\CoolifyConnection;
+use App\Models\FleetAllowlistEntry;
+use App\Models\FleetIpBlock;
 use App\Models\OpsBackgroundJob;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -15,6 +17,7 @@ use App\Services\Coolify\CoolifySiteSync;
 use App\Services\Domains\DomainBindSweep;
 use App\Services\GitHub\GitHubApiException;
 use App\Services\GitHub\GitHubCredentialsException;
+use App\Services\Security\FleetSecurityApplier;
 use App\Services\Sites\ChannelSwitcher;
 use App\Services\Sites\ComposePackMigrator;
 use App\Services\Sites\CoolifyDeploySettings;
@@ -50,6 +53,7 @@ class OpsJobRunner
             'sites.bulk_purge' => $this->bulkPurge($job),
             'sites.bulk_publish_status' => $this->bulkPublishStatus($job),
             'domains.bulk_bind' => $this->bulkBindDomains($job),
+            'security.fleet_apply' => $this->securityFleetApply($job),
             default => throw new RuntimeException('Unknown ops job type.'),
         };
     }
@@ -290,6 +294,35 @@ class OpsJobRunner
                 : __('sites.publish.flash.bulk_unpublished'),
             $result,
         );
+    }
+
+    /**
+     * Pushes one fleet block / allowlist record to the sites, canary first
+     * (FleetSecurityApplier). A canary that refused the change fails the job.
+     */
+    private function securityFleetApply(OpsBackgroundJob $job): string
+    {
+        $payload = is_array($job->payload) ? $job->payload : [];
+        $id = (int) ($payload['record_id'] ?? 0);
+        $record = ($payload['record'] ?? '') === 'allowlist'
+            ? FleetAllowlistEntry::query()->find($id)
+            : FleetIpBlock::query()->find($id);
+        if ($record === null) {
+            throw new RuntimeException('Security record not found.');
+        }
+
+        $result = app(FleetSecurityApplier::class)->apply(
+            $record,
+            function (string $name, int $done, int $total) use ($job): void {
+                $job->updateProgress((int) (($done / max(1, $total)) * 100), $name);
+            },
+        );
+
+        if ($result['stopped_at_canary']) {
+            throw new RuntimeException(__('security.apply.stopped_at_canary', ['error' => implode('; ', $result['errors']) ?: __('security.apply.canary_unsupported')]));
+        }
+
+        return __('security.apply.summary', ['ok' => $result['ok'], 'failed' => $result['failed'], 'skipped' => $result['skipped']]);
     }
 
     private function bulkBindDomains(OpsBackgroundJob $job): string

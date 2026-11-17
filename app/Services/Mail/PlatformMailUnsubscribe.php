@@ -16,6 +16,7 @@ final class PlatformMailUnsubscribe
         PlatformNotificationCatalog::SITE_UP,
         PlatformNotificationCatalog::SITE_VERSION_UPDATE,
         PlatformNotificationCatalog::DEPLOY_FAILED,
+        PlatformNotificationCatalog::SECURITY_ALERT,
     ];
 
     public function url(User $user, string $key): string

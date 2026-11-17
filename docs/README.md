@@ -32,6 +32,7 @@
 - [Coolify HTTP adapter](modules/coolify-client.md) — N connections, allowlists, site dropdowns
 - [Coolify deploy webhooks](modules/coolify-webhooks.md) — HMAC or query token + deployments UI + fleet KPI
 - [Site agent client](modules/agent-client.md) — HMAC health poll + version gate + unhealthy KPI
+- [Fleet security (Güvenlik)](modules/security-fleet.md) — security-alerts summary poll, cross-site correlation, fleet IP block / allowlist, e-mail alert, MCP
 - [MCP endpoint](modules/mcp.md) — `/mcp` for AI agents: bearer tokens (`ops:mcp-token`), write tools run the panel routes in-process (same validation, policies, audit)
 - [Site admins](modules/site-admins.md) — CMS admin list/create/reset/deactivate/delete via agent
 - [Arama & Analitik](modules/search-integrations.md) — per-site Search Console / Bing / Yandex verification + GA4 / GTM / Metrica / Clarity pushed over the agent; fleet column + filter; operator steps

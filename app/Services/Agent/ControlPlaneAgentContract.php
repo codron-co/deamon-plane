@@ -77,6 +77,18 @@ final class ControlPlaneAgentContract
     /** CMS 1.2.49+: reads (GET) and partially sets (POST) search verification + GA4/GTM ids. */
     public const SEARCH_INTEGRATIONS_PATH = '/internal/control/v1/search-integrations';
 
+    /**
+     * Security alerts module (fleet security, docs/modules/security-fleet.md). Not under /v1: the
+     * routes belong to the CMS `security-alerts` module. GET summary, POST block|unblock|allowlist.
+     */
+    public const SECURITY_SUMMARY_PATH = '/internal/control/security/summary';
+
+    public const SECURITY_BLOCK_PATH = '/internal/control/security/block';
+
+    public const SECURITY_UNBLOCK_PATH = '/internal/control/security/unblock';
+
+    public const SECURITY_ALLOWLIST_PATH = '/internal/control/security/allowlist';
+
     public const ADMINS_PATH = '/internal/control/v1/admins';
 
     /** Module catalog: GET lists installable modules, POST `{slug, enabled}` turns one on (installs with dependencies) or off (data kept). Older CMS answers 404. */
