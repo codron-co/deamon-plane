@@ -387,6 +387,97 @@ class SiteAgentClient
         return $this->requestAdmins($site, 'DELETE', ControlPlaneAgentContract::adminPath($adminId));
     }
 
+    /** Installable CMS modules with their installed / enabled / locked state. */
+    public function listModules(Site $site): ModuleAgentResult
+    {
+        return $this->requestModules($site, 'GET');
+    }
+
+    /**
+     * Turns one module on (the CMS installs it with its dependencies when needed)
+     * or off (disable only; the module's data stays).
+     */
+    public function setModule(Site $site, string $slug, bool $enabled): ModuleAgentResult
+    {
+        return $this->requestModules($site, 'POST', ['slug' => $slug, 'enabled' => $enabled]);
+    }
+
+    /**
+     * @param  array{slug: string, enabled: bool}|null  $payload
+     */
+    private function requestModules(Site $site, string $method, ?array $payload = null): ModuleAgentResult
+    {
+        if (! $site->hasAgentSecret()) {
+            return ModuleAgentResult::needsSecret();
+        }
+
+        $baseUrl = $site->resolvedAgentBaseUrl();
+        if ($baseUrl === null) {
+            return ModuleAgentResult::failure((string) __('site_modules.errors.no_base_url'));
+        }
+
+        $body = $payload !== null ? ControlPlaneAgentContract::encodeJson($payload) : '';
+        $signed = ControlPlaneAgentSignature::headers((string) $site->agent_secret_encrypted, $body);
+        $timeout = $method === 'GET'
+            ? max(1, (int) config('ops.agent.timeout_seconds', 10))
+            : max(1, (int) config('ops.agent.module_toggle_timeout_seconds', 45));
+        $url = $baseUrl.ControlPlaneAgentContract::modulesPath();
+
+        try {
+            $response = $this->sendWithRetry(function () use ($timeout, $signed, $method, $url, $body): Response {
+                $pending = Http::timeout($timeout)
+                    ->acceptJson()
+                    ->withHeaders($signed['headers']);
+
+                return $method === 'GET'
+                    ? $pending->get($url)
+                    : $pending->withBody($body, 'application/json')->post($url);
+            });
+        } catch (ConnectionException) {
+            $this->logModuleFailure($site, $method, 'timeout');
+
+            return ModuleAgentResult::failure((string) __('site_modules.errors.timeout'));
+        } catch (Throwable) {
+            $this->logModuleFailure($site, $method, 'http_error');
+
+            return ModuleAgentResult::failure((string) __('site_modules.errors.request_failed'));
+        }
+
+        $json = $response->json();
+
+        if ($response->failed()) {
+            $result = ModuleAgentResult::fromCmsError(is_array($json) ? $json : null, $response->status());
+            $this->logModuleFailure($site, $method, $result->errorCode ?? ($result->unsupported ? 'unsupported' : 'http_error'), $response->status());
+
+            return $result;
+        }
+
+        if (! is_array($json)) {
+            $this->logModuleFailure($site, $method, 'invalid_response', $response->status());
+
+            return ModuleAgentResult::failure((string) __('site_modules.errors.invalid_response'), $response->status(), 'invalid_response');
+        }
+
+        if ($this->payloadContainsSecret($site, $json)) {
+            $this->logModuleFailure($site, $method, 'secret_echo', $response->status());
+
+            return ModuleAgentResult::failure((string) __('site_modules.errors.invalid_response'), $response->status(), 'secret_echo');
+        }
+
+        return ModuleAgentResult::fromCmsPayload($json, $response->status());
+    }
+
+    private function logModuleFailure(Site $site, string $method, string $reason, ?int $httpStatus = null): void
+    {
+        Log::warning('Site module agent call failed', [
+            'site_id' => $site->id,
+            'site_slug' => $site->slug,
+            'method' => $method,
+            'reason' => $reason,
+            'http_status' => $httpStatus,
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>|null  $payload
      */

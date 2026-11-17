@@ -361,6 +361,11 @@ return [
                 'deploy_canary_updated' => 'Canary flag changed',
                 'ci_rollout_deployed' => 'CI rollout deployed',
                 'ci_rollout_canary_failed' => 'CI rollout: canary failed',
+                'module' => [
+                    'enabled' => 'Module turned on',
+                    'disabled' => 'Module turned off',
+                    'toggle_failed' => 'Module change failed',
+                ],
             ],
             'mail_server' => [
                 'created' => 'Mail server created',

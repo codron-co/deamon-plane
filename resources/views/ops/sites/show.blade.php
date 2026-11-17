@@ -102,6 +102,7 @@
         <a id="site-tab-overview" class="is-active" href="#overview" role="tab" aria-selected="true" aria-controls="overview">{{ __('sites.detail.overview') }}</a>
         <a id="site-tab-deployments" href="#deployments" role="tab" aria-selected="false" aria-controls="deployments">{{ __('sites.deployments.title') }}</a>
         <a id="site-tab-theme" href="#theme" role="tab" aria-selected="false" aria-controls="theme">{{ __('sites.themes.title') }}</a>
+        <a id="site-tab-modules" href="#modules" role="tab" aria-selected="false" aria-controls="modules">{{ __('site_modules.title') }}</a>
         @if ($canManageAdmins ?? false)
             <a id="site-tab-admins" href="#admins" role="tab" aria-selected="false" aria-controls="admins">{{ __('sites.admins.title') }}</a>
         @endif
@@ -207,6 +208,7 @@
 
     <section id="deployments" class="site-section site-section-surface" role="tabpanel" data-site-panel aria-labelledby="site-tab-deployments">@include('ops.deployments.index')</section>
     <section id="theme" class="site-section site-section-surface" role="tabpanel" data-site-panel aria-labelledby="site-tab-theme">@include('ops.sites._themes')</section>
+    @include('ops.sites._modules')
     @include('ops.sites._admins')
     <section id="search" class="site-section" role="tabpanel" data-site-panel aria-labelledby="site-tab-search site-search-heading">@include('ops.sites._search-integrations')</section>
 
@@ -288,5 +290,6 @@
     <script src="{{ asset('js/sites-cloudflare.js') }}?v={{ filemtime(public_path('js/sites-cloudflare.js')) }}" defer></script>
     <script src="{{ asset('js/sites-landing.js') }}?v={{ filemtime(public_path('js/sites-landing.js')) }}" defer></script>
     <script src="{{ asset('js/sites-admins.js') }}?v={{ filemtime(public_path('js/sites-admins.js')) }}" defer></script>
+    <script src="{{ asset('js/sites-modules.js') }}?v={{ filemtime(public_path('js/sites-modules.js')) }}" defer></script>
     <script src="{{ asset('js/ops-lazy-panels.js') }}?v={{ filemtime(public_path('js/ops-lazy-panels.js')) }}" defer></script>
 @endsection
