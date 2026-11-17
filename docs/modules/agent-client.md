@@ -90,4 +90,4 @@ Site detail → Altyapı → "Yönetici 2FA zorunluluğu" (`SiteTwoFactorPolicyC
 
 ## Security routes
 
-The CMS `security-alerts` module adds `GET /internal/control/security/summary` and `POST /internal/control/security/{block,unblock,allowlist}` (same HMAC headers, not under `/v1`), and a small `security` block in `/health`. They are called by `App\Services\Security\SiteSecurityClient`; see [security-fleet.md](security-fleet.md).
+The CMS `security-alerts` module adds `GET /internal/control/v1/security/summary` and `POST /internal/control/v1/security/{block,unblock,allowlist}` (same HMAC headers), and a small `security` block in `/health`. They are called by `App\Services\Security\SiteSecurityClient`; see [security-fleet.md](security-fleet.md).

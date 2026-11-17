@@ -19,6 +19,9 @@ final class SecurityCallResult
 
     public const FAILED = 'failed';
 
+    /** The site refused for good (422 ip_allowlisted / uid_conflict): retrying cannot help. */
+    public const REJECTED = 'rejected';
+
     /**
      * @param  array<string, mixed>  $payload
      */
@@ -45,6 +48,11 @@ final class SecurityCallResult
     public function isOk(): bool
     {
         return $this->state === self::OK;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->state === self::REJECTED;
     }
 
     public function isUnsupported(): bool

@@ -119,12 +119,23 @@ class SecurityCollector
             return [];
         }
 
-        $known = SiteSecurityEvent::query()
+        $existing = SiteSecurityEvent::query()
             ->where('site_id', $site->id)
             ->whereIn('event_uid', array_column($rows, 'event_uid'))
-            ->pluck('event_uid')
+            ->pluck('count', 'event_uid')
             ->all();
-        $known = array_flip($known);
+        $known = array_fill_keys(array_keys($existing), true);
+
+        // The same uid can come back with a bigger count (the site merged more hits into it):
+        // update the row, never duplicate it, and never alert twice for it.
+        foreach ($rows as $row) {
+            if (isset($existing[$row['event_uid']]) && (int) $existing[$row['event_uid']] !== (int) $row['count']) {
+                SiteSecurityEvent::query()
+                    ->where('site_id', $site->id)
+                    ->where('event_uid', $row['event_uid'])
+                    ->update(['count' => $row['count']]);
+            }
+        }
 
         $new = [];
         foreach ($rows as $row) {

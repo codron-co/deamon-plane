@@ -78,16 +78,16 @@ final class ControlPlaneAgentContract
     public const SEARCH_INTEGRATIONS_PATH = '/internal/control/v1/search-integrations';
 
     /**
-     * Security alerts module (fleet security, docs/modules/security-fleet.md). Not under /v1: the
+     * Security alerts module (fleet security, docs/modules/security-fleet.md). Under /v1 like every control route: the
      * routes belong to the CMS `security-alerts` module. GET summary, POST block|unblock|allowlist.
      */
-    public const SECURITY_SUMMARY_PATH = '/internal/control/security/summary';
+    public const SECURITY_SUMMARY_PATH = '/internal/control/v1/security/summary';
 
-    public const SECURITY_BLOCK_PATH = '/internal/control/security/block';
+    public const SECURITY_BLOCK_PATH = '/internal/control/v1/security/block';
 
-    public const SECURITY_UNBLOCK_PATH = '/internal/control/security/unblock';
+    public const SECURITY_UNBLOCK_PATH = '/internal/control/v1/security/unblock';
 
-    public const SECURITY_ALLOWLIST_PATH = '/internal/control/security/allowlist';
+    public const SECURITY_ALLOWLIST_PATH = '/internal/control/v1/security/allowlist';
 
     public const ADMINS_PATH = '/internal/control/v1/admins';
 

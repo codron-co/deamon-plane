@@ -254,7 +254,7 @@ return [
 
     /*
     | Fleet security (Güvenlik): pulls each CMS's security-alerts summary over the
-    | signed agent (`/internal/control/security/*`, docs/modules/security-fleet.md).
+    | signed agent (`/internal/control/v1/security/*`, docs/modules/security-fleet.md).
     | The shared host's CPU is capped, so sites are polled one at a time, spaced
     | `spacing_seconds` apart, and a failing site is skipped, never retried in a burst.
     */

@@ -27,7 +27,7 @@ Plane her sitenin güvenlik özetini imzalı agent ile çeker, olayları kendi v
 
 `DispatchSecurityCollectionJob` (her 10 dk, `ops-security-collect`) aktif ve agent secret'lı siteleri sıralar (test sitesi önce, sonra en uzun süredir yoklanmayan), her biri için `CollectSiteSecurityJob`'u gecikmeli kuyruğa atar. `SecurityCollector`:
 
-1. `GET /internal/control/security/summary?since=<imleç>` imzalı (HMAC, health ile aynı başlıklar; GET'te gövde `""`).
+1. `GET /internal/control/v1/security/summary?since=<imleç>` imzalı (HMAC, health ile aynı başlıklar; GET'te gövde `""`).
 2. Olaylar `SecurityEventSanitizer`'dan geçer (tip, uzunluk, IP geçerliliği, gelecekteki zaman, yol sorgusu).
 3. Yeni olaylar toplu eklenir (`insertOrIgnore`), imleç ancak sayfa yazıldıktan sonra ilerler. `has_more` ise sıradaki sayfa (üst sınır var).
 4. Yeni olaylar `SecurityAlertNotifier`'a gider.
@@ -36,9 +36,9 @@ Plane her sitenin güvenlik özetini imzalı agent ile çeker, olayları kendi v
 
 ## Site uç noktası sözleşmesi (CMS'in sağlaması gereken)
 
-Hepsi `EnsureControlPlaneSignature` ile imzalı, `/internal/control/security/...` (v1 altında değil).
+Hepsi `EnsureControlPlaneSignature` ile imzalı, `/internal/control/v1/security/...`.
 
-`GET /internal/control/security/summary?since=<cursor>` → 200:
+`GET /internal/control/v1/security/summary?since=<cursor>` → 200:
 
 ```json
 {
@@ -64,11 +64,13 @@ Hepsi `EnsureControlPlaneSignature` ile imzalı, `/internal/control/security/...
 
 `events` = imleçten sonraki en çok 200 olay, eskiden yeniye; `since` yoksa en eski olaydan başla. Modül kapalıysa `module_enabled:false` ve boş `events`. `severity` 0 bilgi, 1 uyarı, 2 kritik. `path` sorgusuz olmalı; istek gövdesi, çerez, başlık yok.
 
-`POST /internal/control/security/block` gövde `{"uid","ip","reason","expires_at"|null,"source":"plane"}` → `{"ok":true,"state":"blocked|already_blocked"}`.
-`POST /internal/control/security/unblock` gövde `{"uid","ip"}` → `{"ok":true,"state":"released|not_blocked"}`.
-`POST /internal/control/security/allowlist` gövde `{"uid","action":"add|remove","ip","label"}` → `{"ok":true,"state":"added|exists|removed|absent"}`.
+`POST /internal/control/v1/security/block` gövde `{"uid","ip","reason","expires_at"|null,"source":"plane"}` → `{"ok":true,"state":"blocked|already_blocked"}`.
+`POST /internal/control/v1/security/unblock` gövde `{"uid","ip"}` → `{"ok":true,"state":"released|not_blocked"}`.
+`POST /internal/control/v1/security/allowlist` gövde `{"uid","action":"add|remove","ip","label"}` → `{"ok":true,"state":"added|exists|removed|absent"}`.
 
 Yazan uç noktalar `uid` ve `ip` üzerinden idempotent olmalı; izin listesi her zaman engelden üstündür. 404/405 = "bu CMS'te yok" (Plane hata saymaz), 401/403 = imza reddi, 429 = Plane retry-after ile bekler, 422 = geçersiz gövde.
+
+422 `{"error":"ip_allowlisted"}` (izin listesindeki IP'ye block) ve 422 `{"error":"uid_conflict"}` (aynı uid başka IP/kayıtla) **kalıcı ret**: Plane bunları hata/yeniden deneme saymaz, o siteye `rejected` yazar, tekrar çağırmaz ve süpürmeyi durdurmaz. İmleç opak dizgidir (site `v1.<unix>.<id>` üretir). Aynı `uid` daha büyük `count` ile yeniden gelebilir: Plane satırı günceller, kopyalamaz, yeniden uyarmaz.
 
 ## Ekranlar (Güvenlik menüsü, `routes/ops/security.php`)
 

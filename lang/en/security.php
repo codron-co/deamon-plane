@@ -164,7 +164,7 @@ return [
         'allowlist' => 'Security · allowlist :ip',
     ],
     'apply' => [
-        'summary' => 'Security change pushed: :ok sites ok, :failed failed, :skipped without the endpoint.',
+        'summary' => 'Security change pushed: :ok sites ok, :failed failed, :skipped (no endpoint or refused for good).',
         'stopped_at_canary' => 'Stopped at the test site, no other site was touched: :error',
         'canary_unsupported' => 'the test site has no security endpoint',
     ],

@@ -112,6 +112,12 @@ class SiteSecurityClient
 
             return SecurityCallResult::failure(SecurityCallResult::FAILED, 'The CMS rejected the signature.', $status);
         }
+        if ($status === 422) {
+            $code = (string) data_get($response->json(), 'error', '');
+            if (in_array($code, ['ip_allowlisted', 'uid_conflict'], true)) {
+                return SecurityCallResult::failure(SecurityCallResult::REJECTED, $code, $status);
+            }
+        }
         if ($response->failed()) {
             $this->log($site, $path, 'http_error', $status);
 

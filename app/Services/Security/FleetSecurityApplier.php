@@ -27,7 +27,7 @@ class FleetSecurityApplier
 
     /**
      * @param  null|callable(string, int, int): void  $onProgress  (site name, done, total)
-     * @return array{status: string, ok: int, failed: int, skipped: int, stopped_at_canary: bool, errors: list<string>}
+     * @return array{status: string, ok: int, failed: int, skipped: int, rejected: int, stopped_at_canary: bool, errors: list<string>}
      */
     public function apply(FleetIpBlock|FleetAllowlistEntry $record, ?callable $onProgress = null): array
     {
@@ -35,7 +35,7 @@ class FleetSecurityApplier
         $applied = is_array($record->applied) ? $record->applied : [];
         $total = max(1, count($sites));
         $done = 0;
-        $result = ['status' => FleetIpBlock::STATUS_PENDING, 'ok' => 0, 'failed' => 0, 'skipped' => 0, 'stopped_at_canary' => false, 'errors' => []];
+        $result = ['status' => FleetIpBlock::STATUS_PENDING, 'ok' => 0, 'failed' => 0, 'skipped' => 0, 'rejected' => 0, 'stopped_at_canary' => false, 'errors' => []];
         $spacingMs = max(0, (int) config('ops.security.apply_spacing_ms', 250));
 
         foreach ($sites as $site) {
@@ -44,6 +44,9 @@ class FleetSecurityApplier
 
             if ($previous === 'ok') {
                 $result['ok']++;
+            } elseif ($previous === 'rejected') {
+                // A permanent refusal is not retried.
+                $result['rejected']++;
             } elseif ($this->knownUnsupported($site)) {
                 $applied[$site->slug] = $this->row('unsupported', 'Site has no security endpoint.');
                 $result['skipped']++;
@@ -52,6 +55,9 @@ class FleetSecurityApplier
                 if ($call->isOk()) {
                     $applied[$site->slug] = $this->row('ok');
                     $result['ok']++;
+                } elseif ($call->isRejected()) {
+                    $applied[$site->slug] = $this->row('rejected', $call->message);
+                    $result['rejected']++;
                 } else {
                     $applied[$site->slug] = $this->row($call->isUnsupported() ? 'unsupported' : 'failed', $call->message);
                     $call->isUnsupported() ? $result['skipped']++ : $result['failed']++;
@@ -71,7 +77,7 @@ class FleetSecurityApplier
 
             // The canary decides: when it did not take the change, nobody else is touched.
             if ($isCanary) {
-                if (($applied[$site->slug]['state'] ?? '') !== 'ok') {
+                if (! in_array($applied[$site->slug]['state'] ?? '', ['ok', 'rejected'], true)) {
                     $result['stopped_at_canary'] = true;
                     break;
                 }

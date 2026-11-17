@@ -322,7 +322,7 @@ class OpsJobRunner
             throw new RuntimeException(__('security.apply.stopped_at_canary', ['error' => implode('; ', $result['errors']) ?: __('security.apply.canary_unsupported')]));
         }
 
-        return __('security.apply.summary', ['ok' => $result['ok'], 'failed' => $result['failed'], 'skipped' => $result['skipped']]);
+        return __('security.apply.summary', ['ok' => $result['ok'], 'failed' => $result['failed'], 'skipped' => $result['skipped'] + $result['rejected']]);
     }
 
     private function bulkBindDomains(OpsBackgroundJob $job): string

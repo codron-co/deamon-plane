@@ -164,7 +164,7 @@ return [
         'allowlist' => 'Güvenlik · izin listesi :ip',
     ],
     'apply' => [
-        'summary' => 'Güvenlik değişikliği gönderildi: :ok site tamam, :failed başarısız, :skipped uç noktası olmayan.',
+        'summary' => 'Güvenlik değişikliği gönderildi: :ok site tamam, :failed başarısız, :skipped (uç noktası yok ya da kalıcı ret).',
         'stopped_at_canary' => 'Test sitesinde durdu, başka siteye dokunulmadı: :error',
         'canary_unsupported' => 'test sitesinde güvenlik uç noktası yok',
     ],

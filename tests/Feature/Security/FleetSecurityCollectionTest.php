@@ -43,7 +43,7 @@ class FleetSecurityCollectionTest extends TestCase
         $this->assertSame('/wp-login.php', SiteSecurityEvent::query()->where('event_uid', 'e2')->value('path'), 'query string must be cut');
         $this->assertTrue($this->siteCalls[0]['signed']);
         $this->assertSame('GET', $this->siteCalls[0]['method']);
-        $this->assertSame('/internal/control/security/summary', $this->siteCalls[0]['path']);
+        $this->assertSame('/internal/control/v1/security/summary', $this->siteCalls[0]['path']);
 
         $cursor = SiteSecurityCursor::query()->where('site_id', $site->id)->firstOrFail();
         $this->assertSame('c-2', $cursor->cursor);
@@ -66,6 +66,28 @@ class FleetSecurityCollectionTest extends TestCase
         $this->assertSame(1, SiteSecurityEvent::query()->count());
         $this->assertNull($this->siteCalls[0]['query']);
         $this->assertSame('since=c-1', $this->siteCalls[1]['query']);
+    }
+
+    public function test_the_same_uid_with_a_new_count_updates_the_row_without_duplicating(): void
+    {
+        $site = $this->activeSite('alpha');
+        $round = 0;
+        $this->fakeSite('alpha', function (Request $request) use (&$round) {
+            $round++;
+
+            return Http::response($this->summaryPayload(
+                [$this->eventPayload('e1', ['count' => $round === 1 ? 1 : 7])],
+                ['cursor' => 'v1.17000000'.$round.'.1'],
+            ), 200);
+        });
+        app(SecurityCollector::class)->collect($site);
+
+        $second = app(SecurityCollector::class)->collect($site->fresh());
+
+        $this->assertSame(0, $second['stored'], 'an update is not a new event');
+        $this->assertSame(1, SiteSecurityEvent::query()->count());
+        $this->assertSame(7, SiteSecurityEvent::query()->value('count'));
+        $this->assertSame('v1.170000002.1', SiteSecurityCursor::query()->value('cursor'));
     }
 
     public function test_the_same_uid_on_two_sites_is_two_events(): void

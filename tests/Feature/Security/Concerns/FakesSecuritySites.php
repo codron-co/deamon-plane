@@ -50,7 +50,7 @@ trait FakesSecuritySites
     protected function fakeSite(string $slug, callable|array $answer): void
     {
         Http::fake([
-            'https://'.$slug.'.example.test/internal/control/security/*' => function (Request $request) use ($slug, $answer) {
+            'https://'.$slug.'.example.test/internal/control/v1/security/*' => function (Request $request) use ($slug, $answer) {
                 $this->siteCalls[] = [
                     'host' => $slug,
                     'method' => $request->method(),

@@ -66,7 +66,7 @@ class FleetSecurityResponseTest extends TestCase
 
         $this->assertSame(['test', 'beta', 'zeta'], array_column($this->siteCalls, 'host'));
         $this->assertTrue(collect($this->siteCalls)->every(fn (array $call) => $call['signed'] && $call['method'] === 'POST'));
-        $this->assertSame('/internal/control/security/block', $this->siteCalls[0]['path']);
+        $this->assertSame('/internal/control/v1/security/block', $this->siteCalls[0]['path']);
         $body = $this->siteCalls[0]['body'];
         $this->assertSame('203.0.113.7', $body['ip']);
         $this->assertSame($result['block']->uid, $body['uid']);
@@ -159,7 +159,7 @@ class FleetSecurityResponseTest extends TestCase
         app(OpsJobRunner::class)->run($released['job']);
 
         $this->assertSame(['test', 'beta'], array_column($this->siteCalls, 'host'));
-        $this->assertSame('/internal/control/security/unblock', $this->siteCalls[0]['path']);
+        $this->assertSame('/internal/control/v1/security/unblock', $this->siteCalls[0]['path']);
         $this->assertNotNull($released['block']->fresh()->released_at);
         $this->assertSame(0, FleetIpBlock::query()->active()->count());
         $this->assertNotNull(AuditLog::query()->where('action', 'security.fleet_unblock')->first());
@@ -178,7 +178,7 @@ class FleetSecurityResponseTest extends TestCase
         $added = app(FleetSecurityResponse::class)->allow('198.51.100.0/24', 'office', $emin);
         app(OpsJobRunner::class)->run($added['job']);
 
-        $this->assertSame('/internal/control/security/allowlist', $this->siteCalls[0]['path']);
+        $this->assertSame('/internal/control/v1/security/allowlist', $this->siteCalls[0]['path']);
         $this->assertSame('add', $this->siteCalls[0]['body']['action']);
         $this->assertSame('198.51.100.0/24', $this->siteCalls[0]['body']['ip']);
 
@@ -194,6 +194,43 @@ class FleetSecurityResponseTest extends TestCase
         app(OpsJobRunner::class)->run($removed['job']);
         $this->assertSame('remove', $this->siteCalls[1]['body']['action']);
         $this->assertSame(0, FleetAllowlistEntry::query()->active()->count());
+    }
+
+    public function test_a_permanent_422_refusal_is_recorded_not_retried_and_does_not_stop_the_sweep(): void
+    {
+        $this->activeSite('test');
+        $this->activeSite('beta');
+        $this->activeSite('gamma');
+        $this->fakeSite('test', ['ok' => true]);
+        $this->fakeSite('beta', fn (Request $request) => Http::response(['error' => 'ip_allowlisted'], 422));
+        $this->fakeSite('gamma', ['ok' => true]);
+        Queue::fake();
+        $result = app(FleetSecurityResponse::class)->block('203.0.113.7', null, null, $this->user());
+
+        $first = app(FleetSecurityApplier::class)->apply($result['block']);
+
+        $this->assertSame(1, $first['rejected']);
+        $this->assertSame(0, $first['failed']);
+        $this->assertSame(FleetIpBlock::STATUS_APPLIED, $first['status']);
+        $this->assertSame('rejected', $result['block']->fresh()->applied['beta']['state']);
+        $this->assertContains('gamma', array_column($this->siteCalls, 'host'));
+
+        $this->siteCalls = [];
+        app(FleetSecurityApplier::class)->apply($result['block']->fresh());
+        $this->assertSame([], array_column($this->siteCalls, 'host'), 'nothing is called again');
+    }
+
+    public function test_a_uid_conflict_is_also_a_permanent_refusal(): void
+    {
+        $this->activeSite('test');
+        $this->fakeSite('test', fn (Request $request) => Http::response(['error' => 'uid_conflict'], 422));
+        Queue::fake();
+        $result = app(FleetSecurityResponse::class)->block('203.0.113.7', null, null, $this->user());
+
+        $run = app(FleetSecurityApplier::class)->apply($result['block']);
+
+        $this->assertSame(1, $run['rejected']);
+        $this->assertSame('uid_conflict', $result['block']->fresh()->applied['test']['error']);
     }
 
     public function test_dangerous_targets_are_refused(): void
