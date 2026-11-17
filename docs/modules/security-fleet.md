@@ -98,6 +98,18 @@ Tek kanal e-posta (WhatsApp/Telegram yok). `SecurityAlertNotifier` kritik olayda
 
 Okuma (`read`): `list_security_events`, `get_site_security`, `get_fleet_security_summary`, `list_fleet_allowlist`. Yazma (`write`, kullanıcı rolü de `canWriteOps` olmalı, `confirmed: true` şart): `block_ip_fleet`, `unblock_ip_fleet`, `add_fleet_allowlist`. Hepsi `FleetSecurityResponse` üzerinden denetim satırı yazar ve `job.id` döner (`list_jobs`). Ayrıntı: [mcp.md](mcp.md).
 
+## Çalışma ortamı sensörleri ve tarayıcı sonuçları (CMS 1.2.122+, geriye uyumlu)
+
+Site eklentileri (eski CMS'te alanlar yoktur; Plane bunu "bildirilmedi" gösterir, temiz saymaz):
+
+- `/health` → `security`: `insecure_settings` (int) ve `telemetry: {ingest_age_seconds|null, dropped_24h, outbox_lag_seconds|null}`; `sites.last_health_payload.security` içine yazılır, eksikse `null`.
+- `GET .../security/summary` yanıtına `system` (`insecure_settings`, `insecure_keys[]`, `exempt`, `ini_drift[{key,expected,actual}]`, `php_eol{version,eol,days_left,status}`, `telemetry_gaps[]`, `integrity{status,open}`) ve `scans` (`critical_production`, `high_production`, `pending_review`, `last_scan_at`, `by_type{}`). `SecurityEventSanitizer` ikisini de sınırlar ve imleç satırındaki `summary` içine yazar; yoksa `null`.
+- `POST .../security/scan-results` (imzalı): `{type, payload|items, lockfile?, production?, complete?, scanned_at?}`, türler `composer_audit, npm_audit, gitleaks, trivy, semgrep, csp_header_check, cdn_integrity`; yanıt `{ok,type,items,new,updated,resolved,events}`; 422 `validation_failed`, 413 (>16 MB).
+
+Ekranlar: Güvenlik özetinde "Çalışma ortamı" paneli (güvensiz ayar, php.ini sapması, PHP ömür sonu, telemetri boşluğu, üretimde advisory sayıları; kritik bir risk varsa kırmızı "İlgi gerekiyor" rozeti) ve "En riskli 5 uyarı"; site ayrıntısında aynı verinin site bazlı dökümü. `FleetRuntimeRisks` risk üretir: kritik ayar (`app_debug`, `allow_php_edit`), bütünlük kritik, PHP ömür sonu, ini sapması (`display_errors`, `allow_url_include`, `upload_progress` kritik), üretimde kritik/yüksek advisory, ingest sessizliği (>5 dk kritik), düşen olay, giden kutusu gecikmesi (>10 dk). Sıra: önem, sonra ağırlık.
+
+`SiteSecurityClient::pushScanResults(site, tür, payload, seçenekler)` ve MCP `push_security_scan_results` (write, `confirmed` şart, denetim `security.scan_push`; tarayıcı çıktısı denetim kaydına kopyalanmaz) sonucu siteye iletir. Plane tarayıcı çalıştırmaz ve CI/iş akışına bağlanmaz; uygulama bağlama sonraki iş. Önce `test` sitesinde deneyin.
+
 ## Yapılandırma (`config/ops.php` → `security`)
 
 `poll_minutes`, `max_sites_per_run`, `spacing_seconds`, `timeout_seconds`, `max_pages_per_run`, `unsupported_retry_hours`, `backoff_after_failures`, `retention_days`, `alert_window_minutes`, `cross_site_window_minutes`, `cross_site_min_sites`; env: `OPS_SECURITY_POLL_MINUTES`, `OPS_SECURITY_MAX_SITES_PER_RUN`, `OPS_SECURITY_SPACING_SECONDS`, `OPS_SECURITY_TIMEOUT`, `OPS_SECURITY_RETENTION_DAYS`.

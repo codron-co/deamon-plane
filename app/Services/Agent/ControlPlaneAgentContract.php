@@ -89,6 +89,9 @@ final class ControlPlaneAgentContract
 
     public const SECURITY_ALLOWLIST_PATH = '/internal/control/v1/security/allowlist';
 
+    /** CMS 1.2.122+: scanner results pushed by CI / Plane (composer_audit, npm_audit, gitleaks, trivy, semgrep, csp_header_check, cdn_integrity). */
+    public const SECURITY_SCAN_RESULTS_PATH = '/internal/control/v1/security/scan-results';
+
     public const ADMINS_PATH = '/internal/control/v1/admins';
 
     /** Module catalog: GET lists installable modules, POST `{slug, enabled}` turns one on (installs with dependencies) or off (data kept). Older CMS answers 404. */

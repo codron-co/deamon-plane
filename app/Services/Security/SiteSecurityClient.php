@@ -55,6 +55,34 @@ class SiteSecurityClient
         return $this->send($site, 'POST', ControlPlaneAgentContract::SECURITY_ALLOWLIST_PATH, $body);
     }
 
+    public const SCAN_TYPES = ['composer_audit', 'npm_audit', 'gitleaks', 'trivy', 'semgrep', 'csp_header_check', 'cdn_integrity'];
+
+    /** The CMS refuses bodies over 16 MB (413). */
+    public const SCAN_MAX_BYTES = 16 * 1024 * 1024;
+
+    /**
+     * Pushes one scanner result to a site (CMS 1.2.122+). Plane does not run scanners here:
+     * the caller hands over the tool's raw JSON (`payload`) or normalized `items`.
+     *
+     * @param  array<string, mixed>  $payload  raw tool output, or ['items' => [...]]
+     * @param  array{lockfile?: string, production?: bool, complete?: bool, scanned_at?: string}  $options
+     */
+    public function pushScanResults(Site $site, string $type, array $payload, array $options = []): SecurityCallResult
+    {
+        if (! in_array($type, self::SCAN_TYPES, true)) {
+            return SecurityCallResult::failure(SecurityCallResult::FAILED, 'Unknown scan type.');
+        }
+
+        $body = ['type' => $type, ...array_intersect_key($options, array_flip(['lockfile', 'production', 'complete', 'scanned_at']))];
+        $body += isset($payload['items']) && count($payload) === 1 ? ['items' => $payload['items']] : ['payload' => $payload];
+
+        if (strlen((string) json_encode($body)) > self::SCAN_MAX_BYTES) {
+            return SecurityCallResult::failure(SecurityCallResult::FAILED, 'Scan result is larger than 16 MB.');
+        }
+
+        return $this->send($site, 'POST', ControlPlaneAgentContract::SECURITY_SCAN_RESULTS_PATH, $body);
+    }
+
     /**
      * @param  array<string, mixed>|null  $body
      */

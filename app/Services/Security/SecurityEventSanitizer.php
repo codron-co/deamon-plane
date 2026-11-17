@@ -114,6 +114,91 @@ final class SecurityEventSanitizer
             'top_ips' => $topIps,
             'blocks_active' => max(0, (int) ($payload['blocks_active'] ?? 0)),
             'generated_at' => self::text($payload['generated_at'] ?? null, 40),
+            // CMS 1.2.122+: runtime sensors and scanner counters. Absent on older CMS: null.
+            'system' => self::system($payload['system'] ?? null),
+            'scans' => self::scans($payload['scans'] ?? null),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function system(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $slugs = fn (mixed $list, int $max): array => array_values(array_slice(array_filter(array_map(
+            fn ($item): string => self::slug($item, 60),
+            is_array($list) ? $list : [],
+        )), 0, $max));
+
+        $drift = [];
+        foreach (array_slice(is_array($value['ini_drift'] ?? null) ? $value['ini_drift'] : [], 0, 20) as $row) {
+            $key = is_array($row) ? self::slug($row['key'] ?? null, 60) : '';
+            if ($key !== '') {
+                $drift[] = [
+                    'key' => $key,
+                    'expected' => self::text(is_scalar($row['expected'] ?? null) ? (string) $row['expected'] : null, 60),
+                    'actual' => self::text(is_scalar($row['actual'] ?? null) ? (string) $row['actual'] : null, 60),
+                ];
+            }
+        }
+
+        $eol = null;
+        if (is_array($value['php_eol'] ?? null)) {
+            $eol = [
+                'version' => self::text($value['php_eol']['version'] ?? null, 20),
+                'eol' => self::text($value['php_eol']['eol'] ?? null, 20),
+                'days_left' => is_numeric($value['php_eol']['days_left'] ?? null) ? (int) $value['php_eol']['days_left'] : null,
+                'status' => self::slug($value['php_eol']['status'] ?? null, 20) ?: null,
+            ];
+        }
+
+        $integrity = null;
+        if (is_array($value['integrity'] ?? null)) {
+            $status = self::slug($value['integrity']['status'] ?? null, 20);
+            $integrity = [
+                'status' => in_array($status, ['ok', 'warning', 'critical', 'unknown'], true) ? $status : 'unknown',
+                'open' => max(0, (int) ($value['integrity']['open'] ?? 0)),
+            ];
+        }
+
+        return [
+            'insecure_settings' => max(0, (int) ($value['insecure_settings'] ?? 0)),
+            'insecure_keys' => $slugs($value['insecure_keys'] ?? [], 20),
+            'exempt' => ($value['exempt'] ?? false) === true,
+            'ini_drift' => $drift,
+            'php_eol' => $eol,
+            'telemetry_gaps' => $slugs($value['telemetry_gaps'] ?? [], 10),
+            'integrity' => $integrity,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function scans(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $byType = [];
+        foreach ((array) ($value['by_type'] ?? []) as $type => $count) {
+            $key = self::slug($type, 40);
+            if ($key !== '' && count($byType) < 12) {
+                $byType[$key] = max(0, (int) $count);
+            }
+        }
+
+        return [
+            'critical_production' => max(0, (int) ($value['critical_production'] ?? 0)),
+            'high_production' => max(0, (int) ($value['high_production'] ?? 0)),
+            'pending_review' => max(0, (int) ($value['pending_review'] ?? 0)),
+            'last_scan_at' => self::text($value['last_scan_at'] ?? null, 40),
+            'by_type' => $byType,
         ];
     }
 

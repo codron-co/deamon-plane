@@ -31,6 +31,8 @@
         <x-ops.metric :label="__('security.site.blocks_active')" :value="$health['blocks_active'] ?? ($detail['site_counters']['blocks_active'] ?? 0)" />
     </x-ops.metrics>
 
+    @include('ops.security._runtime_site', ['runtime' => $detail['runtime']])
+
     <section class="ops-panel" aria-labelledby="security-site-reporting">
         <h2 id="security-site-reporting">{{ __('security.site.reporting') }}</h2>
         <dl class="site-fact-list">

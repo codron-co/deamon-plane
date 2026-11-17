@@ -182,7 +182,7 @@ final class AgentHealthResult
     }
 
     /**
-     * @return array{module_enabled: bool, critical_24h: int, blocks_active: int}|null
+     * @return array{module_enabled: bool, critical_24h: int, blocks_active: int, insecure_settings: int|null, telemetry: array<string, int|null>|null}|null
      */
     private static function security(mixed $value): ?array
     {
@@ -190,10 +190,23 @@ final class AgentHealthResult
             return null;
         }
 
+        $telemetry = null;
+        if (is_array($value['telemetry'] ?? null)) {
+            $age = fn (mixed $v): ?int => is_numeric($v) ? max(0, min(31_536_000, (int) $v)) : null;
+            $telemetry = [
+                'ingest_age_seconds' => $age($value['telemetry']['ingest_age_seconds'] ?? null),
+                'dropped_24h' => max(0, min(1_000_000, (int) ($value['telemetry']['dropped_24h'] ?? 0))),
+                'outbox_lag_seconds' => $age($value['telemetry']['outbox_lag_seconds'] ?? null),
+            ];
+        }
+
         return [
             'module_enabled' => ($value['module_enabled'] ?? false) === true,
             'critical_24h' => max(0, min(1_000_000, (int) ($value['critical_24h'] ?? 0))),
             'blocks_active' => max(0, min(1_000_000, (int) ($value['blocks_active'] ?? 0))),
+            // CMS 1.2.122+; null on older CMS.
+            'insecure_settings' => is_numeric($value['insecure_settings'] ?? null) ? max(0, min(1_000_000, (int) $value['insecure_settings'])) : null,
+            'telemetry' => $telemetry,
         ];
     }
 

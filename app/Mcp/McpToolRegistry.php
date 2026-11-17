@@ -19,6 +19,7 @@ use App\Mcp\Tools\ListSiteAdminsTool;
 use App\Mcp\Tools\ListSitesTool;
 use App\Mcp\Tools\ListThemesTool;
 use App\Mcp\Tools\RouteToolCatalog;
+use App\Mcp\Tools\PushSecurityScanResultsTool;
 use App\Mcp\Tools\UnblockIpFleetTool;
 use App\Mcp\Tools\UpdateThemeFleetTool;
 use App\Mcp\Tools\WhoamiTool;
@@ -59,6 +60,7 @@ class McpToolRegistry
             new BlockIpFleetTool,
             new UnblockIpFleetTool,
             new AddFleetAllowlistTool,
+            new PushSecurityScanResultsTool,
         ];
 
         $this->tools = [];

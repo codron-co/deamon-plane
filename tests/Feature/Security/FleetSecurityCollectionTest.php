@@ -245,7 +245,7 @@ class FleetSecurityCollectionTest extends TestCase
         app(SiteHealthChecker::class)->check($site);
 
         $this->assertSame(
-            ['module_enabled' => true, 'critical_24h' => 3, 'blocks_active' => 2],
+            ['module_enabled' => true, 'critical_24h' => 3, 'blocks_active' => 2, 'insecure_settings' => null, 'telemetry' => null],
             $site->fresh()->last_health_payload['security'],
         );
         $this->assertNotNull(AgentHealthResult::fromCmsPayload(['queue_ok' => true], 200)->summary);

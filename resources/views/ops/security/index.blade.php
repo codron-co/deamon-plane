@@ -25,6 +25,8 @@
         <x-ops.metric :label="__('security.overview.blocks')" :value="$overview['blocks_active']" :href="route('ops.security.blocks')" />
     </x-ops.metrics>
 
+    @include('ops.security._runtime', ['runtime' => $overview['runtime']])
+
     @if (count($overview['cross_site']) > 0)
         <section class="ops-panel" aria-labelledby="security-cross-heading">
             <h2 id="security-cross-heading">{{ __('security.overview.cross_site') }} @include('ops.dashboard._hint', ['text' => __('security.overview.cross_site_hint')])</h2>

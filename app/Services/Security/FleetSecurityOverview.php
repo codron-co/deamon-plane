@@ -16,7 +16,10 @@ use Illuminate\Support\Collection;
  */
 class FleetSecurityOverview
 {
-    public function __construct(private readonly SecurityCorrelator $correlator) {}
+    public function __construct(
+        private readonly SecurityCorrelator $correlator,
+        private readonly FleetRuntimeRisks $runtime,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -41,6 +44,7 @@ class FleetSecurityOverview
             'cross_site' => $this->correlator->crossSite($day)->all(),
             'blocks_active' => FleetIpBlock::query()->active()->count(),
             'coverage' => $this->coverage(),
+            'runtime' => $this->runtime->build(),
         ];
     }
 
@@ -139,6 +143,7 @@ class FleetSecurityOverview
                 'last_error' => $cursor?->last_error,
             ],
             'health_block' => $site->last_health_payload['security'] ?? null,
+            'runtime' => $this->runtime->forSite($site),
             'site_counters' => $cursor?->summary,
             'stored' => [
                 'events_24h' => (int) (clone $base)->where('occurred_at', '>=', $since)->sum('count'),
