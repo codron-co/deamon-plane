@@ -676,6 +676,27 @@ final class RouteToolCatalog
                 params: ['site' => 'site'],
             ),
             new RouteTool(
+                name: 'list_site_modules',
+                description: 'Installable CMS modules of a site, read live over the signed agent: slug, name, tagline, category, installed, enabled, locked (core, cannot be turned off) and requires. Slugs feed set_site_module. Sites on an older CMS answer `unsupported`.',
+                route: 'ops.sites.modules.index',
+                ability: McpToken::ABILITY_READ,
+                properties: $site,
+                required: ['site'],
+                params: ['site' => 'site'],
+            ),
+            new RouteTool(
+                name: 'set_site_module',
+                description: 'Turn one CMS module on or off on a site. On installs it with its dependencies when it is not installed yet (`changed` lists every module that changed); off only disables it, the module\'s data stays. Locked (core) modules cannot be turned off. Try it on the test site first.',
+                route: 'ops.sites.modules.update',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $site + [
+                    'module' => ['type' => 'string', 'description' => 'Module slug from list_site_modules, e.g. xml-export.'],
+                    'enabled' => ['type' => 'boolean'],
+                ],
+                required: ['site', 'module', 'enabled'],
+                params: ['site' => 'site'],
+            ),
+            new RouteTool(
                 name: 'assign_mail_server',
                 description: 'Attach a mail server (Hostinger) to the site and configure CMS SMTP. Omit mail_server_id to detach.',
                 route: 'ops.sites.mail',

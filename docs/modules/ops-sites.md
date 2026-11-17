@@ -51,6 +51,9 @@ Draft CRUD for Coolify-hosted Deamon sites. Create/edit still write desired stat
 | POST | `/sites/{site}/env/fix` | `ops.sites.env.fix` | operator, super_admin; `CoolifyAppEnvSync::sync` with the chosen `channel` |
 | POST | `/sites/{site}/env` | `ops.sites.env.set` | operator, super_admin; upsert one key (not protected / bootstrap) |
 | DELETE | `/sites/{site}/env` | `ops.sites.env.destroy` | operator, super_admin; delete one key (not protected / bootstrap) |
+| GET | `/sites/{site}/modules/panel` | `ops.sites.modules.panel` | viewer+; lazy HTML of the CMS module catalog ([site-modules.md](site-modules.md)) |
+| GET | `/sites/{site}/modules` | `ops.sites.modules.index` | viewer+; JSON catalog (MCP `list_site_modules`) |
+| POST | `/sites/{site}/modules` | `ops.sites.modules.update` | operator, super_admin; JSON `{module, enabled}` → CMS toggle, audited |
 | POST | `/sites/{site}/admins` | `ops.sites.admins.store` | operator, super_admin; CMS admin create |
 | POST | `/sites/{site}/admins/{remoteAdmin}/password` | `ops.sites.admins.password` | operator, super_admin; CMS password reset |
 | POST | `/sites/{site}/admins/{remoteAdmin}/password-invite` | `ops.sites.admins.password-invite` | operator, super_admin; resend set-password mail (CMS 1.2.18+) |

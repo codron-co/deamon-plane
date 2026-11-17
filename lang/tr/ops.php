@@ -365,6 +365,11 @@ return [
                 'deploy_canary_updated' => 'Kanarya işareti değişti',
                 'ci_rollout_deployed' => 'CI yayını deploy etti',
                 'ci_rollout_canary_failed' => 'CI yayını: kanarya başarısız',
+                'module' => [
+                    'enabled' => 'Modül açıldı',
+                    'disabled' => 'Modül kapatıldı',
+                    'toggle_failed' => 'Modül değiştirilemedi',
+                ],
             ],
             'mail_server' => [
                 'created' => 'Posta sunucusu oluşturuldu',

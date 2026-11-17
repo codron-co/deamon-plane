@@ -222,6 +222,8 @@ return [
     'agent' => [
         'skew_seconds' => (int) env('CONTROL_PLANE_AGENT_SKEW_SECONDS', 60),
         'timeout_seconds' => (int) env('CONTROL_PLANE_AGENT_TIMEOUT', 10),
+        // Turning a module on may install it with its dependencies (migrations) on the CMS.
+        'module_toggle_timeout_seconds' => (int) env('CONTROL_PLANE_AGENT_MODULE_TIMEOUT', 45),
         'poll_minutes' => (int) env('CONTROL_PLANE_AGENT_POLL_MINUTES', 10),
         'stale_after_minutes' => (int) env('CONTROL_PLANE_AGENT_STALE_MINUTES', 30),
         // Down alert only after this many unhealthy answers in a row (one poll

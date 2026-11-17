@@ -11,6 +11,7 @@ use App\Http\Controllers\Ops\SiteDetailController;
 use App\Http\Controllers\Ops\SiteDomainController;
 use App\Http\Controllers\Ops\SiteEnvController;
 use App\Http\Controllers\Ops\SiteListPreferencesController;
+use App\Http\Controllers\Ops\SiteModuleController;
 use App\Http\Controllers\Ops\SitePublishStatusController;
 use App\Http\Controllers\Ops\SiteSearchIntegrationsController;
 use App\Http\Controllers\Ops\SiteTagController;
@@ -116,6 +117,9 @@ Route::post('/sites/{site}/themes/{installation}/activate', [SiteThemeController
 Route::post('/sites/{site}/themes/{installation}/reinstall', [SiteThemeController::class, 'reinstall'])->name('ops.sites.themes.reinstall');
 Route::delete('/sites/{site}/themes/{installation}', [SiteThemeController::class, 'remove'])->name('ops.sites.themes.remove');
 Route::post('/sites/{site}/themes/{installation}/auto-update', [SiteThemeController::class, 'autoUpdate'])->name('ops.sites.themes.auto-update');
+Route::get('/sites/{site}/modules/panel', [SiteModuleController::class, 'panel'])->name('ops.sites.modules.panel');
+Route::get('/sites/{site}/modules', [SiteModuleController::class, 'index'])->name('ops.sites.modules.index');
+Route::post('/sites/{site}/modules', [SiteModuleController::class, 'update'])->name('ops.sites.modules.update');
 Route::get('/sites/{site}/admins/panel', [SiteAdminController::class, 'panel'])->name('ops.sites.admins.panel');
 Route::post('/sites/{site}/admins', [SiteAdminController::class, 'store'])->name('ops.sites.admins.store');
 Route::post('/sites/{site}/admins/{remoteAdmin}/password', [SiteAdminController::class, 'resetPassword'])->name('ops.sites.admins.password');

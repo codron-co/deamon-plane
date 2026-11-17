@@ -1,10 +1,10 @@
 # MCP endpoint (AI agents)
 
-`POST /mcp` speaks the [Model Context Protocol](https://modelcontextprotocol.io) (Streamable HTTP, JSON responses, no SSE) so an AI agent (Claude Code, Cursor, any MCP client) can run Plane: open a site, provision it, set up Cloudflare, install and update themes, deploy, switch channels, manage CMS admins.
+`POST /mcp` speaks the [Model Context Protocol](https://modelcontextprotocol.io) (Streamable HTTP, JSON responses, no SSE) so an AI agent (Claude Code, Cursor, any MCP client) can run Plane: open a site, provision it, set up Cloudflare, install and update themes, deploy, switch channels, manage CMS admins, turn CMS modules on and off.
 
 ## How a tool runs
 
-- **Read tools** (`list_sites`, `get_site`, `get_setup_options`, `list_themes`, `list_jobs`, `get_deployment`, `list_site_activity`, `list_dns_records`, `list_site_admins`, `whoami`) read models directly through `App\Mcp\McpPresenter`. No secrets leave Plane (agent secret, APP_KEY, DB passwords, Coolify / Cloudflare tokens).
+- **Read tools** (`list_sites`, `get_site`, `get_setup_options`, `list_themes`, `list_jobs`, `get_deployment`, `list_site_activity`, `list_dns_records`, `list_site_admins`, `whoami`) read models directly through `App\Mcp\McpPresenter`. Read tools backed by a panel JSON route (`list_site_modules`, `list_mail_orders`) are `RouteTool` entries with the `read` ability. No secrets leave Plane (agent secret, APP_KEY, DB passwords, Coolify / Cloudflare tokens).
 - **Write tools** are one panel route each (`App\Mcp\Tools\RouteToolCatalog`). `App\Mcp\OpsRouteInvoker` runs the route **in-process** as the token's user: same FormRequest validation, policies, services, audit rows and background jobs as an operator's click. Nothing is reimplemented. The request asks for JSON, so controllers that offer it queue an `ops_background_jobs` row (the agent follows it with `list_jobs job_id=…`); redirects are read back like `ConvertOpsAjaxRedirect` (`status` / `warning` / `error` flash, plus one-time values such as a generated admin password under `once`).
 - Arguments name things the way people do: a site by slug, domain or id; a theme install by its catalog `theme_id`; a Cloudflare zone by id or apex name (`App\Mcp\McpModels`).
 - `update_site` and `update_theme_settings` fill the fields the agent leaves out with the current values. The edit form posts every field and a missing one is cleared (aliases released from DNS, mail server detached).
@@ -22,7 +22,7 @@ php artisan ops:mcp-token revoke <id>
 | Ability | Tools |
 |---------|-------|
 | `read` | read tools only |
-| `write` | + every change an operator can make (create, provision, deploy, themes, DNS add/edit, admins) |
+| `write` | + every change an operator can make (create, provision, deploy, themes, DNS add/edit, admins, CMS modules via `set_site_module`) |
 | `danger` | + deactivate, archive, purge, DNS delete, admin delete, theme rollback/remove, `bulk_sites all:true`, `update_theme_fleet` on every site |
 
 The ability only narrows: the user's role (`super_admin` / `operator` / `viewer`) and policies still decide every call, exactly as in the panel. A viewer with a write token is still refused.
@@ -47,6 +47,10 @@ Cursor / other clients (`mcp.json`):
 ```json
 { "mcpServers": { "deamon-plane": { "url": "https://plane.codron.co/mcp", "headers": { "Authorization": "Bearer plane_mcp_…" } } } }
 ```
+
+## Site modules
+
+`list_site_modules` (`site`) reads the CMS module catalog live; `set_site_module` (`site`, `module`, `enabled`) turns one module on (installs it with its dependencies when needed) or off (data kept). Locked core modules cannot be turned off; sites on an older CMS answer `unsupported`. See [site-modules.md](site-modules.md).
 
 ## Adding a tool
 

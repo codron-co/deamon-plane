@@ -76,6 +76,9 @@ final class ControlPlaneAgentContract
 
     public const ADMINS_PATH = '/internal/control/v1/admins';
 
+    /** Module catalog: GET lists installable modules, POST `{slug, enabled}` turns one on (installs with dependencies) or off (data kept). Older CMS answers 404. */
+    public const MODULES_PATH = '/internal/control/v1/modules';
+
     public const HEADER_SITE = 'X-Deamon-Site';
 
     public const HEADER_TIMESTAMP = 'X-Deamon-Timestamp';
@@ -236,6 +239,11 @@ final class ControlPlaneAgentContract
     public static function adminsPath(): string
     {
         return self::configuredPath('ops.agent.admins_path', self::ADMINS_PATH);
+    }
+
+    public static function modulesPath(): string
+    {
+        return self::configuredPath('ops.agent.modules_path', self::MODULES_PATH);
     }
 
     public static function adminPath(int $adminId): string
