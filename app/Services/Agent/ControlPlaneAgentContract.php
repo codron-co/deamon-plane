@@ -71,6 +71,9 @@ final class ControlPlaneAgentContract
     /** Cloudflare Turnstile keys, mode and protected forms (GET/POST); CMS support shows as `turnstile` in health. */
     public const TURNSTILE_PATH = '/internal/control/v1/turnstile';
 
+    /** CMS 1.2.119+: admin 2FA zorunluluk politikası (GET/POST: required, grace_days). */
+    public const TWO_FACTOR_POLICY_PATH = '/internal/control/v1/security/two-factor';
+
     /** CMS 1.2.49+: reads (GET) and partially sets (POST) search verification + GA4/GTM ids. */
     public const SEARCH_INTEGRATIONS_PATH = '/internal/control/v1/search-integrations';
 
@@ -226,6 +229,11 @@ final class ControlPlaneAgentContract
     public static function searchIntegrationsPath(): string
     {
         return self::configuredPath('ops.agent.search_integrations_path', self::SEARCH_INTEGRATIONS_PATH);
+    }
+
+    public static function twoFactorPolicyPath(): string
+    {
+        return self::configuredPath('ops.agent.two_factor_policy_path', self::TWO_FACTOR_POLICY_PATH);
     }
 
     public static function turnstilePath(): string

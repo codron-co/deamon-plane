@@ -83,3 +83,7 @@ CMS route registration (Task 11 lives in `codron-co/deamon`). Theme agent client
 Hostinger tokens stay in Plane (`mail_servers.api_token` encrypted). After a site is assigned a Hostinger mail server **and** at least one mailbox domain is bound (`site_mail_bindings`), Plane POSTs `{agent_base_url}/internal/control/v1/mail/configure` with the same HMAC as themes. Body has `enabled`, `provider`, `site_id`, `plane_base_url`, `mail_domain`, `mail_domains`, `webmail_url` — **never** the API token. Bindings are operator-selected on Infrastructure; primary-domain auto-match is only a first-time default.
 
 CMS mailbox UI calls back to Plane `POST/GET/PATCH/DELETE /internal/site/v1/mail/mailboxes…` with `X-Deamon-Site` + HMAC of that site’s agent secret. Plane talks to Hostinger. Details: [mail-servers.md](mail-servers.md).
+
+## Admin 2FA policy (CMS 1.2.119+)
+
+Site detail → Altyapı → "Yönetici 2FA zorunluluğu" (`SiteTwoFactorPolicyController`, `SiteTwoFactorPolicyAgent`) and MCP `set_admin_two_factor` POST `{required, grace_days}` to `{agent_base_url}/internal/control/v1/security/two-factor` (GET reads `{required, grace_days, required_since, grace_ends_at, admins_total, admins_with_two_factor}`) with the same HMAC. Default is optional; the site admin cannot loosen it. No Plane DB state (the CMS holds the policy); each change is audited as `site.two_factor_policy.updated`. Older CMS answers 404 → "cms_too_old".

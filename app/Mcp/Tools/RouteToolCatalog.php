@@ -667,6 +667,18 @@ final class RouteToolCatalog
                 params: ['site' => 'site'],
             ),
             new RouteTool(
+                name: 'set_admin_two_factor',
+                description: 'Require two-factor authentication for the site\'s admin panel users (CMS 1.2.119+). required=false makes it optional again; grace_days (0-60, default 7) is how long admins without 2FA can still sign in after it is required.',
+                route: 'ops.sites.two-factor.update',
+                ability: McpToken::ABILITY_WRITE,
+                properties: $site + [
+                    'required' => ['type' => 'boolean'],
+                    'grace_days' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 60],
+                ],
+                required: ['site', 'required'],
+                params: ['site' => 'site'],
+            ),
+            new RouteTool(
                 name: 'sync_turnstile',
                 description: 'Re-push the site\'s Turnstile widget (hostnames, keys) to Cloudflare and the CMS.',
                 route: 'ops.sites.turnstile.sync',

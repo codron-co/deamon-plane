@@ -220,6 +220,7 @@
                 @include('ops.sites._domains')
                 @include('ops.sites._cloudflare')
                 @include('ops.sites._turnstile')
+                @include('ops.sites._two-factor')
                 @include('ops.sites._mail')
                 @include('ops.sites._comail')
                 @include('ops.sites._platform-mail')
