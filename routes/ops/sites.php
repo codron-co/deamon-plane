@@ -17,6 +17,7 @@ use App\Http\Controllers\Ops\SiteSearchIntegrationsController;
 use App\Http\Controllers\Ops\SiteTagController;
 use App\Http\Controllers\Ops\SiteThemeController;
 use App\Http\Controllers\Ops\SiteTurnstileController;
+use App\Http\Controllers\Ops\SiteTwoFactorPolicyController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/sites', [SiteController::class, 'index'])->name('ops.sites');
@@ -106,6 +107,8 @@ Route::post('/sites/{site}/mailbox-requests/{mailboxRequest}/reject', [SiteContr
 Route::post('/sites/{site}/search-integrations', [SiteSearchIntegrationsController::class, 'update'])->name('ops.sites.search-integrations.update');
 Route::post('/sites/{site}/search-integrations/pull', [SiteSearchIntegrationsController::class, 'pull'])->name('ops.sites.search-integrations.pull');
 Route::post('/sites/{site}/search-integrations/push', [SiteSearchIntegrationsController::class, 'push'])->name('ops.sites.search-integrations.push');
+Route::post('/sites/{site}/two-factor', [SiteTwoFactorPolicyController::class, 'update'])->name('ops.sites.two-factor.update');
+Route::post('/sites/{site}/two-factor/pull', [SiteTwoFactorPolicyController::class, 'pull'])->name('ops.sites.two-factor.pull');
 Route::post('/sites/{site}/turnstile', [SiteTurnstileController::class, 'update'])->name('ops.sites.turnstile.update');
 Route::post('/sites/{site}/turnstile/sync', [SiteTurnstileController::class, 'sync'])->name('ops.sites.turnstile.sync');
 Route::post('/sites/{site}/themes', [SiteThemeController::class, 'assign'])->name('ops.sites.themes.assign');
