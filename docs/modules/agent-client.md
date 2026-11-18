@@ -87,3 +87,7 @@ CMS mailbox UI calls back to Plane `POST/GET/PATCH/DELETE /internal/site/v1/mail
 ## Admin 2FA policy (CMS 1.2.119+)
 
 Site detail → Altyapı → "Yönetici 2FA zorunluluğu" (`SiteTwoFactorPolicyController`, `SiteTwoFactorPolicyAgent`) and MCP `set_admin_two_factor` POST `{required, grace_days}` to `{agent_base_url}/internal/control/v1/security/two-factor` (GET reads `{required, grace_days, required_since, grace_ends_at, admins_total, admins_with_two_factor}`) with the same HMAC. Default is optional; the site admin cannot loosen it. No Plane DB state (the CMS holds the policy); each change is audited as `site.two_factor_policy.updated`. Older CMS answers 404 → "cms_too_old".
+
+## Security routes
+
+The CMS `security-alerts` module adds `GET /internal/control/v1/security/summary` and `POST /internal/control/v1/security/{block,unblock,allowlist}` (same HMAC headers), and a small `security` block in `/health`. They are called by `App\Services\Security\SiteSecurityClient`; see [security-fleet.md](security-fleet.md).

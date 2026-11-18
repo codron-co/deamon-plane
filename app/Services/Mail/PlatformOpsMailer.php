@@ -2,6 +2,7 @@
 
 namespace App\Services\Mail;
 
+use App\Enums\OpsRole;
 use App\Jobs\SendOpsNotificationJob;
 use App\Mail\PlatformOpsMail;
 use App\Mail\PlatformTestMail;
@@ -70,6 +71,47 @@ final class PlatformOpsMailer
         }
 
         return true;
+    }
+
+    /**
+     * Fleet alert for the people who run Plane (super admins), not for a site's own
+     * recipients: critical security events, one IP probing several sites. Queued like
+     * send(); returns the number of deliveries queued (0 when platform mail is not ready).
+     */
+    public function sendToSuperAdmins(string $notificationKey, string $subject, string $body, ?Site $site = null): int
+    {
+        if (! $this->resolver->settings()->isReady()) {
+            return 0;
+        }
+
+        $queued = 0;
+        User::query()
+            ->role(OpsRole::SuperAdmin->value)
+            ->whereNotNull('email')
+            ->orderBy('id')
+            ->limit(10)
+            ->get()
+            ->each(function (User $user) use ($notificationKey, $subject, $body, $site, &$queued): void {
+                $email = trim((string) $user->email);
+                if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false || $user->hasMailOptOut($notificationKey)) {
+                    return;
+                }
+
+                $notification = OpsNotification::query()->create([
+                    'site_id' => $site?->id,
+                    'notification_key' => $notificationKey,
+                    'user_id' => $user->id,
+                    'recipient' => $email,
+                    'subject' => mb_substr($subject, 0, 255),
+                    'body' => $body,
+                    'status' => OpsNotification::STATUS_PENDING,
+                ]);
+
+                SendOpsNotificationJob::dispatch($notification->id)->afterCommit();
+                $queued++;
+            });
+
+        return $queued;
     }
 
     /**

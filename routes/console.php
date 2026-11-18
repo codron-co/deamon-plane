@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\DispatchSecurityCollectionJob;
 use App\Jobs\DispatchSiteHealthChecksJob;
 use App\Jobs\ExpireMailSubscriptionsJob;
 use App\Jobs\KickStalledFleetRolloutsJob;
@@ -127,4 +128,18 @@ Schedule::command('ops:snapshot-fleet')
 Schedule::job(new KickStalledFleetRolloutsJob)
     ->everyFiveMinutes()
     ->name('ops-fleet-rollout-watchdog')
+    ->withoutOverlapping();
+
+// Fleet security: pull each CMS's security-alerts summary, one site at a time with a
+// gap between sites (shared host CPU rule). A site that fails is skipped until next run.
+Schedule::job(new DispatchSecurityCollectionJob)
+    ->cron(sprintf('*/%d * * * *', min(30, max(5, (int) config('ops.security.poll_minutes', 10)))))
+    ->name('ops-security-collect')
+    ->withoutOverlapping();
+
+// Fleet security events are kept 90 days (KVKK: IPs are personal data).
+Schedule::command('security:prune')
+    ->dailyAt('03:20')
+    ->timezone(config('app.timezone'))
+    ->name('ops-security-prune')
     ->withoutOverlapping();

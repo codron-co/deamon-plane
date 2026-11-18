@@ -7,6 +7,7 @@ return [
         'primary' => 'Birincil',
         'fleet' => 'Filo',
         'activity' => 'Geçmiş',
+        'security' => 'Güvenlik',
         'rollouts' => 'CI yayınları',
         'sites' => 'Siteler',
         'domains' => 'Domainler',

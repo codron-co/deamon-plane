@@ -1111,7 +1111,7 @@
                     window.clearTimeout(timer);
                     timer = window.setTimeout(function () {
                         form.requestSubmit();
-                    }, 300);
+                    }, Number(form.dataset.searchDelay) || 300);
                 });
             }
 

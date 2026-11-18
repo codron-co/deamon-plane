@@ -77,6 +77,10 @@
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v4.6l2.6 1.6M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12Z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
                     {{ __('ops.nav.activity') }}
                 </a>
+                <a class="ops-nav-item {{ request()->routeIs('ops.security*') ? 'is-active' : '' }}" href="{{ route('ops.security') }}">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.9 3 3.8v3.7c0 3 2 5.3 5 6.6 3-1.3 5-3.6 5-6.6V3.8L8 1.9Zm-1.9 5.9 1.4 1.4 2.5-2.7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    {{ __('ops.nav.security') }}
+                </a>
                 <a class="ops-nav-item {{ request()->routeIs('ops.rollouts*') ? 'is-active' : '' }}" href="{{ route('ops.rollouts') }}">
                     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h3v-3h3v-3h3v-3h2M10.5 3.5h3v3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     {{ __('ops.nav.rollouts') }}

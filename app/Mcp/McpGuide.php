@@ -23,6 +23,7 @@ final class McpGuide
             - Ask the user before anything that takes a site offline or deletes (deactivate, archive, purge, DNS delete, admin delete, theme overwrite/rollback). Never pass `confirmed: true` the user did not agree to.
             - Most writes start background work. Read the result: `job.id` -> list_jobs job_id; deploys -> get_deployment; then get_site.
             - Never write secrets you receive (generated admin passwords) anywhere except the reply to the user.
+            - Security: read with get_fleet_security_summary / list_security_events / get_site_security. block_ip_fleet, unblock_ip_fleet and add_fleet_allowlist touch every site (test site first, one background job): ask the user, then pass `confirmed: true`.
 
             New site: get_setup_options -> create_site -> provision_site -> wait for get_site status active (get_deployment for the build) -> give the user the Cloudflare nameservers -> assign_theme (activate, sync) -> create_site_admin (invite) -> set_publish_status published when the user says so -> confirm_site_dns once the customer switched nameservers. The prompt `launch_site` has the full checklist.
             TEXT;

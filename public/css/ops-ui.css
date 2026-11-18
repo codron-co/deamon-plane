@@ -2497,3 +2497,143 @@ a.site-tag:hover {
     .site-switch,
     .site-switch-thumb { transition: none; }
 }
+
+/* ---------- Security (Güvenlik) ---------- */
+
+.security-tabs,
+.security-period {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0 0 18px;
+}
+
+.security-tabs a,
+.security-period a {
+    padding: 6px 12px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.security-tabs a:hover,
+.security-period a:hover {
+    background: var(--surface-raised);
+    color: var(--text);
+}
+
+.security-tabs a.is-active,
+.security-period a.is-active {
+    background: var(--surface-raised);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.security-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    gap: 16px;
+}
+
+.security-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.security-card {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+}
+
+.security-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.security-card p {
+    margin: 0;
+    font-size: 12px;
+}
+
+.security-card-sites {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+}
+
+.security-card footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.security-inline-form {
+    display: inline;
+    margin-left: 6px;
+}
+
+.security-filter-toggle {
+    position: relative;
+}
+
+.security-filter-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.security-filter-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.security-filter-panel[hidden],
+.security-filter-dot[hidden] {
+    display: none;
+}
+
+.security-sev {
+    display: inline-flex;
+    align-items: center;
+}
+
+.security-sev-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-faint);
+}
+
+.security-sev.is-warning .security-sev-dot {
+    background: var(--warning);
+}
+
+.security-sev.is-critical .security-sev-dot {
+    background: var(--danger);
+}
+
+.security-add-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px;
+}
+
+.security-add-form .field-input {
+    min-width: 11rem;
+}

@@ -8,6 +8,7 @@
 - **Write tools** are one panel route each (`App\Mcp\Tools\RouteToolCatalog`). `App\Mcp\OpsRouteInvoker` runs the route **in-process** as the token's user: same FormRequest validation, policies, services, audit rows and background jobs as an operator's click. Nothing is reimplemented. The request asks for JSON, so controllers that offer it queue an `ops_background_jobs` row (the agent follows it with `list_jobs job_id=…`); redirects are read back like `ConvertOpsAjaxRedirect` (`status` / `warning` / `error` flash, plus one-time values such as a generated admin password under `once`).
 - Arguments name things the way people do: a site by slug, domain or id; a theme install by its catalog `theme_id`; a Cloudflare zone by id or apex name (`App\Mcp\McpModels`).
 - `update_site` and `update_theme_settings` fill the fields the agent leaves out with the current values. The edit form posts every field and a missing one is cleared (aliases released from DNS, mail server detached).
+- Fleet security: read tools `list_security_events`, `get_site_security`, `get_fleet_security_summary`, `list_fleet_allowlist`; write tools `block_ip_fleet`, `unblock_ip_fleet`, `add_fleet_allowlist`, `push_security_scan_results` (one site's scanner result; the user's role must be able to write, `confirmed: true` is required, the test site is tried first, one background job, audit row). See [security-fleet.md](security-fleet.md).
 - Custom tools: `bulk_sites` (one action on many sites through the panel bulk routes, always with explicit `site_ids`) and `update_theme_fleet` (every site behind the catalog, dry run by default).
 - Prompt `launch_site` is the new-site checklist; server instructions repeat the house rules (test site first, batch deploys on the shared host, ask before offline/delete).
 
@@ -21,7 +22,7 @@ php artisan ops:mcp-token revoke <id>
 
 | Ability | Tools |
 |---------|-------|
-| `read` | read tools only |
+| `read` | read tools only (incl. the security read tools) |
 | `write` | + every change an operator can make (create, provision, deploy, themes, DNS add/edit, admins, CMS modules via `set_site_module`) |
 | `danger` | + deactivate, archive, purge, DNS delete, admin delete, theme rollback/remove, `bulk_sites all:true`, `update_theme_fleet` on every site |
 

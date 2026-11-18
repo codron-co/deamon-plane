@@ -83,6 +83,9 @@ final class AgentHealthResult
                 // CMS with the commerce health key: module state and the number of
                 // published priced products. Site::isEcommerce() reads it.
                 'commerce' => self::commerce($payload['commerce'] ?? null),
+                // CMS with the security-alerts module: a small block only (module state, critical
+                // events in 24h, active blocks). The details come from the security summary poll.
+                'security' => self::security($payload['security'] ?? null),
                 'http_status' => $httpStatus,
             ]),
         );
@@ -175,6 +178,35 @@ final class AgentHealthResult
             'module_enabled' => ($value['module_enabled'] ?? false) === true,
             'checkout_ready' => ($value['checkout_ready'] ?? false) === true,
             'priced_products' => is_int($priced) && $priced >= 0 ? $priced : null,
+        ];
+    }
+
+    /**
+     * @return array{module_enabled: bool, critical_24h: int, blocks_active: int, insecure_settings: int|null, telemetry: array<string, int|null>|null}|null
+     */
+    private static function security(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $telemetry = null;
+        if (is_array($value['telemetry'] ?? null)) {
+            $age = fn (mixed $v): ?int => is_numeric($v) ? max(0, min(31_536_000, (int) $v)) : null;
+            $telemetry = [
+                'ingest_age_seconds' => $age($value['telemetry']['ingest_age_seconds'] ?? null),
+                'dropped_24h' => max(0, min(1_000_000, (int) ($value['telemetry']['dropped_24h'] ?? 0))),
+                'outbox_lag_seconds' => $age($value['telemetry']['outbox_lag_seconds'] ?? null),
+            ];
+        }
+
+        return [
+            'module_enabled' => ($value['module_enabled'] ?? false) === true,
+            'critical_24h' => max(0, min(1_000_000, (int) ($value['critical_24h'] ?? 0))),
+            'blocks_active' => max(0, min(1_000_000, (int) ($value['blocks_active'] ?? 0))),
+            // CMS 1.2.122+; null on older CMS.
+            'insecure_settings' => is_numeric($value['insecure_settings'] ?? null) ? max(0, min(1_000_000, (int) $value['insecure_settings'])) : null,
+            'telemetry' => $telemetry,
         ];
     }
 
