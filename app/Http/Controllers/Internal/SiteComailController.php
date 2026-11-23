@@ -320,9 +320,11 @@ class SiteComailController extends Controller
 
     /**
      * `POST /mailboxes/bulk` (docs: CONTRACT-bulk-mailboxes): activate,
-     * deactivate or delete `addresses`, or set `passwords` (optionally with
-     * `force_password_change`). A bad request changes nothing; after that each
-     * address is done on its own and reported in `results`.
+     * deactivate or delete `addresses`, give them all `quota_mb`, or set
+     * `passwords` (optionally with `force_password_change`). A bad request
+     * changes nothing; after that each address is done on its own and reported
+     * in `results`. A quota goes through the same package check as a single
+     * mailbox, counting the quotas already set earlier in the same request.
      */
     public function bulkMailboxes(Request $request, ComailMailboxActions $actions): JsonResponse
     {
@@ -336,9 +338,11 @@ class SiteComailController extends Controller
                 'passwords.*.address' => ['exclude_unless:action,password', 'required', 'string', 'max:320'],
                 'passwords.*.password' => ['exclude_unless:action,password', 'required', 'string', 'max:128'],
                 'force_password_change' => ['sometimes', 'boolean'],
+                'quota_mb' => ['exclude_unless:action,quota', 'required', 'integer', 'min:1'],
             ]);
 
             $action = (string) $data['action'];
+            $quotaMb = $action === ComailMailboxActions::QUOTA ? (int) $data['quota_mb'] : null;
             $items = [];
             if ($action === ComailMailboxActions::PASSWORD) {
                 foreach ($data['passwords'] as $row) {
@@ -369,7 +373,15 @@ class SiteComailController extends Controller
 
                 $username = (string) $mailbox['username'];
                 try {
-                    $actions->apply($directory->client, $username, $action, $password, $action === ComailMailboxActions::PASSWORD ? $force : null);
+                    if ($quotaMb !== null) {
+                        $owner = $directory->forDomain(ComailDirectory::domainOf($username));
+                        $this->limits->assertQuotaChange($owner, $mailbox, $quotaMb);
+                    }
+                    $actions->apply($directory->client, $username, $action, $password, $action === ComailMailboxActions::PASSWORD ? $force : null, $quotaMb);
+                } catch (ComailException $exception) {
+                    $results[] = ['address' => $address, 'ok' => false, 'error' => $exception->error, 'message' => $exception->getMessage()];
+
+                    continue;
                 } catch (MailcowException $exception) {
                     if ($exception->isUnreachable()) {
                         throw $exception;
@@ -379,7 +391,11 @@ class SiteComailController extends Controller
                     continue;
                 }
 
-                $this->audit($site, $request, ...self::bulkAudit($username, $action, $force));
+                if ($quotaMb !== null) {
+                    // The next row's storage check must see this box's new quota.
+                    $directory->rememberQuota($username, $quotaMb);
+                }
+                $this->audit($site, $request, ...self::bulkAudit($username, $action, $force, $quotaMb));
                 $results[] = ['address' => $address, 'ok' => true];
             }
             $directory->forget();
@@ -391,10 +407,16 @@ class SiteComailController extends Controller
     /**
      * @return array{0: string, 1: array<string, mixed>}
      */
-    private static function bulkAudit(string $username, string $action, ?bool $force): array
+    private static function bulkAudit(string $username, string $action, ?bool $force, ?int $quotaMb = null): array
     {
         return match ($action) {
             ComailMailboxActions::DELETE => ['comail.mailbox_deleted', ['address' => $username, 'bulk' => true]],
+            ComailMailboxActions::QUOTA => ['comail.mailbox_updated', [
+                'address' => $username,
+                'changed' => ['quota_mb'],
+                'quota_mb' => $quotaMb,
+                'bulk' => true,
+            ]],
             ComailMailboxActions::PASSWORD => ['comail.mailbox_updated', [
                 'address' => $username,
                 'changed' => $force === null ? ['password'] : ['password', 'force_password_change'],

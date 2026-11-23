@@ -292,6 +292,26 @@ class ComailDirectory
         return null;
     }
 
+    /**
+     * Writes a quota just set on mailcow into the cached rows (this directory
+     * and the owner directories), so the next storage check in the same
+     * request (bulk quota) counts it without reading mailcow again.
+     */
+    public function rememberQuota(string $address, int $quotaMb): void
+    {
+        $address = strtolower(trim($address));
+        if ($this->mailboxes !== null) {
+            foreach ($this->mailboxes as $i => $row) {
+                if (strtolower((string) ($row['username'] ?? '')) === $address) {
+                    $this->mailboxes[$i]['quota'] = $quotaMb * 1048576;
+                }
+            }
+        }
+        foreach ($this->ownerDirectories as $directory) {
+            $directory->rememberQuota($address, $quotaMb);
+        }
+    }
+
     public function forget(): void
     {
         $this->mailboxes = null;

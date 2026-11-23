@@ -5,6 +5,7 @@ namespace Tests\Feature\Comail;
 use App\Enums\OpsRole;
 use App\Http\Controllers\Ops\ComailMailboxOpsController;
 use App\Models\AuditLog;
+use App\Models\MailPackage;
 use App\Models\MailServer;
 use App\Models\Site;
 use App\Services\Comail\ComailMailboxActions;
@@ -151,6 +152,112 @@ class ComailBulkMailboxesTest extends TestCase
         $this->signed('POST', '/mailboxes/bulk', $this->site, ['action' => 'archive', 'addresses' => ['info@acme.test']])->assertStatus(422);
         $this->signed('POST', '/mailboxes/bulk', $this->site, ['action' => 'activate'])->assertStatus(422);
         $this->assertArrayHasKey('info@acme.test', $this->mailcow->mailboxes);
+    }
+
+    public function test_bulk_quota_sets_each_quota_and_audits_it(): void
+    {
+        $this->useStarterPackage();
+
+        $this->signed('POST', '/mailboxes/bulk', $this->site, [
+            'action' => 'quota',
+            'addresses' => ['info@acme.test', 'SATIS@acme.test'],
+            'quota_mb' => 2048,
+        ])->assertOk()
+            ->assertJsonPath('results.0', ['address' => 'info@acme.test', 'ok' => true])
+            ->assertJsonPath('results.1', ['address' => 'satis@acme.test', 'ok' => true]);
+
+        $edits = array_values(array_filter($this->mailcow->calls, static fn (array $call): bool => $call['path'] === '/edit/mailbox'));
+        $this->assertCount(2, $edits);
+        $this->assertSame(['quota' => 2048], $edits[0]['body']['attr']);
+        $this->assertSame(2048 * 1048576, $this->mailcow->mailboxes['info@acme.test']['quota']);
+        $this->assertSame(2048 * 1048576, $this->mailcow->mailboxes['satis@acme.test']['quota']);
+
+        $audits = AuditLog::query()->where('action', 'comail.mailbox_updated')->orderBy('id')->get();
+        $this->assertCount(2, $audits);
+        $this->assertSame('info@acme.test', $audits[0]->after['address']);
+        $this->assertSame(['quota_mb'], $audits[0]->after['changed']);
+        $this->assertSame(2048, $audits[0]->after['quota_mb']);
+        $this->assertTrue($audits[0]->after['bulk']);
+    }
+
+    public function test_bulk_quota_over_the_per_mailbox_cap_fails_that_row_only(): void
+    {
+        $this->useStarterPackage();
+        // Already above the 5120 MB cap: shrinking it is always allowed.
+        $this->mailcow->addMailbox('info@acme.test', 8192);
+
+        $this->signed('POST', '/mailboxes/bulk', $this->site, [
+            'action' => 'quota',
+            'addresses' => ['satis@acme.test', 'info@acme.test'],
+            'quota_mb' => 6000,
+        ])->assertOk()
+            ->assertJsonPath('results.0.address', 'satis@acme.test')
+            ->assertJsonPath('results.0.ok', false)
+            ->assertJsonPath('results.0.error', 'limit_storage')
+            ->assertJsonPath('results.0.message', 'Bir posta kutusu en fazla 5120 MB olabilir.')
+            ->assertJsonPath('results.1', ['address' => 'info@acme.test', 'ok' => true]);
+
+        $this->assertSame(1024 * 1048576, $this->mailcow->mailboxes['satis@acme.test']['quota']);
+        $this->assertSame(6000 * 1048576, $this->mailcow->mailboxes['info@acme.test']['quota']);
+        $this->assertSame(1, AuditLog::query()->where('action', 'comail.mailbox_updated')->count());
+    }
+
+    public function test_bulk_quota_counts_the_quotas_set_earlier_in_the_same_request(): void
+    {
+        $this->useStarterPackage();
+        $this->mailcow->addMailbox('destek@acme.test');
+
+        // 10240 MB package, 3 x 1024 allocated: two boxes fit 4000 MB, the third does not.
+        $this->signed('POST', '/mailboxes/bulk', $this->site, [
+            'action' => 'quota',
+            'addresses' => ['info@acme.test', 'satis@acme.test', 'destek@acme.test', 'yok@acme.test'],
+            'quota_mb' => 4000,
+        ])->assertOk()
+            ->assertJsonPath('results.0', ['address' => 'info@acme.test', 'ok' => true])
+            ->assertJsonPath('results.1', ['address' => 'satis@acme.test', 'ok' => true])
+            ->assertJsonPath('results.2.ok', false)
+            ->assertJsonPath('results.2.error', 'limit_storage')
+            ->assertJsonPath('results.2.message', 'Paketinizde 2240 MB boş alan kaldı; daha küçük bir kota seçin.')
+            ->assertJsonPath('results.3.ok', false)
+            ->assertJsonPath('results.3.error', 'not_found')
+            ->assertJsonPath('results.3.message', 'Posta kutusu bulunamadı.');
+
+        $this->assertSame(4000 * 1048576, $this->mailcow->mailboxes['satis@acme.test']['quota']);
+        $this->assertSame(1024 * 1048576, $this->mailcow->mailboxes['destek@acme.test']['quota']);
+        $this->assertSame(2, AuditLog::query()->where('action', 'comail.mailbox_updated')->count());
+
+        // The list right after shows the new quotas.
+        $rows = collect($this->signed('GET', '/mailboxes', $this->site)->assertOk()->json('mailboxes'))->keyBy('address');
+        $this->assertSame(4000, $rows['info@acme.test']['quota_mb']);
+        $this->assertSame(1024, $rows['destek@acme.test']['quota_mb']);
+    }
+
+    public function test_bulk_quota_needs_a_positive_quota_and_other_actions_ignore_it(): void
+    {
+        foreach ([[], ['quota_mb' => 0], ['quota_mb' => 'cok'], ['quota_mb' => -5]] as $extra) {
+            $this->signed('POST', '/mailboxes/bulk', $this->site, [
+                'action' => 'quota',
+                'addresses' => ['info@acme.test'],
+            ] + $extra)->assertStatus(422)->assertJsonPath('error', 'validation_failed');
+        }
+        $this->assertSame([], $this->mailcow->paths());
+
+        $this->signed('POST', '/mailboxes/bulk', $this->site, [
+            'action' => 'deactivate',
+            'addresses' => ['info@acme.test'],
+            'quota_mb' => 0,
+        ])->assertOk()->assertJsonPath('results.0.ok', true);
+        $this->assertSame(1024 * 1048576, $this->mailcow->mailboxes['info@acme.test']['quota']);
+    }
+
+    public function test_page_does_not_offer_the_quota_action(): void
+    {
+        $this->actingAs($this->opsUser())->post(route('ops.comail.mailboxes.bulk'), [
+            'action' => 'quota',
+            'mailbox_ids' => ['kim@nosite.test'],
+        ])->assertSessionHasErrors('action');
+
+        $this->assertSame([], $this->mailcow->paths());
     }
 
     public function test_generated_passwords_are_readable_and_pass_the_rule(): void
@@ -327,5 +434,11 @@ class ComailBulkMailboxesTest extends TestCase
             ->post(route('ops.comail.mailboxes.webmail', 'ali@nosite.test'))
             ->assertRedirect(route('ops.comail.mailboxes'))
             ->assertSessionHas('error');
+    }
+
+    private function useStarterPackage(): void
+    {
+        $package = MailPackage::query()->where('slug', 'starter')->firstOrFail();
+        $this->site->forceFill(['mail_package_id' => $package->id])->save();
     }
 }

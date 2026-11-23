@@ -114,7 +114,7 @@ class ComailMailboxOpsController extends Controller
         $this->authorize('ops.danger');
 
         $data = $request->validate([
-            'action' => ['required', 'string', Rule::in(ComailMailboxActions::ACTIONS)],
+            'action' => ['required', 'string', Rule::in(ComailMailboxActions::OPS_ACTIONS)],
             'mailbox_ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_BULK],
             'mailbox_ids.*' => ['required', 'string', 'max:320'],
             'password_mode' => ['nullable', 'string', 'in:each,same'],
