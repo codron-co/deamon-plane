@@ -74,6 +74,7 @@ HMAC same as Hostinger configure. Body includes `enabled`, `site_id`, `plane_bas
 
 - `SiteHealthMailNotifier` after agent health (down/up + version)
 - `CoolifyDeploymentSync` when a deployment becomes failed
+- `ComailWelcome` / `SendComailWelcomeMailJob`: setup guide to each new CoMail mailbox, key `comail_welcome` (scope `comail`, default off, global only: not in the per-site override panel, ignored by the CMS). See [comail.md](comail.md) "Welcome mail".
 - `PlatformOpsMailer` — respects Plane user opt-outs (see below); adds unsubscribe footer and `List-Unsubscribe` for preference-based ops keys
 
 ## Ops mail unsubscribe (Plane host)

@@ -109,7 +109,7 @@ class SiteDetailController extends Controller
             'mailCatalog' => $mailBinder->optionsForSite($site),
             'mailboxRequests' => $site->mailboxRequests,
             'cloudflareAccounts' => CloudflareAccounts::enabled(),
-            'platformMailDefinitions' => PlatformNotificationCatalog::definitions(),
+            'platformMailDefinitions' => PlatformNotificationCatalog::siteDefinitions(),
             'platformMailNotifications' => $platformMail->notificationsFor($site),
         ]);
     }

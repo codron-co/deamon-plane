@@ -318,6 +318,7 @@ class FakeMailcow
                 $this->addMailbox($address, (int) $body['quota']);
                 $this->mailboxes[$address]['name'] = $body['name'] ?? $body['local_part'];
                 $this->passwords[$address] = (string) $body['password'];
+                $this->mailboxes[$address]['attributes']['force_pw_update'] = (string) ($body['force_pw_update'] ?? '0');
 
                 return [$this->success('mailbox_added', $address)];
             case '/edit/mailbox':

@@ -29,6 +29,9 @@ final class PlatformNotificationCatalog
 
     public const DEPLOY_FAILED = 'deploy_failed';
 
+    /** Global only (Plane sends it); not a per-site override, ignored by the CMS. */
+    public const COMAIL_WELCOME = 'comail_welcome';
+
     /**
      * @return array<string, array{label: string, description: string, default: bool, scope: string}>
      */
@@ -101,7 +104,23 @@ final class PlatformNotificationCatalog
                 'default' => true,
                 'scope' => 'plane',
             ],
+            self::COMAIL_WELCOME => [
+                'label' => 'CoMail welcome mail',
+                'description' => 'Setup guide (webmail, iPhone, Android, Outlook) to every new CoMail mailbox. Not sent for H-Posta migrations.',
+                'default' => false,
+                'scope' => 'comail',
+            ],
         ];
+    }
+
+    /**
+     * Definitions a site may override (per-site panel); global-only keys are left out.
+     *
+     * @return array<string, array{label: string, description: string, default: bool, scope: string}>
+     */
+    public static function siteDefinitions(): array
+    {
+        return array_filter(self::definitions(), static fn (array $definition): bool => $definition['scope'] !== 'comail');
     }
 
     /**

@@ -110,6 +110,23 @@ final class PlatformOpsMailer
         });
     }
 
+    /**
+     * Points the `platform_ops` mailer at the stored SMTP login (for mails built
+     * elsewhere, such as the CoMail welcome mail).
+     */
+    public function useRuntimeMailer(PlatformMailSetting $settings): void
+    {
+        $this->applyRuntimeMailer($settings);
+    }
+
+    /**
+     * The exception message with the SMTP password removed (not logged here).
+     */
+    public function redact(Throwable $exception): string
+    {
+        return $this->redactTransportExceptionMessage($this->resolver->settings(), $exception);
+    }
+
     public function safeError(Throwable $exception): string
     {
         $message = $this->redactTransportExceptionMessage($this->resolver->settings(), $exception);

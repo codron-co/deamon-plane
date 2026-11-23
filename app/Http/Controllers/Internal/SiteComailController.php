@@ -18,6 +18,7 @@ use App\Services\Comail\ComailMailboxActions;
 use App\Services\Comail\ComailSiteConfigurer;
 use App\Services\Comail\ComailWebmailHost;
 use App\Services\Comail\ComailWebmailSso;
+use App\Services\Comail\ComailWelcome;
 use App\Services\Comail\MailcowClient;
 use App\Services\Comail\MailcowException;
 use App\Services\Hostinger\HostingerMailClient;
@@ -213,7 +214,10 @@ class SiteComailController extends Controller
                 'name' => ['nullable', 'string', 'max:255'],
                 'password' => ['required', 'string', 'min:6', 'max:128'],
                 'quota_mb' => ['nullable', 'integer', 'min:1'],
+                'force_password_change' => ['sometimes', 'boolean'],
+                'send_welcome' => ['sometimes', 'boolean'],
             ]);
+            $forceChange = filter_var($data['force_password_change'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
             if (! $directory->ownsDomain($data['domain'])) {
                 throw ComailException::domainNotOwned();
@@ -236,12 +240,17 @@ class SiteComailController extends Controller
                 'password' => $data['password'],
                 'password2' => $data['password'],
                 'active' => 1,
-                'force_pw_update' => 0,
+                'force_pw_update' => $forceChange ? 1 : 0,
                 'tls_enforce_in' => 0,
                 'tls_enforce_out' => 0,
             ]);
 
-            $this->audit($site, $request, 'comail.mailbox_created', ['address' => $address, 'quota_mb' => $quota]);
+            // Setup guide to the new mailbox (queued, off unless switched on; never the password).
+            // H-Posta migrations create mailboxes elsewhere and send nothing: those users already had mail.
+            $welcome = filter_var($data['send_welcome'] ?? true, FILTER_VALIDATE_BOOLEAN)
+                && app(ComailWelcome::class)->queue($address, $name !== '' ? $name : null, $forceChange);
+
+            $this->audit($site, $request, 'comail.mailbox_created', ['address' => $address, 'quota_mb' => $quota, 'welcome_mail' => $welcome]);
 
             $row = $directory->client->mailbox($address) ?? [
                 'username' => $address,

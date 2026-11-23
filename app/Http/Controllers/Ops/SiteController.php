@@ -933,8 +933,9 @@ class SiteController extends Controller
         $input = is_array($validated['notifications'] ?? null) ? $validated['notifications'] : [];
         $overrides = [];
 
+        $siteKeys = PlatformNotificationCatalog::siteDefinitions();
         foreach ($defaults as $key => $defaultRow) {
-            if (! array_key_exists($key, $input) || ! is_array($input[$key])) {
+            if (! array_key_exists($key, $siteKeys) || ! array_key_exists($key, $input) || ! is_array($input[$key])) {
                 continue;
             }
             $row = $input[$key];
