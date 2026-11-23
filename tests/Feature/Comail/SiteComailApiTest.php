@@ -219,11 +219,7 @@ class SiteComailApiTest extends TestCase
         $this->signed('POST', '/mailboxes', $site, ['local_part' => 'x', 'domain' => 'acme.test', 'password' => 'short'])
             ->assertStatus(422)
             ->assertJsonPath('error', 'validation_failed')
-            ->assertJsonPath('message', 'Parola en az 8 karakter olmalı.');
-
-        $this->signed('POST', '/mailboxes', $site, ['local_part' => 'x', 'domain' => 'acme.test', 'password' => 'onlyletters'])
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'Parola en az bir harf ve bir rakam içermeli.');
+            ->assertJsonPath('message', 'Parola en az 6 karakter olmalı.');
 
         $this->signed('POST', '/mailboxes', $site, ['local_part' => 'x', 'domain' => 'foreign.test', 'password' => self::PASSWORD])
             ->assertStatus(422)
@@ -241,6 +237,32 @@ class SiteComailApiTest extends TestCase
         $this->signed('POST', '/mailboxes', $site, ['local_part' => 'y', 'domain' => 'acme.test', 'password' => self::PASSWORD])
             ->assertStatus(422)
             ->assertJsonPath('error', 'limit_storage');
+    }
+
+    public function test_mailbox_password_has_only_a_length_rule(): void
+    {
+        $site = $this->comailSite();
+        $this->comailDomain($site);
+        $package = \App\Models\MailPackage::query()->where('slug', 'starter')->firstOrFail();
+        $site->forceFill(['mail_package_id' => $package->id])->save();
+
+        // Five characters is below the floor of 6 (mailcow's own minimum).
+        $this->signed('POST', '/mailboxes', $site, ['local_part' => 'kisa', 'domain' => 'acme.test', 'password' => 'abcde'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Parola en az 6 karakter olmalı.');
+        $this->assertArrayNotHasKey('kisa@acme.test', $this->mailcow->mailboxes);
+
+        // No complexity rule: six lower-case letters are fine.
+        $this->signed('POST', '/mailboxes', $site, ['local_part' => 'harf', 'domain' => 'acme.test', 'password' => 'abcdef'])
+            ->assertCreated();
+        $this->assertArrayHasKey('harf@acme.test', $this->mailcow->mailboxes);
+
+        $this->signed('PATCH', '/mailboxes/harf@acme.test', $site, ['password' => 'abcde'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Parola en az 6 karakter olmalı.');
+
+        $this->signed('PATCH', '/mailboxes/harf@acme.test', $site, ['password' => 'qwerty'])->assertOk();
+        $this->assertSame('qwerty', $this->mailcow->passwords['harf@acme.test']);
     }
 
     public function test_mailboxes_of_another_site_are_not_found(): void

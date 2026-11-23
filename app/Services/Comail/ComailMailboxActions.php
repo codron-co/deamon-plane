@@ -30,19 +30,17 @@ class ComailMailboxActions
 
     /**
      * Turkish reason the password is refused, null when it is fine (same rule
-     * as a single mailbox: 8-128 characters, a letter and a digit).
+     * as a single mailbox: 6-128 characters, no complexity requirement; 6 is
+     * mailcow's own minimum).
      */
     public static function passwordProblem(string $password): ?string
     {
         $length = mb_strlen($password);
-        if ($length < 8) {
-            return 'Parola en az 8 karakter olmalı.';
+        if ($length < 6) {
+            return 'Parola en az 6 karakter olmalı.';
         }
         if ($length > 128) {
             return 'Parola en fazla 128 karakter olabilir.';
-        }
-        if (preg_match('/\pL/u', $password) !== 1 || preg_match('/\d/', $password) !== 1) {
-            return 'Parola en az bir harf ve bir rakam içermeli.';
         }
 
         return null;

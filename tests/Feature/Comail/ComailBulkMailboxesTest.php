@@ -112,12 +112,28 @@ class ComailBulkMailboxesTest extends TestCase
             'action' => 'password',
             'passwords' => [
                 ['address' => 'info@acme.test', 'password' => 'Saglam-Parola-1'],
-                ['address' => 'satis@acme.test', 'password' => 'sadeceharf'],
+                ['address' => 'satis@acme.test', 'password' => 'kisa5'],
             ],
         ])->assertStatus(422)->assertJsonPath('error', 'validation_failed');
 
         $this->assertArrayNotHasKey('info@acme.test', $this->mailcow->passwords);
         $this->assertSame([], $this->mailcow->paths());
+    }
+
+    public function test_bulk_password_has_no_complexity_rule(): void
+    {
+        $this->signed('POST', '/mailboxes/bulk', $this->site, [
+            'action' => 'password',
+            'passwords' => [
+                ['address' => 'info@acme.test', 'password' => 'abcdef'],
+                ['address' => 'satis@acme.test', 'password' => '123456'],
+            ],
+        ])->assertOk()->assertJsonPath('results.0.ok', true)->assertJsonPath('results.1.ok', true);
+
+        $this->assertSame('abcdef', $this->mailcow->passwords['info@acme.test']);
+        $this->assertSame('123456', $this->mailcow->passwords['satis@acme.test']);
+        $this->assertNull(ComailMailboxActions::passwordProblem('abcdef'));
+        $this->assertSame('Parola en az 6 karakter olmalı.', ComailMailboxActions::passwordProblem('abcde'));
     }
 
     public function test_bulk_delete_and_its_limits(): void

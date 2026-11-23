@@ -83,7 +83,7 @@ Success bodies carry `"ok": true`. A single object (mailbox, alias, migration) i
 | POST | `/domains/{domain}/dns` | – | apply, same shape |
 | POST | `/domains/{domain}/activate` | – | activate, same shape |
 | GET | `/mailboxes` | – | `{mailboxes[{address,local_part,domain,name,quota_mb,used_bytes,percent,messages,active,must_change_password,created_at,last_login_at}]}` (ISO 8601 dates) |
-| POST | `/mailboxes` | `{local_part,domain,name?,password,quota_mb?}` | mailbox, 201. Password 8–128 chars with a letter and a digit. |
+| POST | `/mailboxes` | `{local_part,domain,name?,password,quota_mb?}` | mailbox, 201. Password 6–128 chars (mailcow's own minimum), no complexity rule. The same 6–128 rule applies to `PATCH` and bulk `password`. |
 | PATCH | `/mailboxes/{address}` | `{name?,password?,quota_mb?,active?,force_password_change?}` | mailbox. `force_password_change` sets mailcow `force_pw_update`; left out, the flag is untouched. |
 | POST | `/mailboxes/bulk` | `{action: activate\|deactivate\|delete, addresses[]}` or `{action: password, passwords[{address,password}], force_password_change?}` (max 100) | `{results[{address,ok,error?,message?}]}`. A bad request (weak password, unknown action) changes nothing; after that each address is done alone and a foreign or missing one is `not_found`. |
 | DELETE | `/mailboxes/{address}` | – | `{ok:true}` |

@@ -211,10 +211,9 @@ class SiteComailController extends Controller
                 'local_part' => ['required', 'string', 'max:64', 'regex:'.self::LOCAL_PART],
                 'domain' => ['required', 'string', 'max:253'],
                 'name' => ['nullable', 'string', 'max:255'],
-                'password' => ['required', 'string', 'min:8', 'max:128'],
+                'password' => ['required', 'string', 'min:6', 'max:128'],
                 'quota_mb' => ['nullable', 'integer', 'min:1'],
             ]);
-            $this->assertPasswordStrength((string) $data['password']);
 
             if (! $directory->ownsDomain($data['domain'])) {
                 throw ComailException::domainNotOwned();
@@ -263,7 +262,7 @@ class SiteComailController extends Controller
             $mailbox = $this->ownedMailbox($directory, $address);
             $data = $this->validated($request, [
                 'name' => ['sometimes', 'nullable', 'string', 'max:255'],
-                'password' => ['sometimes', 'string', 'min:8', 'max:128'],
+                'password' => ['sometimes', 'string', 'min:6', 'max:128'],
                 'quota_mb' => ['sometimes', 'integer', 'min:1'],
                 'active' => ['sometimes', 'boolean'],
                 'force_password_change' => ['sometimes', 'boolean'],
@@ -276,7 +275,6 @@ class SiteComailController extends Controller
                 $changed[] = 'name';
             }
             if (array_key_exists('password', $data)) {
-                $this->assertPasswordStrength((string) $data['password']);
                 $attributes['password'] = $data['password'];
                 $attributes['password2'] = $data['password'];
                 $changed[] = 'password';
@@ -1019,13 +1017,6 @@ class SiteComailController extends Controller
             'array' => ':attribute en fazla :max öğe içerebilir.',
         ],
     ];
-
-    private function assertPasswordStrength(string $password): void
-    {
-        if (preg_match('/\pL/u', $password) !== 1 || preg_match('/\d/', $password) !== 1) {
-            throw ComailException::validation('Parola en az bir harf ve bir rakam içermeli.');
-        }
-    }
 
     private function ownedDomain(Site $site, string $domain): SiteComailDomain
     {
