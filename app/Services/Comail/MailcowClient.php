@@ -396,6 +396,20 @@ class MailcowClient
         return $this->write('/delete/filter', [(string) $id]);
     }
 
+    // ── Alias domains ───────────────────────────────────────────────────
+
+    /**
+     * Every alias domain on the server: {alias_domain, target_domain, active, ...}.
+     * A mailbox may send as the same local part on an active alias domain of its
+     * domain (mailcow sender ACL, postfix mysql_virtual_sender_acl.cf).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function aliasDomains(): array
+    {
+        return $this->rows($this->get('/get/alias-domain/all'));
+    }
+
     // ── App passwords (webmail SSO) ─────────────────────────────────────
 
     /**

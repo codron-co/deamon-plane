@@ -520,6 +520,7 @@ class SiteComailController extends Controller
         return $this->run($request, function (Site $site, ComailDirectory $directory, MailServer $server) use ($request, $credentials): JsonResponse {
             $data = $this->validated($request, [
                 'address' => ['required', 'string', 'max:320'],
+                'from' => ['nullable', 'string', 'max:320'],
             ]);
             $mailbox = $this->ownedMailbox($directory, strtolower(trim((string) $data['address'])));
             if (! ComailDirectory::isActive($mailbox)) {
@@ -527,6 +528,14 @@ class SiteComailController extends Controller
             }
 
             $username = strtolower((string) $mailbox['username']);
+            $sendAs = ComailSmtpCredentials::sendAs($username, $directory->client->aliasDomains());
+            $from = strtolower(trim((string) ($data['from'] ?? '')));
+            if ($from === '') {
+                $from = $username;
+            } elseif (! in_array($from, $sendAs, true)) {
+                throw new ComailException('sender_not_allowed', 'Bu kutu bu adresle gönderemez.');
+            }
+
             $smtp = $credentials->issue($site, $server, $directory->client, $username);
             $this->audit($site, $request, 'comail.smtp_password_created', [
                 'address' => $username,
@@ -540,7 +549,39 @@ class SiteComailController extends Controller
                 'encryption' => $smtp['encryption'],
                 'username' => $smtp['username'],
                 'password' => $smtp['password'],
+                'from' => $from,
+                'send_as' => $sendAs,
             ], 201, 'smtp')->header('Cache-Control', 'no-store');
+        });
+    }
+
+    /**
+     * `GET /smtp-senders`: the site's active mailboxes (own and share group)
+     * with the addresses each may send as (`send_as`, alias domains included).
+     * No password is created here.
+     */
+    public function smtpSenders(Request $request): JsonResponse
+    {
+        return $this->run($request, function (Site $site, ComailDirectory $directory): JsonResponse {
+            $aliasDomains = $directory->client->aliasDomains();
+            $rows = [];
+            foreach ($directory->mailboxes() as $mailbox) {
+                if (! ComailDirectory::isActive($mailbox)) {
+                    continue;
+                }
+                $address = strtolower((string) ($mailbox['username'] ?? ''));
+                if ($address === '') {
+                    continue;
+                }
+                $rows[$address] = [
+                    'address' => $address,
+                    'name' => (string) ($mailbox['name'] ?? ''),
+                    'send_as' => ComailSmtpCredentials::sendAs($address, $aliasDomains),
+                ];
+            }
+            ksort($rows);
+
+            return $this->ok(['senders' => array_values($rows)]);
         });
     }
 
@@ -1088,6 +1129,7 @@ class SiteComailController extends Controller
         'passwords.*.address' => 'Adres',
         'passwords.*.password' => 'Parola',
         'force_password_change' => 'İlk girişte şifre değiştirme',
+        'from' => 'Gönderen adresi',
     ];
 
     private const MESSAGES = [

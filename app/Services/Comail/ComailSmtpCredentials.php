@@ -14,6 +14,11 @@ use App\Models\Site;
  * site's previous password (rotation) and revoking removes only it; the
  * mailbox password, the one-click webmail password and other sites' SMTP
  * passwords stay. The password is never logged, audited or cached.
+ *
+ * Sender addresses (`send_as`): the mailbox itself, then the same local part
+ * on every active alias domain of the mailbox's domain (b2b@beyazogluotomotiv.com
+ * → b2b@beyazoglu.tr). mailcow's sender ACL lets the logged-in mailbox send as
+ * those (postfix `mysql_virtual_sender_acl.cf`, last UNION on `alias_domain`).
  */
 class ComailSmtpCredentials
 {
@@ -24,6 +29,38 @@ class ComailSmtpCredentials
     public const ENCRYPTION = 'ssl';
 
     private const PROTOCOLS = ['smtp_access'];
+
+    /**
+     * The mailbox address first, then local@alias for each active alias domain
+     * whose target is the mailbox's domain (sorted).
+     *
+     * @param  list<array<string, mixed>>  $aliasDomains  MailcowClient::aliasDomains()
+     * @return list<string>
+     */
+    public static function sendAs(string $address, array $aliasDomains): array
+    {
+        $address = strtolower(trim($address));
+        $at = strrpos($address, '@');
+        if ($at === false) {
+            return [];
+        }
+        $local = substr($address, 0, $at);
+        $domain = substr($address, $at + 1);
+
+        $extra = [];
+        foreach ($aliasDomains as $row) {
+            $alias = strtolower(trim((string) ($row['alias_domain'] ?? '')));
+            $target = strtolower(trim((string) ($row['target_domain'] ?? '')));
+            $active = (int) ($row['active_int'] ?? $row['active'] ?? 0) === 1;
+            if ($active && $alias !== '' && $alias !== $domain && $target === $domain) {
+                $extra[] = $local.'@'.$alias;
+            }
+        }
+        $extra = array_values(array_unique($extra));
+        sort($extra);
+
+        return array_merge([$address], $extra);
+    }
 
     public static function appName(Site $site): string
     {

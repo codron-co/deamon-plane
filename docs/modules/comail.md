@@ -224,8 +224,11 @@ The CMS mail settings can send through an existing CoMail mailbox without anyone
 
 | Method | Path | Body | Answer |
 |---|---|---|---|
-| POST | `/smtp-credentials` | `{address}` | `201 {ok, host, port: 465, encryption: "ssl", username, password, smtp: {same}}`, `Cache-Control: no-store` |
+| GET | `/smtp-senders` | none | `{senders: [{address, name, send_as: [..]}]}` (active mailboxes, own + share group) |
+| POST | `/smtp-credentials` | `{address, from?}` | `201 {ok, host, port: 465, encryption: "ssl", username, password, from, send_as, smtp: {same}}`, `Cache-Control: no-store` |
 | DELETE | `/smtp-credentials/{address}` | none | `200 {ok, revoked: n}` |
+
+- `send_as` = the mailbox address, then the same local part on every **active mailcow alias domain** of the mailbox's domain (`get/alias-domain/all`; e.g. `b2b@beyazogluotomotiv.com` → `b2b@beyazoglu.tr`, `b2b@beyazoglu.com.tr`). mailcow's sender ACL allows exactly this (postfix `mysql_virtual_sender_acl.cf`: `mailbox.username = CONCAT('%u','@',alias_domain.target_domain)` with an active alias domain). `from` (optional, default the mailbox) must be one of them, else `422 sender_not_allowed` before any password is made. SMTP login stays the mailbox (`username`); `from` is the header/envelope sender the CMS uses. Alias domains are mailcow objects only (Plane has no record of them); DKIM keys exist per alias domain in mailcow.
 
 - Same auth as every site call (`EnsureSiteMailSignature`, `throttle:site-comail`). The mailbox must be on one of the site's active CoMail domains or a share-group domain (`ComailDirectory(shared: true)`); otherwise `404 not_found` and `comail.access_denied`. An inactive mailbox answers `422 mailbox_inactive`.
 - `ComailSmtpCredentials::issue()` deletes this site's previous SMTP app passwords on the mailbox (same `app_name`), then creates one with `protocols: ["smtp_access"]` and a 32-char alphanumeric password. `app_name` = `<site primary domain> site SMTP (Deamon)` (slug if the site has no primary domain). The mailbox password, the one-click webmail passwords and other sites' SMTP passwords on the same mailbox are untouched.

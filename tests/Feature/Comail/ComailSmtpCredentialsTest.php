@@ -64,7 +64,9 @@ class ComailSmtpCredentialsTest extends TestCase
             ->assertJsonPath('smtp.encryption', 'ssl')
             ->assertJsonPath('smtp.username', 'b2b@acme.test')
             ->assertJsonPath('host', 'mail.example.test')
-            ->assertJsonPath('username', 'b2b@acme.test');
+            ->assertJsonPath('username', 'b2b@acme.test')
+            ->assertJsonPath('smtp.from', 'b2b@acme.test')
+            ->assertJsonPath('smtp.send_as', ['b2b@acme.test']);
 
         $password = (string) $response->json('smtp.password');
         $this->assertMatchesRegularExpression('/\A[A-Za-z0-9]{32}\z/', $password);
@@ -166,6 +168,62 @@ class ComailSmtpCredentialsTest extends TestCase
 
         $this->assertSame(self::APP_NAME, array_values($this->mailcow->appPasswords)[0]['name']);
         $this->assertSame((string) $sibling->id, AuditLog::query()->where('action', 'comail.smtp_password_created')->sole()->after['owner_site_id']);
+    }
+
+    public function test_alias_domain_addresses_can_be_the_sender(): void
+    {
+        $this->mailcow->aliasDomains = [
+            ['alias_domain' => 'beyazoglu.tr', 'target_domain' => 'acme.test', 'active' => 1],
+            ['alias_domain' => 'beyazoglu.com.tr', 'target_domain' => 'acme.test', 'active' => '1'],
+            ['alias_domain' => 'kapali.test', 'target_domain' => 'acme.test', 'active' => 0],
+            ['alias_domain' => 'baska.test', 'target_domain' => 'other.test', 'active' => 1],
+        ];
+
+        $response = $this->signed('POST', '/smtp-credentials', $this->site, ['address' => 'b2b@acme.test', 'from' => 'B2B@Beyazoglu.tr'])
+            ->assertCreated()
+            ->assertJsonPath('smtp.username', 'b2b@acme.test')
+            ->assertJsonPath('smtp.from', 'b2b@beyazoglu.tr')
+            ->assertJsonPath('smtp.send_as', ['b2b@acme.test', 'b2b@beyazoglu.com.tr', 'b2b@beyazoglu.tr']);
+
+        $this->assertCount(1, $this->mailcow->appPasswords);
+        $this->assertSecretNowhere((string) $response->json('smtp.password'));
+
+        $this->signed('GET', '/smtp-senders', $this->site)
+            ->assertOk()
+            ->assertJsonPath('senders.0.address', 'b2b@acme.test')
+            ->assertJsonPath('senders.0.send_as', ['b2b@acme.test', 'b2b@beyazoglu.com.tr', 'b2b@beyazoglu.tr']);
+    }
+
+    public function test_a_sender_outside_the_mailbox_is_refused_before_any_password_is_made(): void
+    {
+        $this->mailcow->aliasDomains = [['alias_domain' => 'kapali.test', 'target_domain' => 'acme.test', 'active' => 0]];
+
+        foreach (['info@acme.test', 'b2b@kapali.test', 'b2b@other.test'] as $from) {
+            $this->signed('POST', '/smtp-credentials', $this->site, ['address' => 'b2b@acme.test', 'from' => $from])
+                ->assertStatus(422)
+                ->assertJsonPath('error', 'sender_not_allowed');
+        }
+
+        $this->assertSame([], $this->mailcow->appPasswords);
+        $this->assertSame([], $this->mailcow->paths('POST'));
+    }
+
+    public function test_senders_list_only_the_sites_active_mailboxes(): void
+    {
+        $this->mailcow->addMailbox('info@acme.test');
+        $this->mailcow->addMailbox('pasif@acme.test');
+        $this->mailcow->mailboxes['pasif@acme.test']['active'] = 0;
+        $this->mailcow->mailboxes['pasif@acme.test']['active_int'] = 0;
+        $other = $this->comailSite('other.test');
+        $this->comailDomain($other, 'other.test');
+        $this->mailcow->addMailbox('info@other.test');
+
+        $response = $this->signed('GET', '/smtp-senders', $this->site)->assertOk();
+
+        $this->assertSame(['b2b@acme.test', 'info@acme.test'], array_column($response->json('senders'), 'address'));
+        $this->assertSame([['info@acme.test']], [$response->json('senders.1.send_as')]);
+        $this->assertSame([], $this->mailcow->appPasswords);
+        $this->signed('GET', '/smtp-senders', $this->site, [], 'wrong-secret')->assertUnauthorized();
     }
 
     public function test_revoke_removes_only_this_sites_password(): void

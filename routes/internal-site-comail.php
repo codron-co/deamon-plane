@@ -39,6 +39,7 @@ Route::middleware(['throttle:site-comail', EnsureSiteMailSignature::class])->gro
     Route::post('/mailboxes/{address}/webmail-login', [SiteComailController::class, 'webmailLogin']);
 
     // Site SMTP from a mailbox: SMTP-only app password (docs/modules/comail.md "Site SMTP").
+    Route::get('/smtp-senders', [SiteComailController::class, 'smtpSenders']);
     Route::post('/smtp-credentials', [SiteComailController::class, 'smtpCredentials']);
     Route::delete('/smtp-credentials/{address}', [SiteComailController::class, 'revokeSmtpCredentials']);
 

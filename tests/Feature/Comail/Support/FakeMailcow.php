@@ -41,6 +41,9 @@ class FakeMailcow
     /** @var array<int, array<string, mixed>> app passwords by id (password kept in `app_passwd` for assertions) */
     public array $appPasswords = [];
 
+    /** @var list<array<string, mixed>> mailcow alias domains {alias_domain, target_domain, active} */
+    public array $aliasDomains = [];
+
     /** @var list<array{method: string, path: string, body: mixed}> */
     public array $calls = [];
 
@@ -201,6 +204,9 @@ class FakeMailcow
         }
         if (preg_match('~^/get/mailbox/(.+)$~', $path, $m)) {
             return $this->mailboxes[urldecode($m[1])] ?? [];
+        }
+        if ($path === '/get/alias-domain/all') {
+            return array_values($this->aliasDomains);
         }
         if ($path === '/get/alias/all') {
             return array_values($this->aliases);
