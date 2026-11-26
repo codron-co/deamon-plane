@@ -218,6 +218,21 @@ Order row: `{id, reference, package{slug,name}, package_slug, package_name, peri
 - Package form: yearly price. A package with orders/subscriptions cannot be deleted. Site CoMail card: subscription status, period end, grace end, link to the site's orders.
 - MCP: `list_mail_orders` (read), `confirm_mail_order` (danger, `confirmed`), `cancel_mail_order` (write).
 
+## Site SMTP from a mailbox (2026-11-26)
+
+The CMS mail settings can send through an existing CoMail mailbox without anyone typing its password ("CoMail kutusu" mode). Plane mints a mailcow **app password** that may only send mail.
+
+| Method | Path | Body | Answer |
+|---|---|---|---|
+| POST | `/smtp-credentials` | `{address}` | `201 {ok, host, port: 465, encryption: "ssl", username, password, smtp: {same}}`, `Cache-Control: no-store` |
+| DELETE | `/smtp-credentials/{address}` | none | `200 {ok, revoked: n}` |
+
+- Same auth as every site call (`EnsureSiteMailSignature`, `throttle:site-comail`). The mailbox must be on one of the site's active CoMail domains or a share-group domain (`ComailDirectory(shared: true)`); otherwise `404 not_found` and `comail.access_denied`. An inactive mailbox answers `422 mailbox_inactive`.
+- `ComailSmtpCredentials::issue()` deletes this site's previous SMTP app passwords on the mailbox (same `app_name`), then creates one with `protocols: ["smtp_access"]` and a 32-char alphanumeric password. `app_name` = `<site primary domain> site SMTP (Deamon)` (slug if the site has no primary domain). The mailbox password, the one-click webmail passwords and other sites' SMTP passwords on the same mailbox are untouched.
+- `host` is the CoMail server's `mail_hostname` (`mail.codron.co`). The password is only in this response: not logged, not audited, not cached. Audits: `comail.smtp_password_created` (`address`, `app_name`, `replaced`) and `comail.smtp_password_revoked` (`address`, `app_name`, `revoked`; only when something was deleted), plus `owner_site_id` on a share-group mailbox.
+- `DELETE` on a mailbox that no longer exists (domain still reachable) answers `revoked: 0`. The CMS calls it when the site switches to another mailbox or back to manual SMTP.
+- If the site's primary domain changes, the next `issue` uses the new name; an app password under the old name stays until removed in the mailcow UI (or the mailbox's app-password list).
+
 ## Shared mail group (Ortak posta grubu)
 
 Sites of one company (first case: `makermach` + `makermak`) can see and manage each other's mailboxes from either CMS admin, one-click webmail login included.
@@ -242,4 +257,4 @@ Sites of one company (first case: `makermach` + `makermak`) can see and manage e
 
 ## Tests
 
-`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta, billing API, checkout, expiry, billing ops, webmail SSO, webmail host, share group, welcome mail) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`, `Support/FakeIyzico`, `Support/FakePaytr`.
+`tests/Feature/Comail/*` (API, DNS, enrollment, ops, H-Posta, billing API, checkout, expiry, billing ops, webmail SSO, webmail host, share group, welcome mail, site SMTP app password) and `tests/Unit/Comail/*`. `Http::fake` only: `Support/FakeMailcow` (stateful mailcow), `Support/FakeCloudflare`, `Support/FakeDnsResolver`, `Support/FakeIyzico`, `Support/FakePaytr`.

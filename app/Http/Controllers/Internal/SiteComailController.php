@@ -16,6 +16,7 @@ use App\Services\Comail\ComailException;
 use App\Services\Comail\ComailLimits;
 use App\Services\Comail\ComailMailboxActions;
 use App\Services\Comail\ComailSiteConfigurer;
+use App\Services\Comail\ComailSmtpCredentials;
 use App\Services\Comail\ComailWebmailHost;
 use App\Services\Comail\ComailWebmailSso;
 use App\Services\Comail\ComailWelcome;
@@ -503,6 +504,71 @@ class SiteComailController extends Controller
             $this->audit($site, $request, 'comail.webmail_login', ['address' => strtolower($username)]);
 
             return $this->ok(['url' => $login['url'], 'expires_in' => $login['expires_in']]);
+        });
+    }
+
+    // ── Site SMTP app password ──────────────────────────────────────────
+
+    /**
+     * `POST /smtp-credentials {address}`: an SMTP-only app password for one
+     * of the site's active mailboxes (own or share group), replacing this
+     * site's previous one on that mailbox. The password is in this response
+     * only: never logged, audited or cached.
+     */
+    public function smtpCredentials(Request $request, ComailSmtpCredentials $credentials): JsonResponse
+    {
+        return $this->run($request, function (Site $site, ComailDirectory $directory, MailServer $server) use ($request, $credentials): JsonResponse {
+            $data = $this->validated($request, [
+                'address' => ['required', 'string', 'max:320'],
+            ]);
+            $mailbox = $this->ownedMailbox($directory, strtolower(trim((string) $data['address'])));
+            if (! ComailDirectory::isActive($mailbox)) {
+                throw new ComailException('mailbox_inactive', 'Bu posta kutusu pasif. Önce E-posta ekranından etkinleştirin.');
+            }
+
+            $username = strtolower((string) $mailbox['username']);
+            $smtp = $credentials->issue($site, $server, $directory->client, $username);
+            $this->audit($site, $request, 'comail.smtp_password_created', [
+                'address' => $username,
+                'app_name' => ComailSmtpCredentials::appName($site),
+                'replaced' => $smtp['replaced'],
+            ]);
+
+            return $this->ok([
+                'host' => $smtp['host'],
+                'port' => $smtp['port'],
+                'encryption' => $smtp['encryption'],
+                'username' => $smtp['username'],
+                'password' => $smtp['password'],
+            ], 201, 'smtp')->header('Cache-Control', 'no-store');
+        });
+    }
+
+    /**
+     * `DELETE /smtp-credentials/{address}`: removes this site's SMTP app
+     * password(s) on the mailbox. A mailbox that no longer exists (on a
+     * domain the site still reaches) answers ok with `revoked: 0`.
+     */
+    public function revokeSmtpCredentials(Request $request, string $address, ComailSmtpCredentials $credentials): JsonResponse
+    {
+        return $this->run($request, function (Site $site, ComailDirectory $directory) use ($request, $address, $credentials): JsonResponse {
+            $address = strtolower(trim(rawurldecode($address)));
+            if (! $directory->ownsAddress($address)) {
+                $this->denied($site, 'mailbox', $address);
+
+                throw ComailException::notFound('Posta kutusu bulunamadı.');
+            }
+
+            $revoked = $directory->mailbox($address) === null ? 0 : $credentials->revoke($site, $directory->client, $address);
+            if ($revoked > 0) {
+                $this->audit($site, $request, 'comail.smtp_password_revoked', [
+                    'address' => $address,
+                    'app_name' => ComailSmtpCredentials::appName($site),
+                    'revoked' => $revoked,
+                ]);
+            }
+
+            return $this->ok(['revoked' => $revoked]);
         });
     }
 
