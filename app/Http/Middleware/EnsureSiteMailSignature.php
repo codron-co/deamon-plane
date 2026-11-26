@@ -32,17 +32,16 @@ class EnsureSiteMailSignature
             return $this->denied();
         }
 
-        if ($this->nonceWasUsed($site, $nonce)) {
-            return $this->denied();
-        }
-
         $body = (string) $request->getContent();
         $secret = (string) $site->agent_secret_encrypted;
         if (! ControlPlaneAgentSignature::matches($secret, $timestamp, $nonce, $body, is_string($signature) ? $signature : null)) {
             return $this->denied();
         }
 
-        $this->rememberNonce($site, $nonce);
+        // Atomic: of two requests with the same nonce only the first one gets in.
+        if (! $this->claimNonce($site, $nonce)) {
+            return $this->denied();
+        }
         $request->attributes->set('mailSite', $site);
 
         return $next($request);
@@ -69,15 +68,11 @@ class EnsureSiteMailSignature
         return preg_match('/\A[A-Za-z0-9._-]+\z/', $nonce) === 1;
     }
 
-    private function nonceWasUsed(Site $site, string $nonce): bool
-    {
-        return Cache::has($this->nonceCacheKey($site, $nonce));
-    }
-
-    private function rememberNonce(Site $site, string $nonce): void
+    private function claimNonce(Site $site, string $nonce): bool
     {
         $ttl = max(30, (int) config('ops.agent.nonce_ttl_seconds', 120));
-        Cache::put($this->nonceCacheKey($site, $nonce), 1, $ttl);
+
+        return Cache::add($this->nonceCacheKey($site, $nonce), 1, $ttl);
     }
 
     private function nonceCacheKey(Site $site, string $nonce): string

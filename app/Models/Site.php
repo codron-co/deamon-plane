@@ -9,6 +9,7 @@ use App\Enums\DeployGate;
 use App\Enums\DeploymentStatus;
 use App\Enums\SiteImportance;
 use App\Enums\SiteStatus;
+use App\Jobs\RevokeComailSmtpPasswordsJob;
 use App\Services\Agent\AgentHealthReason;
 use App\Services\Agent\AgentHealthStatus;
 use App\Services\Agent\ControlPlaneAgentContract;
@@ -183,6 +184,13 @@ class Site extends Model
             if (blank($site->git_repository)) {
                 $site->git_repository = config('ops.deamon.repository')
                     ?: 'https://github.com/codron-co/deamon.git';
+            }
+        });
+
+        // Archive and purge end the site's access to CoMail: its site-SMTP app passwords go.
+        static::deleting(function (Site $site): void {
+            if (! $site->trashed()) {
+                RevokeComailSmtpPasswordsJob::dispatchForSite($site, $site->isForceDeleting() ? 'site_purged' : 'site_archived');
             }
         });
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\Comail;
 
+use App\Jobs\RevokeComailSmtpPasswordsJob;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
@@ -55,6 +56,15 @@ class ComailShareGroup
         $group = $site->comail_share_group;
         if ($group === null || $group === '') {
             return;
+        }
+
+        // Leaving ends access both ways: the site's SMTP passwords on the group's
+        // mailboxes, and the other members' on the site's mailboxes, are revoked.
+        $siblings = ComailDirectory::groupSiblings($site);
+        $ownDomains = RevokeComailSmtpPasswordsJob::activeDomains([$site]);
+        RevokeComailSmtpPasswordsJob::dispatchFor($site, RevokeComailSmtpPasswordsJob::activeDomains($siblings), 'share_group_left');
+        foreach ($siblings as $sibling) {
+            RevokeComailSmtpPasswordsJob::dispatchFor($sibling, $ownDomains, 'share_group_left');
         }
 
         $this->assign($site, null, $actor, $source, $ip);

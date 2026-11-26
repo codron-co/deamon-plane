@@ -510,10 +510,11 @@ class SiteComailController extends Controller
     // ── Site SMTP app password ──────────────────────────────────────────
 
     /**
-     * `POST /smtp-credentials {address}`: an SMTP-only app password for one
-     * of the site's active mailboxes (own or share group), replacing this
-     * site's previous one on that mailbox. The password is in this response
-     * only: never logged, audited or cached.
+     * `POST /smtp-credentials {address, from?}`: a NEW SMTP-only app password
+     * (unique name) for one of the site's active mailboxes (own or share
+     * group). Older ones stay: after storing this one the CMS calls
+     * `/smtp-credentials/revoke` with `keep` = this `app_name`. The password is
+     * in this response only: never logged, audited or cached.
      */
     public function smtpCredentials(Request $request, ComailSmtpCredentials $credentials): JsonResponse
     {
@@ -539,8 +540,7 @@ class SiteComailController extends Controller
             $smtp = $credentials->issue($site, $server, $directory->client, $username);
             $this->audit($site, $request, 'comail.smtp_password_created', [
                 'address' => $username,
-                'app_name' => ComailSmtpCredentials::appName($site),
-                'replaced' => $smtp['replaced'],
+                'app_name' => $smtp['app_name'],
             ]);
 
             return $this->ok([
@@ -549,9 +549,10 @@ class SiteComailController extends Controller
                 'encryption' => $smtp['encryption'],
                 'username' => $smtp['username'],
                 'password' => $smtp['password'],
+                'app_name' => $smtp['app_name'],
                 'from' => $from,
                 'send_as' => $sendAs,
-            ], 201, 'smtp')->header('Cache-Control', 'no-store');
+            ], 201)->header('Cache-Control', 'no-store');
         });
     }
 
@@ -586,26 +587,37 @@ class SiteComailController extends Controller
     }
 
     /**
-     * `DELETE /smtp-credentials/{address}`: removes this site's SMTP app
-     * password(s) on the mailbox. A mailbox that no longer exists (on a
-     * domain the site still reaches) answers ok with `revoked: 0`.
+     * `POST /smtp-credentials/revoke {address, keep?}`: deletes this site's
+     * SMTP app passwords on the mailbox, except the one named `keep` (the
+     * password the CMS has stored). A mailbox that no longer exists (on a
+     * domain the site still reaches) answers `revoked: 0`; a mailbox the site
+     * does not reach answers 404.
      */
-    public function revokeSmtpCredentials(Request $request, string $address, ComailSmtpCredentials $credentials): JsonResponse
+    public function revokeSmtpCredentials(Request $request, ComailSmtpCredentials $credentials): JsonResponse
     {
-        return $this->run($request, function (Site $site, ComailDirectory $directory) use ($request, $address, $credentials): JsonResponse {
-            $address = strtolower(trim(rawurldecode($address)));
+        return $this->run($request, function (Site $site, ComailDirectory $directory) use ($request, $credentials): JsonResponse {
+            $data = $this->validated($request, [
+                'address' => ['required', 'string', 'max:320'],
+                'keep' => ['nullable', 'string', 'max:255'],
+            ]);
+            $address = strtolower(trim((string) $data['address']));
             if (! $directory->ownsAddress($address)) {
                 $this->denied($site, 'mailbox', $address);
 
                 throw ComailException::notFound('Posta kutusu bulunamadı.');
             }
 
-            $revoked = $directory->mailbox($address) === null ? 0 : $credentials->revoke($site, $directory->client, $address);
+            $keep = isset($data['keep']) && $data['keep'] !== '' ? (string) $data['keep'] : null;
+            if ($keep !== null && ! ComailSmtpCredentials::ownedBy($keep, (string) $site->id, ComailSmtpCredentials::legacyName($site))) {
+                throw ComailException::validation('Saklanacak şifre bu siteye ait değil.');
+            }
+
+            $revoked = $directory->mailbox($address) === null ? 0 : $credentials->revoke($site, $directory->client, $address, $keep);
             if ($revoked > 0) {
                 $this->audit($site, $request, 'comail.smtp_password_revoked', [
                     'address' => $address,
-                    'app_name' => ComailSmtpCredentials::appName($site),
                     'revoked' => $revoked,
+                    'kept' => $keep,
                 ]);
             }
 
@@ -1130,6 +1142,7 @@ class SiteComailController extends Controller
         'passwords.*.password' => 'Parola',
         'force_password_change' => 'İlk girişte şifre değiştirme',
         'from' => 'Gönderen adresi',
+        'keep' => 'Saklanacak şifre',
     ];
 
     private const MESSAGES = [

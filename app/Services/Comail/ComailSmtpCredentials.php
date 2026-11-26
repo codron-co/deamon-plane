@@ -9,16 +9,22 @@ use App\Models\Site;
  * Site SMTP from a CoMail mailbox without its password: Plane creates a
  * mailcow app password that may only send (`smtp_access`) and hands it to the
  * site once, in the response of the signed CMS call. The CMS stores it
- * encrypted in its mail settings. Every site has its own app name
- * ("<primary domain> site SMTP (Deamon)"), so issuing again replaces only this
- * site's previous password (rotation) and revoking removes only it; the
- * mailbox password, the one-click webmail password and other sites' SMTP
- * passwords stay. The password is never logged, audited or cached.
+ * encrypted in its mail settings.
+ *
+ * Names: "<primary domain> site SMTP (Deamon) <site id>.<6 random>". The site
+ * id token makes every password traceable to its site even after the primary
+ * domain changes; the random part makes each one unique. Rotation is
+ * "add new → CMS stores it → CMS asks to revoke the rest, keeping the new
+ * name", so a failed or timed-out save never leaves the site on a dead
+ * password. Older names without a token ("<domain> site SMTP (Deamon)") count
+ * as the site's when they equal its legacy name.
  *
  * Sender addresses (`send_as`): the mailbox itself, then the same local part
  * on every active alias domain of the mailbox's domain (b2b@beyazogluotomotiv.com
  * → b2b@beyazoglu.tr). mailcow's sender ACL lets the logged-in mailbox send as
  * those (postfix `mysql_virtual_sender_acl.cf`, last UNION on `alias_domain`).
+ *
+ * The password is never logged, audited or cached.
  */
 class ComailSmtpCredentials
 {
@@ -29,6 +35,9 @@ class ComailSmtpCredentials
     public const ENCRYPTION = 'ssl';
 
     private const PROTOCOLS = ['smtp_access'];
+
+    /** "<anything> site SMTP (Deamon)[ <ULID>.<6>]" */
+    private const NAME_PATTERN = '/ site SMTP \(Deamon\)(?: ([0-9A-HJKMNP-TV-Z]{26})\.[a-z0-9]{6})?\z/i';
 
     /**
      * The mailbox address first, then local@alias for each active alias domain
@@ -62,7 +71,8 @@ class ComailSmtpCredentials
         return array_merge([$address], $extra);
     }
 
-    public static function appName(Site $site): string
+    /** Name without the unique part (also the name used before 2026-11-26). */
+    public static function legacyName(Site $site): string
     {
         $host = strtolower(trim((string) $site->primary_domain));
         if ($host === '') {
@@ -72,18 +82,43 @@ class ComailSmtpCredentials
         return $host.self::NAME_SUFFIX;
     }
 
+    /** A fresh, unique name for a new password of this site. */
+    public static function newName(Site $site): string
+    {
+        return self::legacyName($site).' '.strtoupper((string) $site->id).'.'.substr(bin2hex(random_bytes(4)), 0, 6);
+    }
+
+    /** Is this a Deamon site SMTP password at all (any site)? */
+    public static function isSmtpName(string $name): bool
+    {
+        return preg_match(self::NAME_PATTERN, $name) === 1;
+    }
+
     /**
-     * Replaces this site's previous SMTP app password on the mailbox and returns the new one.
+     * Does the name belong to the site: its id token, or (no token) its legacy name.
+     */
+    public static function ownedBy(string $name, string $siteId, string $legacyName): bool
+    {
+        if (preg_match(self::NAME_PATTERN, $name, $m) !== 1) {
+            return false;
+        }
+
+        return isset($m[1])
+            ? strtoupper($m[1]) === strtoupper($siteId)
+            : $name === $legacyName;
+    }
+
+    /**
+     * Adds a new SMTP app password; the site's older ones stay until revoke().
      *
-     * @return array{host: string, port: int, encryption: string, username: string, password: string, replaced: int}
+     * @return array{host: string, port: int, encryption: string, username: string, password: string, app_name: string}
      */
     public function issue(Site $site, MailServer $server, MailcowClient $client, string $address): array
     {
         $address = strtolower(trim($address));
-        $replaced = $this->revoke($site, $client, $address);
-
+        $name = self::newName($site);
         $password = self::password();
-        $client->addAppPassword($address, self::appName($site), $password, self::PROTOCOLS);
+        $client->addAppPassword($address, $name, $password, self::PROTOCOLS);
 
         return [
             'host' => $server->comailHostname(),
@@ -91,19 +126,46 @@ class ComailSmtpCredentials
             'encryption' => self::ENCRYPTION,
             'username' => $address,
             'password' => $password,
-            'replaced' => $replaced,
+            'app_name' => $name,
         ];
     }
 
     /**
-     * Deletes this site's SMTP app passwords on the mailbox; returns how many.
+     * Deletes the site's SMTP app passwords on the mailbox, except `$keep`; returns how many.
      */
-    public function revoke(Site $site, MailcowClient $client, string $address): int
+    public function revoke(Site $site, MailcowClient $client, string $address, ?string $keep = null): int
     {
-        $name = self::appName($site);
+        return $this->revokeOwned($client, $address, (string) $site->id, self::legacyName($site), $keep);
+    }
+
+    /**
+     * Same for a site that may be gone (share group left, archived, purged).
+     */
+    public function revokeOwned(MailcowClient $client, string $address, string $siteId, string $legacyName, ?string $keep = null): int
+    {
+        return $this->deleteWhere($client, $address, static fn (string $name): bool => $name !== $keep && self::ownedBy($name, $siteId, $legacyName));
+    }
+
+    /**
+     * Deletes Deamon site SMTP passwords on the mailbox that are NOT the site's
+     * (left by a previous owner of the domain); returns how many.
+     */
+    public function revokeForeign(Site $site, MailcowClient $client, string $address): int
+    {
+        $siteId = (string) $site->id;
+        $legacy = self::legacyName($site);
+
+        return $this->deleteWhere($client, $address, static fn (string $name): bool => self::isSmtpName($name) && ! self::ownedBy($name, $siteId, $legacy));
+    }
+
+    /**
+     * @param  callable(string): bool  $match
+     */
+    private function deleteWhere(MailcowClient $client, string $address, callable $match): int
+    {
         $ids = [];
         foreach ($client->appPasswords(strtolower(trim($address))) as $row) {
-            if ((string) ($row['name'] ?? '') === $name && is_numeric($row['id'] ?? null)) {
+            if ($match((string) ($row['name'] ?? '')) && is_numeric($row['id'] ?? null)) {
                 $ids[] = (int) $row['id'];
             }
         }

@@ -7,7 +7,9 @@ use App\Http\Middleware\EnsureSiteMailSignature;
 use Illuminate\Support\Facades\Route;
 
 // CMS → Plane CoMail API, prefix internal/site/v1/comail (docs/modules/comail.md).
-Route::middleware(['throttle:site-comail', EnsureSiteMailSignature::class])->group(function (): void {
+// IP throttle first (cheap, against unsigned junk), then the signature, then the per-site quota
+// keyed by the verified site: an unsigned X-Deamon-Site header cannot use up another site's quota.
+Route::middleware(['throttle:site-comail-ip', EnsureSiteMailSignature::class, 'throttle:site-comail'])->group(function (): void {
     Route::get('/overview', [SiteComailController::class, 'overview']);
 
     // v3: mail security, spam filter and quarantine (CONTRACT-v3-security).
@@ -41,7 +43,7 @@ Route::middleware(['throttle:site-comail', EnsureSiteMailSignature::class])->gro
     // Site SMTP from a mailbox: SMTP-only app password (docs/modules/comail.md "Site SMTP").
     Route::get('/smtp-senders', [SiteComailController::class, 'smtpSenders']);
     Route::post('/smtp-credentials', [SiteComailController::class, 'smtpCredentials']);
-    Route::delete('/smtp-credentials/{address}', [SiteComailController::class, 'revokeSmtpCredentials']);
+    Route::post('/smtp-credentials/revoke', [SiteComailController::class, 'revokeSmtpCredentials']);
 
     Route::get('/aliases', [SiteComailController::class, 'aliases']);
     Route::post('/aliases', [SiteComailController::class, 'storeAlias']);

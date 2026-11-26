@@ -52,8 +52,16 @@ class AppServiceProvider extends ServiceProvider
 
         // CoMail site API: 60/min per site. Every CMS calls from the same Coolify host IP,
         // so an IP key would let one busy admin panel starve the rest.
-        RateLimiter::for('site-comail', static fn (Request $request): Limit => Limit::perMinute(60)
-            ->by('site-comail:'.substr((string) $request->header('X-Deamon-Site', $request->ip()), 0, 64)));
+        // Runs after EnsureSiteMailSignature: keyed by the verified site, never by a raw header.
+        RateLimiter::for('site-comail', static function (Request $request): Limit {
+            $site = $request->attributes->get('mailSite');
+
+            return Limit::perMinute(60)->by('site-comail:'.($site instanceof Site ? (string) $site->id : 'ip:'.$request->ip()));
+        });
+
+        // Before the signature check: a coarse per-IP ceiling (every CMS shares the Coolify host IP).
+        RateLimiter::for('site-comail-ip', static fn (Request $request): Limit => Limit::perMinute((int) config('ops.comail.site_api_ip_per_minute', 1200))
+            ->by('site-comail-ip:'.$request->ip()));
 
         // CoMail webmail SSO redeem (called by the webmail server).
         RateLimiter::for('comail-sso', static fn (Request $request): Limit => Limit::perMinute(30)

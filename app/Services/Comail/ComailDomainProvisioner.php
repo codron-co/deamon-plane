@@ -92,6 +92,7 @@ class ComailDomainProvisioner
             throw ComailException::domainNotOwned();
         }
 
+        $taken = ! $row instanceof SiteComailDomain;
         if (! $row instanceof SiteComailDomain) {
             $row = new SiteComailDomain([
                 'site_id' => $site->id,
@@ -124,6 +125,10 @@ class ComailDomainProvisioner
             } else {
                 $safe = $this->limits->safeDomainAttributes($this->limits->package($site), $client, $domain);
                 $client->editDomain($domain, $safe + ['active' => 1] + self::routingAttributes($relay));
+                if ($taken) {
+                    // The mailcow domain outlived its previous Plane owner: that site's SMTP passwords must not keep sending.
+                    $this->revokeForeignSmtp($site, $client, $domain);
+                }
             }
 
             $dkim = $this->ensureDkim($client, $domain);
@@ -242,6 +247,26 @@ class ComailDomainProvisioner
                 ]);
                 $row->forceFill(['last_error' => mb_substr($exception->getMessage(), 0, 500)])->save();
             }
+        }
+    }
+
+    private function revokeForeignSmtp(Site $site, MailcowClient $client, string $domain): void
+    {
+        $credentials = app(ComailSmtpCredentials::class);
+        try {
+            foreach ($client->mailboxes($domain) as $mailbox) {
+                $address = strtolower((string) ($mailbox['username'] ?? ''));
+                if ($address !== '' && ComailDirectory::domainOf($address) === $domain) {
+                    $credentials->revokeForeign($site, $client, $address);
+                }
+            }
+        } catch (MailcowException $exception) {
+            Log::warning('comail.smtp_revoke_failed', [
+                'site_id' => $site->id,
+                'domain' => $domain,
+                'reason' => 'domain_taken_over',
+                'error' => $exception->providerKey ?? $exception->error,
+            ]);
         }
     }
 
