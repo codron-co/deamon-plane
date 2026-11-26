@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Comail;
 
+use App\Jobs\RevokeComailSmtpPasswordsJob;
 use App\Models\AuditLog;
+use App\Models\CoolifyConnection;
 use App\Models\Site;
 use App\Models\SiteComailDomain;
 use App\Services\Agent\ControlPlaneAgentContract;
@@ -10,8 +12,11 @@ use App\Services\Comail\ComailDomainProvisioner;
 use App\Services\Comail\ComailShareGroup;
 use App\Services\Comail\ComailSmtpCredentials;
 use App\Services\Comail\ComailWebmailSso;
+use App\Services\Comail\MailcowException;
+use App\Services\Sites\SiteLifecycle;
 use App\Support\ControlPlaneAgentSignature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\Feature\Comail\Support\ComailTestHelpers;
 use Tests\TestCase;
@@ -98,7 +103,7 @@ class ComailSmtpCredentialsTest extends TestCase
         // The one-click webmail password and another site's SMTP password on the same mailbox stay.
         $this->mailcow->appPasswords[900] = ['id' => 900, 'name' => ComailWebmailSso::APP_NAME, 'mailbox' => 'b2b@acme.test', 'app_passwd' => 'webmail-one'];
         $this->mailcow->appPasswords[901] = ['id' => 901, 'name' => 'other.test site SMTP (Deamon) 01HX8K3NDEKTSV4RRFFQ69G5FA.abc123', 'mailbox' => 'b2b@acme.test', 'app_passwd' => 'other-site'];
-        // Older name of this site (before unique names) is the site's too.
+        // A name without a site id token is never touched (could be anyone's).
         $this->mailcow->appPasswords[902] = ['id' => 902, 'name' => 'acme.test site SMTP (Deamon)', 'mailbox' => 'b2b@acme.test', 'app_passwd' => 'legacy'];
 
         $first = $this->signed('POST', '/smtp-credentials', $this->site, ['address' => 'b2b@acme.test'])->assertCreated();
@@ -110,17 +115,17 @@ class ComailSmtpCredentialsTest extends TestCase
 
         $this->signed('POST', '/smtp-credentials/revoke', $this->site, ['address' => 'b2b@acme.test', 'keep' => $second->json('app_name')])
             ->assertOk()
-            ->assertJsonPath('revoked', 2);
+            ->assertJsonPath('revoked', 1);
 
         $names = array_column($this->mailcow->appPasswords, 'name');
         $this->assertContains($second->json('app_name'), $names);
         $this->assertNotContains($first->json('app_name'), $names);
-        $this->assertNotContains('acme.test site SMTP (Deamon)', $names);
+        $this->assertContains('acme.test site SMTP (Deamon)', $names);
         $this->assertArrayHasKey(900, $this->mailcow->appPasswords);
         $this->assertArrayHasKey(901, $this->mailcow->appPasswords);
 
         $audit = AuditLog::query()->where('action', 'comail.smtp_password_revoked')->sole();
-        $this->assertSame(['address' => 'b2b@acme.test', 'revoked' => 2, 'kept' => $second->json('app_name')], array_intersect_key($audit->after, array_flip(['address', 'revoked', 'kept'])));
+        $this->assertSame(['address' => 'b2b@acme.test', 'revoked' => 1, 'kept' => $second->json('app_name')], array_intersect_key($audit->after, array_flip(['address', 'revoked', 'kept'])));
     }
 
     public function test_keep_must_be_the_sites_own_password(): void
@@ -283,14 +288,80 @@ class ComailSmtpCredentialsTest extends TestCase
         $this->assertSame(['b2b@acme.test acme', 'info@beyazoglu.test beyazoglu'], $left);
     }
 
-    public function test_archiving_a_site_revokes_its_passwords(): void
+    public function test_archiving_keeps_the_passwords_so_the_site_keeps_sending(): void
     {
         $this->signed('POST', '/smtp-credentials', $this->site, ['address' => 'b2b@acme.test'])->assertCreated();
-        $this->mailcow->appPasswords[900] = ['id' => 900, 'name' => ComailWebmailSso::APP_NAME, 'mailbox' => 'b2b@acme.test', 'app_passwd' => 'webmail-one'];
 
         $this->site->delete();
 
-        $this->assertSame([900], array_keys($this->mailcow->appPasswords));
+        $this->assertCount(1, $this->mailcow->appPasswords);
+        $this->assertNotContains('/delete/app-passwd', $this->mailcow->paths('POST'));
+    }
+
+    public function test_purging_revokes_the_sites_passwords_and_the_groups_on_its_domains(): void
+    {
+        $sibling = $this->comailSite('beyazoglu.test');
+        $this->comailDomain($sibling, 'beyazoglu.test');
+        $this->mailcow->addMailbox('info@beyazoglu.test');
+        app(ComailShareGroup::class)->join([$this->site, $sibling]);
+        $this->site->refresh();
+        $sibling->refresh();
+
+        $this->signed('POST', '/smtp-credentials', $this->site, ['address' => 'info@beyazoglu.test'])->assertCreated();
+        $this->signed('POST', '/smtp-credentials', $sibling, ['address' => 'b2b@acme.test'])->assertCreated();
+        $this->signed('POST', '/smtp-credentials', $sibling, ['address' => 'info@beyazoglu.test'])->assertCreated();
+        $this->mailcow->appPasswords[900] = ['id' => 900, 'name' => ComailWebmailSso::APP_NAME, 'mailbox' => 'b2b@acme.test', 'app_passwd' => 'webmail-one'];
+
+        // Archived first, then purged: the trashed site is not skipped.
+        $this->site->delete();
+        $this->assertCount(4, $this->mailcow->appPasswords);
+        $this->site->forceDelete();
+
+        $left = array_values(array_map(static fn (array $row): string => $row['mailbox'].' '.$row['name'], $this->mailcow->appPasswords));
+        $this->assertCount(2, $left);
+        $this->assertContains('b2b@acme.test '.ComailWebmailSso::APP_NAME, $left);
+        $this->assertStringStartsWith('info@beyazoglu.test beyazoglu.test site SMTP (Deamon) '.strtoupper($sibling->id), collect($left)->first(fn (string $row): bool => str_starts_with($row, 'info@')));
+    }
+
+    public function test_deactivating_revokes_only_the_sites_own_passwords(): void
+    {
+        $connection = CoolifyConnection::factory()->create(['base_url' => 'https://coolify.example', 'api_token' => 'plane-token']);
+        $this->site->forceFill(['coolify_app_uuid' => 'smtp-app-1', 'coolify_connection_id' => $connection->id])->save();
+        Http::fake(['https://coolify.example/api/v1/applications/smtp-app-1/stop' => Http::response(['message' => 'Stopping'], 200)]);
+        $other = $this->comailSite('other.test');
+        $this->comailDomain($other, 'other.test');
+        $this->mailcow->addMailbox('info@other.test');
+        $this->signed('POST', '/smtp-credentials', $this->site, ['address' => 'b2b@acme.test'])->assertCreated();
+        $this->signed('POST', '/smtp-credentials', $other, ['address' => 'info@other.test'])->assertCreated();
+
+        app(SiteLifecycle::class)->deactivate($this->site->fresh(), null, null);
+
+        $this->assertSame(['info@other.test'], array_values(array_column($this->mailcow->appPasswords, 'mailbox')));
+    }
+
+    public function test_the_revoke_job_retries_failed_domains_and_reports_when_it_gives_up(): void
+    {
+        $this->signed('POST', '/smtp-credentials', $this->site, ['address' => 'b2b@acme.test'])->assertCreated();
+        $this->mailcow->httpStatus = 503;
+        $job = new RevokeComailSmtpPasswordsJob((string) $this->site->id, ['acme.test'], 'site_purged');
+
+        $this->assertSame([60, 300, 900], $job->backoff());
+        $this->assertSame(4, $job->tries);
+        try {
+            $job->handle(app(ComailSmtpCredentials::class));
+            $this->fail('the job must throw so the queue retries it');
+        } catch (MailcowException $exception) {
+            $job->failed($exception);
+        }
+
+        $audit = AuditLog::query()->where('action', 'comail.smtp_revoke_failed')->sole();
+        $this->assertSame((string) $this->site->id, (string) $audit->subject_id);
+        $this->assertSame(['acme.test'], $audit->after['domains']);
+
+        // mailcow is back: the next try deletes and does not throw.
+        $this->mailcow->httpStatus = null;
+        $job->handle(app(ComailSmtpCredentials::class));
+        $this->assertSame([], $this->mailcow->appPasswords);
     }
 
     public function test_a_domain_taken_over_by_another_site_loses_the_previous_owners_passwords(): void
@@ -307,7 +378,8 @@ class ComailSmtpCredentialsTest extends TestCase
         app(ComailDomainProvisioner::class)->ensure($newOwner, 'old.test', false);
 
         $this->assertSame(SiteComailDomain::STATUS_ACTIVE, $newOwner->comailDomains()->sole()->status);
-        $this->assertSame([900], array_keys($this->mailcow->appPasswords));
+        // Only names with a site id token are another site's for sure; 902 stays.
+        $this->assertSame([900, 902], array_keys($this->mailcow->appPasswords));
     }
 
     public function test_mailcow_failure_returns_a_turkish_error_without_the_password(): void
@@ -372,15 +444,17 @@ class ComailSmtpCredentialsTest extends TestCase
     {
         $site = new Site(['slug' => 'beyazoglu', 'primary_domain' => null]);
         $site->id = '01HX8K3NDEKTSV4RRFFQ69G5FA';
-        $this->assertSame('beyazoglu site SMTP (Deamon)', ComailSmtpCredentials::legacyName($site));
+        $this->assertSame('beyazoglu site SMTP (Deamon)', ComailSmtpCredentials::baseName($site));
         $name = ComailSmtpCredentials::newName($site);
         $this->assertNotSame($name, ComailSmtpCredentials::newName($site));
-        $this->assertTrue(ComailSmtpCredentials::ownedBy($name, $site->id, 'whatever'));
+        $this->assertTrue(ComailSmtpCredentials::ownedBy($name, $site->id));
         // A domain change keeps the owner (id token).
-        $this->assertTrue(ComailSmtpCredentials::ownedBy('eski.test site SMTP (Deamon) 01HX8K3NDEKTSV4RRFFQ69G5FA.a1b2c3', $site->id, 'yeni.test site SMTP (Deamon)'));
-        $this->assertFalse(ComailSmtpCredentials::ownedBy('x site SMTP (Deamon) 01HX8K3NDEKTSV4RRFFQ69G5FB.a1b2c3', $site->id, 'x site SMTP (Deamon)'));
-        $this->assertFalse(ComailSmtpCredentials::ownedBy(ComailWebmailSso::APP_NAME, $site->id, 'x'));
-        $this->assertTrue(ComailSmtpCredentials::ownedBy('beyazoglu site SMTP (Deamon)', $site->id, 'beyazoglu site SMTP (Deamon)'));
+        $this->assertTrue(ComailSmtpCredentials::ownedBy('eski.test site SMTP (Deamon) 01HX8K3NDEKTSV4RRFFQ69G5FA.a1b2c3', $site->id));
+        $this->assertFalse(ComailSmtpCredentials::ownedBy('x site SMTP (Deamon) 01HX8K3NDEKTSV4RRFFQ69G5FB.a1b2c3', $site->id));
+        $this->assertFalse(ComailSmtpCredentials::ownedBy(ComailWebmailSso::APP_NAME, $site->id));
+        // No token: nobody's.
+        $this->assertFalse(ComailSmtpCredentials::ownedBy('beyazoglu site SMTP (Deamon)', $site->id));
+        $this->assertFalse(ComailSmtpCredentials::isSmtpName('beyazoglu site SMTP (Deamon)'));
     }
 
     private function assertSecretNowhere(string $secret): void

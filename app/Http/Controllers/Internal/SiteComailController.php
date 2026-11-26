@@ -608,7 +608,7 @@ class SiteComailController extends Controller
             }
 
             $keep = isset($data['keep']) && $data['keep'] !== '' ? (string) $data['keep'] : null;
-            if ($keep !== null && ! ComailSmtpCredentials::ownedBy($keep, (string) $site->id, ComailSmtpCredentials::legacyName($site))) {
+            if ($keep !== null && ! ComailSmtpCredentials::ownedBy($keep, (string) $site->id)) {
                 throw ComailException::validation('Saklanacak şifre bu siteye ait değil.');
             }
 

@@ -16,8 +16,7 @@ use App\Models\Site;
  * domain changes; the random part makes each one unique. Rotation is
  * "add new → CMS stores it → CMS asks to revoke the rest, keeping the new
  * name", so a failed or timed-out save never leaves the site on a dead
- * password. Older names without a token ("<domain> site SMTP (Deamon)") count
- * as the site's when they equal its legacy name.
+ * password. Only names with a site id token are ever matched or deleted.
  *
  * Sender addresses (`send_as`): the mailbox itself, then the same local part
  * on every active alias domain of the mailbox's domain (b2b@beyazogluotomotiv.com
@@ -36,8 +35,8 @@ class ComailSmtpCredentials
 
     private const PROTOCOLS = ['smtp_access'];
 
-    /** "<anything> site SMTP (Deamon)[ <ULID>.<6>]" */
-    private const NAME_PATTERN = '/ site SMTP \(Deamon\)(?: ([0-9A-HJKMNP-TV-Z]{26})\.[a-z0-9]{6})?\z/i';
+    /** "<anything> site SMTP (Deamon) <ULID>.<6>" */
+    private const NAME_PATTERN = '/ site SMTP \(Deamon\) ([0-9A-HJKMNP-TV-Z]{26})\.[a-z0-9]{6}\z/i';
 
     /**
      * The mailbox address first, then local@alias for each active alias domain
@@ -71,8 +70,8 @@ class ComailSmtpCredentials
         return array_merge([$address], $extra);
     }
 
-    /** Name without the unique part (also the name used before 2026-11-26). */
-    public static function legacyName(Site $site): string
+    /** Readable part of the name: "<primary domain> site SMTP (Deamon)". */
+    public static function baseName(Site $site): string
     {
         $host = strtolower(trim((string) $site->primary_domain));
         if ($host === '') {
@@ -85,27 +84,21 @@ class ComailSmtpCredentials
     /** A fresh, unique name for a new password of this site. */
     public static function newName(Site $site): string
     {
-        return self::legacyName($site).' '.strtoupper((string) $site->id).'.'.substr(bin2hex(random_bytes(4)), 0, 6);
+        return self::baseName($site).' '.strtoupper((string) $site->id).'.'.substr(bin2hex(random_bytes(4)), 0, 6);
     }
 
-    /** Is this a Deamon site SMTP password at all (any site)? */
+    /** Is this a Deamon site SMTP password (with a site id token) of any site? */
     public static function isSmtpName(string $name): bool
     {
         return preg_match(self::NAME_PATTERN, $name) === 1;
     }
 
     /**
-     * Does the name belong to the site: its id token, or (no token) its legacy name.
+     * Does the name carry this site's id token?
      */
-    public static function ownedBy(string $name, string $siteId, string $legacyName): bool
+    public static function ownedBy(string $name, string $siteId): bool
     {
-        if (preg_match(self::NAME_PATTERN, $name, $m) !== 1) {
-            return false;
-        }
-
-        return isset($m[1])
-            ? strtoupper($m[1]) === strtoupper($siteId)
-            : $name === $legacyName;
+        return preg_match(self::NAME_PATTERN, $name, $m) === 1 && strtoupper($m[1]) === strtoupper($siteId);
     }
 
     /**
@@ -135,15 +128,15 @@ class ComailSmtpCredentials
      */
     public function revoke(Site $site, MailcowClient $client, string $address, ?string $keep = null): int
     {
-        return $this->revokeOwned($client, $address, (string) $site->id, self::legacyName($site), $keep);
+        return $this->revokeOwned($client, $address, (string) $site->id, $keep);
     }
 
     /**
-     * Same for a site that may be gone (share group left, archived, purged).
+     * Same for a site that may be gone (share group left, deactivated, purged).
      */
-    public function revokeOwned(MailcowClient $client, string $address, string $siteId, string $legacyName, ?string $keep = null): int
+    public function revokeOwned(MailcowClient $client, string $address, string $siteId, ?string $keep = null): int
     {
-        return $this->deleteWhere($client, $address, static fn (string $name): bool => $name !== $keep && self::ownedBy($name, $siteId, $legacyName));
+        return $this->deleteWhere($client, $address, static fn (string $name): bool => $name !== $keep && self::ownedBy($name, $siteId));
     }
 
     /**
@@ -153,9 +146,8 @@ class ComailSmtpCredentials
     public function revokeForeign(Site $site, MailcowClient $client, string $address): int
     {
         $siteId = (string) $site->id;
-        $legacy = self::legacyName($site);
 
-        return $this->deleteWhere($client, $address, static fn (string $name): bool => self::isSmtpName($name) && ! self::ownedBy($name, $siteId, $legacy));
+        return $this->deleteWhere($client, $address, static fn (string $name): bool => self::isSmtpName($name) && ! self::ownedBy($name, $siteId));
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Services\Sites;
 
 use App\Enums\SiteStatus;
+use App\Jobs\RevokeComailSmtpPasswordsJob;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Cloudflare\CloudflareHostname;
@@ -35,6 +36,10 @@ class SiteLifecycle
 
         $this->stopCoolify($site);
         $this->transition($site, SiteStatus::Stopped, 'site.deactivated', $actor, $ip);
+
+        // A stopped site sends nothing: its site-SMTP app passwords go. After activate,
+        // the CMS gets a new one with "Şifreyi yenile" (E-Posta Ayarları).
+        RevokeComailSmtpPasswordsJob::dispatchForSite($site, 'site_deactivated');
     }
 
     public function purge(Site $site, ?User $actor, ?string $ip): void

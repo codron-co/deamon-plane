@@ -187,10 +187,11 @@ class Site extends Model
             }
         });
 
-        // Archive and purge end the site's access to CoMail: its site-SMTP app passwords go.
+        // Purge ends the site's CoMail access (its passwords, and the group's on its
+        // domains). Archive does not: the site keeps running and sending; restore needs nothing.
         static::deleting(function (Site $site): void {
-            if (! $site->trashed()) {
-                RevokeComailSmtpPasswordsJob::dispatchForSite($site, $site->isForceDeleting() ? 'site_purged' : 'site_archived');
+            if ($site->isForceDeleting()) {
+                RevokeComailSmtpPasswordsJob::dispatchForPurge($site);
             }
         });
 
